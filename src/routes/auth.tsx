@@ -138,18 +138,19 @@ function LoginPage() {
           <CardContent className="p-6">
             <form onSubmit={handleSubmit} className="flex flex-col gap-4" dir={dir}>
               <div className="space-y-2">
-                <Label htmlFor="email">{t("auth.email")}</Label>
-                <Input
-                  id="email"
-                  inputMode="email"
-                  autoComplete="username"
-                  dir="ltr"
-                  className="text-start"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  autoFocus
-                />
+                <Label htmlFor="role">{t("auth.email")}</Label>
+                <Select value={role} onValueChange={setRole} disabled={seeding}>
+                  <SelectTrigger id="role" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DEMO_ROLES.map((r) => (
+                      <SelectItem key={r} value={r}>
+                        {t(`role.${r}`)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password">{t("auth.password")}</Label>

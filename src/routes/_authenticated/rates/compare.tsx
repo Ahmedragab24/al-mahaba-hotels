@@ -35,7 +35,7 @@ function CompareRates() {
     enabled: !!hotelId,
     queryFn: async () => {
       let q = supabase.from("rates").select(
-        "id,code,hotel_id,supplier_id,room_type_id,meal_plan,currency,valid_from,valid_to,cost_per_night,selling_price,status,is_direct,version,created_at,created_by,supplier:suppliers(name_en,name_ar),room_type:hotel_room_types(name_en,name_ar),hotel:hotels(name_en,name_ar),creator:profiles!rates_created_by_fkey(full_name_en,full_name_ar,email)"
+        "id,code,hotel_id,supplier_id,room_type_id,meal_plan,currency,valid_from,valid_to,cost_per_night,selling_price,status,is_direct,version,created_at,created_by,supplier:suppliers(name_en,name_ar),room_type:hotel_room_types(name_en,name_ar),hotel:hotels(name_en,name_ar)"
       )
         .eq("hotel_id", hotelId)
         .is("deleted_at", null)

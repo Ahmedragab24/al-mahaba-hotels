@@ -2349,6 +2349,7 @@ export type Database = {
           hotel_id: string
           id: string
           is_direct: boolean
+          is_simulated: boolean
           markup_pct: number | null
           max_nights: number | null
           meal_plan: Database["public"]["Enums"]["rate_board"]
@@ -2389,6 +2390,7 @@ export type Database = {
           hotel_id: string
           id?: string
           is_direct?: boolean
+          is_simulated?: boolean
           markup_pct?: number | null
           max_nights?: number | null
           meal_plan: Database["public"]["Enums"]["rate_board"]
@@ -2429,6 +2431,7 @@ export type Database = {
           hotel_id?: string
           id?: string
           is_direct?: boolean
+          is_simulated?: boolean
           markup_pct?: number | null
           max_nights?: number | null
           meal_plan?: Database["public"]["Enums"]["rate_board"]

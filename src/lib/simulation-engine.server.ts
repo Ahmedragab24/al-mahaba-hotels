@@ -207,10 +207,11 @@ async function createInvoice(admin: any): Promise<string | null> {
       invoice_date: today,
       due_date: due,
       subtotal,
-      tax_amount: tax,
+      taxes: tax,
+      fees: 0,
+      discount: 0,
       total_amount: total,
       paid_amount: 0,
-      balance_due: total,
       status: pick(["draft", "issued"]),
       is_simulated: true,
     })

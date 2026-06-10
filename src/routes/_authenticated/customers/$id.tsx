@@ -66,6 +66,7 @@ function CustomerDetail() {
   const c = cust.data;
   const displayName = lang === "ar" ? (c.name_ar || c.name_en) : (c.name_en || c.name_ar);
   const isEntity = c.customer_type !== "individual";
+  const isIndividual = c.customer_type === "individual";
 
   return (
     <>

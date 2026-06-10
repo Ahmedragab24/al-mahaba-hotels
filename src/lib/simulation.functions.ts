@@ -56,7 +56,7 @@ export const updateSimulationSettings = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const patch: Record<string, unknown> = {};
+    const patch: { enabled?: boolean; interval_minutes?: number; intensity?: string } = {};
     if (data.enabled !== undefined) patch.enabled = data.enabled;
     if (data.interval_minutes !== undefined) patch.interval_minutes = data.interval_minutes;
     if (data.intensity !== undefined) patch.intensity = data.intensity;

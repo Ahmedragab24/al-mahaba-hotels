@@ -411,6 +411,17 @@ export const dict: Dict = {
   "dash.avg_selling": { ar: "متوسط البيع", en: "Average Selling" },
   "dash.avg_margin": { ar: "متوسط الهامش", en: "Average Margin" },
 
+  // List-page KPIs (customers / suppliers / hotels / rates)
+  "kpi.total": { ar: "الإجمالي", en: "Total" },
+  "kpi.active": { ar: "نشط", en: "Active" },
+  "kpi.inactive": { ar: "غير نشط", en: "Inactive" },
+  "kpi.archived": { ar: "مؤرشف", en: "Archived" },
+  "kpi.this_month": { ar: "هذا الشهر", en: "This Month" },
+  "kpi.top_rated": { ar: "الأعلى تقييماً", en: "Top Rated" },
+  "kpi.luxury": { ar: "5 نجوم", en: "5-Star" },
+  "kpi.with_credit": { ar: "بحد ائتماني", en: "With Credit" },
+
+
 
   // Users
   "users.title": { ar: "إدارة المستخدمين", en: "User Management" },

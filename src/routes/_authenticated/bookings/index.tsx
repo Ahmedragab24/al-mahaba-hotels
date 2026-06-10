@@ -303,10 +303,10 @@ function BookingsList() {
                   const nights = earliestCheckIn && latestCheckOut
                     ? Math.max(0, Math.round((new Date(latestCheckOut).getTime() - new Date(earliestCheckIn).getTime()) / 86400000))
                     : null;
-                  const hotelNames = Array.from(new Set(
+                  const hotelNames: string[] = Array.from(new Set(
                     (b.rooms ?? [])
                       .map((r: any) => r.hotel ? (lang === "ar" ? (r.hotel.name_ar || r.hotel.name_en) : (r.hotel.name_en || r.hotel.name_ar)) : null)
-                      .filter(Boolean)
+                      .filter((x: any): x is string => typeof x === "string" && x.length > 0)
                   ));
                   return (
                     <TableRow

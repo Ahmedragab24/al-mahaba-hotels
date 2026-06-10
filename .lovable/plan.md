@@ -1,121 +1,123 @@
 
-## نظرة عامة
+# بوابة الموردين (Supplier Portal)
 
-تطوير وحدة الأسعار (Rates) لدعم تعدد الأسعار، الأرشفة التاريخية، اعتبار الفندق مورداً مباشراً، شاشة مقارنة الأسعار، وحقول تتبع إضافية، مع تحديث منظومة الصلاحيات المالية.
+نظام متكامل يسمح للموردين بالتسجيل، انتظار الموافقة، ثم الدخول للوحة تحكم خاصة يرون فيها فقط بياناتهم.
 
----
+## 1) تدفق الانضمام (Onboarding Workflow)
 
-## 1. تعدد الأسعار لنفس الفندق/المورد/الغرفة/الفترة
+```text
+[زائر] → /supplier/apply  ──►  طلب انضمام (supplier_applications: pending)
+                                        │
+                                        ▼
+                          [admin/super_admin] /supplier-applications
+                                        │
+                          ┌─────────────┴─────────────┐
+                          ▼                           ▼
+                    قبول (approve)              رفض (reject)
+                          │                           │
+                          ▼                           ▼
+            • إنشاء حساب auth.users               status=rejected
+            • إنشاء profiles + user_roles=supplier  + سبب الرفض
+            • ربط profiles.supplier_id بسجل suppliers
+            • إرسال بيانات الدخول للإيميل
+```
 
-- إزالة أي قيود فريدة (unique constraints) تمنع تكرار الأسعار في جدول `rates`.
-- السماح بإدخال أكثر من سعر بنفس (hotel_id, supplier_id, room_type_id, valid_from, valid_to, meal_plan).
-- الحفاظ على جميع السجلات للمقارنة.
+## 2) قاعدة البيانات
 
-## 2. أرشفة الأسعار التاريخية (Versioning)
+### تعديلات على enum وجداول قائمة
+- إضافة `'supplier'` إلى `app_role`
+- إضافة `profiles.supplier_id uuid REFERENCES suppliers(id)` لربط المستخدم بمورده
+- إضافة دالة أمان `current_user_supplier_id()`
 
-- إضافة عمود `version` و `parent_rate_id` و `superseded_at` و `superseded_by` في جدول `rates`.
-- تعديل سلوك "التعديل" في الواجهة: بدلاً من UPDATE، يتم إنشاء سجل جديد (نسخة جديدة) ووسم القديم كـ `superseded`.
-- إضافة Cron / Trigger لأرشفة الأسعار الأقدم من سنة تلقائياً (وضع `deleted_at` بدل الحذف الفعلي).
-- شاشة "تاريخ السعر" تعرض كل النسخ.
+### جدول جديد: `supplier_applications`
+- بيانات الشركة: name_en, name_ar, supplier_type, country_code, city_id, address, website, tax_number
+- جهة الاتصال: contact_name, email, phone, position
+- المرفقات: commercial_reg_path, tax_cert_path, profile_path
+- الحالة: status (pending/under_review/approved/rejected), submitted_at, reviewed_at, reviewed_by, rejection_reason
+- بعد القبول: created_supplier_id, created_user_id
 
-## 3. الفندق كمورد مباشر
+### سياسات RLS المحصورة للمورد (Row-Level Security)
+الدور `supplier` يرى/يعدّل فقط ما يخصه:
+- **suppliers**: SELECT/UPDATE فقط على `id = current_user_supplier_id()`
+- **supplier_contracts, supplier_bank_accounts, supplier_contacts, supplier_payables, supplier_payments**: محصورة على `supplier_id = current_user_supplier_id()`
+- **rates**: SELECT/INSERT/UPDATE على `supplier_id = current_user_supplier_id()` (DRAFT فقط، لا يستطيع approve)
+- **hotel_suppliers, hotels, hotel_room_types, hotel_meal_plans**: SELECT للفنادق المرتبطة به فقط
+- **booking_rooms, bookings**: SELECT فقط حيث `supplier_id = current_user_supplier_id()`
+- **invoices, customers**: لا وصول
+- **profiles**: قراءة سجله فقط
 
-- إضافة عمود `is_direct_supplier` على جدول `hotels` وعمود `hotel_id` (nullable) على جدول `rates` للإشارة إلى أن السعر مباشر من الفندق (بدون supplier_id).
-- جعل `supplier_id` nullable في `rates` عند وجود سعر مباشر، مع trigger يضمن وجود أحدهما.
-- في شاشة المقارنة، عرض "الفندق مباشرة" كمصدر مستقل.
+## 3) صفحات جديدة
 
-## 4. شاشة مقارنة الأسعار
+### عامة (بدون مصادقة)
+- `/supplier/apply` — نموذج تقديم طلب انضمام متعدد الخطوات (Stepper):
+  1. بيانات الشركة + النوع (مباشر/وسيط/DMC)
+  2. الدولة/المدينة/العنوان
+  3. جهة الاتصال
+  4. رفع المستندات (سجل تجاري، شهادة ضريبية، بروفايل)
+  5. مراجعة وإرسال
+- `/supplier/apply/success` — رسالة استلام الطلب
 
-- مسار جديد: `/rates/compare` يعرض جميع الأسعار النشطة لفندق/فترة/نوع غرفة محدد، مرتبة من الأرخص للأغلى.
-- جدول مقارنة: المصدر | السعر | العملة | شروط الإلغاء | حالة السعر | تاريخ الإدخال | المدخل.
-- زر "اختيار هذا السعر" لإضافته إلى عرض السعر/الحجز.
-- أفضل سعر دائماً بالأعلى.
+### للمسؤول
+- `/supplier-applications` — قائمة الطلبات بفلاتر (pending/approved/rejected)
+- `/supplier-applications/$id` — تفاصيل طلب: عرض كل البيانات والمرفقات، أزرار قبول/رفض، حقل سبب الرفض، عند القبول يتم إنشاء المورد + المستخدم
 
-## 5. حقول إضافية في نموذج السعر
+### للمورد (Supplier Portal — مسار `_authenticated/supplier-portal/`)
+لوحة تحكم خاصة لا يرى فيها الموظفون أي شيء، ولا يرى المورد سواها:
+- `/supplier-portal` — Dashboard:
+  - KPI: عدد العقود النشطة، عدد الفنادق، الأسعار المعتمدة/قيد الانتظار، حجوزات الشهر، الذمم المستحقة
+  - رسم بياني: الإيرادات الشهرية + الحجوزات
+  - آخر 5 حجوزات، آخر 5 دفعات
+- `/supplier-portal/profile` — بيانات الشركة (تعديل البيانات الأساسية، الشعار، جهات الاتصال، الحسابات البنكية)
+- `/supplier-portal/contracts` — العقود الخاصة به فقط (read-only + رفع مرفقات)
+- `/supplier-portal/rates` — إدارة أسعاره: إضافة/تعديل/أرشفة، إرسال للموافقة (لا يستطيع approve بنفسه)
+- `/supplier-portal/bookings` — الحجوزات المسندة إليه (مع تأكيد الحجز ورفع رقم تأكيد + مرفق)
+- `/supplier-portal/payables` — الذمم الدائنة (ما له على المنصة)
+- `/supplier-portal/payments` — الدفعات المستلمة
+- `/supplier-portal/reports` — تقارير محصورة: مبيعات/أسعار/أداء
 
-- `entered_at` (موجود ضمنياً كـ created_at — سنعرضه صراحة).
-- `entered_by` (موجود كـ created_by — سنعرضه).
-- `status` (موجود).
-- `archived_at` / زر أرشفة (موجود كـ deleted_at).
-- إضافة عرض هذه الحقول في الجدول والنموذج.
+## 4) التوجيه والصلاحيات (Routing & Access Control)
 
-## 6. اختيار يدوي للسعر
+- طبقة جديدة `_authenticated/_supplier/` تحمي مسار `supplier-portal`:
+  - `beforeLoad`: إذا الدور ليس `supplier` → redirect إلى `/` (أو خطأ صلاحية)
+- الموظفون (admin/sales/...) لا يرون رابط البوابة في القائمة الجانبية
+- الموردون لا يرون أي قائمة جانبية أخرى — فقط بنود البوابة
+- تعديل `app-sidebar.tsx` لإظهار قوائم مختلفة حسب الدور
 
-- إزالة أي منطق "اختيار تلقائي لأفضل سعر" من نماذج العروض والحجوزات.
-- في `quotations/-items` و `bookings/-rooms`: عند اختيار فندق+فترة، يفتح dialog مقارنة يختار منه المستخدم السعر يدوياً.
-- ترتيب الأسعار: الأرخص أولاً + علامة "أفضل سعر".
+## 5) الواجهة (UX حديث)
 
-## 7. الوظائف المعتمدة (موجودة بالفعل — تأكيد فقط)
+- نموذج طلب انضمام بـ Stepper مع validation بـ Zod وحفظ تلقائي (draft localStorage)
+- Empty states واضحة وأنيقة
+- Skeleton loaders للجداول
+- Toasts لنتائج العمليات
+- Confirm dialog قبل الموافقة/الرفض
+- شريط حالة الطلب (timeline) في صفحة المسؤول
+- في البوابة: header مخصص يظهر اسم الشركة + شعارها + حالة الحساب
 
-- الدول/المدن: موجودة (`countries`, `cities`).
-- ربط الموردين بالفنادق: موجود (`hotel_suppliers`).
-- مقارنة الأسعار: ستضاف في الخطوة 4.
-- مرفقات تأكيد الحجز: موجودة (`attachments`).
-- دفعات الموردين: موجودة (`supplier_payments`, `payment_orders`).
-- تقارير الذمم المدينة/الدائنة: موجودة في `/reports/financial`.
+## 6) i18n
 
-## 8. الصلاحيات المالية (تطوير حديث)
+إضافة كل المفاتيح (ar/en):
+- `supplier.apply.*`, `supplier.portal.*`, `supplier.applications.*`
+- `roles.supplier`, `nav.supplier_portal`, `nav.supplier_applications`
 
-تطبيق نموذج RBAC + ABAC مع مبدأ Segregation of Duties:
+## 7) تفاصيل تقنية مختصرة
 
-| الصلاحية | super_admin | admin | finance_manager | finance_agent | sales_manager |
-|---|---|---|---|---|---|
-| إنشاء فاتورة | ✅ | ✅ | ✅ | ✅ | ❌ |
-| اعتماد فاتورة (issue) | ✅ | ✅ | ✅ | ❌ | ❌ |
-| استلام دفعة | ✅ | ✅ | ✅ | ✅ | ❌ |
-| اعتماد دفعة مورد | ✅ | ✅ | ✅ | ❌ | ❌ |
-| إلغاء فاتورة معتمدة | ✅ | ✅ | ❌ | ❌ | ❌ |
-| تعديل سعر معتمد | ✅ | ❌ | ❌ | ❌ | ❌ |
-| رؤية تقارير مالية | ✅ | ✅ | ✅ | ✅ | جزئي |
-| Maker-Checker على المدفوعات > X | إجباري | إجباري | إجباري | — | — |
+- Migration واحدة: enum + جدول applications + عمود profiles.supplier_id + RLS لكل الجداول المعنية + دالة `current_user_supplier_id()` + دالة `approve_supplier_application(_id)` security definer (تنشئ auth user + supplier + role + ربط)
+- استخدام `supabaseAdmin` في server function لإنشاء `auth.users` (تتطلب service role)
+- التحقق من تطابق الإيميل (لا يكون مكرراً) قبل الموافقة
+- إرسال كلمة مرور مؤقتة + إجبار تغييرها عند أول دخول (`profiles.must_change_password = true`)
+- Storage bucket جديد `supplier-docs` للمرفقات (مع RLS تسمح للمسؤول والمورد صاحب الطلب)
 
-- إضافة جدول `approval_thresholds` (مبالغ تتطلب موافقة ثانية حسب العملة).
-- Trigger على `payment_orders` و `invoices` لفرض Maker ≠ Checker للمبالغ الكبيرة.
-- تسجيل كل عملية في `audit_logs` (موجود).
+## ما لن يُنفذ في هذه المرحلة (لتجنّب التضخم)
+- إرسال البريد الفعلي (سنُظهر بيانات الدخول للمسؤول لينقلها يدوياً)
+- توقيع رقمي للعقود
+- API خارجي للموردين
 
----
-
-## التغييرات التقنية
-
-### Migrations (SQL)
-1. تعديل `rates`: إضافة `version int`, `parent_rate_id uuid`, `superseded_at`, `superseded_by`, `is_direct` boolean، وجعل `supplier_id` nullable + check constraint.
-2. تعديل `hotels`: إضافة `is_direct_supplier boolean default false`.
-3. جدول جديد `approval_thresholds(currency, entity_type, amount, requires_second_approver)`.
-4. Triggers:
-   - `tg_rates_version`: عند UPDATE على سعر approved → منع التعديل، يجب إنشاء نسخة جديدة.
-   - `tg_archive_old_rates`: function تستدعى عبر pg_cron يومياً لأرشفة الأسعار > سنة.
-   - `tg_payment_maker_checker`: يمنع نفس المستخدم من إنشاء واعتماد دفعة فوق العتبة.
-5. تحديث RLS وسياسات `rates` للسماح بالقراءة لكل الإصدارات.
-
-### Frontend
-- `src/routes/_authenticated/rates/compare.tsx` — شاشة المقارنة الجديدة.
-- `src/routes/_authenticated/rates/-history.tsx` — مكوّن تاريخ نسخ السعر.
-- `src/routes/_authenticated/rates/-form.tsx` — تعديل السلوك ليُنشئ نسخة جديدة عند الحفظ على سعر approved.
-- `src/routes/_authenticated/rates/index.tsx` — إضافة أعمدة (المدخل، التاريخ، الإصدار)، فلتر "أحدث نسخة فقط".
-- `src/routes/_authenticated/quotations/-items.tsx` و `bookings/-rooms.tsx` — استبدال اختيار السعر بفتح dialog مقارنة.
-- `src/lib/i18n.tsx` — إضافة مفاتيح ترجمة جديدة (عربي/إنجليزي).
-
-### Permissions
-- `src/hooks/use-auth.tsx` — إضافة `canApproveInvoice`, `canApprovePayment`, helpers جديدة.
-- `src/components/role-gate.tsx` — لا تغيير جوهري.
-
----
-
-## ترتيب التنفيذ
-
-1. **Migration 1**: تعديل schema الأسعار + الفنادق + جدول approval_thresholds + triggers.
-2. **Migration 2**: pg_cron job للأرشفة السنوية.
-3. تحديث `rates/-form.tsx` و `rates/index.tsx`.
-4. بناء `rates/compare.tsx`.
-5. ربط شاشة المقارنة بـ quotations و bookings.
-6. تحديث صلاحيات `use-auth` وحراس الواجهة.
-7. تحديث الترجمات.
-
----
-
-## أسئلة قبل البدء
-
-1. **عتبة Maker-Checker للمدفوعات**: ما المبلغ الافتراضي بالعملة الأساسية الذي يتطلب موافقة ثانية؟ (مثال: 10,000 SAR)
-2. **مدة الأرشفة**: سنة من `valid_to` أم من `created_at`؟
-3. **عند تعديل سعر draft**: هل ننشئ نسخة جديدة أيضاً، أم نسمح بالتعديل المباشر لأن السعر لم يُعتمد بعد؟ (مقترح: السماح بالتعديل المباشر لـ draft فقط).
-4. **الفندق المباشر**: هل ننشئ سجل supplier تلقائياً عند تفعيل `is_direct_supplier` على فندق، أم نتعامل معه كمصدر افتراضي بدون سجل مورد؟
+## الخطوات بالترتيب
+1. Migration: enum + جدول applications + سياسات RLS + دوال
+2. Storage bucket + سياساته
+3. Server functions: تقديم الطلب، الموافقة (تنشئ auth user)
+4. صفحة `/supplier/apply` العامة
+5. صفحات إدارة الطلبات للمسؤول
+6. طبقة `_supplier` + صفحات البوابة الست
+7. تحديث `app-sidebar` لإظهار/إخفاء حسب الدور
+8. ترجمات + اختبار التدفق الكامل

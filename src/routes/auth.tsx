@@ -59,10 +59,17 @@ function normalizeDigits(raw: string): string {
 function LoginPage() {
   const { t, dir } = useI18n();
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [role, setRole] = useState<string>("super_admin");
+  const [password, setPassword] = useState("12345678");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [seeding, setSeeding] = useState(true);
+
+  useEffect(() => {
+    ensureDemoUsers()
+      .catch(() => undefined)
+      .finally(() => setSeeding(false));
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -70,7 +77,7 @@ function LoginPage() {
     setBusy(true);
     try {
       const { error: err } = await supabase.auth.signInWithPassword({
-        email: normalizeEmail(email),
+        email: `${role}@${DEFAULT_DOMAIN}`,
         password: normalizeDigits(password),
       });
       if (err) {
@@ -84,6 +91,7 @@ function LoginPage() {
       setBusy(false);
     }
   }
+
 
   return (
     <div

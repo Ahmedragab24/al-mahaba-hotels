@@ -111,15 +111,18 @@ export function AppSidebar() {
   const auth = useAuth();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
+  const isSupplierOnly = auth.hasRole("supplier") && !auth.hasAnyRole(["super_admin","admin","sales_manager","sales_agent","operations_manager","operations_agent","finance_manager","finance_agent","viewer"]);
+
   const canSee = (item: NavItem) =>
     (!item.roles || item.roles.length === 0 || auth.hasAnyRole(item.roles)) &&
     auth.canAccessModule(pathToModule(item.to));
-  const visibleOperational = operational.filter(canSee);
-  const visibleContracting = contracting.filter(canSee);
-  const visibleAdmin = admin.filter(canSee);
-  const visibleMaster = master.filter(canSee);
-  const visibleFinance = finance.filter(canSee);
-  const visibleReports = reports.filter(canSee);
+  const visibleOperational = isSupplierOnly ? [] : operational.filter(canSee);
+  const visibleContracting = isSupplierOnly ? [] : contracting.filter(canSee);
+  const visibleAdmin = isSupplierOnly ? [] : admin.filter(canSee);
+  const visibleMaster = isSupplierOnly ? [] : master.filter(canSee);
+  const visibleFinance = isSupplierOnly ? [] : finance.filter(canSee);
+  const visibleReports = isSupplierOnly ? [] : reports.filter(canSee);
+  const visibleSupplier = supplierNav.filter(canSee);
 
   const renderItem = (item: NavItem) => {
     const active = pathname === item.to || (item.to !== "/" && pathname.startsWith(item.to));

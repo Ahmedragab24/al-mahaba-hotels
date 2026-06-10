@@ -180,7 +180,13 @@ function LoginPage() {
           </CardContent>
         </Card>
 
-        <p className="mt-8 text-center text-sm text-muted-foreground">
+        <div className="mt-6 text-center">
+          <Link to="/supplier-apply" className="text-sm font-medium text-[var(--brand-gold-deep)] hover:underline">
+            {t("supplier.apply_cta")} ←
+          </Link>
+        </div>
+
+        <p className="mt-6 text-center text-sm text-muted-foreground">
           © {new Date().getFullYear()} {t("brand.name")}
         </p>
       </div>

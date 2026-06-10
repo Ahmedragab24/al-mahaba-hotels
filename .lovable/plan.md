@@ -1,123 +1,115 @@
 
-# بوابة الموردين (Supplier Portal)
+## النطاق
 
-نظام متكامل يسمح للموردين بالتسجيل، انتظار الموافقة، ثم الدخول للوحة تحكم خاصة يرون فيها فقط بياناتهم.
+ثلاث مهام مترابطة:
 
-## 1) تدفق الانضمام (Onboarding Workflow)
+1. اختبار استجابة الواجهة عبر مقاسات متعددة + اتجاه أفقي/عمودي
+2. اختبار الأدوار فعلياً عبر المتصفح والتأكد من الصلاحيات والربط
+3. بناء "وضع المحاكاة الحية" مع مفتاح تشغيل/إيقاف
 
-```text
-[زائر] → /supplier/apply  ──►  طلب انضمام (supplier_applications: pending)
-                                        │
-                                        ▼
-                          [admin/super_admin] /supplier-applications
-                                        │
-                          ┌─────────────┴─────────────┐
-                          ▼                           ▼
-                    قبول (approve)              رفض (reject)
-                          │                           │
-                          ▼                           ▼
-            • إنشاء حساب auth.users               status=rejected
-            • إنشاء profiles + user_roles=supplier  + سبب الرفض
-            • ربط profiles.supplier_id بسجل suppliers
-            • إرسال بيانات الدخول للإيميل
-```
+---
 
-## 2) قاعدة البيانات
+## 1) اختبار الاستجابة (Responsive QA)
 
-### تعديلات على enum وجداول قائمة
-- إضافة `'supplier'` إلى `app_role`
-- إضافة `profiles.supplier_id uuid REFERENCES suppliers(id)` لربط المستخدم بمورده
-- إضافة دالة أمان `current_user_supplier_id()`
+سأفتح المتصفح على المقاسات التالية وألتقط لقطات + أتحقق من عدم وجود تقطيع نص أو تكسر تخطيط في الصفحات الرئيسية (Dashboard, Customers, Hotels, Rates, RFQs, Quotations, Bookings, Invoices, Suppliers, Reports):
 
-### جدول جديد: `supplier_applications`
-- بيانات الشركة: name_en, name_ar, supplier_type, country_code, city_id, address, website, tax_number
-- جهة الاتصال: contact_name, email, phone, position
-- المرفقات: commercial_reg_path, tax_cert_path, profile_path
-- الحالة: status (pending/under_review/approved/rejected), submitted_at, reviewed_at, reviewed_by, rejection_reason
-- بعد القبول: created_supplier_id, created_user_id
+- موبايل: 375x812 (عمودي) و 812x375 (أفقي)
+- موبايل كبير: 414x896 (عمودي) و 896x414 (أفقي)
+- تابلت: 768x1024 (عمودي) و 1024x768 (أفقي)
+- تابلت كبير: 820x1180 (عمودي) و 1180x820 (أفقي)
+- ديسكتوب: 1366x768 و 1920x1080
 
-### سياسات RLS المحصورة للمورد (Row-Level Security)
-الدور `supplier` يرى/يعدّل فقط ما يخصه:
-- **suppliers**: SELECT/UPDATE فقط على `id = current_user_supplier_id()`
-- **supplier_contracts, supplier_bank_accounts, supplier_contacts, supplier_payables, supplier_payments**: محصورة على `supplier_id = current_user_supplier_id()`
-- **rates**: SELECT/INSERT/UPDATE على `supplier_id = current_user_supplier_id()` (DRAFT فقط، لا يستطيع approve)
-- **hotel_suppliers, hotels, hotel_room_types, hotel_meal_plans**: SELECT للفنادق المرتبطة به فقط
-- **booking_rooms, bookings**: SELECT فقط حيث `supplier_id = current_user_supplier_id()`
-- **invoices, customers**: لا وصول
-- **profiles**: قراءة سجله فقط
+أي تقطيع نص يتم إصلاحه فوراً بنمط `grid-cols-[minmax(0,1fr)_auto] + min-w-0 + shrink-0 + truncate/break-words` كما في القواعد.
 
-## 3) صفحات جديدة
+---
 
-### عامة (بدون مصادقة)
-- `/supplier/apply` — نموذج تقديم طلب انضمام متعدد الخطوات (Stepper):
-  1. بيانات الشركة + النوع (مباشر/وسيط/DMC)
-  2. الدولة/المدينة/العنوان
-  3. جهة الاتصال
-  4. رفع المستندات (سجل تجاري، شهادة ضريبية، بروفايل)
-  5. مراجعة وإرسال
-- `/supplier/apply/success` — رسالة استلام الطلب
+## 2) اختبار الأدوار (Role QA)
 
-### للمسؤول
-- `/supplier-applications` — قائمة الطلبات بفلاتر (pending/approved/rejected)
-- `/supplier-applications/$id` — تفاصيل طلب: عرض كل البيانات والمرفقات، أزرار قبول/رفض، حقل سبب الرفض، عند القبول يتم إنشاء المورد + المستخدم
+الأدوار الموجودة في النظام (من `user_roles` + `app_role`):
+- admin / manager / sales / operations / finance / supplier / customer
 
-### للمورد (Supplier Portal — مسار `_authenticated/supplier-portal/`)
-لوحة تحكم خاصة لا يرى فيها الموظفون أي شيء، ولا يرى المورد سواها:
-- `/supplier-portal` — Dashboard:
-  - KPI: عدد العقود النشطة، عدد الفنادق، الأسعار المعتمدة/قيد الانتظار، حجوزات الشهر، الذمم المستحقة
-  - رسم بياني: الإيرادات الشهرية + الحجوزات
-  - آخر 5 حجوزات، آخر 5 دفعات
-- `/supplier-portal/profile` — بيانات الشركة (تعديل البيانات الأساسية، الشعار، جهات الاتصال، الحسابات البنكية)
-- `/supplier-portal/contracts` — العقود الخاصة به فقط (read-only + رفع مرفقات)
-- `/supplier-portal/rates` — إدارة أسعاره: إضافة/تعديل/أرشفة، إرسال للموافقة (لا يستطيع approve بنفسه)
-- `/supplier-portal/bookings` — الحجوزات المسندة إليه (مع تأكيد الحجز ورفع رقم تأكيد + مرفق)
-- `/supplier-portal/payables` — الذمم الدائنة (ما له على المنصة)
-- `/supplier-portal/payments` — الدفعات المستلمة
-- `/supplier-portal/reports` — تقارير محصورة: مبيعات/أسعار/أداء
+لكل دور:
+- تسجيل دخول فعلي بحساب تجريبي (يُنشأ ضمن بيانات Seed أدناه)
+- التحقق من القائمة الجانبية (الوحدات الظاهرة فقط للدور)
+- محاولة فتح route ممنوع → يجب redirect/blocked
+- محاولة قراءة/كتابة على جدول محمي بـ RLS → يجب فشل عند عدم الصلاحية
+- التأكد من ربط الإجراءات الأساسية (إنشاء عميل، RFQ، عرض سعر، حجز، فاتورة، دفعة)
 
-## 4) التوجيه والصلاحيات (Routing & Access Control)
+سيتم توثيق النتيجة في تقرير مختصر بنهاية المهمة.
 
-- طبقة جديدة `_authenticated/_supplier/` تحمي مسار `supplier-portal`:
-  - `beforeLoad`: إذا الدور ليس `supplier` → redirect إلى `/` (أو خطأ صلاحية)
-- الموظفون (admin/sales/...) لا يرون رابط البوابة في القائمة الجانبية
-- الموردون لا يرون أي قائمة جانبية أخرى — فقط بنود البوابة
-- تعديل `app-sidebar.tsx` لإظهار قوائم مختلفة حسب الدور
+---
 
-## 5) الواجهة (UX حديث)
+## 3) وضع المحاكاة الحية (Live Simulation)
 
-- نموذج طلب انضمام بـ Stepper مع validation بـ Zod وحفظ تلقائي (draft localStorage)
-- Empty states واضحة وأنيقة
-- Skeleton loaders للجداول
-- Toasts لنتائج العمليات
-- Confirm dialog قبل الموافقة/الرفض
-- شريط حالة الطلب (timeline) في صفحة المسؤول
-- في البوابة: header مخصص يظهر اسم الشركة + شعارها + حالة الحساب
+### المفهوم
+Job دوري يحاكي نشاطاً حقيقياً على المنصة (إنشاء RFQs، تحويلها لعروض أسعار، حجوزات، دفعات...) لتبدو المنصة حية حتى بدون مستخدمين حقيقيين.
 
-## 6) i18n
+### المكونات
 
-إضافة كل المفاتيح (ar/en):
-- `supplier.apply.*`, `supplier.portal.*`, `supplier.applications.*`
-- `roles.supplier`, `nav.supplier_portal`, `nav.supplier_applications`
+**أ. جدول إعدادات المحاكاة** `simulation_settings` (سجل واحد):
+- `enabled` (bool) — مفتاح التشغيل الرئيسي
+- `interval_minutes` (int) — تردد التشغيل (افتراضي 15)
+- `intensity` (low/medium/high) — كم حدث ينشأ في كل دورة
+- `last_run_at`, `last_run_status`, `last_run_summary`
+- محمي: قراءة/كتابة لـ admin فقط
 
-## 7) تفاصيل تقنية مختصرة
+**ب. جدول وسم البيانات الاصطناعية**: إضافة عمود `is_simulated boolean default false` على الجداول المتأثرة (customers, suppliers, rfqs, quotations, bookings, invoices, receipts, supplier_payments) للسماح بحذف نظيف عند الإيقاف.
 
-- Migration واحدة: enum + جدول applications + عمود profiles.supplier_id + RLS لكل الجداول المعنية + دالة `current_user_supplier_id()` + دالة `approve_supplier_application(_id)` security definer (تنشئ auth user + supplier + role + ربط)
-- استخدام `supabaseAdmin` في server function لإنشاء `auth.users` (تتطلب service role)
-- التحقق من تطابق الإيميل (لا يكون مكرراً) قبل الموافقة
-- إرسال كلمة مرور مؤقتة + إجبار تغييرها عند أول دخول (`profiles.must_change_password = true`)
-- Storage bucket جديد `supplier-docs` للمرفقات (مع RLS تسمح للمسؤول والمورد صاحب الطلب)
+**ج. بيانات أساسية ثابتة (Seed مرة واحدة)**:
+- 10 عملاء افتراضيين (أفراد + شركات + جروبات)
+- 8 موردين (فنادق + شركات نقل)
+- 6 مستخدمين موظفين بأدوار متنوعة (sales/operations/finance/manager)
+- بيانات مرجعية: غرف، مواسم، أسعار
 
-## ما لن يُنفذ في هذه المرحلة (لتجنّب التضخم)
-- إرسال البريد الفعلي (سنُظهر بيانات الدخول للمسؤول لينقلها يدوياً)
-- توقيع رقمي للعقود
-- API خارجي للموردين
+**د. Server route للمحاكاة**: `/api/public/hooks/simulation-tick`
+- يتحقق من `simulation_settings.enabled`
+- ينشئ بشكل عشوائي حدث واحد أو أكثر حسب `intensity`:
+  - RFQ جديد لعميل عشوائي
+  - رد مورد على RFQ موجود
+  - تحويل RFQ إلى Quotation
+  - تأكيد Quotation → Booking
+  - إنشاء فاتورة من حجز
+  - تسجيل دفعة عميل أو دفعة مورد
+- كل سجل يحمل `is_simulated=true` و `created_by` = مستخدم موظف افتراضي
+- يكتب ملخص في `last_run_summary`
 
-## الخطوات بالترتيب
-1. Migration: enum + جدول applications + سياسات RLS + دوال
-2. Storage bucket + سياساته
-3. Server functions: تقديم الطلب، الموافقة (تنشئ auth user)
-4. صفحة `/supplier/apply` العامة
-5. صفحات إدارة الطلبات للمسؤول
-6. طبقة `_supplier` + صفحات البوابة الست
-7. تحديث `app-sidebar` لإظهار/إخفاء حسب الدور
-8. ترجمات + اختبار التدفق الكامل
+**هـ. pg_cron**: جدولة استدعاء الـ route كل `interval_minutes` (افتراضياً 15 دقيقة) — يتم التحكم في النشاط من خلال flag `enabled` داخل الـ handler نفسه (الـ cron يعمل دائماً لكن يخرج فوراً إذا معطّل).
+
+**و. صفحة لوحة تحكم المحاكاة**: `/admin/simulation` (admin فقط)
+- مفتاح ON/OFF
+- اختيار التردد والكثافة
+- زر "تشغيل دورة الآن" يدوياً
+- زر "حذف جميع البيانات الاصطناعية" (يحذف كل ما `is_simulated=true`)
+- عرض آخر تشغيل وملخصه
+- إحصاءات سريعة: كم سجل اصطناعي موجود في كل جدول
+
+**ز. مؤشر بصري**: شارة صغيرة "بيانات تجريبية" على صفوف الجداول التي `is_simulated=true` لتمييزها عن الحقيقي.
+
+### الأمان
+- الـ route محمي بـ `apikey` header (anon key)
+- جميع كتابات المحاكاة تستخدم `supabaseAdmin` بعد التحقق من التفعيل
+- لا يمكن للأدوار غير admin رؤية أو تعديل `simulation_settings`
+- لوحة التحكم محمية بـ `has_role(admin)`
+
+---
+
+## ترتيب التنفيذ
+
+1. Migration: `simulation_settings` + أعمدة `is_simulated` + RLS
+2. Seed: إنشاء المستخدمين والعملاء والموردين الافتراضيين (مرة واحدة، idempotent)
+3. Server route للمحاكاة + helpers
+4. صفحة لوحة تحكم المحاكاة + ربطها في القائمة الجانبية (admin فقط)
+5. شارة "بيانات تجريبية" في الجداول
+6. جدولة pg_cron
+7. اختبار الاستجابة عبر المتصفح وإصلاح أي تقطيع
+8. اختبار الأدوار فعلياً وتسجيل النتائج
+9. تقرير نهائي مختصر
+
+---
+
+## ملاحظات تقنية
+
+- الـ Seed باستخدام `supabase.auth.admin.createUser` داخل migration لن يعمل (لا نملك admin client في migration)، لذا سيتم عبر server function يتم استدعاؤها مرة واحدة من لوحة التحكم بزر "تهيئة البيانات الافتراضية".
+- الـ pg_cron يستدعي URL ثابت `project--2d28f67f-e9e1-4975-bb2e-db98999a94f7.lovable.app` لضمان عدم تأثره بتغيير المعاينات.
+- جميع جداول المحاكاة الجديدة تتبع قاعدة GRANT الإلزامية.
+- وضع المحاكاة لا يُغيّر أي بيانات حقيقية للمستخدم — فقط يضيف سجلات موسومة.

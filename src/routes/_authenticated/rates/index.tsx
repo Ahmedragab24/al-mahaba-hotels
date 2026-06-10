@@ -101,10 +101,17 @@ function RatesList() {
 
   const total = list.data?.count ?? 0;
 
-  const actions = useMemo(() => canWrite && (
-    <Button onClick={() => navigate({ to: "/rates/new" })} size="sm">
-      <Plus className="h-4 w-4" /> {t("rates.new")}
-    </Button>
+  const actions = useMemo(() => (
+    <div className="flex gap-2">
+      <Button asChild variant="outline" size="sm">
+        <Link to="/rates/compare"><GitCompare className="h-4 w-4" />{t("rates.compare")}</Link>
+      </Button>
+      {canWrite && (
+        <Button onClick={() => navigate({ to: "/rates/new" })} size="sm">
+          <Plus className="h-4 w-4" /> {t("rates.new")}
+        </Button>
+      )}
+    </div>
   ), [canWrite, navigate, t]);
 
   return (

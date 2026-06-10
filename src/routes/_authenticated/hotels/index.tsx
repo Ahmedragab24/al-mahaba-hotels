@@ -67,6 +67,22 @@ function HotelsList() {
     return m;
   }, [cities.data]);
 
+  const metrics = useQuery({
+    queryKey: ["hotels-metrics"],
+    queryFn: async () => {
+      const { data } = await supabase.from("hotels").select("status,star_rating,created_at,deleted_at");
+      const rows = data ?? [];
+      const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0,0,0,0);
+      return {
+        total: rows.filter(r => !r.deleted_at).length,
+        active: rows.filter(r => r.status === "active" && !r.deleted_at).length,
+        archived: rows.filter(r => r.deleted_at).length,
+        luxury: rows.filter(r => Number(r.star_rating) === 5 && !r.deleted_at).length,
+        thisMonth: rows.filter(r => new Date(r.created_at) >= monthStart && !r.deleted_at).length,
+      };
+    },
+  });
+
   const list = useQuery({
     queryKey: ["hotels", { dSearch, status, country, stars, showArchived, page }],
     queryFn: async () => {

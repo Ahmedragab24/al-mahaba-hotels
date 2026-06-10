@@ -152,19 +152,25 @@ function InvoicesList() {
         actions={canWrite && <Button size="sm" onClick={() => setOpenNew(true)}><Plus className="h-4 w-4" /> {t("inv.new")}</Button>} />
       <div className="space-y-4 p-6">
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          {[
-            [t("inv.kpi.total"), metrics.data?.total],
-            [t("inv.kpi.outstanding"), metrics.data ? fmt(metrics.data.outstanding) : undefined],
-            [t("inv.kpi.overdue"), metrics.data?.overdue],
-            [t("inv.kpi.paid"), metrics.data?.paid],
-            [t("inv.kpi.draft"), metrics.data?.draft],
-          ].map(([label, val], i) => (
-            <Card key={i}><CardContent className="p-4">
-              <div className="text-xs text-muted-foreground">{label as string}</div>
-              <div className="text-xl font-bold">{val ?? "—"}</div>
-            </CardContent></Card>
+          <KpiCard icon={FileText} tone="primary" label={t("inv.kpi.total")} value={metrics.data?.total ?? "—"}
+            active={status === "all"} onClick={() => { setStatus("all"); setPage(1); }} />
+          <KpiCard icon={Wallet} tone="warning" label={t("inv.kpi.outstanding")} value={metrics.data ? fmt(metrics.data.outstanding) : "—"} />
+          <KpiCard icon={AlertTriangle} tone="destructive" label={t("inv.kpi.overdue")} value={metrics.data?.overdue ?? "—"} />
+          <KpiCard icon={CheckCircle2} tone="success" label={t("inv.kpi.paid")} value={metrics.data?.paid ?? "—"}
+            active={status === "paid"} onClick={() => { setStatus("paid"); setPage(1); }} />
+          <KpiCard icon={FileEdit} tone="muted" label={t("inv.kpi.draft")} value={metrics.data?.draft ?? "—"}
+            active={status === "draft"} onClick={() => { setStatus("draft"); setPage(1); }} />
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <StatusPill label={t("filter.all")} tone="primary" active={status === "all"} onClick={() => { setStatus("all"); setPage(1); }} />
+          {STATUSES.map(s => (
+            <StatusPill key={s} label={t(`invstatus.${s}`)}
+              tone={s === "paid" ? "success" : s === "cancelled" ? "destructive" : s === "partially_paid" ? "warning" : s === "draft" ? "muted" : "info"}
+              active={status === s} onClick={() => { setStatus(s); setPage(1); }} />
           ))}
         </div>
+
 
         <Card>
           <CardContent className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 xl:grid-cols-5">

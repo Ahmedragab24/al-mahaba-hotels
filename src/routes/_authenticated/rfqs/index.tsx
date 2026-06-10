@@ -38,17 +38,11 @@ function RfqList() {
   const canWrite = auth.hasAnyRole(["super_admin","admin","sales_manager","sales_agent","operations_manager","operations_agent"]);
 
   const [search, setSearch] = useState("");
-  const [customer, setCustomer] = useState("all");
   const [status, setStatus] = useState("all");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [page, setPage] = useState(1);
   const dSearch = useDebounce(search, 300);
-
-  const customers = useQuery({
-    queryKey: ["lookup-customers"],
-    queryFn: async () => (await supabase.from("customers").select("id,name_en,name_ar").is("deleted_at", null).order("name_en")).data ?? [],
-  });
 
   const metrics = useQuery({
     queryKey: ["rfq-metrics"],
@@ -68,13 +62,12 @@ function RfqList() {
   });
 
   const list = useQuery({
-    queryKey: ["rfqs", { dSearch, customer, status, from, to, page }],
+    queryKey: ["rfqs", { dSearch, status, from, to, page }],
     queryFn: async () => {
       let q = supabase.from("rfqs").select(
-        "id,rfq_no,status,currency,destination,travel_start,travel_end,created_at,customer:customers(name_en,name_ar)",
+        "id,rfq_no,status,currency,destination,travel_start,travel_end,created_at,supplier_requests:rfq_supplier_requests(supplier:suppliers(name_en,name_ar))",
         { count: "exact" },
       ).is("deleted_at", null);
-      if (customer !== "all") q = q.eq("customer_id", customer);
       if (status !== "all") q = q.eq("status", status);
       if (from) q = q.gte("travel_start", from);
       if (to) q = q.lte("travel_end", to);
@@ -86,6 +79,7 @@ function RfqList() {
       return { rows: data ?? [], count: count ?? 0 };
     },
   });
+
 
   const total = list.data?.count ?? 0;
   const actions = useMemo(() => canWrite && (
@@ -113,18 +107,11 @@ function RfqList() {
         </div>
 
         <Card>
-          <CardContent className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 xl:grid-cols-5">
+          <CardContent className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 xl:grid-cols-4">
             <div className="relative">
               <Search className="absolute top-2.5 start-2 h-4 w-4 text-muted-foreground" />
               <Input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder={`${t("rfq.number")} / ${t("rfq.destination")}`} className="ps-8" />
             </div>
-            <Select value={customer} onValueChange={(v) => { setCustomer(v); setPage(1); }}>
-              <SelectTrigger className="w-full"><SelectValue placeholder={t("rfq.customer")} /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t("filter.all")}</SelectItem>
-                {customers.data?.map((c: any) => <SelectItem key={c.id} value={c.id}>{lang === "ar" ? (c.name_ar || c.name_en) : (c.name_en || c.name_ar)}</SelectItem>)}
-              </SelectContent>
-            </Select>
             <Select value={status} onValueChange={(v) => { setStatus(v); setPage(1); }}>
               <SelectTrigger className="w-full"><SelectValue placeholder={t("filter.status")} /></SelectTrigger>
               <SelectContent>
@@ -137,13 +124,14 @@ function RfqList() {
           </CardContent>
         </Card>
 
+
         <Card>
           <CardContent className="p-0 overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow className="whitespace-nowrap">
                   <TableHead>{t("rfq.number")}</TableHead>
-                  <TableHead>{t("rfq.customer")}</TableHead>
+                  <TableHead>{t("rfq.suppliers", "الموردون")}</TableHead>
                   <TableHead>{t("rfq.destination")}</TableHead>
                   <TableHead>{t("rfq.travel_start")}</TableHead>
                   <TableHead>{t("rfq.travel_end")}</TableHead>
@@ -159,7 +147,8 @@ function RfqList() {
                     <TableCell className="font-mono text-xs">
                       <Link to="/rfqs/$id" params={{ id: r.id }} className="hover:underline">{r.rfq_no}</Link>
                     </TableCell>
-                    <TableCell className="text-sm">{r.customer ? (lang === "ar" ? (r.customer.name_ar || r.customer.name_en) : (r.customer.name_en || r.customer.name_ar)) : "—"}</TableCell>
+                    <TableCell className="text-sm">{(r.supplier_requests ?? []).length > 0 ? (r.supplier_requests as any[]).map((sr: any) => lang === "ar" ? (sr.supplier?.name_ar || sr.supplier?.name_en) : (sr.supplier?.name_en || sr.supplier?.name_ar)).filter(Boolean).join("، ") : "—"}</TableCell>
+
                     <TableCell className="text-sm">{r.destination ?? "—"}</TableCell>
                     <TableCell dir="ltr" className="text-xs">{formatDate(r.travel_start, lang)}</TableCell>
                     <TableCell dir="ltr" className="text-xs">{formatDate(r.travel_end, lang)}</TableCell>

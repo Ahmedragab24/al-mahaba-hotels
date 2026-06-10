@@ -437,14 +437,20 @@ export function CreateQuotationButton({ rfq }: { rfq: any }) {
   const responses = useRfqResponses(rfq.id);
   const [open, setOpen] = useState(false);
   const [markup, setMarkup] = useState("15");
+  const [customerId, setCustomerId] = useState<string>("");
   const plus7 = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
   const [expiry, setExpiry] = useState(plus7);
   const canWrite = auth.hasAnyRole(["super_admin","admin","sales_manager","sales_agent"]);
 
+  const customers = useQuery({
+    queryKey: ["lookup-customers"],
+    queryFn: async () => (await supabase.from("customers").select("id,name_en,name_ar").is("deleted_at", null).order("name_en")).data ?? [],
+    enabled: open,
+  });
+
   const approved = (responses.data ?? []).filter((r: any) => r.status === "approved" && r.cost_price != null);
   if (!canWrite || rfq.status !== "approved" || approved.length === 0) return null;
 
-  // best approved response per item
   const byItem = new Map<string, any>();
   approved.forEach((r: any) => {
     const cur = byItem.get(r.rfq_item_id);
@@ -453,9 +459,10 @@ export function CreateQuotationButton({ rfq }: { rfq: any }) {
 
   const createMut = useMutation({
     mutationFn: async () => {
+      if (!customerId) throw new Error(t("rfq.customer") + " *");
       const m = Math.max(0, Number(markup) || 0);
       const { data: quote, error } = await supabase.from("quotations").insert({
-        customer_id: rfq.customer_id,
+        customer_id: customerId,
         currency: rfq.currency,
         quotation_date: new Date().toISOString().slice(0, 10),
         travel_date: rfq.travel_start,
@@ -492,6 +499,17 @@ export function CreateQuotationButton({ rfq }: { rfq: any }) {
           <DialogHeader><DialogTitle>{t("rfq.to_quote")}</DialogTitle></DialogHeader>
           <p className="text-sm text-muted-foreground">{t("rfq.to_quote_hint")}</p>
           <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5 sm:col-span-2">
+              <label className="text-sm">{t("rfq.customer")} *</label>
+              <Select value={customerId} onValueChange={setCustomerId}>
+                <SelectTrigger className="w-full"><SelectValue placeholder={t("rfq.customer")} /></SelectTrigger>
+                <SelectContent>
+                  {customers.data?.map((c: any) => (
+                    <SelectItem key={c.id} value={c.id}>{lang === "ar" ? (c.name_ar || c.name_en) : (c.name_en || c.name_ar)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="space-y-1.5">
               <label className="text-sm">{t("rfq.to_quote_markup")} *</label>
               <Input type="number" min={0} step="0.5" value={markup} onChange={(e) => setMarkup(e.target.value)} dir="ltr" />
@@ -503,10 +521,11 @@ export function CreateQuotationButton({ rfq }: { rfq: any }) {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>{t("actions.cancel")}</Button>
-            <Button onClick={() => createMut.mutate()} disabled={createMut.isPending}>{t("rfq.to_quote")}</Button>
+            <Button onClick={() => createMut.mutate()} disabled={createMut.isPending || !customerId}>{t("rfq.to_quote")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
   );
 }
+

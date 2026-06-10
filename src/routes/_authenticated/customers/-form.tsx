@@ -76,6 +76,8 @@ export function CustomerForm({ initial, onSaved }: { initial?: any; onSaved: (id
     },
   });
 
+  const customerType = form.watch("customer_type");
+  const isIndividual = customerType === "individual";
   const country = form.watch("country_code");
   const cities = useCities(country || null);
 

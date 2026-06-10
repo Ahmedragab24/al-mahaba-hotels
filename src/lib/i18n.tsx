@@ -74,6 +74,8 @@ export const dict: Dict = {
   "label.name": { ar: "الاسم", en: "Name" },
   "label.name_ar": { ar: "الاسم بالعربية", en: "Name (Arabic)" },
   "label.name_en": { ar: "الاسم بالإنجليزية", en: "Name (English)" },
+  "label.personal_name_ar": { ar: "الاسم الشخصي بالعربية", en: "Personal Name (Arabic)" },
+  "label.personal_name_en": { ar: "الاسم الشخصي بالإنجليزية", en: "Personal Name (English)" },
   "label.type": { ar: "النوع", en: "Type" },
   "label.email": { ar: "البريد الإلكتروني", en: "Email" },
   "label.phone": { ar: "الهاتف", en: "Phone" },

@@ -14,10 +14,11 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { StatusPill } from "@/components/status-pill";
+import { StatusPill as StatusBadge } from "@/components/status-pill";
+import { KpiCard, StatusPill } from "@/components/list-toolkit";
 import { DataPagination } from "@/components/data-pagination";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import { Plus, Search, Eye, Pencil, Archive, RotateCcw, Trash2 } from "lucide-react";
+import { Plus, Search, Eye, Pencil, Archive, RotateCcw, Trash2, Users, UserCheck, UserX, CreditCard, Calendar } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/customers/")({

@@ -21,7 +21,8 @@ const BOARDS = ["RO", "BB", "HB", "FB", "AI", "UAI"] as const;
 
 const schema = z.object({
   hotel_id: z.string().uuid(),
-  supplier_id: z.string().uuid(),
+  is_direct: z.boolean().default(false),
+  supplier_id: z.string().uuid().optional().or(z.literal("")),
   contract_id: z.string().uuid().optional().or(z.literal("")),
   room_type_id: z.string().uuid(),
   view_id: z.string().uuid().optional().or(z.literal("")),
@@ -42,6 +43,8 @@ const schema = z.object({
   cancellation_policy_ar: z.string().max(4000).optional().or(z.literal("")),
 }).refine((v) => new Date(v.valid_to) >= new Date(v.valid_from), {
   path: ["valid_to"], message: "valid_to >= valid_from",
+}).refine((v) => v.is_direct || (v.supplier_id && v.supplier_id.length > 0), {
+  path: ["supplier_id"], message: "supplier required unless direct",
 });
 
 type FormVals = z.input<typeof schema>;

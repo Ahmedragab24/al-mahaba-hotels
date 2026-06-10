@@ -14,10 +14,11 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { StatusPill } from "@/components/status-pill";
+import { StatusPill as StatusBadge } from "@/components/status-pill";
+import { KpiCard, StatusPill } from "@/components/list-toolkit";
 import { DataPagination } from "@/components/data-pagination";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import { Plus, Search, Eye, Pencil, Archive, RotateCcw, Trash2, MapPin, Phone, Star } from "lucide-react";
+import { Plus, Search, Eye, Pencil, Archive, RotateCcw, Trash2, MapPin, Phone, Star, Hotel, CheckCircle2, Crown, Calendar } from "lucide-react";
 import { toast } from "sonner";
 import hotelImg1 from "@/assets/hotels/hotel-1.jpg";
 import hotelImg2 from "@/assets/hotels/hotel-2.jpg";
@@ -65,6 +66,22 @@ function HotelsList() {
     cities.data?.forEach((c: any) => m.set(c.id, c));
     return m;
   }, [cities.data]);
+
+  const metrics = useQuery({
+    queryKey: ["hotels-metrics"],
+    queryFn: async () => {
+      const { data } = await supabase.from("hotels").select("status,star_rating,created_at,deleted_at");
+      const rows = data ?? [];
+      const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0,0,0,0);
+      return {
+        total: rows.filter(r => !r.deleted_at).length,
+        active: rows.filter(r => r.status === "active" && !r.deleted_at).length,
+        archived: rows.filter(r => r.deleted_at).length,
+        luxury: rows.filter(r => Number(r.star_rating) === 5 && !r.deleted_at).length,
+        thisMonth: rows.filter(r => new Date(r.created_at) >= monthStart && !r.deleted_at).length,
+      };
+    },
+  });
 
   const list = useQuery({
     queryKey: ["hotels", { dSearch, status, country, stars, showArchived, page }],
@@ -123,6 +140,25 @@ function HotelsList() {
     <>
       <PageHeader title={t("hotels.title")} subtitle={`${total} ${t("label.total")}`} actions={actions} />
       <div className="space-y-4 p-6">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          <KpiCard icon={Hotel} tone="primary" label={t("kpi.total")} value={metrics.data?.total ?? "—"}
+            active={status === "all" && !showArchived} onClick={() => { setStatus("all"); setShowArchived(false); setPage(1); }} />
+          <KpiCard icon={CheckCircle2} tone="success" label={t("kpi.active")} value={metrics.data?.active ?? "—"}
+            active={status === "active"} onClick={() => { setStatus("active"); setShowArchived(false); setPage(1); }} />
+          <KpiCard icon={Crown} tone="warning" label={t("kpi.luxury")} value={metrics.data?.luxury ?? "—"}
+            active={stars === "5"} onClick={() => { setStars(stars === "5" ? "all" : "5"); setPage(1); }} />
+          <KpiCard icon={Archive} tone="muted" label={t("kpi.archived")} value={metrics.data?.archived ?? "—"}
+            active={showArchived} onClick={() => { setShowArchived(true); setStatus("all"); setPage(1); }} />
+          <KpiCard icon={Calendar} tone="info" label={t("kpi.this_month")} value={metrics.data?.thisMonth ?? "—"} />
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <StatusPill label={t("filter.all")} tone="primary" active={stars === "all"} onClick={() => { setStars("all"); setPage(1); }} />
+          {STARS.map(n => (
+            <StatusPill key={n} label={"★".repeat(n)} tone="warning" active={stars === String(n)} onClick={() => { setStars(String(n)); setPage(1); }} />
+          ))}
+        </div>
+
         <Card>
           <CardContent className="flex flex-wrap items-center gap-3 p-4">
             <div className="relative min-w-[220px] flex-1">
@@ -203,7 +239,7 @@ function HotelsList() {
                   />
                   <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-foreground/60 to-transparent" />
                   <div className="absolute top-3 start-3 flex items-center gap-2">
-                    <StatusPill status={h.status} />
+                    <StatusBadge status={h.status} />
                   </div>
                   {h.star_rating ? (
                     <Badge className="absolute top-3 end-3 gap-1 bg-card/90 text-amber-500 shadow backdrop-blur hover:bg-card/90">

@@ -13,10 +13,11 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { StatusPill } from "@/components/status-pill";
+import { StatusPill as StatusBadge } from "@/components/status-pill";
+import { KpiCard, StatusPill } from "@/components/list-toolkit";
 import { DataPagination } from "@/components/data-pagination";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import { Plus, Search, Eye, Pencil, Archive, RotateCcw, Trash2, Star } from "lucide-react";
+import { Plus, Search, Eye, Pencil, Archive, RotateCcw, Trash2, Star, Building2, CheckCircle2, XCircle, Award, Calendar } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/suppliers/")({
@@ -44,6 +45,23 @@ function SuppliersList() {
 
   const dSearch = useDebounce(search, 300);
   const countries = useCountries();
+
+  const metrics = useQuery({
+    queryKey: ["suppliers-metrics"],
+    queryFn: async () => {
+      const { data } = await supabase.from("suppliers").select("status,rating,created_at,deleted_at");
+      const rows = data ?? [];
+      const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0,0,0,0);
+      return {
+        total: rows.filter(r => !r.deleted_at).length,
+        active: rows.filter(r => r.status === "active" && !r.deleted_at).length,
+        inactive: rows.filter(r => r.status === "inactive" && !r.deleted_at).length,
+        archived: rows.filter(r => r.deleted_at).length,
+        topRated: rows.filter(r => Number(r.rating) >= 4 && !r.deleted_at).length,
+        thisMonth: rows.filter(r => new Date(r.created_at) >= monthStart && !r.deleted_at).length,
+      };
+    },
+  });
 
   const list = useQuery({
     queryKey: ["suppliers", { dSearch, status, country, stype, showArchived, page }],
@@ -102,6 +120,26 @@ function SuppliersList() {
     <>
       <PageHeader title={t("suppliers.title")} subtitle={`${total} ${t("label.total")}`} actions={actions} />
       <div className="space-y-4 p-6">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          <KpiCard icon={Building2} tone="primary" label={t("kpi.total")} value={metrics.data?.total ?? "—"}
+            active={status === "all" && !showArchived} onClick={() => { setStatus("all"); setShowArchived(false); setPage(1); }} />
+          <KpiCard icon={CheckCircle2} tone="success" label={t("kpi.active")} value={metrics.data?.active ?? "—"}
+            active={status === "active"} onClick={() => { setStatus("active"); setShowArchived(false); setPage(1); }} />
+          <KpiCard icon={XCircle} tone="warning" label={t("kpi.inactive")} value={metrics.data?.inactive ?? "—"}
+            active={status === "inactive"} onClick={() => { setStatus("inactive"); setShowArchived(false); setPage(1); }} />
+          <KpiCard icon={Archive} tone="muted" label={t("kpi.archived")} value={metrics.data?.archived ?? "—"}
+            active={showArchived} onClick={() => { setShowArchived(true); setStatus("all"); setPage(1); }} />
+          <KpiCard icon={Award} tone="info" label={t("kpi.top_rated")} value={metrics.data?.topRated ?? "—"} />
+          <KpiCard icon={Calendar} tone="info" label={t("kpi.this_month")} value={metrics.data?.thisMonth ?? "—"} />
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <StatusPill label={t("filter.all")} tone="primary" active={stype === "all"} onClick={() => { setStype("all"); setPage(1); }} />
+          {STYPES.map(s => (
+            <StatusPill key={s} label={t(`stype.${s}`, s)} tone="info" active={stype === s} onClick={() => { setStype(s); setPage(1); }} />
+          ))}
+        </div>
+
         <Card>
           <CardContent className="flex flex-wrap items-center gap-3 p-4">
             <div className="relative min-w-[220px] flex-1">
@@ -175,7 +213,7 @@ function SuppliersList() {
                     <TableCell dir="ltr" className="text-xs">{s.phone}</TableCell>
                     <TableCell className="text-xs font-mono">{s.preferred_currency}</TableCell>
                     <TableCell>{s.rating ? <span className="flex items-center gap-0.5 text-amber-500"><Star className="h-3 w-3 fill-current" />{Number(s.rating).toFixed(1)}</span> : <span className="text-muted-foreground">—</span>}</TableCell>
-                    <TableCell><StatusPill status={s.status} /></TableCell>
+                    <TableCell><StatusBadge status={s.status} /></TableCell>
                     <TableCell className="text-end">
                       <div className="flex justify-end gap-1">
                         <Button asChild variant="ghost" size="icon" title={t("actions.view")}>

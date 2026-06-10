@@ -14,10 +14,11 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { StatusPill } from "@/components/status-pill";
+import { StatusPill as StatusBadge } from "@/components/status-pill";
+import { KpiCard, StatusPill } from "@/components/list-toolkit";
 import { DataPagination } from "@/components/data-pagination";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import { Plus, Search, Eye, Pencil, Archive, RotateCcw, Trash2 } from "lucide-react";
+import { Plus, Search, Eye, Pencil, Archive, RotateCcw, Trash2, Users, UserCheck, UserX, CreditCard, Calendar } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/customers/")({
@@ -45,6 +46,23 @@ function CustomersList() {
 
   const dSearch = useDebounce(search, 300);
   const countries = useCountries();
+
+  const metrics = useQuery({
+    queryKey: ["customers-metrics"],
+    queryFn: async () => {
+      const { data } = await supabase.from("customers").select("status,credit_limit,created_at,deleted_at");
+      const rows = data ?? [];
+      const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0,0,0,0);
+      return {
+        total: rows.filter(r => !r.deleted_at).length,
+        active: rows.filter(r => r.status === "active" && !r.deleted_at).length,
+        inactive: rows.filter(r => r.status === "inactive" && !r.deleted_at).length,
+        archived: rows.filter(r => r.deleted_at).length,
+        withCredit: rows.filter(r => Number(r.credit_limit) > 0 && !r.deleted_at).length,
+        thisMonth: rows.filter(r => new Date(r.created_at) >= monthStart && !r.deleted_at).length,
+      };
+    },
+  });
 
   const list = useQuery({
     queryKey: ["customers", { dSearch, type, status, country, showArchived, page }],
@@ -102,6 +120,26 @@ function CustomersList() {
     <>
       <PageHeader title={t("customers.title")} subtitle={`${total} ${t("label.total")}`} actions={actions} />
       <div className="space-y-4 p-6">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          <KpiCard icon={Users} tone="primary" label={t("kpi.total")} value={metrics.data?.total ?? "—"}
+            active={status === "all" && !showArchived} onClick={() => { setStatus("all"); setShowArchived(false); setPage(1); }} />
+          <KpiCard icon={UserCheck} tone="success" label={t("kpi.active")} value={metrics.data?.active ?? "—"}
+            active={status === "active"} onClick={() => { setStatus("active"); setShowArchived(false); setPage(1); }} />
+          <KpiCard icon={UserX} tone="warning" label={t("kpi.inactive")} value={metrics.data?.inactive ?? "—"}
+            active={status === "inactive"} onClick={() => { setStatus("inactive"); setShowArchived(false); setPage(1); }} />
+          <KpiCard icon={Archive} tone="muted" label={t("kpi.archived")} value={metrics.data?.archived ?? "—"}
+            active={showArchived} onClick={() => { setShowArchived(true); setStatus("all"); setPage(1); }} />
+          <KpiCard icon={CreditCard} tone="info" label={t("kpi.with_credit")} value={metrics.data?.withCredit ?? "—"} />
+          <KpiCard icon={Calendar} tone="info" label={t("kpi.this_month")} value={metrics.data?.thisMonth ?? "—"} />
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <StatusPill label={t("filter.all")} tone="primary" active={type === "all"} onClick={() => { setType("all"); setPage(1); }} />
+          {TYPES.map(c => (
+            <StatusPill key={c} label={t(`ctype.${c}`)} tone="info" active={type === c} onClick={() => { setType(c); setPage(1); }} />
+          ))}
+        </div>
+
         <Card>
           <CardContent className="flex flex-wrap items-center gap-3 p-4">
             <div className="relative min-w-[220px] flex-1">
@@ -173,7 +211,7 @@ function CustomersList() {
                     <TableCell dir="ltr" className="text-xs">{c.email}</TableCell>
                     <TableCell dir="ltr" className="text-xs">{c.phone}</TableCell>
                     <TableCell className="text-xs">{c.country_code}</TableCell>
-                    <TableCell><StatusPill status={c.status} /></TableCell>
+                    <TableCell><StatusBadge status={c.status} /></TableCell>
                     <TableCell className="text-end">
                       <div className="flex justify-end gap-1">
                         <Button asChild variant="ghost" size="icon" title={t("actions.view")}>

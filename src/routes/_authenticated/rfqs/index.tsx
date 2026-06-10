@@ -107,18 +107,11 @@ function RfqList() {
         </div>
 
         <Card>
-          <CardContent className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 xl:grid-cols-5">
+          <CardContent className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 xl:grid-cols-4">
             <div className="relative">
               <Search className="absolute top-2.5 start-2 h-4 w-4 text-muted-foreground" />
               <Input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder={`${t("rfq.number")} / ${t("rfq.destination")}`} className="ps-8" />
             </div>
-            <Select value={customer} onValueChange={(v) => { setCustomer(v); setPage(1); }}>
-              <SelectTrigger className="w-full"><SelectValue placeholder={t("rfq.customer")} /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t("filter.all")}</SelectItem>
-                {customers.data?.map((c: any) => <SelectItem key={c.id} value={c.id}>{lang === "ar" ? (c.name_ar || c.name_en) : (c.name_en || c.name_ar)}</SelectItem>)}
-              </SelectContent>
-            </Select>
             <Select value={status} onValueChange={(v) => { setStatus(v); setPage(1); }}>
               <SelectTrigger className="w-full"><SelectValue placeholder={t("filter.status")} /></SelectTrigger>
               <SelectContent>
@@ -131,13 +124,14 @@ function RfqList() {
           </CardContent>
         </Card>
 
+
         <Card>
           <CardContent className="p-0 overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow className="whitespace-nowrap">
                   <TableHead>{t("rfq.number")}</TableHead>
-                  <TableHead>{t("rfq.customer")}</TableHead>
+                  <TableHead>{t("rfq.suppliers", "الموردون")}</TableHead>
                   <TableHead>{t("rfq.destination")}</TableHead>
                   <TableHead>{t("rfq.travel_start")}</TableHead>
                   <TableHead>{t("rfq.travel_end")}</TableHead>
@@ -153,7 +147,8 @@ function RfqList() {
                     <TableCell className="font-mono text-xs">
                       <Link to="/rfqs/$id" params={{ id: r.id }} className="hover:underline">{r.rfq_no}</Link>
                     </TableCell>
-                    <TableCell className="text-sm">{r.customer ? (lang === "ar" ? (r.customer.name_ar || r.customer.name_en) : (r.customer.name_en || r.customer.name_ar)) : "—"}</TableCell>
+                    <TableCell className="text-sm">{(r.supplier_requests ?? []).length > 0 ? (r.supplier_requests as any[]).map((sr: any) => lang === "ar" ? (sr.supplier?.name_ar || sr.supplier?.name_en) : (sr.supplier?.name_en || sr.supplier?.name_ar)).filter(Boolean).join("، ") : "—"}</TableCell>
+
                     <TableCell className="text-sm">{r.destination ?? "—"}</TableCell>
                     <TableCell dir="ltr" className="text-xs">{formatDate(r.travel_start, lang)}</TableCell>
                     <TableCell dir="ltr" className="text-xs">{formatDate(r.travel_end, lang)}</TableCell>

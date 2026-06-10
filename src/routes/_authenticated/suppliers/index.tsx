@@ -176,7 +176,7 @@ function SuppliersList() {
                     <TableCell dir="ltr" className="text-xs">{s.phone}</TableCell>
                     <TableCell className="text-xs font-mono">{s.preferred_currency}</TableCell>
                     <TableCell>{s.rating ? <span className="flex items-center gap-0.5 text-amber-500"><Star className="h-3 w-3 fill-current" />{Number(s.rating).toFixed(1)}</span> : <span className="text-muted-foreground">—</span>}</TableCell>
-                    <TableCell><StatusPill status={s.status} /></TableCell>
+                    <TableCell><StatusBadge status={s.status} /></TableCell>
                     <TableCell className="text-end">
                       <div className="flex justify-end gap-1">
                         <Button asChild variant="ghost" size="icon" title={t("actions.view")}>

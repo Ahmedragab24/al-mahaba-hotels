@@ -13,8 +13,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DataPagination } from "@/components/data-pagination";
-import { Plus, Search, Eye } from "lucide-react";
+import {
+  Plus, Search, Eye, X, CalendarCheck2, BedDouble, ClipboardList,
+  CheckCircle2, LogIn, CheckCheck, XCircle, DollarSign, FileText, Hotel,
+} from "lucide-react";
 import { formatDate } from "@/lib/format";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/bookings/")({
   component: BookingsList,
@@ -32,6 +36,44 @@ export function BkStatusBadge({ status, t }: { status: string; t: (k: string, f?
   return <Badge variant={variant as any} className={cls}>{t(`bkstatus.${status}`)}</Badge>;
 }
 
+type KpiTone = "primary" | "warning" | "success" | "info" | "muted" | "destructive";
+const TONE: Record<KpiTone, { bg: string; fg: string; ring: string }> = {
+  primary:     { bg: "bg-primary/10",       fg: "text-primary",        ring: "ring-primary/15" },
+  warning:     { bg: "bg-amber-500/10",     fg: "text-amber-600 dark:text-amber-400",  ring: "ring-amber-500/15" },
+  success:     { bg: "bg-emerald-500/10",   fg: "text-emerald-600 dark:text-emerald-400", ring: "ring-emerald-500/15" },
+  info:        { bg: "bg-sky-500/10",       fg: "text-sky-600 dark:text-sky-400",      ring: "ring-sky-500/15" },
+  muted:       { bg: "bg-muted",            fg: "text-muted-foreground",                ring: "ring-border" },
+  destructive: { bg: "bg-destructive/10",   fg: "text-destructive",                     ring: "ring-destructive/15" },
+};
+
+function KpiCard({ icon: Icon, label, value, tone = "muted", active, onClick }: {
+  icon: any; label: string; value: React.ReactNode; tone?: KpiTone; active?: boolean; onClick?: () => void;
+}) {
+  const T = TONE[tone];
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "group relative overflow-hidden rounded-xl border bg-card p-4 text-start transition-all",
+        "hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        active && "ring-2 ring-offset-1 ring-offset-background", active && T.ring.replace("ring-", "ring-"),
+      )}
+    >
+      <div className="flex items-center gap-3">
+        <div className={cn("grid h-10 w-10 shrink-0 place-items-center rounded-lg", T.bg, T.fg)}>
+          <Icon className="h-5 w-5" />
+        </div>
+        <div className="min-w-0">
+          <div className="truncate text-xs font-medium text-muted-foreground">{label}</div>
+          <div className="text-xl font-bold leading-tight">{value ?? "—"}</div>
+        </div>
+      </div>
+      <span className={cn("pointer-events-none absolute inset-x-0 bottom-0 h-0.5 origin-start scale-x-0 transition-transform group-hover:scale-x-100", T.fg.replace("text-", "bg-"))} />
+    </button>
+  );
+}
+
 function BookingsList() {
   const { t, lang } = useI18n();
   const auth = useAuth();
@@ -47,6 +89,9 @@ function BookingsList() {
   const [page, setPage] = useState(1);
   const dSearch = useDebounce(search, 300);
 
+  const filtersActive = !!(dSearch || customer !== "all" || status !== "all" || hotel !== "all" || from || to);
+  const resetAll = () => { setSearch(""); setCustomer("all"); setStatus("all"); setHotel("all"); setFrom(""); setTo(""); setPage(1); };
+
   const customers = useQuery({
     queryKey: ["lookup-customers"],
     queryFn: async () => (await supabase.from("customers").select("id,name_en,name_ar").is("deleted_at", null).order("name_en")).data ?? [],
@@ -56,7 +101,6 @@ function BookingsList() {
     queryFn: async () => (await supabase.from("hotels").select("id,name_en,name_ar").is("deleted_at", null).order("name_en")).data ?? [],
   });
 
-  // Booking KPIs
   const metrics = useQuery({
     queryKey: ["bookings-metrics"],
     queryFn: async () => {
@@ -64,7 +108,16 @@ function BookingsList() {
       const rows = data ?? [];
       const sum = rows.reduce((a, r: any) => a + (r.rooms ?? []).reduce((x: number, i: any) => x + Number(i.total_selling), 0), 0);
       const by = (...s: string[]) => rows.filter((r: any) => s.includes(r.status)).length;
-      return { total: rows.length, confirmed: by("confirmed"), inHouse: by("checked_in"), completed: by("checked_out"), cancelled: by("cancelled","no_show"), value: sum };
+      return {
+        total: rows.length,
+        draft: by("draft"),
+        pending: by("pending_confirmation"),
+        confirmed: by("confirmed"),
+        inHouse: by("checked_in"),
+        completed: by("checked_out"),
+        cancelled: by("cancelled","no_show"),
+        value: sum,
+      };
     },
   });
 
@@ -78,7 +131,7 @@ function BookingsList() {
         if (ids.length === 0) return { rows: [], count: 0 };
       }
       let q = supabase.from("bookings").select(
-        "id,booking_no,status,currency,booking_date,quotation_id,created_by,customer:customers(name_en,name_ar),rooms:booking_rooms(total_selling,check_in)",
+        "id,booking_no,status,currency,booking_date,quotation_id,created_by,customer:customers(name_en,name_ar),rooms:booking_rooms(total_selling,check_in,check_out,hotel:hotels(name_en,name_ar))",
         { count: "exact" },
       ).is("deleted_at", null);
       if (ids) q = q.in("id", ids);
@@ -98,29 +151,71 @@ function BookingsList() {
   const total = list.data?.count ?? 0;
   const fmt = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 0 });
   const actions = useMemo(() => canWrite && (
-    <Button size="sm" onClick={() => navigate({ to: "/bookings/new" })}><Plus className="h-4 w-4" /> {t("bk.new")}</Button>
+    <Button size="sm" onClick={() => navigate({ to: "/bookings/new" })}>
+      <Plus className="h-4 w-4" /> {t("bk.new")}
+    </Button>
   ), [canWrite, navigate, t]);
+
+  const setStatusAndReset = (s: string) => { setStatus(s); setPage(1); };
+
+  const quickFilters: { key: string; label: string; count?: number; tone: KpiTone }[] = [
+    { key: "all",                   label: t("filter.all"),                    count: metrics.data?.total,     tone: "primary" },
+    { key: "draft",                 label: t("bkstatus.draft"),                count: metrics.data?.draft,     tone: "muted" },
+    { key: "pending_confirmation",  label: t("bkstatus.pending_confirmation"), count: metrics.data?.pending,   tone: "warning" },
+    { key: "confirmed",             label: t("bkstatus.confirmed"),            count: metrics.data?.confirmed, tone: "success" },
+    { key: "checked_in",            label: t("bkstatus.checked_in"),           count: metrics.data?.inHouse,   tone: "info" },
+    { key: "checked_out",           label: t("bkstatus.checked_out"),          count: metrics.data?.completed, tone: "muted" },
+    { key: "cancelled",             label: t("bkstatus.cancelled"),            count: metrics.data?.cancelled, tone: "destructive" },
+  ];
 
   return (
     <>
-      <PageHeader title={t("bk.title")} subtitle={`${total} ${t("label.total")}`} actions={actions} />
-      <div className="space-y-4 p-6">
+      <PageHeader
+        title={t("bk.title")}
+        subtitle={`${total} ${t("label.total")}`}
+        actions={actions}
+      />
+      <div className="space-y-5 p-4 sm:p-6">
+        {/* KPI cards */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          {[
-            [t("bk.kpi.total"), metrics.data?.total],
-            [t("bk.kpi.confirmed"), metrics.data?.confirmed],
-            [t("bk.kpi.in_house"), metrics.data?.inHouse],
-            [t("bk.kpi.completed"), metrics.data?.completed],
-            [t("bk.kpi.cancelled"), metrics.data?.cancelled],
-            [t("bk.kpi.value"), metrics.data ? fmt(metrics.data.value) : undefined],
-          ].map(([label, val], i) => (
-            <Card key={i}><CardContent className="p-4">
-              <div className="text-xs text-muted-foreground">{label as string}</div>
-              <div className="text-xl font-bold">{val ?? "—"}</div>
-            </CardContent></Card>
-          ))}
+          <KpiCard icon={ClipboardList}  tone="primary"     label={t("bk.kpi.total")}     value={metrics.data?.total}     active={status==="all"}                  onClick={() => setStatusAndReset("all")} />
+          <KpiCard icon={CheckCircle2}   tone="success"     label={t("bk.kpi.confirmed")} value={metrics.data?.confirmed} active={status==="confirmed"}            onClick={() => setStatusAndReset("confirmed")} />
+          <KpiCard icon={LogIn}          tone="info"        label={t("bk.kpi.in_house")}  value={metrics.data?.inHouse}   active={status==="checked_in"}           onClick={() => setStatusAndReset("checked_in")} />
+          <KpiCard icon={CheckCheck}     tone="muted"       label={t("bk.kpi.completed")} value={metrics.data?.completed} active={status==="checked_out"}          onClick={() => setStatusAndReset("checked_out")} />
+          <KpiCard icon={XCircle}        tone="destructive" label={t("bk.kpi.cancelled")} value={metrics.data?.cancelled} active={status==="cancelled"}            onClick={() => setStatusAndReset("cancelled")} />
+          <KpiCard icon={DollarSign}     tone="warning"     label={t("bk.kpi.value")}     value={metrics.data ? fmt(metrics.data.value) : undefined} />
         </div>
 
+        {/* Quick status pills */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-medium text-muted-foreground">{t("bk.filter.quick")}:</span>
+          {quickFilters.map((q) => {
+            const T = TONE[q.tone];
+            const active = status === q.key;
+            return (
+              <button
+                key={q.key}
+                onClick={() => setStatusAndReset(q.key)}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-all",
+                  active
+                    ? cn(T.bg, T.fg, "border-transparent shadow-sm")
+                    : "border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
+              >
+                <span>{q.label}</span>
+                {q.count !== undefined && (
+                  <span className={cn(
+                    "rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums",
+                    active ? "bg-background/60" : "bg-muted"
+                  )}>{q.count}</span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Filters */}
         <Card>
           <CardContent className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 xl:grid-cols-4">
             <div className="relative">
@@ -134,13 +229,6 @@ function BookingsList() {
                 {customers.data?.map((c: any) => <SelectItem key={c.id} value={c.id}>{lang === "ar" ? (c.name_ar || c.name_en) : (c.name_en || c.name_ar)}</SelectItem>)}
               </SelectContent>
             </Select>
-            <Select value={status} onValueChange={(v) => { setStatus(v); setPage(1); }}>
-              <SelectTrigger className="w-full"><SelectValue placeholder={t("filter.status")} /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t("filter.all")}</SelectItem>
-                {BK_STATUSES.map((s) => <SelectItem key={s} value={s}>{t(`bkstatus.${s}`)}</SelectItem>)}
-              </SelectContent>
-            </Select>
             <Select value={hotel} onValueChange={(v) => { setHotel(v); setPage(1); }}>
               <SelectTrigger className="w-full"><SelectValue placeholder={t("quotes.items.hotel")} /></SelectTrigger>
               <SelectContent>
@@ -148,41 +236,129 @@ function BookingsList() {
                 {hotels.data?.map((h: any) => <SelectItem key={h.id} value={h.id}>{lang === "ar" ? (h.name_ar || h.name_en) : (h.name_en || h.name_ar)}</SelectItem>)}
               </SelectContent>
             </Select>
-            <Input type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} className="w-full" />
-            <Input type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} className="w-full" />
+            <div className="grid grid-cols-2 gap-2">
+              <Input type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} className="w-full" />
+              <Input type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} className="w-full" />
+            </div>
+            {filtersActive && (
+              <div className="sm:col-span-2 xl:col-span-4 flex justify-end">
+                <Button variant="ghost" size="sm" onClick={resetAll}>
+                  <X className="h-4 w-4" /> {t("actions.reset")}
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
 
+        {/* Table */}
         <Card>
           <CardContent className="p-0 overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="whitespace-nowrap">
+                <TableRow className="whitespace-nowrap bg-muted/40 hover:bg-muted/40">
                   <TableHead>{t("bk.number")}</TableHead>
                   <TableHead>{t("bk.customer")}</TableHead>
-                  <TableHead>{t("bk.booking_date")}</TableHead>
+                  <TableHead>{t("bk.col.hotels")}</TableHead>
+                  <TableHead>{t("bk.col.checkin")}</TableHead>
+                  <TableHead className="text-center">{t("bk.col.nights")}</TableHead>
                   <TableHead>{t("bk.source")}</TableHead>
-                  <TableHead>{t("bk.value")}</TableHead>
+                  <TableHead className="text-end">{t("bk.value")}</TableHead>
                   <TableHead>{t("label.status")}</TableHead>
                   <TableHead className="text-end">{t("label.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {list.isLoading && <TableRow><TableCell colSpan={7} className="py-10 text-center text-muted-foreground">{t("label.loading")}</TableCell></TableRow>}
-                {!list.isLoading && (list.data?.rows.length ?? 0) === 0 && <TableRow><TableCell colSpan={7} className="py-10 text-center text-muted-foreground">{t("label.no_results")}</TableCell></TableRow>}
+                {list.isLoading && (
+                  <TableRow><TableCell colSpan={9} className="py-10 text-center text-muted-foreground">{t("label.loading")}</TableCell></TableRow>
+                )}
+                {!list.isLoading && (list.data?.rows.length ?? 0) === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={9} className="py-16">
+                      <div className="mx-auto flex max-w-sm flex-col items-center gap-3 text-center">
+                        <div className="grid h-14 w-14 place-items-center rounded-full bg-muted text-muted-foreground">
+                          <CalendarCheck2 className="h-7 w-7" />
+                        </div>
+                        <div className="text-sm font-medium">{t("label.no_results")}</div>
+                        <div className="text-xs text-muted-foreground">{t("bk.no_results_hint")}</div>
+                        {filtersActive && (
+                          <Button variant="outline" size="sm" onClick={resetAll}>
+                            <X className="h-4 w-4" /> {t("actions.reset")}
+                          </Button>
+                        )}
+                        {!filtersActive && canWrite && (
+                          <Button size="sm" onClick={() => navigate({ to: "/bookings/new" })}>
+                            <Plus className="h-4 w-4" /> {t("bk.new")}
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )}
                 {list.data?.rows.map((b: any) => {
                   const value = (b.rooms ?? []).reduce((a: number, i: any) => a + Number(i.total_selling), 0);
+                  const earliestCheckIn = (b.rooms ?? [])
+                    .map((r: any) => r.check_in).filter(Boolean).sort()[0];
+                  const latestCheckOut = (b.rooms ?? [])
+                    .map((r: any) => r.check_out).filter(Boolean).sort().slice(-1)[0];
+                  const nights = earliestCheckIn && latestCheckOut
+                    ? Math.max(0, Math.round((new Date(latestCheckOut).getTime() - new Date(earliestCheckIn).getTime()) / 86400000))
+                    : null;
+                  const hotelNames = Array.from(new Set(
+                    (b.rooms ?? [])
+                      .map((r: any) => r.hotel ? (lang === "ar" ? (r.hotel.name_ar || r.hotel.name_en) : (r.hotel.name_en || r.hotel.name_ar)) : null)
+                      .filter(Boolean)
+                  ));
                   return (
-                    <TableRow key={b.id} className="whitespace-nowrap">
+                    <TableRow
+                      key={b.id}
+                      className="whitespace-nowrap cursor-pointer hover:bg-muted/50"
+                      onClick={() => navigate({ to: "/bookings/$id", params: { id: b.id } })}
+                    >
                       <TableCell className="font-mono text-xs">
-                        <Link to="/bookings/$id" params={{ id: b.id }} className="hover:underline">{b.booking_no}</Link>
+                        <Link to="/bookings/$id" params={{ id: b.id }} className="text-primary hover:underline" onClick={(e) => e.stopPropagation()}>
+                          {b.booking_no}
+                        </Link>
                       </TableCell>
-                      <TableCell className="text-sm">{b.customer ? (lang === "ar" ? (b.customer.name_ar || b.customer.name_en) : (b.customer.name_en || b.customer.name_ar)) : "—"}</TableCell>
-                      <TableCell dir="ltr" className="text-xs">{formatDate(b.booking_date, lang)}</TableCell>
-                      <TableCell className="text-xs">{b.quotation_id ? t("bk.source_quotation") : t("bk.source_direct")}</TableCell>
-                      <TableCell dir="ltr" className="text-xs">{fmt(value)} {b.currency}</TableCell>
+                      <TableCell className="text-sm font-medium">
+                        {b.customer ? (lang === "ar" ? (b.customer.name_ar || b.customer.name_en) : (b.customer.name_en || b.customer.name_ar)) : "—"}
+                      </TableCell>
+                      <TableCell className="text-xs max-w-[220px]">
+                        {hotelNames.length === 0 ? (
+                          <span className="text-muted-foreground">—</span>
+                        ) : (
+                          <div className="flex items-center gap-1.5 truncate">
+                            <Hotel className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                            <span className="truncate" title={hotelNames.join(", ")}>
+                              {hotelNames[0]}
+                              {hotelNames.length > 1 && <span className="text-muted-foreground"> +{hotelNames.length - 1}</span>}
+                            </span>
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell dir="ltr" className="text-xs">
+                        {earliestCheckIn ? formatDate(earliestCheckIn, lang) : <span className="text-muted-foreground">—</span>}
+                      </TableCell>
+                      <TableCell className="text-center text-xs">
+                        {nights !== null ? (
+                          <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 font-medium">
+                            <BedDouble className="h-3 w-3" /> {nights}
+                          </span>
+                        ) : <span className="text-muted-foreground">—</span>}
+                      </TableCell>
+                      <TableCell className="text-xs">
+                        {b.quotation_id ? (
+                          <span className="inline-flex items-center gap-1 text-muted-foreground">
+                            <FileText className="h-3.5 w-3.5" /> {t("bk.source_quotation")}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">{t("bk.source_direct")}</span>
+                        )}
+                      </TableCell>
+                      <TableCell dir="ltr" className="text-end text-xs font-semibold tabular-nums">
+                        {fmt(value)} <span className="text-muted-foreground font-normal">{b.currency}</span>
+                      </TableCell>
                       <TableCell><BkStatusBadge status={b.status} t={t} /></TableCell>
-                      <TableCell className="text-end">
+                      <TableCell className="text-end" onClick={(e) => e.stopPropagation()}>
                         <Button asChild variant="ghost" size="icon" title={t("actions.view")}>
                           <Link to="/bookings/$id" params={{ id: b.id }}><Eye className="h-4 w-4" /></Link>
                         </Button>

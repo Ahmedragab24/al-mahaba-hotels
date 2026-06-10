@@ -34,7 +34,8 @@ const PATH_DESC: Array<[string, string]> = [
 
 function lookupKey(pathname: string): string | undefined {
   if (pathname === "/" || pathname === "") return "pagedesc.dashboard";
-  const match = PATH_DESC.sort((a, b) => b[0].length - a[0].length).find(([p]) => pathname === p || pathname.startsWith(p + "/"));
+  // only show auto descriptions on top-level list pages (not on detail/new sub-routes)
+  const match = PATH_DESC.sort((a, b) => b[0].length - a[0].length).find(([p]) => pathname === p);
   return match?.[1];
 }
 
@@ -56,13 +57,15 @@ export function PageHeader({
   const desc = description ?? (autoDesc && autoDesc !== autoKey ? autoDesc : undefined);
 
   return (
-    <div className="flex flex-col gap-2 border-b bg-background/60 px-6 py-5 sm:flex-row sm:items-start sm:justify-between">
-      <div className="min-w-0 flex-1">
-        <h1 className="text-2xl font-semibold text-foreground">{title}</h1>
-        {subtitle && <p className="text-base text-muted-foreground">{subtitle}</p>}
-        {desc && <p className="mt-1 max-w-3xl text-sm text-muted-foreground/90">{desc}</p>}
+    <div className="flex flex-col gap-3 border-b bg-background/60 px-6 py-5">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0 flex-1">
+          <h1 className="break-words text-2xl font-semibold leading-tight text-foreground">{title}</h1>
+          {subtitle && <p className="mt-1 break-words text-base text-muted-foreground">{subtitle}</p>}
+          {desc && <p className="mt-1 max-w-3xl text-sm text-muted-foreground/90">{desc}</p>}
+        </div>
+        {actions && <div className="flex flex-wrap items-center gap-2 lg:shrink-0 lg:justify-end">{actions}</div>}
       </div>
-      {actions && <div className="flex flex-wrap items-center gap-3">{actions}</div>}
     </div>
   );
 }

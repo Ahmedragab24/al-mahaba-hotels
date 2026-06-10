@@ -60,6 +60,7 @@ export function RateForm({ initial, onSaved }: { initial?: any; onSaved: (id: st
     resolver: zodResolver(schema),
     defaultValues: {
       hotel_id: initial?.hotel_id ?? "",
+      is_direct: initial?.is_direct ?? false,
       supplier_id: initial?.supplier_id ?? "",
       contract_id: initial?.contract_id ?? "",
       room_type_id: initial?.room_type_id ?? "",
@@ -84,6 +85,7 @@ export function RateForm({ initial, onSaved }: { initial?: any; onSaved: (id: st
 
   const hotelId = form.watch("hotel_id");
   const supplierId = form.watch("supplier_id");
+  const isDirect = form.watch("is_direct");
   const roomTypes = useHotelRoomTypes(hotelId || null);
   const views = useHotelViews(hotelId || null);
   const contracts = useSupplierContracts(supplierId || null);
@@ -95,7 +97,23 @@ export function RateForm({ initial, onSaved }: { initial?: any; onSaved: (id: st
        "notes_en", "notes_ar", "cancellation_policy_en", "cancellation_policy_ar"].forEach((k) => {
         if (clean[k] === "" || clean[k] === undefined) clean[k] = null;
       });
+      if (clean.is_direct) {
+        clean.supplier_id = null;
+        clean.contract_id = null;
+      } else if (clean.supplier_id === "") {
+        clean.supplier_id = null;
+      }
       if (initial?.id) {
+        // Approved rates → create a new draft version via RPC
+        if (initial.status === "approved") {
+          const { data, error } = await supabase.rpc("create_rate_version", {
+            _rate_id: initial.id,
+            _changes: clean as any,
+          });
+          if (error) throw error;
+          toast.info(t("rates.versioned_saved"));
+          return data as string;
+        }
         const { error } = await supabase.from("rates").update(clean).eq("id", initial.id);
         if (error) throw error;
         return initial.id as string;

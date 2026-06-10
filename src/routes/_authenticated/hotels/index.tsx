@@ -204,7 +204,7 @@ function HotelsList() {
                   />
                   <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-foreground/60 to-transparent" />
                   <div className="absolute top-3 start-3 flex items-center gap-2">
-                    <StatusPill status={h.status} />
+                    <StatusBadge status={h.status} />
                   </div>
                   {h.star_rating ? (
                     <Badge className="absolute top-3 end-3 gap-1 bg-card/90 text-amber-500 shadow backdrop-blur hover:bg-card/90">

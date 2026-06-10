@@ -40,15 +40,6 @@ const DEMO_ROLES = [
 
 const DEFAULT_DOMAIN = "uat-hrs.sa";
 
-/** Normalize Arabic-Indic digits to Latin and expand bare usernames to full emails. */
-function normalizeEmail(raw: string): string {
-  const latin = raw
-    .trim()
-    .replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660))
-    .replace(/[\u06F0-\u06F9]/g, (d) => String(d.charCodeAt(0) - 0x06F0));
-  if (!latin) return latin;
-  return latin.includes("@") ? latin.toLowerCase() : `${latin.toLowerCase()}@${DEFAULT_DOMAIN}`;
-}
 
 function normalizeDigits(raw: string): string {
   return raw

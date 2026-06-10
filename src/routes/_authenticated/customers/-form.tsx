@@ -140,20 +140,24 @@ export function CustomerForm({ initial, onSaved }: { initial?: any; onSaved: (id
               </Select><FormMessage /></FormItem>
           )} />
           <FormField control={form.control} name="name_en" render={({ field }) => (
-            <FormItem><FormLabel>{t("label.name_en")} *</FormLabel><FormControl><Input {...field} dir="ltr" /></FormControl><FormMessage /></FormItem>
+            <FormItem><FormLabel>{t(isIndividual ? "label.personal_name_en" : "label.name_en")} *</FormLabel><FormControl><Input {...field} dir="ltr" /></FormControl><FormMessage /></FormItem>
           )} />
           <FormField control={form.control} name="name_ar" render={({ field }) => (
-            <FormItem><FormLabel>{t("label.name_ar")} *</FormLabel><FormControl><Input {...field} dir="rtl" /></FormControl><FormMessage /></FormItem>
+            <FormItem><FormLabel>{t(isIndividual ? "label.personal_name_ar" : "label.name_ar")} *</FormLabel><FormControl><Input {...field} dir="rtl" /></FormControl><FormMessage /></FormItem>
           )} />
-          <FormField control={form.control} name="legal_name" render={({ field }) => (
-            <FormItem><FormLabel>{t("label.name")}</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-          )} />
-          <FormField control={form.control} name="tax_number" render={({ field }) => (
-            <FormItem><FormLabel>{t("label.tax_number")}</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-          )} />
-          <FormField control={form.control} name="commercial_registration" render={({ field }) => (
-            <FormItem><FormLabel>{t("label.cr")}</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-          )} />
+          {!isIndividual && (
+            <>
+              <FormField control={form.control} name="legal_name" render={({ field }) => (
+                <FormItem><FormLabel>{t("label.name")}</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+              )} />
+              <FormField control={form.control} name="tax_number" render={({ field }) => (
+                <FormItem><FormLabel>{t("label.tax_number")}</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+              )} />
+              <FormField control={form.control} name="commercial_registration" render={({ field }) => (
+                <FormItem><FormLabel>{t("label.cr")}</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+              )} />
+            </>
+          )}
           <FormField control={form.control} name="rating" render={({ field }) => (
             <FormItem><FormLabel>{t("label.rating")} (1-5)</FormLabel>
               <FormControl><Input type="number" min={1} max={5} {...field} value={field.value ?? ""} onChange={e => field.onChange(e.target.value === "" ? null : Number(e.target.value))} /></FormControl><FormMessage /></FormItem>

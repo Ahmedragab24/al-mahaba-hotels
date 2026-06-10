@@ -48,9 +48,17 @@ export const ensureDemoUsers = createServerFn({ method: "POST" }).handler(async 
     if (!user) continue;
 
     // Ensure profile row
-    await supabaseAdmin
-      .from("profiles")
-      .upsert({ id: user.id, display_name: role }, { onConflict: "id" });
+    await supabaseAdmin.from("profiles").upsert(
+      {
+        id: user.id,
+        email,
+        username: role,
+        full_name_ar: role,
+        full_name_en: role,
+        must_change_password: false,
+      },
+      { onConflict: "id" },
+    );
 
     // Ensure role row
     await supabaseAdmin

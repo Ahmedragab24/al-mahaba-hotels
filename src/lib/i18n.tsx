@@ -774,6 +774,7 @@ export const dict: Dict = {
   "quotes.print.valid_until": { ar: "صالح حتى", en: "Valid Until" },
   "quotes.print.notes": { ar: "ملاحظات", en: "Notes" },
   "quotes.print.footer": { ar: "شكرًا لتعاملكم معنا. هذا العرض صالح حتى التاريخ المذكور أعلاه.", en: "Thank you for your business. This quotation is valid until the date stated above." },
+  "quotes.expiring_soon": { ar: "عروض ستنتهي صلاحيتها خلال 7 أيام", en: "quotations expiring within 7 days" },
   "quotes.items.contract": { ar: "العقد", en: "Contract" },
   "quotes.items.room_type": { ar: "نوع الغرفة", en: "Room Type" },
   "quotes.items.season": { ar: "الموسم", en: "Season" },

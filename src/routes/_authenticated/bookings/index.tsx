@@ -18,7 +18,7 @@ import {
   CheckCircle2, LogIn, CheckCheck, XCircle, DollarSign, FileText, Hotel,
 } from "lucide-react";
 import { formatDate } from "@/lib/format";
-import { cn } from "@/lib/utils";
+import { KpiCard, StatusPill, type KpiTone } from "@/components/list-toolkit";
 
 export const Route = createFileRoute("/_authenticated/bookings/")({
   component: BookingsList,
@@ -36,43 +36,6 @@ export function BkStatusBadge({ status, t }: { status: string; t: (k: string, f?
   return <Badge variant={variant as any} className={cls}>{t(`bkstatus.${status}`)}</Badge>;
 }
 
-type KpiTone = "primary" | "warning" | "success" | "info" | "muted" | "destructive";
-const TONE: Record<KpiTone, { bg: string; fg: string; ring: string }> = {
-  primary:     { bg: "bg-primary/10",       fg: "text-primary",        ring: "ring-primary/15" },
-  warning:     { bg: "bg-amber-500/10",     fg: "text-amber-600 dark:text-amber-400",  ring: "ring-amber-500/15" },
-  success:     { bg: "bg-emerald-500/10",   fg: "text-emerald-600 dark:text-emerald-400", ring: "ring-emerald-500/15" },
-  info:        { bg: "bg-sky-500/10",       fg: "text-sky-600 dark:text-sky-400",      ring: "ring-sky-500/15" },
-  muted:       { bg: "bg-muted",            fg: "text-muted-foreground",                ring: "ring-border" },
-  destructive: { bg: "bg-destructive/10",   fg: "text-destructive",                     ring: "ring-destructive/15" },
-};
-
-function KpiCard({ icon: Icon, label, value, tone = "muted", active, onClick }: {
-  icon: any; label: string; value: React.ReactNode; tone?: KpiTone; active?: boolean; onClick?: () => void;
-}) {
-  const T = TONE[tone];
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "group relative overflow-hidden rounded-xl border bg-card p-4 text-start transition-all",
-        "hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        active && "ring-2 ring-offset-1 ring-offset-background", active && T.ring.replace("ring-", "ring-"),
-      )}
-    >
-      <div className="flex items-center gap-3">
-        <div className={cn("grid h-10 w-10 shrink-0 place-items-center rounded-lg", T.bg, T.fg)}>
-          <Icon className="h-5 w-5" />
-        </div>
-        <div className="min-w-0">
-          <div className="truncate text-xs font-medium text-muted-foreground">{label}</div>
-          <div className="text-xl font-bold leading-tight">{value ?? "—"}</div>
-        </div>
-      </div>
-      <span className={cn("pointer-events-none absolute inset-x-0 bottom-0 h-0.5 origin-start scale-x-0 transition-transform group-hover:scale-x-100", T.fg.replace("text-", "bg-"))} />
-    </button>
-  );
-}
 
 function BookingsList() {
   const { t, lang } = useI18n();
@@ -189,30 +152,9 @@ function BookingsList() {
         {/* Quick status pills */}
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs font-medium text-muted-foreground">{t("bk.filter.quick")}:</span>
-          {quickFilters.map((q) => {
-            const T = TONE[q.tone];
-            const active = status === q.key;
-            return (
-              <button
-                key={q.key}
-                onClick={() => setStatusAndReset(q.key)}
-                className={cn(
-                  "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-all",
-                  active
-                    ? cn(T.bg, T.fg, "border-transparent shadow-sm")
-                    : "border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground"
-                )}
-              >
-                <span>{q.label}</span>
-                {q.count !== undefined && (
-                  <span className={cn(
-                    "rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums",
-                    active ? "bg-background/60" : "bg-muted"
-                  )}>{q.count}</span>
-                )}
-              </button>
-            );
-          })}
+          {quickFilters.map((q) => (
+            <StatusPill key={q.key} label={q.label} count={q.count} tone={q.tone} active={status === q.key} onClick={() => setStatusAndReset(q.key)} />
+          ))}
         </div>
 
         {/* Filters */}

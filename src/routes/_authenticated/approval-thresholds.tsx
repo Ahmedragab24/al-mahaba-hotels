@@ -184,15 +184,15 @@ function ThresholdDialog({
 
   const save = useMutation({
     mutationFn: async () => {
+      if (!form.entity_type || !form.currency) throw new Error(t("label.required"));
       const payload = {
-        entity_type: form.entity_type,
-        currency: form.currency,
+        entity_type: form.entity_type as EntityType,
+        currency: form.currency as string,
         amount: Number(form.amount ?? 0),
         requires_second_approver: form.requires_second_approver ?? true,
         notes: form.notes ?? null,
         is_active: form.is_active ?? true,
       };
-      if (!payload.entity_type || !payload.currency) throw new Error(t("label.required"));
       if (isEdit) {
         const { error } = await supabase.from("approval_thresholds").update(payload).eq("id", initial!.id!);
         if (error) throw error;

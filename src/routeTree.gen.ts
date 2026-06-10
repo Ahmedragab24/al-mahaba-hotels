@@ -15,6 +15,7 @@ import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedUsersRouteImport } from './routes/_authenticated/users'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedAuditRouteImport } from './routes/_authenticated/audit'
+import { Route as AuthenticatedApprovalThresholdsRouteImport } from './routes/_authenticated/approval-thresholds'
 import { Route as AuthenticatedTaxesIndexRouteImport } from './routes/_authenticated/taxes/index'
 import { Route as AuthenticatedSuppliersIndexRouteImport } from './routes/_authenticated/suppliers/index'
 import { Route as AuthenticatedSeasonsIndexRouteImport } from './routes/_authenticated/seasons/index'
@@ -85,6 +86,12 @@ const AuthenticatedAuditRoute = AuthenticatedAuditRouteImport.update({
   path: '/audit',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedApprovalThresholdsRoute =
+  AuthenticatedApprovalThresholdsRouteImport.update({
+    id: '/approval-thresholds',
+    path: '/approval-thresholds',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedTaxesIndexRoute = AuthenticatedTaxesIndexRouteImport.update({
   id: '/taxes/',
   path: '/taxes/',
@@ -315,6 +322,7 @@ const AuthenticatedBookingsIdRoute = AuthenticatedBookingsIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/auth': typeof AuthRoute
+  '/approval-thresholds': typeof AuthenticatedApprovalThresholdsRoute
   '/audit': typeof AuthenticatedAuditRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/users': typeof AuthenticatedUsersRoute
@@ -361,6 +369,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
+  '/approval-thresholds': typeof AuthenticatedApprovalThresholdsRoute
   '/audit': typeof AuthenticatedAuditRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/users': typeof AuthenticatedUsersRoute
@@ -410,6 +419,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_authenticated/approval-thresholds': typeof AuthenticatedApprovalThresholdsRoute
   '/_authenticated/audit': typeof AuthenticatedAuditRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/users': typeof AuthenticatedUsersRoute
@@ -460,6 +470,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/approval-thresholds'
     | '/audit'
     | '/settings'
     | '/users'
@@ -506,6 +517,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/auth'
+    | '/approval-thresholds'
     | '/audit'
     | '/settings'
     | '/users'
@@ -554,6 +566,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_authenticated'
     | '/auth'
+    | '/_authenticated/approval-thresholds'
     | '/_authenticated/audit'
     | '/_authenticated/settings'
     | '/_authenticated/users'
@@ -647,6 +660,13 @@ declare module '@tanstack/react-router' {
       path: '/audit'
       fullPath: '/audit'
       preLoaderRoute: typeof AuthenticatedAuditRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/approval-thresholds': {
+      id: '/_authenticated/approval-thresholds'
+      path: '/approval-thresholds'
+      fullPath: '/approval-thresholds'
+      preLoaderRoute: typeof AuthenticatedApprovalThresholdsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/taxes/': {
@@ -933,6 +953,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedApprovalThresholdsRoute: typeof AuthenticatedApprovalThresholdsRoute
   AuthenticatedAuditRoute: typeof AuthenticatedAuditRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedUsersRoute: typeof AuthenticatedUsersRoute
@@ -980,6 +1001,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedApprovalThresholdsRoute: AuthenticatedApprovalThresholdsRoute,
   AuthenticatedAuditRoute: AuthenticatedAuditRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedUsersRoute: AuthenticatedUsersRoute,

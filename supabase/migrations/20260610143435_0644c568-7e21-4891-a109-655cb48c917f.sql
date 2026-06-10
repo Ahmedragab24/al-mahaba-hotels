@@ -1,0 +1,2 @@
+ALTER TABLE public.rates ADD COLUMN IF NOT EXISTS is_simulated BOOLEAN NOT NULL DEFAULT false;
+CREATE INDEX IF NOT EXISTS idx_rates_is_simulated ON public.rates(is_simulated) WHERE is_simulated = true;

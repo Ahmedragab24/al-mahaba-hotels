@@ -32,6 +32,7 @@ export const getSimulationSettings = createServerFn({ method: "GET" })
       "invoices",
       "receipts",
       "supplier_payments",
+      "rates",
     ]) {
       const { count } = await supabaseAdmin
         .from(table as any)
@@ -90,6 +91,7 @@ export const purgeSimulatedData = createServerFn({ method: "POST" })
       "bookings",
       "quotations",
       "rfqs",
+      "rates",
       "customers",
       "suppliers",
     ]) {

@@ -13,8 +13,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DataPagination } from "@/components/data-pagination";
-import { Plus, Search, Eye } from "lucide-react";
+import {
+  Plus, Search, Eye, X, FileText, Clock, CheckCircle2, ThumbsUp, XCircle, DollarSign,
+  CalendarClock, AlertTriangle,
+} from "lucide-react";
 import { formatDate, formatDateTime } from "@/lib/format";
+import { cn } from "@/lib/utils";
+import { KpiCard, StatusPill, type KpiTone } from "@/components/list-toolkit";
 
 export const Route = createFileRoute("/_authenticated/quotations/")({
   component: QuotationsList,
@@ -47,6 +52,10 @@ function QuotationsList() {
   const [page, setPage] = useState(1);
   const dSearch = useDebounce(search, 300);
 
+  const filtersActive = !!(dSearch || customer !== "all" || status !== "all" || hotel !== "all" || creator !== "all" || from || to);
+  const resetAll = () => { setSearch(""); setCustomer("all"); setStatus("all"); setHotel("all"); setCreator("all"); setFrom(""); setTo(""); setPage(1); };
+  const setStatusAndReset = (s: string) => { setStatus(s); setPage(1); };
+
   const customers = useQuery({
     queryKey: ["lookup-customers"],
     queryFn: async () => (await supabase.from("customers").select("id,name_en,name_ar").is("deleted_at", null).order("name_en")).data ?? [],
@@ -63,11 +72,25 @@ function QuotationsList() {
   const metrics = useQuery({
     queryKey: ["quotes-metrics"],
     queryFn: async () => {
-      const { data } = await supabase.from("quotations").select("status, items:quotation_items(total_selling)").is("deleted_at", null);
+      const { data } = await supabase.from("quotations").select("status, expiry_date, items:quotation_items(total_selling)").is("deleted_at", null);
       const rows = data ?? [];
       const sum = rows.reduce((a, r: any) => a + (r.items ?? []).reduce((x: number, i: any) => x + Number(i.total_selling), 0), 0);
-      const by = (s: string) => rows.filter((r: any) => r.status === s).length;
-      return { total: rows.length, pending: by("pending_approval"), approved: by("approved"), accepted: by("accepted"), rejected: by("rejected"), value: sum };
+      const by = (...s: string[]) => rows.filter((r: any) => s.includes(r.status)).length;
+      const today = new Date().toISOString().slice(0,10);
+      const in7 = new Date(Date.now() + 7*86400000).toISOString().slice(0,10);
+      const expiringSoon = rows.filter((r: any) => r.status === "sent" && r.expiry_date && r.expiry_date >= today && r.expiry_date <= in7).length;
+      return {
+        total: rows.length,
+        draft: by("draft"),
+        pending: by("pending_approval"),
+        approved: by("approved"),
+        sent: by("sent"),
+        accepted: by("accepted"),
+        rejected: by("rejected","cancelled"),
+        expired: by("expired"),
+        expiringSoon,
+        value: sum,
+      };
     },
   });
 
@@ -103,29 +126,64 @@ function QuotationsList() {
   const fmt = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 0 });
   const creatorName = (id: string | null) => creators.data?.find((p: any) => p.id === id)?.email ?? "—";
   const actions = useMemo(() => canWrite && (
-    <Button size="sm" onClick={() => navigate({ to: "/quotations/new" })}><Plus className="h-4 w-4" /> {t("quotes.new")}</Button>
+    <Button size="sm" onClick={() => navigate({ to: "/quotations/new" })}>
+      <Plus className="h-4 w-4" /> {t("quotes.new")}
+    </Button>
   ), [canWrite, navigate, t]);
+
+  const quickFilters: { key: string; label: string; count?: number; tone: KpiTone }[] = [
+    { key: "all",              label: t("filter.all"),              count: metrics.data?.total,    tone: "primary" },
+    { key: "draft",            label: t("qstatus.draft"),           count: metrics.data?.draft,    tone: "muted" },
+    { key: "pending_approval", label: t("qstatus.pending_approval"),count: metrics.data?.pending,  tone: "warning" },
+    { key: "approved",         label: t("qstatus.approved"),        count: metrics.data?.approved, tone: "success" },
+    { key: "sent",             label: t("qstatus.sent"),            count: metrics.data?.sent,     tone: "info" },
+    { key: "accepted",         label: t("qstatus.accepted"),        count: metrics.data?.accepted, tone: "success" },
+    { key: "rejected",         label: t("qstatus.rejected"),        count: metrics.data?.rejected, tone: "destructive" },
+    { key: "expired",          label: t("qstatus.expired"),         count: metrics.data?.expired,  tone: "muted" },
+  ];
+
+  const today = new Date().toISOString().slice(0,10);
 
   return (
     <>
-      <PageHeader title={t("quotes.title")} subtitle={`${total} ${t("label.total")}`} actions={actions} />
-      <div className="space-y-4 p-6">
+      <PageHeader
+        title={t("quotes.title")}
+        subtitle={`${total} ${t("label.total")}`}
+        actions={actions}
+      />
+      <div className="space-y-5 p-4 sm:p-6">
+        {/* KPI cards */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          {[
-            [t("dash.quotes_total"), metrics.data?.total],
-            [t("dash.quotes_pending"), metrics.data?.pending],
-            [t("dash.quotes_approved"), metrics.data?.approved],
-            [t("dash.quotes_accepted"), metrics.data?.accepted],
-            [t("dash.quotes_rejected"), metrics.data?.rejected],
-            [t("dash.quotes_value"), metrics.data ? fmt(metrics.data.value) : undefined],
-          ].map(([label, val], i) => (
-            <Card key={i}><CardContent className="p-4">
-              <div className="text-xs text-muted-foreground">{label as string}</div>
-              <div className="text-xl font-bold">{val ?? "—"}</div>
-            </CardContent></Card>
+          <KpiCard icon={FileText}      tone="primary"     label={t("dash.quotes_total")}    value={metrics.data?.total}    active={status==="all"}              onClick={() => setStatusAndReset("all")} />
+          <KpiCard icon={Clock}         tone="warning"     label={t("dash.quotes_pending")}  value={metrics.data?.pending}  active={status==="pending_approval"} onClick={() => setStatusAndReset("pending_approval")} />
+          <KpiCard icon={CheckCircle2}  tone="info"        label={t("dash.quotes_approved")} value={metrics.data?.approved} active={status==="approved"}         onClick={() => setStatusAndReset("approved")} />
+          <KpiCard icon={ThumbsUp}      tone="success"     label={t("dash.quotes_accepted")} value={metrics.data?.accepted} active={status==="accepted"}         onClick={() => setStatusAndReset("accepted")} />
+          <KpiCard icon={XCircle}       tone="destructive" label={t("dash.quotes_rejected")} value={metrics.data?.rejected} active={status==="rejected"}         onClick={() => setStatusAndReset("rejected")} />
+          <KpiCard icon={DollarSign}    tone="warning"     label={t("dash.quotes_value")}    value={metrics.data ? fmt(metrics.data.value) : undefined} />
+        </div>
+
+        {/* Expiring soon banner */}
+        {(metrics.data?.expiringSoon ?? 0) > 0 && (
+          <div className="flex items-center gap-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-sm">
+            <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+            <span className="flex-1">
+              <strong>{metrics.data!.expiringSoon}</strong> {t("quotes.expiring_soon", "عروض ستنتهي صلاحيتها خلال 7 أيام")}
+            </span>
+            <Button size="sm" variant="outline" onClick={() => setStatusAndReset("sent")}>
+              {t("actions.view")}
+            </Button>
+          </div>
+        )}
+
+        {/* Quick status pills */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-medium text-muted-foreground">{t("bk.filter.quick")}:</span>
+          {quickFilters.map((q) => (
+            <StatusPill key={q.key} label={q.label} count={q.count} tone={q.tone} active={status === q.key} onClick={() => setStatusAndReset(q.key)} />
           ))}
         </div>
 
+        {/* Filters */}
         <Card>
           <CardContent className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 xl:grid-cols-4">
             <div className="relative">
@@ -137,13 +195,6 @@ function QuotationsList() {
               <SelectContent>
                 <SelectItem value="all">{t("filter.all")}</SelectItem>
                 {customers.data?.map((c: any) => <SelectItem key={c.id} value={c.id}>{lang === "ar" ? (c.name_ar || c.name_en) : (c.name_en || c.name_ar)}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={status} onValueChange={(v) => { setStatus(v); setPage(1); }}>
-              <SelectTrigger className="w-full"><SelectValue placeholder={t("filter.status")} /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t("filter.all")}</SelectItem>
-                {STATUSES.map((s) => <SelectItem key={s} value={s}>{t(`qstatus.${s}`)}</SelectItem>)}
               </SelectContent>
             </Select>
             <Select value={hotel} onValueChange={(v) => { setHotel(v); setPage(1); }}>
@@ -160,46 +211,93 @@ function QuotationsList() {
                 {creators.data?.map((p: any) => <SelectItem key={p.id} value={p.id}>{p.email}</SelectItem>)}
               </SelectContent>
             </Select>
-            <Input type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} className="w-full" />
-            <Input type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} className="w-full" />
+            <div className="grid grid-cols-2 gap-2 sm:col-span-2 xl:col-span-2">
+              <Input type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} className="w-full" />
+              <Input type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} className="w-full" />
+            </div>
+            {filtersActive && (
+              <div className="sm:col-span-2 xl:col-span-4 flex justify-end">
+                <Button variant="ghost" size="sm" onClick={resetAll}>
+                  <X className="h-4 w-4" /> {t("actions.reset")}
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
 
+        {/* Table */}
         <Card>
           <CardContent className="p-0 overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="whitespace-nowrap">
+                <TableRow className="whitespace-nowrap bg-muted/40 hover:bg-muted/40">
                   <TableHead>{t("quotes.number")}</TableHead>
                   <TableHead>{t("quotes.customer")}</TableHead>
                   <TableHead>{t("quotes.quotation_date")}</TableHead>
                   <TableHead>{t("quotes.expiry_date")}</TableHead>
-                  <TableHead>{t("quotes.value")}</TableHead>
+                  <TableHead className="text-end">{t("quotes.value")}</TableHead>
                   <TableHead>{t("label.status")}</TableHead>
                   <TableHead>{t("quotes.creator")}</TableHead>
                   <TableHead className="text-end">{t("label.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {list.isLoading && <TableRow><TableCell colSpan={8} className="py-10 text-center text-muted-foreground">{t("label.loading")}</TableCell></TableRow>}
-                {!list.isLoading && (list.data?.rows.length ?? 0) === 0 && <TableRow><TableCell colSpan={8} className="py-10 text-center text-muted-foreground">{t("label.no_results")}</TableCell></TableRow>}
+                {list.isLoading && (
+                  <TableRow><TableCell colSpan={8} className="py-10 text-center text-muted-foreground">{t("label.loading")}</TableCell></TableRow>
+                )}
+                {!list.isLoading && (list.data?.rows.length ?? 0) === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={8} className="py-16">
+                      <div className="mx-auto flex max-w-sm flex-col items-center gap-3 text-center">
+                        <div className="grid h-14 w-14 place-items-center rounded-full bg-muted text-muted-foreground">
+                          <FileText className="h-7 w-7" />
+                        </div>
+                        <div className="text-sm font-medium">{t("label.no_results")}</div>
+                        {filtersActive ? (
+                          <Button variant="outline" size="sm" onClick={resetAll}>
+                            <X className="h-4 w-4" /> {t("actions.reset")}
+                          </Button>
+                        ) : canWrite && (
+                          <Button size="sm" onClick={() => navigate({ to: "/quotations/new" })}>
+                            <Plus className="h-4 w-4" /> {t("quotes.new")}
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )}
                 {list.data?.rows.map((q: any) => {
                   const value = (q.items ?? []).reduce((a: number, i: any) => a + Number(i.total_selling), 0);
+                  const expiringSoon = q.status === "sent" && q.expiry_date && q.expiry_date >= today
+                    && (new Date(q.expiry_date).getTime() - new Date(today).getTime()) / 86400000 <= 7;
                   return (
-                    <TableRow key={q.id} className="whitespace-nowrap">
+                    <TableRow
+                      key={q.id}
+                      className="whitespace-nowrap cursor-pointer hover:bg-muted/50"
+                      onClick={() => navigate({ to: "/quotations/$id", params: { id: q.id } })}
+                    >
                       <TableCell className="font-mono text-xs">
-                        <Link to="/quotations/$id" params={{ id: q.id }} className="hover:underline">{q.quotation_no}</Link>
+                        <Link to="/quotations/$id" params={{ id: q.id }} className="text-primary hover:underline" onClick={(e) => e.stopPropagation()}>
+                          {q.quotation_no}
+                        </Link>
                       </TableCell>
-                      <TableCell className="text-sm">{q.customer ? (lang === "ar" ? (q.customer.name_ar || q.customer.name_en) : (q.customer.name_en || q.customer.name_ar)) : "—"}</TableCell>
+                      <TableCell className="text-sm font-medium">{q.customer ? (lang === "ar" ? (q.customer.name_ar || q.customer.name_en) : (q.customer.name_en || q.customer.name_ar)) : "—"}</TableCell>
                       <TableCell dir="ltr" className="text-xs">{formatDate(q.quotation_date, lang)}</TableCell>
-                      <TableCell dir="ltr" className="text-xs">{formatDate(q.expiry_date, lang)}</TableCell>
-                      <TableCell dir="ltr" className="text-xs">{fmt(value)} {q.currency}</TableCell>
+                      <TableCell dir="ltr" className="text-xs">
+                        <span className={cn("inline-flex items-center gap-1", expiringSoon && "font-semibold text-amber-600 dark:text-amber-400")}>
+                          {expiringSoon && <CalendarClock className="h-3 w-3" />}
+                          {formatDate(q.expiry_date, lang)}
+                        </span>
+                      </TableCell>
+                      <TableCell dir="ltr" className="text-end text-xs font-semibold tabular-nums">
+                        {fmt(value)} <span className="text-muted-foreground font-normal">{q.currency}</span>
+                      </TableCell>
                       <TableCell><QStatusBadge status={q.status} t={t} /></TableCell>
                       <TableCell className="text-xs">
-                        <div className="font-medium">{creatorName(q.created_by)}</div>
+                        <div className="font-medium truncate max-w-[180px]">{creatorName(q.created_by)}</div>
                         <div dir="ltr" className="text-muted-foreground">{formatDateTime(q.created_at, lang)}</div>
                       </TableCell>
-                      <TableCell className="text-end">
+                      <TableCell className="text-end" onClick={(e) => e.stopPropagation()}>
                         <Button asChild variant="ghost" size="icon" title={t("actions.view")}>
                           <Link to="/quotations/$id" params={{ id: q.id }}><Eye className="h-4 w-4" /></Link>
                         </Button>

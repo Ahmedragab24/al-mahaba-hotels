@@ -59,6 +59,7 @@ import { Route as AuthenticatedContractsNewRouteImport } from './routes/_authent
 import { Route as AuthenticatedContractsIdRouteImport } from './routes/_authenticated/contracts/$id'
 import { Route as AuthenticatedBookingsNewRouteImport } from './routes/_authenticated/bookings/new'
 import { Route as AuthenticatedBookingsIdRouteImport } from './routes/_authenticated/bookings/$id'
+import { Route as ApiPublicHooksSimulationTickRouteImport } from './routes/api/public/hooks/simulation-tick'
 
 const SupplierApplyRoute = SupplierApplyRouteImport.update({
   id: '/supplier-apply',
@@ -338,6 +339,12 @@ const AuthenticatedBookingsIdRoute = AuthenticatedBookingsIdRouteImport.update({
   path: '/bookings/$id',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const ApiPublicHooksSimulationTickRoute =
+  ApiPublicHooksSimulationTickRouteImport.update({
+    id: '/api/public/hooks/simulation-tick',
+    path: '/api/public/hooks/simulation-tick',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
@@ -389,6 +396,7 @@ export interface FileRoutesByFullPath {
   '/seasons/': typeof AuthenticatedSeasonsIndexRoute
   '/suppliers/': typeof AuthenticatedSuppliersIndexRoute
   '/taxes/': typeof AuthenticatedTaxesIndexRoute
+  '/api/public/hooks/simulation-tick': typeof ApiPublicHooksSimulationTickRoute
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
@@ -440,6 +448,7 @@ export interface FileRoutesByTo {
   '/seasons': typeof AuthenticatedSeasonsIndexRoute
   '/suppliers': typeof AuthenticatedSuppliersIndexRoute
   '/taxes': typeof AuthenticatedTaxesIndexRoute
+  '/api/public/hooks/simulation-tick': typeof ApiPublicHooksSimulationTickRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -493,6 +502,7 @@ export interface FileRoutesById {
   '/_authenticated/seasons/': typeof AuthenticatedSeasonsIndexRoute
   '/_authenticated/suppliers/': typeof AuthenticatedSuppliersIndexRoute
   '/_authenticated/taxes/': typeof AuthenticatedTaxesIndexRoute
+  '/api/public/hooks/simulation-tick': typeof ApiPublicHooksSimulationTickRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -546,6 +556,7 @@ export interface FileRouteTypes {
     | '/seasons/'
     | '/suppliers/'
     | '/taxes/'
+    | '/api/public/hooks/simulation-tick'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/auth'
@@ -597,6 +608,7 @@ export interface FileRouteTypes {
     | '/seasons'
     | '/suppliers'
     | '/taxes'
+    | '/api/public/hooks/simulation-tick'
   id:
     | '__root__'
     | '/_authenticated'
@@ -649,12 +661,14 @@ export interface FileRouteTypes {
     | '/_authenticated/seasons/'
     | '/_authenticated/suppliers/'
     | '/_authenticated/taxes/'
+    | '/api/public/hooks/simulation-tick'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   SupplierApplyRoute: typeof SupplierApplyRoute
+  ApiPublicHooksSimulationTickRoute: typeof ApiPublicHooksSimulationTickRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1009,6 +1023,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedBookingsIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/public/hooks/simulation-tick': {
+      id: '/api/public/hooks/simulation-tick'
+      path: '/api/public/hooks/simulation-tick'
+      fullPath: '/api/public/hooks/simulation-tick'
+      preLoaderRoute: typeof ApiPublicHooksSimulationTickRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -1120,6 +1141,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   SupplierApplyRoute: SupplierApplyRoute,
+  ApiPublicHooksSimulationTickRoute: ApiPublicHooksSimulationTickRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -168,6 +168,7 @@ export function AppSidebar() {
             <SidebarMenu>{visibleOperational.map(renderItem)}</SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+        )}
         {visibleContracting.length > 0 && (
           <SidebarGroup>
             <SidebarGroupLabel className="text-xs font-semibold uppercase tracking-wider">{t("nav.contracting")}</SidebarGroupLabel>

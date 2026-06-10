@@ -18,8 +18,7 @@ import {
   CheckCircle2, LogIn, CheckCheck, XCircle, DollarSign, FileText, Hotel,
 } from "lucide-react";
 import { formatDate } from "@/lib/format";
-import { cn } from "@/lib/utils";
-import { KpiCard, StatusPill, KPI_TONE, type KpiTone } from "@/components/list-toolkit";
+import { KpiCard, StatusPill, type KpiTone } from "@/components/list-toolkit";
 
 export const Route = createFileRoute("/_authenticated/bookings/")({
   component: BookingsList,

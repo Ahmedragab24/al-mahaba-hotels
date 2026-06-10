@@ -35,6 +35,7 @@ import {
   LayoutTemplate,
   TrendingUp,
   Scale,
+  Activity,
 } from "lucide-react";
 import logoUrl from "@/assets/daleel-logo-transparent.png";
 import logoDarkUrl from "@/assets/daleel-logo-dark.png";

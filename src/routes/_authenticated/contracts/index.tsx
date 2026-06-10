@@ -269,7 +269,8 @@ function ContractsList() {
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
             <DataPagination page={page} pageSize={PAGE_SIZE} total={total} onPage={setPage} />

@@ -150,10 +150,21 @@ export function RateForm({ initial, onSaved }: { initial?: any; onSaved: (id: st
                 </Select>
                 <FormMessage /></FormItem>
             )} />
+            <FormField control={form.control} name="is_direct" render={({ field }) => (
+              <FormItem className="flex items-center gap-2 self-end pb-2">
+                <FormControl>
+                  <Checkbox checked={!!field.value} onCheckedChange={(v) => {
+                    field.onChange(!!v);
+                    if (v) { form.setValue("supplier_id", ""); form.setValue("contract_id", ""); }
+                  }} />
+                </FormControl>
+                <FormLabel className="!mt-0">{t("rates.is_direct")}</FormLabel>
+              </FormItem>
+            )} />
             <FormField control={form.control} name="supplier_id" render={({ field }) => (
-              <FormItem><FormLabel>{t("rates.supplier")} *</FormLabel>
-                <Select value={field.value} onValueChange={(v) => { field.onChange(v); form.setValue("contract_id", ""); }}>
-                  <FormControl><SelectTrigger><SelectValue placeholder="—" /></SelectTrigger></FormControl>
+              <FormItem><FormLabel>{t("rates.supplier")} {!isDirect && "*"}</FormLabel>
+                <Select value={field.value || ""} onValueChange={(v) => { field.onChange(v); form.setValue("contract_id", ""); }} disabled={isDirect}>
+                  <FormControl><SelectTrigger><SelectValue placeholder={isDirect ? t("rates.source.direct") : "—"} /></SelectTrigger></FormControl>
                   <SelectContent>
                     {suppliers.data?.map((s) => (
                       <SelectItem key={s.id} value={s.id}>{lang === "ar" ? (s.name_ar || s.name_en) : (s.name_en || s.name_ar)}</SelectItem>

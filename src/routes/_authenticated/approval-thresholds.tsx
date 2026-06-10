@@ -176,11 +176,7 @@ function ThresholdDialog({
 }) {
   const { t } = useI18n();
   const isEdit = !!initial?.id;
-  const [form, setForm] = useState<Partial<Threshold>>({});
-
-  // Reset when opening
-  useState(() => {});
-  if (open && form === (undefined as any)) setForm(initial ?? {});
+  const [form, setForm] = useState<Partial<Threshold>>(initial ?? {});
 
   const save = useMutation({
     mutationFn: async () => {

@@ -29,6 +29,7 @@ export const MODULES: { key: string; labelKey: string; roles: AppRole[] }[] = [
   { key: "supplier-portal", labelKey: "nav.supplier_portal", roles: ["supplier"] },
   { key: "approval-thresholds", labelKey: "nav.approval_thresholds", roles: ["super_admin","admin","finance_manager"] },
   { key: "audit", labelKey: "nav.audit", roles: ADMIN },
+  { key: "simulation", labelKey: "nav.simulation", roles: ADMIN },
   { key: "settings", labelKey: "nav.settings", roles: ADMIN },
 ];
 

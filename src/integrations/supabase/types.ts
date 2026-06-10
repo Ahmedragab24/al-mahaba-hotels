@@ -449,6 +449,7 @@ export type Database = {
           customer_id: string
           deleted_at: string | null
           id: string
+          is_simulated: boolean
           no_show_at: string | null
           no_show_by: string | null
           notes: string | null
@@ -475,6 +476,7 @@ export type Database = {
           customer_id: string
           deleted_at?: string | null
           id?: string
+          is_simulated?: boolean
           no_show_at?: string | null
           no_show_by?: string | null
           notes?: string | null
@@ -501,6 +503,7 @@ export type Database = {
           customer_id?: string
           deleted_at?: string | null
           id?: string
+          is_simulated?: boolean
           no_show_at?: string | null
           no_show_by?: string | null
           notes?: string | null
@@ -858,6 +861,7 @@ export type Database = {
           deleted_at: string | null
           email: string | null
           id: string
+          is_simulated: boolean
           legal_name: string | null
           mobile: string | null
           name_ar: string
@@ -892,6 +896,7 @@ export type Database = {
           deleted_at?: string | null
           email?: string | null
           id?: string
+          is_simulated?: boolean
           legal_name?: string | null
           mobile?: string | null
           name_ar: string
@@ -926,6 +931,7 @@ export type Database = {
           deleted_at?: string | null
           email?: string | null
           id?: string
+          is_simulated?: boolean
           legal_name?: string | null
           mobile?: string | null
           name_ar?: string
@@ -1659,6 +1665,7 @@ export type Database = {
           id: string
           invoice_date: string
           invoice_no: string | null
+          is_simulated: boolean
           issued_at: string | null
           issued_by: string | null
           notes: string | null
@@ -1686,6 +1693,7 @@ export type Database = {
           id?: string
           invoice_date?: string
           invoice_no?: string | null
+          is_simulated?: boolean
           issued_at?: string | null
           issued_by?: string | null
           notes?: string | null
@@ -1713,6 +1721,7 @@ export type Database = {
           id?: string
           invoice_date?: string
           invoice_no?: string | null
+          is_simulated?: boolean
           issued_at?: string | null
           issued_by?: string | null
           notes?: string | null
@@ -2074,6 +2083,7 @@ export type Database = {
           deleted_at: string | null
           expiry_date: string
           id: string
+          is_simulated: boolean
           notes: string | null
           quotation_date: string
           quotation_no: string
@@ -2089,6 +2099,7 @@ export type Database = {
           deleted_at?: string | null
           expiry_date: string
           id?: string
+          is_simulated?: boolean
           notes?: string | null
           quotation_date?: string
           quotation_no?: string
@@ -2104,6 +2115,7 @@ export type Database = {
           deleted_at?: string | null
           expiry_date?: string
           id?: string
+          is_simulated?: boolean
           notes?: string | null
           quotation_date?: string
           quotation_no?: string
@@ -2549,6 +2561,7 @@ export type Database = {
           deleted_at: string | null
           exchange_rate: number
           id: string
+          is_simulated: boolean
           notes: string | null
           payment_method: string
           receipt_date: string
@@ -2570,6 +2583,7 @@ export type Database = {
           deleted_at?: string | null
           exchange_rate?: number
           id?: string
+          is_simulated?: boolean
           notes?: string | null
           payment_method?: string
           receipt_date?: string
@@ -2591,6 +2605,7 @@ export type Database = {
           deleted_at?: string | null
           exchange_rate?: number
           id?: string
+          is_simulated?: boolean
           notes?: string | null
           payment_method?: string
           receipt_date?: string
@@ -2952,6 +2967,7 @@ export type Database = {
           deleted_at: string | null
           destination: string | null
           id: string
+          is_simulated: boolean
           notes: string | null
           rfq_no: string | null
           status: string
@@ -2967,6 +2983,7 @@ export type Database = {
           deleted_at?: string | null
           destination?: string | null
           id?: string
+          is_simulated?: boolean
           notes?: string | null
           rfq_no?: string | null
           status?: string
@@ -2982,6 +2999,7 @@ export type Database = {
           deleted_at?: string | null
           destination?: string | null
           id?: string
+          is_simulated?: boolean
           notes?: string | null
           rfq_no?: string | null
           status?: string
@@ -3043,6 +3061,45 @@ export type Database = {
           notes?: string | null
           season_type?: string
           start_date?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      simulation_settings: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          id: string
+          intensity: string
+          interval_minutes: number
+          last_run_at: string | null
+          last_run_status: string | null
+          last_run_summary: Json | null
+          total_runs: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          intensity?: string
+          interval_minutes?: number
+          last_run_at?: string | null
+          last_run_status?: string | null
+          last_run_summary?: Json | null
+          total_runs?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          intensity?: string
+          interval_minutes?: number
+          last_run_at?: string | null
+          last_run_status?: string | null
+          last_run_summary?: Json | null
+          total_runs?: number
           updated_at?: string
         }
         Relationships: []
@@ -3475,6 +3532,7 @@ export type Database = {
           currency: string
           exchange_rate: number
           id: string
+          is_simulated: boolean
           notes: string | null
           payment_date: string
           payment_method: string
@@ -3495,6 +3553,7 @@ export type Database = {
           currency?: string
           exchange_rate?: number
           id?: string
+          is_simulated?: boolean
           notes?: string | null
           payment_date?: string
           payment_method?: string
@@ -3515,6 +3574,7 @@ export type Database = {
           currency?: string
           exchange_rate?: number
           id?: string
+          is_simulated?: boolean
           notes?: string | null
           payment_date?: string
           payment_method?: string
@@ -3594,6 +3654,7 @@ export type Database = {
           deleted_at: string | null
           email: string | null
           id: string
+          is_simulated: boolean
           legal_name: string | null
           mobile: string | null
           name_ar: string
@@ -3624,6 +3685,7 @@ export type Database = {
           deleted_at?: string | null
           email?: string | null
           id?: string
+          is_simulated?: boolean
           legal_name?: string | null
           mobile?: string | null
           name_ar: string
@@ -3654,6 +3716,7 @@ export type Database = {
           deleted_at?: string | null
           email?: string | null
           id?: string
+          is_simulated?: boolean
           legal_name?: string | null
           mobile?: string | null
           name_ar?: string

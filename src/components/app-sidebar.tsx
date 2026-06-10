@@ -35,6 +35,7 @@ import {
   LayoutTemplate,
   TrendingUp,
   Scale,
+  Activity,
 } from "lucide-react";
 import logoUrl from "@/assets/daleel-logo-transparent.png";
 import logoDarkUrl from "@/assets/daleel-logo-dark.png";
@@ -100,6 +101,7 @@ const admin: NavItem[] = [
   { to: "/supplier-applications", labelKey: "nav.supplier_applications", icon: Handshake, roles: ["super_admin","admin"] },
   { to: "/approval-thresholds", labelKey: "nav.approval_thresholds", icon: Scale, roles: ["super_admin","admin","finance_manager"] },
   { to: "/audit", labelKey: "nav.audit", icon: History, roles: ["super_admin","admin"] },
+  { to: "/simulation", labelKey: "nav.simulation", icon: Activity, roles: ["super_admin","admin"] },
   { to: "/settings", labelKey: "nav.settings", icon: Settings, roles: ["super_admin","admin"] },
 ];
 const supplierNav: NavItem[] = [

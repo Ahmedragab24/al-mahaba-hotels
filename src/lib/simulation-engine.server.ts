@@ -248,6 +248,62 @@ async function createReceipt(admin: any): Promise<string | null> {
   return data?.id ?? null;
 }
 
+async function createRate(admin: any): Promise<string | null> {
+  const { data: hotels } = await admin.from("hotels").select("id").is("deleted_at", null).limit(50);
+  if (!hotels || hotels.length === 0) return null;
+  const hotel = pick(hotels);
+  const { data: rts } = await admin
+    .from("hotel_room_types")
+    .select("id")
+    .eq("hotel_id", hotel.id)
+    .limit(20);
+  if (!rts || rts.length === 0) return null;
+  const rt = pick(rts);
+
+  const isDirect = Math.random() < 0.4;
+  let supplierId: string | null = null;
+  if (!isDirect) {
+    const { data: sups } = await admin
+      .from("suppliers")
+      .select("id")
+      .eq("is_simulated", true)
+      .limit(30);
+    if (!sups || sups.length === 0) return null;
+    supplierId = pick(sups).id;
+  }
+
+  const today = new Date();
+  const validFrom = new Date(today.getTime() - 7 * 86400000);
+  const validTo = new Date(today.getTime() + 90 * 86400000);
+  const cost = intBetween(180, 1400);
+  const markup = intBetween(10, 35);
+  const selling = Math.round(cost * (1 + markup / 100));
+  const fmt = (d: Date) => d.toISOString().slice(0, 10);
+
+  const { data, error } = await admin
+    .from("rates")
+    .insert({
+      code: `SIM-RT-${Date.now().toString(36).toUpperCase()}-${intBetween(100, 999)}`,
+      hotel_id: hotel.id,
+      supplier_id: supplierId,
+      room_type_id: rt.id,
+      meal_plan: pick(["RO", "BB", "HB", "FB"]),
+      currency: "SAR",
+      valid_from: fmt(validFrom),
+      valid_to: fmt(validTo),
+      cost_per_night: cost,
+      selling_price: selling,
+      markup_pct: markup,
+      status: pick(["draft", "approved", "approved", "approved"]),
+      is_direct: isDirect,
+      is_simulated: true,
+    })
+    .select("id")
+    .single();
+  if (error) return null;
+  return data?.id ?? null;
+}
+
 export async function runSimulationTick(opts: { force?: boolean } = {}): Promise<TickResult> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const admin = supabaseAdmin;

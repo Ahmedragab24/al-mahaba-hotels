@@ -66,6 +66,7 @@ function CustomerDetail() {
   const c = cust.data;
   const displayName = lang === "ar" ? (c.name_ar || c.name_en) : (c.name_en || c.name_ar);
   const isEntity = c.customer_type !== "individual";
+  const isIndividual = c.customer_type === "individual";
 
   return (
     <>
@@ -102,10 +103,14 @@ function CustomerDetail() {
                 <KV label={t("label.code")} value={c.code} mono />
                 <KV label={t("filter.type")} value={t(`ctype.${c.customer_type}`)} />
                 <KV label={t("label.language")} value={c.preferred_language === "ar" ? "العربية" : "English"} />
-                <KV label={t("label.name_en")} value={c.name_en} />
-                <KV label={t("label.name_ar")} value={c.name_ar} />
-                <KV label={t("label.tax_number")} value={c.tax_number} />
-                <KV label={t("label.cr")} value={c.commercial_registration} />
+                <KV label={isIndividual ? t("label.personal_name_en") : t("label.name_en")} value={c.name_en} />
+                <KV label={isIndividual ? t("label.personal_name_ar") : t("label.name_ar")} value={c.name_ar} />
+                {!isIndividual && (
+                  <>
+                    <KV label={t("label.tax_number")} value={c.tax_number} />
+                    <KV label={t("label.cr")} value={c.commercial_registration} />
+                  </>
+                )}
                 <KV label={t("label.email")} value={c.email} />
                 <KV label={t("label.phone")} value={c.phone} />
                 <KV label={t("label.mobile")} value={c.mobile} />

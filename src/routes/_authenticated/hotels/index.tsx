@@ -140,6 +140,25 @@ function HotelsList() {
     <>
       <PageHeader title={t("hotels.title")} subtitle={`${total} ${t("label.total")}`} actions={actions} />
       <div className="space-y-4 p-6">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          <KpiCard icon={Hotel} tone="primary" label={t("kpi.total")} value={metrics.data?.total ?? "—"}
+            active={status === "all" && !showArchived} onClick={() => { setStatus("all"); setShowArchived(false); setPage(1); }} />
+          <KpiCard icon={CheckCircle2} tone="success" label={t("kpi.active")} value={metrics.data?.active ?? "—"}
+            active={status === "active"} onClick={() => { setStatus("active"); setShowArchived(false); setPage(1); }} />
+          <KpiCard icon={Crown} tone="warning" label={t("kpi.luxury")} value={metrics.data?.luxury ?? "—"}
+            active={stars === "5"} onClick={() => { setStars(stars === "5" ? "all" : "5"); setPage(1); }} />
+          <KpiCard icon={Archive} tone="muted" label={t("kpi.archived")} value={metrics.data?.archived ?? "—"}
+            active={showArchived} onClick={() => { setShowArchived(true); setStatus("all"); setPage(1); }} />
+          <KpiCard icon={Calendar} tone="info" label={t("kpi.this_month")} value={metrics.data?.thisMonth ?? "—"} />
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <StatusPill label={t("filter.all")} tone="primary" active={stars === "all"} onClick={() => { setStars("all"); setPage(1); }} />
+          {STARS.map(n => (
+            <StatusPill key={n} label={"★".repeat(n)} tone="warning" active={stars === String(n)} onClick={() => { setStars(String(n)); setPage(1); }} />
+          ))}
+        </div>
+
         <Card>
           <CardContent className="flex flex-wrap items-center gap-3 p-4">
             <div className="relative min-w-[220px] flex-1">

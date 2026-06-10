@@ -43,6 +43,7 @@ function RatesList() {
   const [from, setFrom] = useState<string>("");
   const [to, setTo] = useState<string>("");
   const [showArchived, setShowArchived] = useState(false);
+  const [latestOnly, setLatestOnly] = useState(true);
   const [page, setPage] = useState(1);
   const [confirm, setConfirm] = useState<{ id: string; action: "archive" | "restore" | "delete" } | null>(null);
 

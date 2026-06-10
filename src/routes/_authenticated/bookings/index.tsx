@@ -153,30 +153,9 @@ function BookingsList() {
         {/* Quick status pills */}
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs font-medium text-muted-foreground">{t("bk.filter.quick")}:</span>
-          {quickFilters.map((q) => {
-            const T = TONE[q.tone];
-            const active = status === q.key;
-            return (
-              <button
-                key={q.key}
-                onClick={() => setStatusAndReset(q.key)}
-                className={cn(
-                  "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-all",
-                  active
-                    ? cn(T.bg, T.fg, "border-transparent shadow-sm")
-                    : "border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground"
-                )}
-              >
-                <span>{q.label}</span>
-                {q.count !== undefined && (
-                  <span className={cn(
-                    "rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums",
-                    active ? "bg-background/60" : "bg-muted"
-                  )}>{q.count}</span>
-                )}
-              </button>
-            );
-          })}
+          {quickFilters.map((q) => (
+            <StatusPill key={q.key} label={q.label} count={q.count} tone={q.tone} active={status === q.key} onClick={() => setStatusAndReset(q.key)} />
+          ))}
         </div>
 
         {/* Filters */}

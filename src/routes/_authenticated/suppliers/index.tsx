@@ -46,6 +46,23 @@ function SuppliersList() {
   const dSearch = useDebounce(search, 300);
   const countries = useCountries();
 
+  const metrics = useQuery({
+    queryKey: ["suppliers-metrics"],
+    queryFn: async () => {
+      const { data } = await supabase.from("suppliers").select("status,rating,created_at,deleted_at");
+      const rows = data ?? [];
+      const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0,0,0,0);
+      return {
+        total: rows.filter(r => !r.deleted_at).length,
+        active: rows.filter(r => r.status === "active" && !r.deleted_at).length,
+        inactive: rows.filter(r => r.status === "inactive" && !r.deleted_at).length,
+        archived: rows.filter(r => r.deleted_at).length,
+        topRated: rows.filter(r => Number(r.rating) >= 4 && !r.deleted_at).length,
+        thisMonth: rows.filter(r => new Date(r.created_at) >= monthStart && !r.deleted_at).length,
+      };
+    },
+  });
+
   const list = useQuery({
     queryKey: ["suppliers", { dSearch, status, country, stype, showArchived, page }],
     queryFn: async () => {

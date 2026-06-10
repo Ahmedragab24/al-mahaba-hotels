@@ -52,13 +52,14 @@ function RatesList() {
   const suppliers = useSuppliersLite();
 
   const list = useQuery({
-    queryKey: ["rates", { dSearch, status, hotelId, supplierId, board, from, to, showArchived, page }],
+    queryKey: ["rates", { dSearch, status, hotelId, supplierId, board, from, to, showArchived, latestOnly, page }],
     queryFn: async () => {
       let q = supabase.from("rates").select(
-        "id,code,hotel_id,supplier_id,room_type_id,meal_plan,currency,valid_from,valid_to,cost_per_night,selling_price,status,deleted_at,hotel:hotels(name_en,name_ar),supplier:suppliers(name_en,name_ar),room_type:hotel_room_types(name_en,name_ar)",
+        "id,code,hotel_id,supplier_id,room_type_id,meal_plan,currency,valid_from,valid_to,cost_per_night,selling_price,status,deleted_at,is_direct,version,superseded_at,hotel:hotels(name_en,name_ar),supplier:suppliers(name_en,name_ar),room_type:hotel_room_types(name_en,name_ar)",
         { count: "exact" },
       );
       if (!showArchived) q = q.is("deleted_at", null);
+      if (latestOnly) q = q.is("superseded_at", null);
       if (status !== "all") q = q.eq("status", status as any);
       if (hotelId !== "all") q = q.eq("hotel_id", hotelId);
       if (supplierId !== "all") q = q.eq("supplier_id", supplierId);

@@ -9,10 +9,13 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SupplierApplyRouteImport } from './routes/supplier-apply'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedUsersRouteImport } from './routes/_authenticated/users'
+import { Route as AuthenticatedSupplierPortalRouteImport } from './routes/_authenticated/supplier-portal'
+import { Route as AuthenticatedSupplierApplicationsRouteImport } from './routes/_authenticated/supplier-applications'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedAuditRouteImport } from './routes/_authenticated/audit'
 import { Route as AuthenticatedApprovalThresholdsRouteImport } from './routes/_authenticated/approval-thresholds'
@@ -57,6 +60,11 @@ import { Route as AuthenticatedContractsIdRouteImport } from './routes/_authenti
 import { Route as AuthenticatedBookingsNewRouteImport } from './routes/_authenticated/bookings/new'
 import { Route as AuthenticatedBookingsIdRouteImport } from './routes/_authenticated/bookings/$id'
 
+const SupplierApplyRoute = SupplierApplyRouteImport.update({
+  id: '/supplier-apply',
+  path: '/supplier-apply',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
@@ -76,6 +84,18 @@ const AuthenticatedUsersRoute = AuthenticatedUsersRouteImport.update({
   path: '/users',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedSupplierPortalRoute =
+  AuthenticatedSupplierPortalRouteImport.update({
+    id: '/supplier-portal',
+    path: '/supplier-portal',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedSupplierApplicationsRoute =
+  AuthenticatedSupplierApplicationsRouteImport.update({
+    id: '/supplier-applications',
+    path: '/supplier-applications',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -322,9 +342,12 @@ const AuthenticatedBookingsIdRoute = AuthenticatedBookingsIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/auth': typeof AuthRoute
+  '/supplier-apply': typeof SupplierApplyRoute
   '/approval-thresholds': typeof AuthenticatedApprovalThresholdsRoute
   '/audit': typeof AuthenticatedAuditRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/supplier-applications': typeof AuthenticatedSupplierApplicationsRoute
+  '/supplier-portal': typeof AuthenticatedSupplierPortalRoute
   '/users': typeof AuthenticatedUsersRoute
   '/bookings/$id': typeof AuthenticatedBookingsIdRoute
   '/bookings/new': typeof AuthenticatedBookingsNewRoute
@@ -369,9 +392,12 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
+  '/supplier-apply': typeof SupplierApplyRoute
   '/approval-thresholds': typeof AuthenticatedApprovalThresholdsRoute
   '/audit': typeof AuthenticatedAuditRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/supplier-applications': typeof AuthenticatedSupplierApplicationsRoute
+  '/supplier-portal': typeof AuthenticatedSupplierPortalRoute
   '/users': typeof AuthenticatedUsersRoute
   '/': typeof AuthenticatedIndexRoute
   '/bookings/$id': typeof AuthenticatedBookingsIdRoute
@@ -419,9 +445,12 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/supplier-apply': typeof SupplierApplyRoute
   '/_authenticated/approval-thresholds': typeof AuthenticatedApprovalThresholdsRoute
   '/_authenticated/audit': typeof AuthenticatedAuditRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/_authenticated/supplier-applications': typeof AuthenticatedSupplierApplicationsRoute
+  '/_authenticated/supplier-portal': typeof AuthenticatedSupplierPortalRoute
   '/_authenticated/users': typeof AuthenticatedUsersRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/bookings/$id': typeof AuthenticatedBookingsIdRoute
@@ -470,9 +499,12 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/supplier-apply'
     | '/approval-thresholds'
     | '/audit'
     | '/settings'
+    | '/supplier-applications'
+    | '/supplier-portal'
     | '/users'
     | '/bookings/$id'
     | '/bookings/new'
@@ -517,9 +549,12 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/auth'
+    | '/supplier-apply'
     | '/approval-thresholds'
     | '/audit'
     | '/settings'
+    | '/supplier-applications'
+    | '/supplier-portal'
     | '/users'
     | '/'
     | '/bookings/$id'
@@ -566,9 +601,12 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_authenticated'
     | '/auth'
+    | '/supplier-apply'
     | '/_authenticated/approval-thresholds'
     | '/_authenticated/audit'
     | '/_authenticated/settings'
+    | '/_authenticated/supplier-applications'
+    | '/_authenticated/supplier-portal'
     | '/_authenticated/users'
     | '/_authenticated/'
     | '/_authenticated/bookings/$id'
@@ -616,10 +654,18 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  SupplierApplyRoute: typeof SupplierApplyRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/supplier-apply': {
+      id: '/supplier-apply'
+      path: '/supplier-apply'
+      fullPath: '/supplier-apply'
+      preLoaderRoute: typeof SupplierApplyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth': {
       id: '/auth'
       path: '/auth'
@@ -646,6 +692,20 @@ declare module '@tanstack/react-router' {
       path: '/users'
       fullPath: '/users'
       preLoaderRoute: typeof AuthenticatedUsersRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/supplier-portal': {
+      id: '/_authenticated/supplier-portal'
+      path: '/supplier-portal'
+      fullPath: '/supplier-portal'
+      preLoaderRoute: typeof AuthenticatedSupplierPortalRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/supplier-applications': {
+      id: '/_authenticated/supplier-applications'
+      path: '/supplier-applications'
+      fullPath: '/supplier-applications'
+      preLoaderRoute: typeof AuthenticatedSupplierApplicationsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/settings': {
@@ -956,6 +1016,8 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedApprovalThresholdsRoute: typeof AuthenticatedApprovalThresholdsRoute
   AuthenticatedAuditRoute: typeof AuthenticatedAuditRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
+  AuthenticatedSupplierApplicationsRoute: typeof AuthenticatedSupplierApplicationsRoute
+  AuthenticatedSupplierPortalRoute: typeof AuthenticatedSupplierPortalRoute
   AuthenticatedUsersRoute: typeof AuthenticatedUsersRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedBookingsIdRoute: typeof AuthenticatedBookingsIdRoute
@@ -1004,6 +1066,9 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedApprovalThresholdsRoute: AuthenticatedApprovalThresholdsRoute,
   AuthenticatedAuditRoute: AuthenticatedAuditRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
+  AuthenticatedSupplierApplicationsRoute:
+    AuthenticatedSupplierApplicationsRoute,
+  AuthenticatedSupplierPortalRoute: AuthenticatedSupplierPortalRoute,
   AuthenticatedUsersRoute: AuthenticatedUsersRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedBookingsIdRoute: AuthenticatedBookingsIdRoute,
@@ -1054,6 +1119,7 @@ const AuthenticatedRouteRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  SupplierApplyRoute: SupplierApplyRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

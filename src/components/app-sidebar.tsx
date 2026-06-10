@@ -97,9 +97,13 @@ const reports: NavItem[] = [
 ];
 const admin: NavItem[] = [
   { to: "/users", labelKey: "nav.users", icon: ShieldCheck, roles: ["super_admin","admin"] },
+  { to: "/supplier-applications", labelKey: "nav.supplier_applications", icon: Handshake, roles: ["super_admin","admin"] },
   { to: "/approval-thresholds", labelKey: "nav.approval_thresholds", icon: Scale, roles: ["super_admin","admin","finance_manager"] },
   { to: "/audit", labelKey: "nav.audit", icon: History, roles: ["super_admin","admin"] },
   { to: "/settings", labelKey: "nav.settings", icon: Settings, roles: ["super_admin","admin"] },
+];
+const supplierNav: NavItem[] = [
+  { to: "/supplier-portal", labelKey: "nav.supplier_portal", icon: LayoutDashboard, roles: ["supplier"] },
 ];
 
 export function AppSidebar() {
@@ -107,15 +111,18 @@ export function AppSidebar() {
   const auth = useAuth();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
+  const isSupplierOnly = auth.hasRole("supplier") && !auth.hasAnyRole(["super_admin","admin","sales_manager","sales_agent","operations_manager","operations_agent","finance_manager","finance_agent","viewer"]);
+
   const canSee = (item: NavItem) =>
     (!item.roles || item.roles.length === 0 || auth.hasAnyRole(item.roles)) &&
     auth.canAccessModule(pathToModule(item.to));
-  const visibleOperational = operational.filter(canSee);
-  const visibleContracting = contracting.filter(canSee);
-  const visibleAdmin = admin.filter(canSee);
-  const visibleMaster = master.filter(canSee);
-  const visibleFinance = finance.filter(canSee);
-  const visibleReports = reports.filter(canSee);
+  const visibleOperational = isSupplierOnly ? [] : operational.filter(canSee);
+  const visibleContracting = isSupplierOnly ? [] : contracting.filter(canSee);
+  const visibleAdmin = isSupplierOnly ? [] : admin.filter(canSee);
+  const visibleMaster = isSupplierOnly ? [] : master.filter(canSee);
+  const visibleFinance = isSupplierOnly ? [] : finance.filter(canSee);
+  const visibleReports = isSupplierOnly ? [] : reports.filter(canSee);
+  const visibleSupplier = supplierNav.filter(canSee);
 
   const renderItem = (item: NavItem) => {
     const active = pathname === item.to || (item.to !== "/" && pathname.startsWith(item.to));
@@ -146,12 +153,22 @@ export function AppSidebar() {
         </div>
       </SidebarHeader>
       <SidebarContent>
+        {visibleSupplier.length > 0 && (
+          <SidebarGroup>
+            <SidebarGroupLabel className="text-xs font-semibold uppercase tracking-wider">{t("nav.supplier_portal")}</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>{visibleSupplier.map(renderItem)}</SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+        {visibleOperational.length > 0 && (
         <SidebarGroup>
           <SidebarGroupLabel className="text-xs font-semibold uppercase tracking-wider">{t("nav.dashboard")}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>{visibleOperational.map(renderItem)}</SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+        )}
         {visibleContracting.length > 0 && (
           <SidebarGroup>
             <SidebarGroupLabel className="text-xs font-semibold uppercase tracking-wider">{t("nav.contracting")}</SidebarGroupLabel>

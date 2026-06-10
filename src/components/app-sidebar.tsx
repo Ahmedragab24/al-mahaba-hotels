@@ -97,9 +97,13 @@ const reports: NavItem[] = [
 ];
 const admin: NavItem[] = [
   { to: "/users", labelKey: "nav.users", icon: ShieldCheck, roles: ["super_admin","admin"] },
+  { to: "/supplier-applications", labelKey: "nav.supplier_applications", icon: Handshake, roles: ["super_admin","admin"] },
   { to: "/approval-thresholds", labelKey: "nav.approval_thresholds", icon: Scale, roles: ["super_admin","admin","finance_manager"] },
   { to: "/audit", labelKey: "nav.audit", icon: History, roles: ["super_admin","admin"] },
   { to: "/settings", labelKey: "nav.settings", icon: Settings, roles: ["super_admin","admin"] },
+];
+const supplierNav: NavItem[] = [
+  { to: "/supplier-portal", labelKey: "nav.supplier_portal", icon: LayoutDashboard, roles: ["supplier"] },
 ];
 
 export function AppSidebar() {

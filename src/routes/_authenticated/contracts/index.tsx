@@ -217,8 +217,14 @@ function ContractsList() {
               <TableBody>
                 {list.isLoading && <TableRow><TableCell colSpan={9} className="py-10 text-center text-muted-foreground">{t("label.loading")}</TableCell></TableRow>}
                 {!list.isLoading && (list.data?.rows.length ?? 0) === 0 && <TableRow><TableCell colSpan={9} className="py-10 text-center text-muted-foreground">{t("label.no_results")}</TableCell></TableRow>}
-                {list.data?.rows.map((c: any) => (
-                  <TableRow key={c.id} className={c.deleted_at ? "opacity-60" : ""}>
+                {list.data?.rows.map((c: any) => {
+                  const today = new Date(); today.setHours(0,0,0,0);
+                  const end = c.end_date ? new Date(c.end_date) : null;
+                  const daysLeft = end ? Math.ceil((end.getTime() - today.getTime()) / 86400000) : null;
+                  const isExpiringSoon = c.status === "active" && daysLeft !== null && daysLeft >= 0 && daysLeft <= 30;
+                  const isExpired = daysLeft !== null && daysLeft < 0;
+                  return (
+                  <TableRow key={c.id} className={`${c.deleted_at ? "opacity-60" : ""} ${isExpiringSoon ? "bg-amber-500/5" : ""}`}>
                     <TableCell className="font-mono text-xs">
                       <Link to="/contracts/$id" params={{ id: c.id }} className="hover:underline">{c.contract_number}</Link>
                     </TableCell>
@@ -226,7 +232,21 @@ function ContractsList() {
                     <TableCell className="text-sm">{c.supplier ? (lang === "ar" ? (c.supplier.name_ar || c.supplier.name_en) : (c.supplier.name_en || c.supplier.name_ar)) : "—"}</TableCell>
                     <TableCell className="text-sm">{c.hotel ? (lang === "ar" ? (c.hotel.name_ar || c.hotel.name_en) : (c.hotel.name_en || c.hotel.name_ar)) : "—"}</TableCell>
                     <TableCell className="text-xs">{t(`ctrtype.${c.contract_type}`)}</TableCell>
-                    <TableCell dir="ltr" className="text-xs whitespace-nowrap">{formatDate(c.start_date, lang)} → {formatDate(c.end_date, lang)}</TableCell>
+                    <TableCell dir="ltr" className="text-xs whitespace-nowrap">
+                      <div className="flex items-center gap-2">
+                        <span>{formatDate(c.start_date, lang)} → {formatDate(c.end_date, lang)}</span>
+                        {isExpiringSoon && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-400">
+                            <Clock className="h-3 w-3" />{daysLeft}d
+                          </span>
+                        )}
+                        {isExpired && c.status !== "draft" && !c.deleted_at && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-destructive/15 px-2 py-0.5 text-[10px] font-semibold text-destructive">
+                            <XCircle className="h-3 w-3" />{t("kpi.expired")}
+                          </span>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell className="text-xs">{c.currency ?? "—"}</TableCell>
                     <TableCell><StatusBadge status={c.status} /></TableCell>
                     <TableCell className="text-end">

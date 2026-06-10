@@ -41,12 +41,13 @@ function RfqDetail() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("rfqs")
-        .select("*, customer:customers(name_en,name_ar,email,phone)")
+        .select("*")
         .eq("id", id).maybeSingle();
       if (error) throw error;
       return data as any;
     },
   });
+
 
   const history = useQuery({
     queryKey: ["rfq-status-history", id],
@@ -82,8 +83,8 @@ function RfqDetail() {
   if (!q.data) return <div className="p-6 text-muted-foreground">{t("rfq.no_found")}</div>;
 
   const r = q.data;
-  const customerName = lang === "ar" ? (r.customer?.name_ar || r.customer?.name_en) : (r.customer?.name_en || r.customer?.name_ar);
   const editable = canWrite && r.status === "draft" && !r.deleted_at;
+
 
   const actions: { key: string; label: string; status: string; icon: React.ComponentType<{ className?: string }>; variant?: "destructive" | "outline"; show: boolean }[] = [
     { key: "send", label: t("rfq.send"), status: "sent", icon: Send, show: canWrite && r.status === "draft" },
@@ -98,8 +99,9 @@ function RfqDetail() {
   return (
     <>
       <PageHeader
-        title={`${r.rfq_no} — ${customerName ?? ""}`}
-        subtitle={`${formatDate(r.travel_start)} → ${formatDate(r.travel_end)} · ${r.currency}${r.destination ? " · " + r.destination : ""}`}
+        title={`${r.rfq_no}${r.destination ? " — " + r.destination : ""}`}
+        subtitle={`${formatDate(r.travel_start)} → ${formatDate(r.travel_end)} · ${r.currency}`}
+
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => navigate({ to: "/rfqs" })}>
@@ -141,8 +143,8 @@ function RfqDetail() {
               <Card>
                 <CardContent className="grid gap-x-8 p-6 sm:grid-cols-2 lg:grid-cols-3">
                   <KV k={t("rfq.number")} v={<span dir="ltr">{r.rfq_no}</span>} />
-                  <KV k={t("rfq.customer")} v={customerName ?? "—"} />
                   <KV k={t("filter.status")} v={<RStatusBadge status={r.status} t={t} />} />
+
                   <KV k={t("rfq.destination")} v={r.destination ?? "—"} />
                   <KV k={t("rfq.travel_start")} v={formatDate(r.travel_start)} />
                   <KV k={t("rfq.travel_end")} v={formatDate(r.travel_end)} />

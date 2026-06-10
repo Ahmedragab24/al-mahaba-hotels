@@ -174,7 +174,7 @@ function CustomersList() {
                     <TableCell dir="ltr" className="text-xs">{c.email}</TableCell>
                     <TableCell dir="ltr" className="text-xs">{c.phone}</TableCell>
                     <TableCell className="text-xs">{c.country_code}</TableCell>
-                    <TableCell><StatusPill status={c.status} /></TableCell>
+                    <TableCell><StatusBadge status={c.status} /></TableCell>
                     <TableCell className="text-end">
                       <div className="flex justify-end gap-1">
                         <Button asChild variant="ghost" size="icon" title={t("actions.view")}>

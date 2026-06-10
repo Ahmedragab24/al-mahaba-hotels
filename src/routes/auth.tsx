@@ -1,33 +1,45 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useI18n } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { LangSwitcher } from "@/components/lang-switcher";
 import { Loader2 } from "lucide-react";
 import logoUrl from "@/assets/daleel-logo-transparent.png";
 import logoDarkUrl from "@/assets/daleel-logo-dark.png";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { ensureDemoUsers } from "@/lib/demo-users.functions";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
   component: LoginPage,
 });
 
+const DEMO_ROLES = [
+  "super_admin",
+  "admin",
+  "sales_manager",
+  "sales_agent",
+  "operations_manager",
+  "operations_agent",
+  "finance_manager",
+  "finance_agent",
+  "viewer",
+] as const;
+
+
 const DEFAULT_DOMAIN = "uat-hrs.sa";
 
-/** Normalize Arabic-Indic digits to Latin and expand bare usernames to full emails. */
-function normalizeEmail(raw: string): string {
-  const latin = raw
-    .trim()
-    .replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660))
-    .replace(/[\u06F0-\u06F9]/g, (d) => String(d.charCodeAt(0) - 0x06F0));
-  if (!latin) return latin;
-  return latin.includes("@") ? latin.toLowerCase() : `${latin.toLowerCase()}@${DEFAULT_DOMAIN}`;
-}
 
 function normalizeDigits(raw: string): string {
   return raw
@@ -38,10 +50,17 @@ function normalizeDigits(raw: string): string {
 function LoginPage() {
   const { t, dir } = useI18n();
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [role, setRole] = useState<string>("super_admin");
+  const [password, setPassword] = useState("12345678");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [seeding, setSeeding] = useState(true);
+
+  useEffect(() => {
+    ensureDemoUsers()
+      .catch(() => undefined)
+      .finally(() => setSeeding(false));
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -49,7 +68,7 @@ function LoginPage() {
     setBusy(true);
     try {
       const { error: err } = await supabase.auth.signInWithPassword({
-        email: normalizeEmail(email),
+        email: `${role}@${DEFAULT_DOMAIN}`,
         password: normalizeDigits(password),
       });
       if (err) {
@@ -63,6 +82,7 @@ function LoginPage() {
       setBusy(false);
     }
   }
+
 
   return (
     <div
@@ -109,18 +129,19 @@ function LoginPage() {
           <CardContent className="p-6">
             <form onSubmit={handleSubmit} className="flex flex-col gap-4" dir={dir}>
               <div className="space-y-2">
-                <Label htmlFor="email">{t("auth.email")}</Label>
-                <Input
-                  id="email"
-                  inputMode="email"
-                  autoComplete="username"
-                  dir="ltr"
-                  className="text-start"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  autoFocus
-                />
+                <Label htmlFor="role">{t("auth.email")}</Label>
+                <Select value={role} onValueChange={setRole} disabled={seeding}>
+                  <SelectTrigger id="role" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DEMO_ROLES.map((r) => (
+                      <SelectItem key={r} value={r}>
+                        {t(`role.${r}`)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password">{t("auth.password")}</Label>
@@ -142,7 +163,7 @@ function LoginPage() {
               )}
               <Button
                 type="submit"
-                disabled={busy}
+                disabled={busy || seeding}
                 className="h-10 w-full border-0 font-semibold text-white"
                 style={{ background: "var(--gradient-brand)" }}
               >

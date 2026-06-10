@@ -91,6 +91,7 @@ export const purgeSimulatedData = createServerFn({ method: "POST" })
       "bookings",
       "quotations",
       "rfqs",
+      "rates",
       "customers",
       "suppliers",
     ]) {

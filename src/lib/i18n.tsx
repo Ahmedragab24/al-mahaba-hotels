@@ -420,6 +420,10 @@ export const dict: Dict = {
   "kpi.top_rated": { ar: "الأعلى تقييماً", en: "Top Rated" },
   "kpi.luxury": { ar: "5 نجوم", en: "5-Star" },
   "kpi.with_credit": { ar: "بحد ائتماني", en: "With Credit" },
+  "kpi.expiring_soon": { ar: "تنتهي قريباً", en: "Expiring Soon" },
+  "kpi.expired": { ar: "منتهية", en: "Expired" },
+  "kpi.draft": { ar: "مسودة", en: "Draft" },
+
 
 
 

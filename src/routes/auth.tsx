@@ -1,21 +1,42 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useI18n } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { LangSwitcher } from "@/components/lang-switcher";
 import { Loader2 } from "lucide-react";
 import logoUrl from "@/assets/daleel-logo-transparent.png";
 import logoDarkUrl from "@/assets/daleel-logo-dark.png";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { ensureDemoUsers } from "@/lib/demo-users.functions";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
   component: LoginPage,
 });
+
+const DEMO_ROLES = [
+  "super_admin",
+  "admin",
+  "sales_manager",
+  "sales_agent",
+  "operations_manager",
+  "operations_agent",
+  "finance_manager",
+  "finance_agent",
+  "viewer",
+] as const;
+
 
 const DEFAULT_DOMAIN = "uat-hrs.sa";
 

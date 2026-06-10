@@ -332,7 +332,7 @@ export async function runSimulationTick(opts: { force?: boolean } = {}): Promise
     await ensureMinSuppliers(admin, 4);
 
     for (let i = 0; i < eventsPerTick; i++) {
-      const action = pick(["rfq", "rfq", "booking", "booking", "invoice", "receipt"]);
+      const action = pick(["rate", "rate", "rfq", "rfq", "booking", "booking", "invoice", "receipt"]);
       if (action === "rfq") {
         if (await createRfq(admin)) bump("rfqs");
       } else if (action === "booking") {
@@ -341,6 +341,8 @@ export async function runSimulationTick(opts: { force?: boolean } = {}): Promise
         if (await createInvoice(admin)) bump("invoices");
       } else if (action === "receipt") {
         if (await createReceipt(admin)) bump("receipts");
+      } else if (action === "rate") {
+        if (await createRate(admin)) bump("rates");
       }
     }
 

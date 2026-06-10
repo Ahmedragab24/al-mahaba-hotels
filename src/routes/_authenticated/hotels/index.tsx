@@ -1,0 +1,278 @@
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useState, useMemo } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { PageHeader } from "@/components/page-header";
+import { useI18n } from "@/lib/i18n";
+import { useAuth } from "@/hooks/use-auth";
+import { useDebounce } from "@/lib/use-debounce";
+import { useCountries, useCities } from "@/lib/lookups";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { StatusPill } from "@/components/status-pill";
+import { DataPagination } from "@/components/data-pagination";
+import { ConfirmDialog } from "@/components/confirm-dialog";
+import { Plus, Search, Eye, Pencil, Archive, RotateCcw, Trash2, MapPin, Phone, Star } from "lucide-react";
+import { toast } from "sonner";
+import hotelImg1 from "@/assets/hotels/hotel-1.jpg";
+import hotelImg2 from "@/assets/hotels/hotel-2.jpg";
+import hotelImg3 from "@/assets/hotels/hotel-3.jpg";
+import hotelImg4 from "@/assets/hotels/hotel-4.jpg";
+import hotelImg5 from "@/assets/hotels/hotel-5.jpg";
+import hotelImg6 from "@/assets/hotels/hotel-6.jpg";
+
+export const Route = createFileRoute("/_authenticated/hotels/")({
+  component: HotelsList,
+});
+
+const PAGE_SIZE = 12;
+const STATUSES = ["active", "inactive", "archived"] as const;
+const STARS = [1, 2, 3, 4, 5] as const;
+
+const HOTEL_IMAGES = [hotelImg1, hotelImg2, hotelImg3, hotelImg4, hotelImg5, hotelImg6];
+
+function hotelImage(id: string) {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  return HOTEL_IMAGES[h % HOTEL_IMAGES.length];
+}
+
+function HotelsList() {
+  const { t, lang } = useI18n();
+  const auth = useAuth();
+  const qc = useQueryClient();
+  const navigate = useNavigate();
+  const canWrite = auth.hasAnyRole(["super_admin", "admin", "operations_manager", "operations_agent"]);
+
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState<string>("all");
+  const [country, setCountry] = useState<string>("all");
+  const [stars, setStars] = useState<string>("all");
+  const [showArchived, setShowArchived] = useState(false);
+  const [page, setPage] = useState(1);
+  const [confirm, setConfirm] = useState<{ id: string; action: "archive" | "restore" | "delete" } | null>(null);
+
+  const dSearch = useDebounce(search, 300);
+  const countries = useCountries();
+  const cities = useCities();
+  const cityMap = useMemo(() => {
+    const m = new Map<string, { name_en: string; name_ar: string }>();
+    cities.data?.forEach((c: any) => m.set(c.id, c));
+    return m;
+  }, [cities.data]);
+
+  const list = useQuery({
+    queryKey: ["hotels", { dSearch, status, country, stars, showArchived, page }],
+    queryFn: async () => {
+      let q = supabase.from("hotels").select(
+        "id,code,name_en,name_ar,brand,star_rating,country_code,city_id,district,phone,email,status,created_at,deleted_at",
+        { count: "exact" },
+      );
+      if (!showArchived) q = q.is("deleted_at", null);
+      if (status !== "all") q = q.eq("status", status as any);
+      if (country !== "all") q = q.eq("country_code", country);
+      if (stars !== "all") q = q.eq("star_rating", Number(stars));
+      if (dSearch.trim()) {
+        const s = `%${dSearch.trim()}%`;
+        q = q.or(`code.ilike.${s},name_en.ilike.${s},name_ar.ilike.${s},brand.ilike.${s},email.ilike.${s},phone.ilike.${s}`);
+      }
+      const from = (page - 1) * PAGE_SIZE;
+      q = q.order("created_at", { ascending: false }).range(from, from + PAGE_SIZE - 1);
+      const { data, error, count } = await q;
+      if (error) throw error;
+      return { rows: data ?? [], count: count ?? 0 };
+    },
+  });
+
+  const archiveMut = useMutation({
+    mutationFn: async ({ id, action }: { id: string; action: "archive" | "restore" | "delete" }) => {
+      if (action === "delete") {
+        const { error } = await supabase.from("hotels").delete().eq("id", id);
+        if (error) throw error;
+      } else if (action === "archive") {
+        const { error } = await supabase.from("hotels").update({ deleted_at: new Date().toISOString(), status: "archived" }).eq("id", id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("hotels").update({ deleted_at: null, status: "active" }).eq("id", id);
+        if (error) throw error;
+      }
+    },
+    onSuccess: (_d, v) => {
+      toast.success(v.action === "restore" ? t("toast.restored") : t("toast.deleted"));
+      qc.invalidateQueries({ queryKey: ["hotels"] });
+      qc.invalidateQueries({ queryKey: ["lookup", "hotels-lite"] });
+      setConfirm(null);
+    },
+    onError: (e: any) => toast.error(e.message ?? t("toast.error")),
+  });
+
+  const total = list.data?.count ?? 0;
+
+  const actions = useMemo(() => canWrite && (
+    <Button onClick={() => navigate({ to: "/hotels/new" })} size="sm">
+      <Plus className="h-4 w-4" /> {t("hotels.new")}
+    </Button>
+  ), [canWrite, navigate, t]);
+
+  return (
+    <>
+      <PageHeader title={t("hotels.title")} subtitle={`${total} ${t("label.total")}`} actions={actions} />
+      <div className="space-y-4 p-6">
+        <Card>
+          <CardContent className="flex flex-wrap items-center gap-3 p-4">
+            <div className="relative min-w-[220px] flex-1">
+              <Search className="absolute top-2.5 start-2 h-4 w-4 text-muted-foreground" />
+              <Input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                placeholder={t("actions.search")} className="ps-8" />
+            </div>
+            <Select value={status} onValueChange={(v) => { setStatus(v); setPage(1); }}>
+              <SelectTrigger className="w-[150px]"><SelectValue placeholder={t("filter.status")} /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t("filter.all")}</SelectItem>
+                {STATUSES.map((s) => <SelectItem key={s} value={s}>{t(`status.${s}`)}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={country} onValueChange={(v) => { setCountry(v); setPage(1); }}>
+              <SelectTrigger className="w-[180px]"><SelectValue placeholder={t("filter.country")} /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t("filter.all")}</SelectItem>
+                {countries.data?.map((c) => (
+                  <SelectItem key={c.code} value={c.code}>{lang === "ar" ? c.name_ar : c.name_en}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={stars} onValueChange={(v) => { setStars(v); setPage(1); }}>
+              <SelectTrigger className="w-[130px]"><SelectValue placeholder={t("label.stars")} /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t("filter.all")}</SelectItem>
+                {STARS.map((n) => <SelectItem key={n} value={String(n)}>{"★".repeat(n)}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <label className="ms-auto flex items-center gap-2 text-sm">
+              <Checkbox checked={showArchived} onCheckedChange={(v) => { setShowArchived(!!v); setPage(1); }} />
+              {t("filter.show_archived")}
+            </label>
+          </CardContent>
+        </Card>
+
+        {list.isLoading && (
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Card key={i} className="overflow-hidden">
+                <Skeleton className="aspect-[3/2] w-full rounded-none" />
+                <CardContent className="space-y-3 p-4">
+                  <Skeleton className="h-5 w-3/4" />
+                  <Skeleton className="h-4 w-1/2" />
+                  <Skeleton className="h-4 w-2/3" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {!list.isLoading && (list.data?.rows.length ?? 0) === 0 && (
+          <Card><CardContent className="py-16 text-center text-muted-foreground">{t("label.no_results")}</CardContent></Card>
+        )}
+
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+          {list.data?.rows.map((h: any) => {
+            const name = lang === "ar" ? (h.name_ar || h.name_en) : (h.name_en || h.name_ar);
+            const city = h.city_id ? cityMap.get(h.city_id) : null;
+            const cityName = city ? (lang === "ar" ? city.name_ar : city.name_en) : null;
+            const countryName = countries.data?.find((c) => c.code === h.country_code);
+            const location = [cityName, countryName ? (lang === "ar" ? countryName.name_ar : countryName.name_en) : h.country_code]
+              .filter(Boolean).join("، ");
+            return (
+              <Card
+                key={h.id}
+                className={`group overflow-hidden border transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${h.deleted_at ? "opacity-60" : ""}`}
+              >
+                <Link to="/hotels/$id" params={{ id: h.id }} className="relative block aspect-[3/2] overflow-hidden bg-muted">
+                  <img
+                    src={hotelImage(h.id)}
+                    alt={name}
+                    width={768}
+                    height={512}
+                    loading="lazy"
+                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-foreground/60 to-transparent" />
+                  <div className="absolute top-3 start-3 flex items-center gap-2">
+                    <StatusPill status={h.status} />
+                  </div>
+                  {h.star_rating ? (
+                    <Badge className="absolute top-3 end-3 gap-1 bg-card/90 text-amber-500 shadow backdrop-blur hover:bg-card/90">
+                      <Star className="h-3 w-3 fill-current" />
+                      <span className="text-foreground">{h.star_rating}</span>
+                    </Badge>
+                  ) : null}
+                  <div className="absolute bottom-2 start-3 end-3">
+                    <span className="font-mono text-[11px] text-background/90">{h.code}</span>
+                  </div>
+                </Link>
+                <CardContent className="space-y-2 p-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <Link to="/hotels/$id" params={{ id: h.id }} className="line-clamp-1 text-base font-semibold hover:underline">
+                      {name}
+                    </Link>
+                  </div>
+                  {h.brand && <div className="text-xs font-medium text-primary">{h.brand}</div>}
+                  <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                    <MapPin className="h-3.5 w-3.5 shrink-0" />
+                    <span className="line-clamp-1">{location || "—"}</span>
+                  </div>
+                  {h.phone && (
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Phone className="h-3.5 w-3.5 shrink-0" />
+                      <span dir="ltr">{h.phone}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between border-t pt-3">
+                    <div className="text-amber-500 text-sm">{h.star_rating ? "★".repeat(h.star_rating) : ""}</div>
+                    <div className="flex gap-1">
+                      <Button asChild variant="ghost" size="icon" className="h-8 w-8" title={t("actions.view")}>
+                        <Link to="/hotels/$id" params={{ id: h.id }}><Eye className="h-4 w-4" /></Link>
+                      </Button>
+                      {canWrite && !h.deleted_at && (
+                        <Button asChild variant="ghost" size="icon" className="h-8 w-8" title={t("actions.edit")}>
+                          <Link to="/hotels/$id" params={{ id: h.id }} search={{ edit: 1 } as any}><Pencil className="h-4 w-4" /></Link>
+                        </Button>
+                      )}
+                      {auth.isAdmin && (h.deleted_at
+                        ? <Button variant="ghost" size="icon" className="h-8 w-8" title={t("actions.restore")} onClick={() => setConfirm({ id: h.id, action: "restore" })}><RotateCcw className="h-4 w-4" /></Button>
+                        : <Button variant="ghost" size="icon" className="h-8 w-8" title={t("actions.archive")} onClick={() => setConfirm({ id: h.id, action: "archive" })}><Archive className="h-4 w-4" /></Button>
+                      )}
+                      {auth.isAdmin && h.deleted_at && (
+                        <Button variant="ghost" size="icon" className="h-8 w-8" title={t("actions.delete")} onClick={() => setConfirm({ id: h.id, action: "delete" })}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+
+        <Card>
+          <CardContent className="p-0">
+            <DataPagination page={page} pageSize={PAGE_SIZE} total={total} onPage={setPage} />
+          </CardContent>
+        </Card>
+      </div>
+
+      <ConfirmDialog
+        open={!!confirm}
+        onOpenChange={(v) => !v && setConfirm(null)}
+        title={confirm?.action === "restore" ? t("actions.restore") : confirm?.action === "delete" ? t("actions.delete") : t("actions.archive")}
+        description={confirm?.action === "delete" ? t("toast.confirm_delete") : confirm?.action === "restore" ? "" : t("toast.confirm_archive")}
+        destructive={confirm?.action !== "restore"}
+        onConfirm={() => confirm && archiveMut.mutate(confirm)}
+      />
+    </>
+  );
+}

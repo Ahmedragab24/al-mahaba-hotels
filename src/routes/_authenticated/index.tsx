@@ -1,4 +1,4 @@
-import { createFileRoute, Link, type LinkProps } from "@tanstack/react-router";
+import { createFileRoute, Link, Navigate, type LinkProps } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
@@ -9,8 +9,16 @@ import { Users, Hotel, Truck, Tags, ClipboardCheck, Activity, TrendingUp, Trendi
 import { formatDateTime } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/")({
-  component: Dashboard,
+  component: DashboardOrRedirect,
 });
+
+function DashboardOrRedirect() {
+  const auth = useAuth();
+  if (!auth.loading && auth.hasRole("supplier") && !auth.hasAnyRole(["super_admin","admin","sales_manager","sales_agent","operations_manager","operations_agent","finance_manager","finance_agent","viewer"])) {
+    return <Navigate to="/supplier-portal" replace />;
+  }
+  return <Dashboard />;
+}
 
 function StatCard({ icon: Icon, label, value, to }: { icon: React.ComponentType<{ className?: string }>; label: string; value: number | string; to?: LinkProps["to"] }) {
   const card = (

@@ -95,7 +95,7 @@ function Row({ label, value }: { label: string; value: string }) {
 function HotelsTab() {
   const { lang, t } = useI18n();
   const q = useQuery({ queryKey: ["my-hotels"], queryFn: () => listMyHotels() });
-  const rows = (q.data?.rows ?? []) as Array<{ hotels: { id: string; name_ar: string; name_en: string; code: string; stars: number } | null }>;
+  const rows = (q.data?.rows ?? []) as unknown as Array<{ hotels: { id: string; name_ar: string; name_en: string; code: string; star_rating: number | null } | null }>;
   if (q.isLoading) return <Loader />;
   if (rows.length === 0) return <Empty msg={t("supplier.portal.empty_hotels")} />;
   return (
@@ -103,7 +103,7 @@ function HotelsTab() {
       {rows.map((r) => r.hotels && (
         <Card key={r.hotels.id}><CardContent className="p-4">
           <div className="font-semibold truncate">{lang === "ar" ? r.hotels.name_ar : r.hotels.name_en}</div>
-          <div className="text-xs text-muted-foreground">{r.hotels.code} · {"★".repeat(r.hotels.stars)}</div>
+          <div className="text-xs text-muted-foreground">{r.hotels.code} · {"★".repeat(r.hotels.star_rating ?? 0)}</div>
         </CardContent></Card>
       ))}
     </div>
@@ -138,7 +138,7 @@ function BookingsTab() {
   const { t } = useI18n();
   const q = useQuery({ queryKey: ["my-bookings"], queryFn: () => listMyBookings() });
   if (q.isLoading) return <Loader />;
-  const rows = (q.data?.rows ?? []) as Array<{ id: string; check_in: string; check_out: string; nights: number; room_count: number; total_cost: number; currency: string; status: string }>;
+  const rows = (q.data?.rows ?? []) as unknown as Array<{ id: string; check_in: string; check_out: string; nights: number; rooms: number; total_cost: number; confirmation_status: string }>;
   if (rows.length === 0) return <Empty msg={t("supplier.portal.empty_bookings")} />;
   return (
     <Card><CardContent className="p-0 overflow-x-auto">
@@ -150,9 +150,9 @@ function BookingsTab() {
         <tbody>{rows.map((r) => (
           <tr key={r.id} className="border-t">
             <Td>{r.check_in}</Td><Td>{r.check_out}</Td>
-            <Td>{r.nights}</Td><Td>{r.room_count}</Td>
-            <Td>{Number(r.total_cost).toLocaleString()} {r.currency}</Td>
-            <Td><Badge variant="outline">{r.status}</Badge></Td>
+            <Td>{r.nights}</Td><Td>{r.rooms}</Td>
+            <Td>{Number(r.total_cost).toLocaleString()}</Td>
+            <Td><Badge variant="outline">{r.confirmation_status}</Badge></Td>
           </tr>
         ))}</tbody>
       </table>

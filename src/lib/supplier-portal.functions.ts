@@ -49,7 +49,7 @@ export const listMyHotels = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data } = await context.supabase
       .from("hotel_suppliers")
-      .select("hotel_id, hotels(id,code,name_en,name_ar,stars,city_id)")
+      .select("hotel_id, hotels(id,code,name_en,name_ar,star_rating,city_id)")
       .order("hotel_id");
     return { rows: data ?? [] };
   });
@@ -70,7 +70,7 @@ export const listMyBookings = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data } = await context.supabase
       .from("booking_rooms")
-      .select("id,booking_id,hotel_id,check_in,check_out,nights,room_count,total_cost,currency,status")
+      .select("id,booking_id,hotel_id,check_in,check_out,nights,rooms,total_cost,confirmation_status")
       .order("check_in", { ascending: false })
       .limit(200);
     return { rows: data ?? [] };

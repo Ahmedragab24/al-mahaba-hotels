@@ -62,6 +62,53 @@ export type Database = {
         }
         Relationships: []
       }
+      approval_thresholds: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          currency: string
+          entity_type: string
+          id: string
+          is_active: boolean
+          notes: string | null
+          requires_second_approver: boolean
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          currency: string
+          entity_type: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          requires_second_approver?: boolean
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          entity_type?: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          requires_second_approver?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approval_thresholds_currency_fkey"
+            columns: ["currency"]
+            isOneToOne: false
+            referencedRelation: "currencies"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
       attachments: {
         Row: {
           created_at: string
@@ -1398,6 +1445,7 @@ export type Database = {
           district: string | null
           email: string | null
           id: string
+          is_direct_supplier: boolean
           latitude: number | null
           longitude: number | null
           name_ar: string
@@ -1430,6 +1478,7 @@ export type Database = {
           district?: string | null
           email?: string | null
           id?: string
+          is_direct_supplier?: boolean
           latitude?: number | null
           longitude?: number | null
           name_ar: string
@@ -1462,6 +1511,7 @@ export type Database = {
           district?: string | null
           email?: string | null
           id?: string
+          is_direct_supplier?: boolean
           latitude?: number | null
           longitude?: number | null
           name_ar?: string
@@ -2275,12 +2325,14 @@ export type Database = {
           deleted_at: string | null
           hotel_id: string
           id: string
+          is_direct: boolean
           markup_pct: number | null
           max_nights: number | null
           meal_plan: Database["public"]["Enums"]["rate_board"]
           min_nights: number
           notes_ar: string | null
           notes_en: string | null
+          parent_rate_id: string | null
           rejection_reason: string | null
           release_days: number
           room_type_id: string
@@ -2288,11 +2340,14 @@ export type Database = {
           status: Database["public"]["Enums"]["approval_status"]
           submitted_at: string | null
           submitted_by: string | null
-          supplier_id: string
+          superseded_at: string | null
+          superseded_by: string | null
+          supplier_id: string | null
           updated_at: string
           updated_by: string | null
           valid_from: string
           valid_to: string
+          version: number
           view_id: string | null
         }
         Insert: {
@@ -2310,12 +2365,14 @@ export type Database = {
           deleted_at?: string | null
           hotel_id: string
           id?: string
+          is_direct?: boolean
           markup_pct?: number | null
           max_nights?: number | null
           meal_plan: Database["public"]["Enums"]["rate_board"]
           min_nights?: number
           notes_ar?: string | null
           notes_en?: string | null
+          parent_rate_id?: string | null
           rejection_reason?: string | null
           release_days?: number
           room_type_id: string
@@ -2323,11 +2380,14 @@ export type Database = {
           status?: Database["public"]["Enums"]["approval_status"]
           submitted_at?: string | null
           submitted_by?: string | null
-          supplier_id: string
+          superseded_at?: string | null
+          superseded_by?: string | null
+          supplier_id?: string | null
           updated_at?: string
           updated_by?: string | null
           valid_from: string
           valid_to: string
+          version?: number
           view_id?: string | null
         }
         Update: {
@@ -2345,12 +2405,14 @@ export type Database = {
           deleted_at?: string | null
           hotel_id?: string
           id?: string
+          is_direct?: boolean
           markup_pct?: number | null
           max_nights?: number | null
           meal_plan?: Database["public"]["Enums"]["rate_board"]
           min_nights?: number
           notes_ar?: string | null
           notes_en?: string | null
+          parent_rate_id?: string | null
           rejection_reason?: string | null
           release_days?: number
           room_type_id?: string
@@ -2358,11 +2420,14 @@ export type Database = {
           status?: Database["public"]["Enums"]["approval_status"]
           submitted_at?: string | null
           submitted_by?: string | null
-          supplier_id?: string
+          superseded_at?: string | null
+          superseded_by?: string | null
+          supplier_id?: string | null
           updated_at?: string
           updated_by?: string | null
           valid_from?: string
           valid_to?: string
+          version?: number
           view_id?: string | null
         }
         Relationships: [
@@ -2385,6 +2450,13 @@ export type Database = {
             columns: ["hotel_id"]
             isOneToOne: false
             referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rates_parent_rate_id_fkey"
+            columns: ["parent_rate_id"]
+            isOneToOne: false
+            referencedRelation: "rates"
             referencedColumns: ["id"]
           },
           {
@@ -3574,6 +3646,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      archive_old_rates: { Args: never; Returns: number }
       check_account_lock: { Args: { _email: string }; Returns: Json }
       create_booking_from_quotation: {
         Args: { _quotation_id: string }
@@ -3586,6 +3659,10 @@ export type Database = {
       create_payables_from_booking: {
         Args: { _booking_id: string }
         Returns: number
+      }
+      create_rate_version: {
+        Args: { _changes: Json; _rate_id: string }
+        Returns: string
       }
       current_user_roles: {
         Args: never

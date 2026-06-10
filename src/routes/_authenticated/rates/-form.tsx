@@ -13,6 +13,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 
@@ -20,7 +21,8 @@ const BOARDS = ["RO", "BB", "HB", "FB", "AI", "UAI"] as const;
 
 const schema = z.object({
   hotel_id: z.string().uuid(),
-  supplier_id: z.string().uuid(),
+  is_direct: z.boolean().default(false),
+  supplier_id: z.string().uuid().optional().or(z.literal("")),
   contract_id: z.string().uuid().optional().or(z.literal("")),
   room_type_id: z.string().uuid(),
   view_id: z.string().uuid().optional().or(z.literal("")),
@@ -41,6 +43,8 @@ const schema = z.object({
   cancellation_policy_ar: z.string().max(4000).optional().or(z.literal("")),
 }).refine((v) => new Date(v.valid_to) >= new Date(v.valid_from), {
   path: ["valid_to"], message: "valid_to >= valid_from",
+}).refine((v) => v.is_direct || (v.supplier_id && v.supplier_id.length > 0), {
+  path: ["supplier_id"], message: "supplier required unless direct",
 });
 
 type FormVals = z.input<typeof schema>;
@@ -56,6 +60,7 @@ export function RateForm({ initial, onSaved }: { initial?: any; onSaved: (id: st
     resolver: zodResolver(schema),
     defaultValues: {
       hotel_id: initial?.hotel_id ?? "",
+      is_direct: initial?.is_direct ?? false,
       supplier_id: initial?.supplier_id ?? "",
       contract_id: initial?.contract_id ?? "",
       room_type_id: initial?.room_type_id ?? "",
@@ -80,6 +85,7 @@ export function RateForm({ initial, onSaved }: { initial?: any; onSaved: (id: st
 
   const hotelId = form.watch("hotel_id");
   const supplierId = form.watch("supplier_id");
+  const isDirect = form.watch("is_direct");
   const roomTypes = useHotelRoomTypes(hotelId || null);
   const views = useHotelViews(hotelId || null);
   const contracts = useSupplierContracts(supplierId || null);
@@ -91,7 +97,23 @@ export function RateForm({ initial, onSaved }: { initial?: any; onSaved: (id: st
        "notes_en", "notes_ar", "cancellation_policy_en", "cancellation_policy_ar"].forEach((k) => {
         if (clean[k] === "" || clean[k] === undefined) clean[k] = null;
       });
+      if (clean.is_direct) {
+        clean.supplier_id = null;
+        clean.contract_id = null;
+      } else if (clean.supplier_id === "") {
+        clean.supplier_id = null;
+      }
       if (initial?.id) {
+        // Approved rates → create a new draft version via RPC
+        if (initial.status === "approved") {
+          const { data, error } = await supabase.rpc("create_rate_version", {
+            _rate_id: initial.id,
+            _changes: clean as any,
+          });
+          if (error) throw error;
+          toast.info(t("rates.versioned_saved"));
+          return data as string;
+        }
         const { error } = await supabase.from("rates").update(clean).eq("id", initial.id);
         if (error) throw error;
         return initial.id as string;
@@ -128,10 +150,21 @@ export function RateForm({ initial, onSaved }: { initial?: any; onSaved: (id: st
                 </Select>
                 <FormMessage /></FormItem>
             )} />
+            <FormField control={form.control} name="is_direct" render={({ field }) => (
+              <FormItem className="flex items-center gap-2 self-end pb-2">
+                <FormControl>
+                  <Checkbox checked={!!field.value} onCheckedChange={(v) => {
+                    field.onChange(!!v);
+                    if (v) { form.setValue("supplier_id", ""); form.setValue("contract_id", ""); }
+                  }} />
+                </FormControl>
+                <FormLabel className="!mt-0">{t("rates.is_direct")}</FormLabel>
+              </FormItem>
+            )} />
             <FormField control={form.control} name="supplier_id" render={({ field }) => (
-              <FormItem><FormLabel>{t("rates.supplier")} *</FormLabel>
-                <Select value={field.value} onValueChange={(v) => { field.onChange(v); form.setValue("contract_id", ""); }}>
-                  <FormControl><SelectTrigger><SelectValue placeholder="—" /></SelectTrigger></FormControl>
+              <FormItem><FormLabel>{t("rates.supplier")} {!isDirect && "*"}</FormLabel>
+                <Select value={field.value || ""} onValueChange={(v) => { field.onChange(v); form.setValue("contract_id", ""); }} disabled={isDirect}>
+                  <FormControl><SelectTrigger><SelectValue placeholder={isDirect ? t("rates.source.direct") : "—"} /></SelectTrigger></FormControl>
                   <SelectContent>
                     {suppliers.data?.map((s) => (
                       <SelectItem key={s.id} value={s.id}>{lang === "ar" ? (s.name_ar || s.name_en) : (s.name_en || s.name_ar)}</SelectItem>

@@ -16,7 +16,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { StatusPill } from "@/components/status-pill";
 import { DataPagination } from "@/components/data-pagination";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import { Plus, Search, Eye, Pencil, Archive, RotateCcw, Trash2 } from "lucide-react";
+import { Plus, Search, Eye, Pencil, Archive, RotateCcw, Trash2, GitCompare, History } from "lucide-react";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/format";
 
@@ -43,6 +43,7 @@ function RatesList() {
   const [from, setFrom] = useState<string>("");
   const [to, setTo] = useState<string>("");
   const [showArchived, setShowArchived] = useState(false);
+  const [latestOnly, setLatestOnly] = useState(true);
   const [page, setPage] = useState(1);
   const [confirm, setConfirm] = useState<{ id: string; action: "archive" | "restore" | "delete" } | null>(null);
 
@@ -51,13 +52,14 @@ function RatesList() {
   const suppliers = useSuppliersLite();
 
   const list = useQuery({
-    queryKey: ["rates", { dSearch, status, hotelId, supplierId, board, from, to, showArchived, page }],
+    queryKey: ["rates", { dSearch, status, hotelId, supplierId, board, from, to, showArchived, latestOnly, page }],
     queryFn: async () => {
       let q = supabase.from("rates").select(
-        "id,code,hotel_id,supplier_id,room_type_id,meal_plan,currency,valid_from,valid_to,cost_per_night,selling_price,status,deleted_at,hotel:hotels(name_en,name_ar),supplier:suppliers(name_en,name_ar),room_type:hotel_room_types(name_en,name_ar)",
+        "id,code,hotel_id,supplier_id,room_type_id,meal_plan,currency,valid_from,valid_to,cost_per_night,selling_price,status,deleted_at,is_direct,version,superseded_at,hotel:hotels(name_en,name_ar),supplier:suppliers(name_en,name_ar),room_type:hotel_room_types(name_en,name_ar)",
         { count: "exact" },
       );
       if (!showArchived) q = q.is("deleted_at", null);
+      if (latestOnly) q = q.is("superseded_at", null);
       if (status !== "all") q = q.eq("status", status as any);
       if (hotelId !== "all") q = q.eq("hotel_id", hotelId);
       if (supplierId !== "all") q = q.eq("supplier_id", supplierId);
@@ -99,10 +101,17 @@ function RatesList() {
 
   const total = list.data?.count ?? 0;
 
-  const actions = useMemo(() => canWrite && (
-    <Button onClick={() => navigate({ to: "/rates/new" })} size="sm">
-      <Plus className="h-4 w-4" /> {t("rates.new")}
-    </Button>
+  const actions = useMemo(() => (
+    <div className="flex gap-2">
+      <Button asChild variant="outline" size="sm">
+        <Link to="/rates/compare"><GitCompare className="h-4 w-4" />{t("rates.compare")}</Link>
+      </Button>
+      {canWrite && (
+        <Button onClick={() => navigate({ to: "/rates/new" })} size="sm">
+          <Plus className="h-4 w-4" /> {t("rates.new")}
+        </Button>
+      )}
+    </div>
   ), [canWrite, navigate, t]);
 
   return (
@@ -150,7 +159,11 @@ function RatesList() {
             </Select>
             <Input type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} className="w-full" />
             <Input type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} className="w-full" />
-            <label className="flex items-center gap-2 text-sm sm:col-span-2 lg:col-span-1">
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox checked={latestOnly} onCheckedChange={(v) => { setLatestOnly(!!v); setPage(1); }} />
+              {t("rates.latest_only")}
+            </label>
+            <label className="flex items-center gap-2 text-sm">
               <Checkbox checked={showArchived} onCheckedChange={(v) => { setShowArchived(!!v); setPage(1); }} />
               {t("filter.show_archived")}
             </label>

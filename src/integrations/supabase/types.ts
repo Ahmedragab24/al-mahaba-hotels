@@ -1904,6 +1904,7 @@ export type Database = {
           password_changed_at: string | null
           phone: string | null
           preferred_language: Database["public"]["Enums"]["app_language"]
+          supplier_id: string | null
           updated_at: string
           username: string | null
         }
@@ -1924,6 +1925,7 @@ export type Database = {
           password_changed_at?: string | null
           phone?: string | null
           preferred_language?: Database["public"]["Enums"]["app_language"]
+          supplier_id?: string | null
           updated_at?: string
           username?: string | null
         }
@@ -1944,10 +1946,19 @@ export type Database = {
           password_changed_at?: string | null
           phone?: string | null
           preferred_language?: Database["public"]["Enums"]["app_language"]
+          supplier_id?: string | null
           updated_at?: string
           username?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       quotation_items: {
         Row: {
@@ -3036,6 +3047,121 @@ export type Database = {
         }
         Relationships: []
       }
+      supplier_applications: {
+        Row: {
+          address_line1: string | null
+          admin_notes: string | null
+          city_id: string | null
+          commercial_reg_path: string | null
+          commercial_registration: string | null
+          contact_email: string
+          contact_name: string
+          contact_phone: string
+          contact_position: string | null
+          country_code: string | null
+          created_at: string
+          created_supplier_id: string | null
+          created_user_id: string | null
+          id: string
+          legal_name: string | null
+          name_ar: string
+          name_en: string
+          profile_path: string | null
+          rejection_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          submitted_at: string
+          supplier_type: string
+          tax_cert_path: string | null
+          tax_number: string | null
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          address_line1?: string | null
+          admin_notes?: string | null
+          city_id?: string | null
+          commercial_reg_path?: string | null
+          commercial_registration?: string | null
+          contact_email: string
+          contact_name: string
+          contact_phone: string
+          contact_position?: string | null
+          country_code?: string | null
+          created_at?: string
+          created_supplier_id?: string | null
+          created_user_id?: string | null
+          id?: string
+          legal_name?: string | null
+          name_ar: string
+          name_en: string
+          profile_path?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_at?: string
+          supplier_type: string
+          tax_cert_path?: string | null
+          tax_number?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          address_line1?: string | null
+          admin_notes?: string | null
+          city_id?: string | null
+          commercial_reg_path?: string | null
+          commercial_registration?: string | null
+          contact_email?: string
+          contact_name?: string
+          contact_phone?: string
+          contact_position?: string | null
+          country_code?: string | null
+          created_at?: string
+          created_supplier_id?: string | null
+          created_user_id?: string | null
+          id?: string
+          legal_name?: string | null
+          name_ar?: string
+          name_en?: string
+          profile_path?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_at?: string
+          supplier_type?: string
+          tax_cert_path?: string | null
+          tax_number?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_applications_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_applications_country_code_fkey"
+            columns: ["country_code"]
+            isOneToOne: false
+            referencedRelation: "countries"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "supplier_applications_created_supplier_id_fkey"
+            columns: ["created_supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       supplier_bank_accounts: {
         Row: {
           account_holder: string
@@ -3668,6 +3794,11 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["app_role"][]
       }
+      current_user_supplier_id: { Args: never; Returns: string }
+      finalize_supplier_application: {
+        Args: { _app_id: string; _user_id: string }
+        Returns: Json
+      }
       has_any_role: {
         Args: {
           _roles: Database["public"]["Enums"]["app_role"][]
@@ -3683,6 +3814,7 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_supplier_user: { Args: { _uid: string }; Returns: boolean }
       log_audit: {
         Args: {
           _action: string
@@ -3703,6 +3835,10 @@ export type Database = {
         Args: { _ip?: string; _user_id: string }
         Returns: undefined
       }
+      reject_supplier_application: {
+        Args: { _app_id: string; _reason: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_language: "ar" | "en" | "id" | "ur"
@@ -3716,6 +3852,7 @@ export type Database = {
         | "finance_manager"
         | "finance_agent"
         | "viewer"
+        | "supplier"
       approval_status:
         | "draft"
         | "pending_approval"
@@ -3869,6 +4006,7 @@ export const Constants = {
         "finance_manager",
         "finance_agent",
         "viewer",
+        "supplier",
       ],
       approval_status: [
         "draft",

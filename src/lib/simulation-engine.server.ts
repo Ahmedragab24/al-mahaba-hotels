@@ -55,7 +55,7 @@ const HOTEL_NAMES_AR = [
   "منتجع الدمام بيتش",
 ];
 
-const pick = <T,>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)];
+const pick = (arr: any[]): any => arr[Math.floor(Math.random() * arr.length)];
 const intBetween = (a: number, b: number) => Math.floor(Math.random() * (b - a + 1)) + a;
 
 async function ensureMinCustomers(admin: any, minCount: number) {

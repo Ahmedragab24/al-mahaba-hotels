@@ -62,6 +62,8 @@ const master: NavItem[] = [
     roles: ["super_admin","admin","operations_manager","operations_agent","finance_manager","finance_agent","viewer"] },
   { to: "/rates", labelKey: "nav.rates", icon: Tags,
     roles: ["super_admin","admin","sales_manager","sales_agent","operations_manager","operations_agent","finance_manager","finance_agent","viewer"] },
+  { to: "/rates/compare", labelKey: "rates.compare", icon: Tags,
+    roles: ["super_admin","admin","sales_manager","sales_agent","operations_manager","operations_agent","finance_manager","finance_agent","viewer"] },
 ];
 const contracting: NavItem[] = [
   { to: "/room-types", labelKey: "nav.room_types", icon: BedDouble,

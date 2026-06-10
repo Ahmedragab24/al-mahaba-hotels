@@ -172,7 +172,7 @@ function LoginPage() {
               )}
               <Button
                 type="submit"
-                disabled={busy}
+                disabled={busy || seeding}
                 className="h-10 w-full border-0 font-semibold text-white"
                 style={{ background: "var(--gradient-brand)" }}
               >

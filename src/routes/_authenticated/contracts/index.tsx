@@ -14,10 +14,11 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { StatusPill } from "@/components/status-pill";
+import { StatusPill as StatusBadge } from "@/components/status-pill";
+import { KpiCard, StatusPill } from "@/components/list-toolkit";
 import { DataPagination } from "@/components/data-pagination";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import { Plus, Search, Eye, Pencil, Archive, RotateCcw, Trash2 } from "lucide-react";
+import { Plus, Search, Eye, Pencil, Archive, RotateCcw, Trash2, FileSignature, CheckCircle2, Clock, AlertTriangle, FileEdit, XCircle } from "lucide-react";
 import { formatDate } from "@/lib/format";
 import { toast } from "sonner";
 
@@ -41,6 +42,7 @@ function ContractsList() {
   const [supplier, setSupplier] = useState("all");
   const [hotel, setHotel] = useState("all");
   const [type, setType] = useState("all");
+  const [expiring, setExpiring] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   const [page, setPage] = useState(1);
   const [confirm, setConfirm] = useState<{ id: string; action: "archive" | "restore" | "delete" } | null>(null);
@@ -49,8 +51,28 @@ function ContractsList() {
   const suppliers = useSuppliersLite();
   const hotels = useHotelsLite();
 
+  const metrics = useQuery({
+    queryKey: ["contracts-metrics"],
+    queryFn: async () => {
+      const { data } = await supabase.from("supplier_contracts").select("status,end_date,deleted_at");
+      const rows = data ?? [];
+      const today = new Date().toISOString().slice(0, 10);
+      const in30 = new Date(); in30.setDate(in30.getDate() + 30);
+      const in30Str = in30.toISOString().slice(0, 10);
+      const live = rows.filter(r => !r.deleted_at);
+      return {
+        total: live.length,
+        active: live.filter(r => r.status === "active").length,
+        draft: live.filter(r => r.status === "draft").length,
+        expiringSoon: live.filter(r => r.status === "active" && r.end_date && r.end_date >= today && r.end_date <= in30Str).length,
+        expired: live.filter(r => r.status === "expired" || (r.end_date && r.end_date < today && r.status !== "draft")).length,
+        archived: rows.filter(r => r.deleted_at).length,
+      };
+    },
+  });
+
   const list = useQuery({
-    queryKey: ["contracts", { dSearch, status, supplier, hotel, type, showArchived, page }],
+    queryKey: ["contracts", { dSearch, status, supplier, hotel, type, expiring, showArchived, page }],
     queryFn: async () => {
       let q = supabase.from("supplier_contracts").select(
         "id,contract_number,title,contract_type,status,start_date,end_date,currency,commission_pct,deleted_at,created_at,supplier:suppliers(name_en,name_ar),hotel:hotels(name_en,name_ar)",
@@ -61,6 +83,11 @@ function ContractsList() {
       if (supplier !== "all") q = q.eq("supplier_id", supplier);
       if (hotel !== "all") q = q.eq("hotel_id", hotel);
       if (type !== "all") q = q.eq("contract_type", type);
+      if (expiring) {
+        const today = new Date().toISOString().slice(0, 10);
+        const in30 = new Date(); in30.setDate(in30.getDate() + 30);
+        q = q.gte("end_date", today).lte("end_date", in30.toISOString().slice(0, 10)).eq("status", "active");
+      }
       if (dSearch.trim()) {
         const s = `%${dSearch.trim()}%`;
         q = q.or(`contract_number.ilike.${s},title.ilike.${s}`);
@@ -108,6 +135,28 @@ function ContractsList() {
         )}
       />
       <div className="space-y-4 p-6">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          <KpiCard icon={FileSignature} tone="primary" label={t("kpi.total")} value={metrics.data?.total ?? "—"}
+            active={status === "all" && !showArchived && !expiring} onClick={() => { setStatus("all"); setExpiring(false); setShowArchived(false); setPage(1); }} />
+          <KpiCard icon={CheckCircle2} tone="success" label={t("status.active")} value={metrics.data?.active ?? "—"}
+            active={status === "active"} onClick={() => { setStatus("active"); setExpiring(false); setPage(1); }} />
+          <KpiCard icon={Clock} tone="warning" label={t("kpi.expiring_soon")} value={metrics.data?.expiringSoon ?? "—"}
+            active={expiring} onClick={() => { setExpiring(!expiring); setStatus("all"); setPage(1); }} />
+          <KpiCard icon={AlertTriangle} tone="destructive" label={t("kpi.expired")} value={metrics.data?.expired ?? "—"}
+            active={status === "expired"} onClick={() => { setStatus("expired"); setExpiring(false); setPage(1); }} />
+          <KpiCard icon={FileEdit} tone="muted" label={t("kpi.draft")} value={metrics.data?.draft ?? "—"}
+            active={status === "draft"} onClick={() => { setStatus("draft"); setExpiring(false); setPage(1); }} />
+          <KpiCard icon={Archive} tone="muted" label={t("kpi.archived")} value={metrics.data?.archived ?? "—"}
+            active={showArchived} onClick={() => { setShowArchived(true); setStatus("all"); setExpiring(false); setPage(1); }} />
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <StatusPill label={t("filter.all")} tone="primary" active={type === "all"} onClick={() => { setType("all"); setPage(1); }} />
+          {TYPES.map(c => (
+            <StatusPill key={c} label={t(`ctrtype.${c}`)} tone="info" active={type === c} onClick={() => { setType(c); setPage(1); }} />
+          ))}
+        </div>
+
         <Card>
           <CardContent className="flex flex-wrap items-center gap-3 p-4">
             <div className="relative min-w-[200px] flex-1">
@@ -168,8 +217,14 @@ function ContractsList() {
               <TableBody>
                 {list.isLoading && <TableRow><TableCell colSpan={9} className="py-10 text-center text-muted-foreground">{t("label.loading")}</TableCell></TableRow>}
                 {!list.isLoading && (list.data?.rows.length ?? 0) === 0 && <TableRow><TableCell colSpan={9} className="py-10 text-center text-muted-foreground">{t("label.no_results")}</TableCell></TableRow>}
-                {list.data?.rows.map((c: any) => (
-                  <TableRow key={c.id} className={c.deleted_at ? "opacity-60" : ""}>
+                {list.data?.rows.map((c: any) => {
+                  const today = new Date(); today.setHours(0,0,0,0);
+                  const end = c.end_date ? new Date(c.end_date) : null;
+                  const daysLeft = end ? Math.ceil((end.getTime() - today.getTime()) / 86400000) : null;
+                  const isExpiringSoon = c.status === "active" && daysLeft !== null && daysLeft >= 0 && daysLeft <= 30;
+                  const isExpired = daysLeft !== null && daysLeft < 0;
+                  return (
+                  <TableRow key={c.id} className={`${c.deleted_at ? "opacity-60" : ""} ${isExpiringSoon ? "bg-amber-500/5" : ""}`}>
                     <TableCell className="font-mono text-xs">
                       <Link to="/contracts/$id" params={{ id: c.id }} className="hover:underline">{c.contract_number}</Link>
                     </TableCell>
@@ -177,9 +232,23 @@ function ContractsList() {
                     <TableCell className="text-sm">{c.supplier ? (lang === "ar" ? (c.supplier.name_ar || c.supplier.name_en) : (c.supplier.name_en || c.supplier.name_ar)) : "—"}</TableCell>
                     <TableCell className="text-sm">{c.hotel ? (lang === "ar" ? (c.hotel.name_ar || c.hotel.name_en) : (c.hotel.name_en || c.hotel.name_ar)) : "—"}</TableCell>
                     <TableCell className="text-xs">{t(`ctrtype.${c.contract_type}`)}</TableCell>
-                    <TableCell dir="ltr" className="text-xs whitespace-nowrap">{formatDate(c.start_date, lang)} → {formatDate(c.end_date, lang)}</TableCell>
+                    <TableCell dir="ltr" className="text-xs whitespace-nowrap">
+                      <div className="flex items-center gap-2">
+                        <span>{formatDate(c.start_date, lang)} → {formatDate(c.end_date, lang)}</span>
+                        {isExpiringSoon && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-400">
+                            <Clock className="h-3 w-3" />{daysLeft}d
+                          </span>
+                        )}
+                        {isExpired && c.status !== "draft" && !c.deleted_at && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-destructive/15 px-2 py-0.5 text-[10px] font-semibold text-destructive">
+                            <XCircle className="h-3 w-3" />{t("kpi.expired")}
+                          </span>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell className="text-xs">{c.currency ?? "—"}</TableCell>
-                    <TableCell><StatusPill status={c.status} /></TableCell>
+                    <TableCell><StatusBadge status={c.status} /></TableCell>
                     <TableCell className="text-end">
                       <div className="flex justify-end gap-1">
                         <Button asChild variant="ghost" size="icon" title={t("actions.view")}>
@@ -200,7 +269,8 @@ function ContractsList() {
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
             <DataPagination page={page} pageSize={PAGE_SIZE} total={total} onPage={setPage} />

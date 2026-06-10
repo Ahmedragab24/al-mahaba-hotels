@@ -224,13 +224,14 @@ async function createInvoice(admin: any): Promise<string | null> {
 async function createReceipt(admin: any): Promise<string | null> {
   const { data: invoices } = await admin
     .from("invoices")
-    .select("id, customer_id, currency, balance_due")
+    .select("id, customer_id, currency, total_amount, paid_amount")
     .eq("is_simulated", true)
-    .gt("balance_due", 0)
     .limit(20);
   if (!invoices || invoices.length === 0) return null;
   const inv = pick(invoices);
-  const amount = Math.min(Number(inv.balance_due), intBetween(100, 5000));
+  const remaining = Math.max(0, Number(inv.total_amount) - Number(inv.paid_amount || 0));
+  if (remaining <= 0) return null;
+  const amount = Math.min(remaining, intBetween(100, 5000));
   const { data, error } = await admin
     .from("receipts")
     .insert({

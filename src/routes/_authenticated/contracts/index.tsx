@@ -180,7 +180,7 @@ function ContractsList() {
                     <TableCell className="text-xs">{t(`ctrtype.${c.contract_type}`)}</TableCell>
                     <TableCell dir="ltr" className="text-xs whitespace-nowrap">{formatDate(c.start_date, lang)} → {formatDate(c.end_date, lang)}</TableCell>
                     <TableCell className="text-xs">{c.currency ?? "—"}</TableCell>
-                    <TableCell><StatusPill status={c.status} /></TableCell>
+                    <TableCell><StatusBadge status={c.status} /></TableCell>
                     <TableCell className="text-end">
                       <div className="flex justify-end gap-1">
                         <Button asChild variant="ghost" size="icon" title={t("actions.view")}>

@@ -153,6 +153,15 @@ export function AppSidebar() {
         </div>
       </SidebarHeader>
       <SidebarContent>
+        {visibleSupplier.length > 0 && (
+          <SidebarGroup>
+            <SidebarGroupLabel className="text-xs font-semibold uppercase tracking-wider">{t("nav.supplier_portal")}</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>{visibleSupplier.map(renderItem)}</SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+        {visibleOperational.length > 0 && (
         <SidebarGroup>
           <SidebarGroupLabel className="text-xs font-semibold uppercase tracking-wider">{t("nav.dashboard")}</SidebarGroupLabel>
           <SidebarGroupContent>

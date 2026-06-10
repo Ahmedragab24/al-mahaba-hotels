@@ -26,7 +26,7 @@ export const Route = createFileRoute("/_authenticated/quotations/")({
 });
 
 const PAGE_SIZE = 20;
-const STATUSES = ["draft","pending_approval","approved","rejected","sent","accepted","expired","cancelled"] as const;
+
 
 export function QStatusBadge({ status, t }: { status: string; t: (k: string, f?: string) => string }) {
   const variant = status === "rejected" || status === "cancelled" ? "destructive"

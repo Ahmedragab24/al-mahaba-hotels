@@ -87,7 +87,7 @@ async function ensureMinCustomers(admin: any, minCount: number) {
       const n = pick(COMPANY_NAMES_AR);
       rows.push({
         code,
-        customer_type: pick(["corporate", "travel_agency", "group"]),
+        customer_type: pick(["corporate", "agency", "government"]),
         name_ar: n,
         name_en: n,
         legal_name: n,

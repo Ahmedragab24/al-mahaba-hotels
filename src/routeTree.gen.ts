@@ -42,6 +42,7 @@ import { Route as AuthenticatedReportsTaxRouteImport } from './routes/_authentic
 import { Route as AuthenticatedReportsOperationalRouteImport } from './routes/_authenticated/reports/operational'
 import { Route as AuthenticatedReportsFinancialRouteImport } from './routes/_authenticated/reports/financial'
 import { Route as AuthenticatedRatesNewRouteImport } from './routes/_authenticated/rates/new'
+import { Route as AuthenticatedRatesCompareRouteImport } from './routes/_authenticated/rates/compare'
 import { Route as AuthenticatedRatesIdRouteImport } from './routes/_authenticated/rates/$id'
 import { Route as AuthenticatedQuotationsNewRouteImport } from './routes/_authenticated/quotations/new'
 import { Route as AuthenticatedQuotationsIdRouteImport } from './routes/_authenticated/quotations/$id'
@@ -237,6 +238,12 @@ const AuthenticatedRatesNewRoute = AuthenticatedRatesNewRouteImport.update({
   path: '/rates/new',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedRatesCompareRoute =
+  AuthenticatedRatesCompareRouteImport.update({
+    id: '/rates/compare',
+    path: '/rates/compare',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedRatesIdRoute = AuthenticatedRatesIdRouteImport.update({
   id: '/rates/$id',
   path: '/rates/$id',
@@ -323,6 +330,7 @@ export interface FileRoutesByFullPath {
   '/quotations/$id': typeof AuthenticatedQuotationsIdRoute
   '/quotations/new': typeof AuthenticatedQuotationsNewRoute
   '/rates/$id': typeof AuthenticatedRatesIdRoute
+  '/rates/compare': typeof AuthenticatedRatesCompareRoute
   '/rates/new': typeof AuthenticatedRatesNewRoute
   '/reports/financial': typeof AuthenticatedReportsFinancialRoute
   '/reports/operational': typeof AuthenticatedReportsOperationalRoute
@@ -369,6 +377,7 @@ export interface FileRoutesByTo {
   '/quotations/$id': typeof AuthenticatedQuotationsIdRoute
   '/quotations/new': typeof AuthenticatedQuotationsNewRoute
   '/rates/$id': typeof AuthenticatedRatesIdRoute
+  '/rates/compare': typeof AuthenticatedRatesCompareRoute
   '/rates/new': typeof AuthenticatedRatesNewRoute
   '/reports/financial': typeof AuthenticatedReportsFinancialRoute
   '/reports/operational': typeof AuthenticatedReportsOperationalRoute
@@ -417,6 +426,7 @@ export interface FileRoutesById {
   '/_authenticated/quotations/$id': typeof AuthenticatedQuotationsIdRoute
   '/_authenticated/quotations/new': typeof AuthenticatedQuotationsNewRoute
   '/_authenticated/rates/$id': typeof AuthenticatedRatesIdRoute
+  '/_authenticated/rates/compare': typeof AuthenticatedRatesCompareRoute
   '/_authenticated/rates/new': typeof AuthenticatedRatesNewRoute
   '/_authenticated/reports/financial': typeof AuthenticatedReportsFinancialRoute
   '/_authenticated/reports/operational': typeof AuthenticatedReportsOperationalRoute
@@ -465,6 +475,7 @@ export interface FileRouteTypes {
     | '/quotations/$id'
     | '/quotations/new'
     | '/rates/$id'
+    | '/rates/compare'
     | '/rates/new'
     | '/reports/financial'
     | '/reports/operational'
@@ -511,6 +522,7 @@ export interface FileRouteTypes {
     | '/quotations/$id'
     | '/quotations/new'
     | '/rates/$id'
+    | '/rates/compare'
     | '/rates/new'
     | '/reports/financial'
     | '/reports/operational'
@@ -558,6 +570,7 @@ export interface FileRouteTypes {
     | '/_authenticated/quotations/$id'
     | '/_authenticated/quotations/new'
     | '/_authenticated/rates/$id'
+    | '/_authenticated/rates/compare'
     | '/_authenticated/rates/new'
     | '/_authenticated/reports/financial'
     | '/_authenticated/reports/operational'
@@ -825,6 +838,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRatesNewRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/rates/compare': {
+      id: '/_authenticated/rates/compare'
+      path: '/rates/compare'
+      fullPath: '/rates/compare'
+      preLoaderRoute: typeof AuthenticatedRatesCompareRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/rates/$id': {
       id: '/_authenticated/rates/$id'
       path: '/rates/$id'
@@ -929,6 +949,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedQuotationsIdRoute: typeof AuthenticatedQuotationsIdRoute
   AuthenticatedQuotationsNewRoute: typeof AuthenticatedQuotationsNewRoute
   AuthenticatedRatesIdRoute: typeof AuthenticatedRatesIdRoute
+  AuthenticatedRatesCompareRoute: typeof AuthenticatedRatesCompareRoute
   AuthenticatedRatesNewRoute: typeof AuthenticatedRatesNewRoute
   AuthenticatedReportsFinancialRoute: typeof AuthenticatedReportsFinancialRoute
   AuthenticatedReportsOperationalRoute: typeof AuthenticatedReportsOperationalRoute
@@ -975,6 +996,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedQuotationsIdRoute: AuthenticatedQuotationsIdRoute,
   AuthenticatedQuotationsNewRoute: AuthenticatedQuotationsNewRoute,
   AuthenticatedRatesIdRoute: AuthenticatedRatesIdRoute,
+  AuthenticatedRatesCompareRoute: AuthenticatedRatesCompareRoute,
   AuthenticatedRatesNewRoute: AuthenticatedRatesNewRoute,
   AuthenticatedReportsFinancialRoute: AuthenticatedReportsFinancialRoute,
   AuthenticatedReportsOperationalRoute: AuthenticatedReportsOperationalRoute,

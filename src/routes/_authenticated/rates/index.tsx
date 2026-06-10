@@ -16,7 +16,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { StatusPill } from "@/components/status-pill";
 import { DataPagination } from "@/components/data-pagination";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import { Plus, Search, Eye, Pencil, Archive, RotateCcw, Trash2 } from "lucide-react";
+import { Plus, Search, Eye, Pencil, Archive, RotateCcw, Trash2, GitCompare, History } from "lucide-react";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/format";
 

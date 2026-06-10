@@ -159,7 +159,11 @@ function RatesList() {
             </Select>
             <Input type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} className="w-full" />
             <Input type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} className="w-full" />
-            <label className="flex items-center gap-2 text-sm sm:col-span-2 lg:col-span-1">
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox checked={latestOnly} onCheckedChange={(v) => { setLatestOnly(!!v); setPage(1); }} />
+              {t("rates.latest_only")}
+            </label>
+            <label className="flex items-center gap-2 text-sm">
               <Checkbox checked={showArchived} onCheckedChange={(v) => { setShowArchived(!!v); setPage(1); }} />
               {t("filter.show_archived")}
             </label>

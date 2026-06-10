@@ -241,7 +241,7 @@ async function createReceipt(admin: any): Promise<string | null> {
       receipt_date: new Date().toISOString().slice(0, 10),
       amount,
       payment_method: pick(["cash", "bank_transfer", "card"]),
-      status: "received",
+      status: "confirmed",
       is_simulated: true,
     })
     .select("id")

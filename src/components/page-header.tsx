@@ -58,14 +58,12 @@ export function PageHeader({
 
   return (
     <div className="flex flex-col gap-3 border-b bg-background/60 px-6 py-5">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-        <div className="min-w-0 flex-1">
-          <h1 className="break-words text-2xl font-semibold leading-tight text-foreground">{title}</h1>
-          {subtitle && <p className="mt-1 break-words text-base text-muted-foreground">{subtitle}</p>}
-          {desc && <p className="mt-1 max-w-3xl text-sm text-muted-foreground/90">{desc}</p>}
-        </div>
-        {actions && <div className="flex flex-wrap items-center gap-2 lg:shrink-0 lg:justify-end">{actions}</div>}
+      <div className="min-w-0">
+        <h1 className="break-words text-2xl font-semibold leading-tight text-foreground">{title}</h1>
+        {subtitle && <p className="mt-1 break-words text-base text-muted-foreground">{subtitle}</p>}
+        {desc && <p className="mt-1 max-w-3xl text-sm text-muted-foreground/90">{desc}</p>}
       </div>
+      {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </div>
   );
 }

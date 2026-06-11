@@ -53,7 +53,7 @@ function renderErrorPage() {
 let serverEntryPromise;
 async function getServerEntry() {
   if (!serverEntryPromise) {
-    serverEntryPromise = import("./server-BR2a3ZJC.mjs").then((n) => n.s).then(
+    serverEntryPromise = import("./server-DL4KgwXB.mjs").then((n) => n.s).then(
       (m) => m.default ?? m
     );
   }
@@ -94,15 +94,10 @@ const server = {
       return normalizedResponse;
     } catch (error) {
       console.error(error);
-      const errorMessage = error instanceof Error ? `${error.name}: ${error.message}
-${error.stack}` : String(error);
-      return new Response(
-        `<html><body><h1>Server Error</h1><pre>${errorMessage}</pre></body></html>`,
-        {
-          status: 500,
-          headers: { "content-type": "text/html; charset=utf-8" }
-        }
-      );
+      return new Response(renderErrorPage(), {
+        status: 500,
+        headers: { "content-type": "text/html; charset=utf-8" }
+      });
     }
   }
 };

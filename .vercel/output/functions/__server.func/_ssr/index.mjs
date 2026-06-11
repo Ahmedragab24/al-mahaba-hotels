@@ -94,10 +94,15 @@ const server = {
       return normalizedResponse;
     } catch (error) {
       console.error(error);
-      return new Response(renderErrorPage(), {
-        status: 500,
-        headers: { "content-type": "text/html; charset=utf-8" }
-      });
+      const errorMessage = error instanceof Error ? `${error.name}: ${error.message}
+${error.stack}` : String(error);
+      return new Response(
+        `<html><body><h1>Server Error</h1><pre>${errorMessage}</pre></body></html>`,
+        {
+          status: 500,
+          headers: { "content-type": "text/html; charset=utf-8" }
+        }
+      );
     }
   }
 };

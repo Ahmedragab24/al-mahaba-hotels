@@ -1,4 +1,25 @@
 {
+  "version": 2,
   "framework": null,
-  "buildCommand": "npm run build"
+  "builds": [
+    {
+      "src": "server.ts",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/server.ts",
+      "methods": [
+        "GET",
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE",
+        "OPTIONS",
+        "HEAD"
+      ]
+    }
+  ]
 }

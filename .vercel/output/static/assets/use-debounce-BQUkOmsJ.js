@@ -1,1 +1,0 @@
-import{c as n}from"./createLucideIcon-CvZM7RKQ.js";import{r as c}from"./index-CwOVjkPx.js";const u=[["path",{d:"m21 21-4.34-4.34",key:"14j7rj"}],["circle",{cx:"11",cy:"11",r:"8",key:"4ej97u"}]],m=n("search",u);function f(e,t=300){const[r,o]=c.useState(e);return c.useEffect(()=>{const s=setTimeout(()=>o(e),t);return()=>clearTimeout(s)},[e,t]),r}export{m as S,f as u};

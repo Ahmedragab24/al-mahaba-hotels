@@ -41,8 +41,23 @@ export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
       const handler = await getServerEntry();
-      const response = await handler.fetch(request, env, ctx);
-      return await normalizeCatastrophicSsrResponse(response);
+      const isHead = request.method === "HEAD";
+      const fetchRequest = isHead
+        ? new Request(request, { method: "GET" })
+        : request;
+
+      const response = await handler.fetch(fetchRequest, env, ctx);
+      const normalizedResponse = await normalizeCatastrophicSsrResponse(response);
+
+      if (isHead) {
+        return new Response(null, {
+          status: normalizedResponse.status,
+          statusText: normalizedResponse.statusText,
+          headers: normalizedResponse.headers,
+        });
+      }
+
+      return normalizedResponse;
     } catch (error) {
       console.error(error);
       return new Response(renderErrorPage(), {

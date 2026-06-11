@@ -1,0 +1,1 @@
+const s="/assets/hotel-1-DmYactyX.jpg",t="/assets/hotel-2-CqPMbrCA.jpg",e="/assets/hotel-3-BHasCOr7.jpg",o="/assets/hotel-4-3Emk1rs8.jpg",a="/assets/hotel-5-DjyOx9td.jpg",h="/assets/hotel-6-B1RyZy1Y.jpg";export{t as a,e as b,o as c,a as d,h as e,s as h};

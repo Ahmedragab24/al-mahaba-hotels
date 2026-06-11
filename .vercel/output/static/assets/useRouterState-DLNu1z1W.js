@@ -1,0 +1,1 @@
+import{n as s,r as c,al as a,am as i}from"./index-CwOVjkPx.js";function f(r){const o=s({warn:r?.router===void 0}),t=r?.router||o,u=c.useRef(void 0);return a(t.stores.__store,e=>{if(r?.select){if(r.structuralSharing??t.options.defaultStructuralSharing){const n=i(u.current,r.select(e));return u.current=n,n}return r.select(e)}return e})}export{f as u};

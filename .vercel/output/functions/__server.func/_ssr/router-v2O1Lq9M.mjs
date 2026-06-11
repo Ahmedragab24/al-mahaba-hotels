@@ -1,0 +1,2374 @@
+import { b as QueryClient } from "../_libs/tanstack__query-core.mjs";
+import { Q as QueryClientProvider } from "../_libs/tanstack__react-query.mjs";
+import { c as createRouter, a as createRootRouteWithContext, u as useRouter, L as Link, O as Outlet, H as HeadContent, S as Scripts, b as createFileRoute, l as lazyRouteComponent } from "../_libs/tanstack__react-router.mjs";
+import { S as redirect } from "../_libs/tanstack__router-core.mjs";
+import { r as reactExports, j as jsxRuntimeExports } from "../_libs/react.mjs";
+import { D as DirectionProvider } from "../_libs/radix-ui__react-direction.mjs";
+import { s as supabase } from "./client-BdL2Ylqo.mjs";
+import { T as Toaster$1 } from "../_libs/sonner.mjs";
+import { P as Provider, a as Portal, C as Content2, R as Root3, T as Trigger } from "../_libs/radix-ui__react-tooltip.mjs";
+import { c as clsx } from "../_libs/clsx.mjs";
+import { t as twMerge } from "../_libs/tailwind-merge.mjs";
+import { c as cva } from "../_libs/class-variance-authority.mjs";
+import { r as runSimulationTick } from "./simulation-engine.server-CqcvilV1.mjs";
+import "../_libs/react-dom.mjs";
+import "util";
+import "crypto";
+import "async_hooks";
+import "stream";
+import "node:stream";
+import "../_libs/isbot.mjs";
+import "../_libs/tanstack__history.mjs";
+import "../_libs/cookie-es.mjs";
+import "../_libs/seroval.mjs";
+import "../_libs/seroval-plugins.mjs";
+import "node:stream/web";
+import "../_libs/supabase__supabase-js.mjs";
+import "../_libs/supabase__postgrest-js.mjs";
+import "../_libs/supabase__realtime-js.mjs";
+import "../_libs/supabase__phoenix.mjs";
+import "../_libs/supabase__storage-js.mjs";
+import "../_libs/iceberg-js.mjs";
+import "../_libs/supabase__auth-js.mjs";
+import "tslib";
+import "../_libs/supabase__functions-js.mjs";
+import "../_libs/radix-ui__primitive.mjs";
+import "../_libs/radix-ui__react-compose-refs.mjs";
+import "../_libs/radix-ui__react-context.mjs";
+import "../_libs/@radix-ui/react-dismissable-layer+[...].mjs";
+import "../_libs/radix-ui__react-primitive.mjs";
+import "../_libs/radix-ui__react-slot.mjs";
+import "../_libs/@radix-ui/react-use-callback-ref+[...].mjs";
+import "../_libs/@radix-ui/react-use-escape-keydown+[...].mjs";
+import "../_libs/radix-ui__react-id.mjs";
+import "../_libs/@radix-ui/react-use-layout-effect+[...].mjs";
+import "../_libs/radix-ui__react-popper.mjs";
+import "../_libs/floating-ui__react-dom.mjs";
+import "../_libs/floating-ui__dom.mjs";
+import "../_libs/floating-ui__core.mjs";
+import "../_libs/floating-ui__utils.mjs";
+import "../_libs/radix-ui__react-arrow.mjs";
+import "../_libs/radix-ui__react-use-size.mjs";
+import "../_libs/radix-ui__react-portal.mjs";
+import "../_libs/radix-ui__react-presence.mjs";
+import "../_libs/@radix-ui/react-use-controllable-state+[...].mjs";
+import "../_libs/@radix-ui/react-visually-hidden+[...].mjs";
+const appCss = "/assets/styles-CNQQ9vLw.css";
+function reportLovableError(error, context = {}) {
+  if (typeof window === "undefined") return;
+  window.__lovableEvents?.captureException?.(
+    error,
+    {
+      source: "react_error_boundary",
+      route: window.location.pathname,
+      ...context
+    },
+    {
+      mechanism: "react_error_boundary",
+      handled: false,
+      severity: "error"
+    }
+  );
+}
+const dict = {
+  // Brand
+  "brand.name": { ar: "شركة دليل المعالم للحج والعمرة", en: "Daleel Almaalem Hajj & Umrah Co." },
+  "brand.short": { ar: "دليل المعالم", en: "Daleel Almaalem" },
+  "brand.tagline": { ar: "نظام إدارة الحج والعمرة والحجوزات", en: "Hajj, Umrah & Reservations Management" },
+  // Auth
+  "auth.title": { ar: "تسجيل الدخول", en: "Sign in" },
+  "auth.subtitle": { ar: "أدخل بياناتك للوصول إلى النظام", en: "Enter your credentials to access the system" },
+  "auth.email": { ar: "البريد الإلكتروني", en: "Email" },
+  "auth.password": { ar: "كلمة المرور", en: "Password" },
+  "auth.signin": { ar: "دخول", en: "Sign in" },
+  "auth.signing_in": { ar: "جاري الدخول...", en: "Signing in..." },
+  "auth.signout": { ar: "تسجيل الخروج", en: "Sign out" },
+  "auth.invalid": { ar: "بيانات الدخول غير صحيحة", en: "Invalid credentials" },
+  "auth.locked": { ar: "تم قفل الحساب بسبب محاولات فاشلة متعددة. حاول لاحقًا.", en: "Account locked due to too many failed attempts. Try again later." },
+  "auth.setup_first": { ar: "لا يوجد مستخدمون بعد. أنشئ حساب المدير الأول.", en: "No users yet. Create the first administrator account." },
+  "auth.create_first": { ar: "إنشاء حساب المسؤول", en: "Create admin account" },
+  "auth.fullname": { ar: "الاسم الكامل", en: "Full name" },
+  "auth.create_account": { ar: "إنشاء حساب جديد", en: "Create new account" },
+  "auth.already_have": { ar: "لديك حساب بالفعل؟", en: "Already have an account?" },
+  "auth.no_account": { ar: "ليس لديك حساب؟", en: "Don't have an account?" },
+  "auth.signup": { ar: "إنشاء حساب", en: "Sign up" },
+  "auth.signup_pending": { ar: "تم إنشاء الحساب. يجب على المسؤول تفعيل صلاحياتك قبل الاستخدام.", en: "Account created. An administrator must activate your permissions before use." },
+  "auth.confirm_password": { ar: "تأكيد كلمة المرور", en: "Confirm password" },
+  "auth.password_mismatch": { ar: "كلمتا المرور غير متطابقتين", en: "Passwords do not match" },
+  "auth.password_min": { ar: "كلمة المرور يجب أن لا تقل عن 8 أحرف", en: "Password must be at least 8 characters" },
+  "auth.conn_error": { ar: "تعذر الاتصال بالخادم. تحقق من اتصال الإنترنت أو جرّب شبكة أخرى ثم أعد المحاولة.", en: "Could not reach the server. Check your internet connection or try a different network, then retry." },
+  "auth.retry": { ar: "إعادة المحاولة", en: "Retry" },
+  // Nav
+  "nav.dashboard": { ar: "لوحة التحكم", en: "Dashboard" },
+  "nav.customers": { ar: "العملاء", en: "Customers" },
+  "nav.hotels": { ar: "الفنادق", en: "Hotels" },
+  "nav.suppliers": { ar: "الموردون", en: "Suppliers" },
+  "nav.rates": { ar: "الأسعار", en: "Rates" },
+  "nav.admin": { ar: "الإدارة", en: "Administration" },
+  "nav.users": { ar: "المستخدمون", en: "Users" },
+  "nav.audit": { ar: "سجل التدقيق", en: "Audit Log" },
+  "nav.simulation": { ar: "وضع المحاكاة", en: "Simulation Mode" },
+  "nav.settings": { ar: "الإعدادات", en: "Settings" },
+  "nav.master_data": { ar: "البيانات الأساسية", en: "Master Data" },
+  "nav.contracting": { ar: "التعاقدات", en: "Contracting" },
+  // Common actions
+  "actions.new": { ar: "جديد", en: "New" },
+  "actions.create": { ar: "إنشاء", en: "Create" },
+  "actions.save": { ar: "حفظ", en: "Save" },
+  "actions.saving": { ar: "جاري الحفظ...", en: "Saving..." },
+  "actions.cancel": { ar: "إلغاء", en: "Cancel" },
+  "actions.edit": { ar: "تعديل", en: "Edit" },
+  "actions.delete": { ar: "حذف", en: "Delete" },
+  "actions.archive": { ar: "أرشفة", en: "Archive" },
+  "actions.restore": { ar: "استعادة", en: "Restore" },
+  "actions.search": { ar: "بحث...", en: "Search..." },
+  "actions.filter": { ar: "تصفية", en: "Filter" },
+  "actions.refresh": { ar: "تحديث", en: "Refresh" },
+  "actions.view": { ar: "عرض", en: "View" },
+  "actions.back": { ar: "رجوع", en: "Back" },
+  "actions.add": { ar: "إضافة", en: "Add" },
+  "actions.submit_approval": { ar: "إرسال للاعتماد", en: "Submit for approval" },
+  "actions.approve": { ar: "اعتماد", en: "Approve" },
+  "actions.reject": { ar: "رفض", en: "Reject" },
+  "actions.export": { ar: "تصدير", en: "Export" },
+  // Common labels
+  "label.code": { ar: "الرمز", en: "Code" },
+  "label.name": { ar: "الاسم", en: "Name" },
+  "label.name_ar": { ar: "الاسم بالعربية", en: "Name (Arabic)" },
+  "label.name_en": { ar: "الاسم بالإنجليزية", en: "Name (English)" },
+  "label.personal_name_ar": { ar: "الاسم الشخصي بالعربية", en: "Personal Name (Arabic)" },
+  "label.personal_name_en": { ar: "الاسم الشخصي بالإنجليزية", en: "Personal Name (English)" },
+  "label.type": { ar: "النوع", en: "Type" },
+  "label.email": { ar: "البريد الإلكتروني", en: "Email" },
+  "label.phone": { ar: "الهاتف", en: "Phone" },
+  "label.mobile": { ar: "الجوال", en: "Mobile" },
+  "label.country": { ar: "الدولة", en: "Country" },
+  "label.city": { ar: "المدينة", en: "City" },
+  "label.address": { ar: "العنوان", en: "Address" },
+  "label.status": { ar: "الحالة", en: "Status" },
+  "label.currency": { ar: "العملة", en: "Currency" },
+  "label.language": { ar: "اللغة", en: "Language" },
+  "label.tax_number": { ar: "الرقم الضريبي", en: "Tax Number" },
+  "label.cr": { ar: "السجل التجاري", en: "Commercial Registration" },
+  "label.credit_limit": { ar: "حد الائتمان", en: "Credit Limit" },
+  "label.credit_days": { ar: "أيام الائتمان", en: "Credit Days" },
+  "label.payment_terms": { ar: "شروط الدفع", en: "Payment Terms" },
+  "label.rating": { ar: "التقييم", en: "Rating" },
+  "label.notes": { ar: "ملاحظات", en: "Notes" },
+  "label.website": { ar: "الموقع الإلكتروني", en: "Website" },
+  "label.created_at": { ar: "تاريخ الإنشاء", en: "Created at" },
+  "label.updated_at": { ar: "تاريخ التعديل", en: "Updated at" },
+  "label.brand": { ar: "العلامة التجارية", en: "Brand" },
+  "label.stars": { ar: "النجوم", en: "Stars" },
+  "label.checkin": { ar: "الدخول", en: "Check-in" },
+  "label.checkout": { ar: "الخروج", en: "Check-out" },
+  "label.description": { ar: "الوصف", en: "Description" },
+  "label.role": { ar: "الدور", en: "Role" },
+  "label.actions": { ar: "إجراءات", en: "Actions" },
+  "label.total": { ar: "الإجمالي", en: "Total" },
+  "label.no_results": { ar: "لا توجد نتائج", en: "No results" },
+  "label.loading": { ar: "جاري التحميل...", en: "Loading..." },
+  "label.required": { ar: "مطلوب", en: "Required" },
+  // Status values
+  "status.active": { ar: "نشط", en: "Active" },
+  "status.inactive": { ar: "غير نشط", en: "Inactive" },
+  "status.archived": { ar: "مؤرشف", en: "Archived" },
+  "status.draft": { ar: "مسودة", en: "Draft" },
+  "status.pending_approval": { ar: "بانتظار الاعتماد", en: "Pending Approval" },
+  "status.approved": { ar: "معتمد", en: "Approved" },
+  "status.rejected": { ar: "مرفوض", en: "Rejected" },
+  "status.expired": { ar: "منتهي", en: "Expired" },
+  // Customer types
+  "ctype.corporate": { ar: "شركة", en: "Corporate" },
+  "ctype.individual": { ar: "فرد", en: "Individual" },
+  "ctype.agency": { ar: "وكالة", en: "Agency" },
+  "ctype.government": { ar: "جهة حكومية", en: "Government" },
+  "customers.members": { ar: "الأفراد التابعون", en: "Individuals" },
+  "members.import_title": { ar: "استيراد الأفراد من ملف إكسل", en: "Import individuals from Excel" },
+  "members.import_hint": { ar: "أرفق ملف إكسل يحتوي على بيانات الأفراد (الاسم، البريد، الجوال...) وسيتم تحليله وإدخال الأفراد تلقائياً كعملاء أفراد تابعين لهذا الكيان.", en: "Attach an Excel file with the individuals' data (name, email, mobile...). It will be analyzed and the individuals will be created automatically as customers linked to this entity." },
+  "members.choose_file": { ar: "اختيار ملف إكسل", en: "Choose Excel file" },
+  "members.download_template": { ar: "تنزيل النموذج", en: "Download template" },
+  "members.empty_file": { ar: "الملف فارغ أو لا يحتوي على بيانات صالحة", en: "The file is empty or has no valid data" },
+  "members.no_name_column": { ar: "لم يتم العثور على عمود الاسم في الملف", en: "No name column found in the file" },
+  "members.parse_error": { ar: "تعذر قراءة الملف، تأكد أنه ملف إكسل صالح", en: "Could not read the file. Make sure it is a valid Excel file" },
+  "members.missing_name": { ar: "الاسم مفقود", en: "Missing name" },
+  "members.valid_rows": { ar: "صف جاهز", en: "valid rows" },
+  "members.invalid_rows": { ar: "صف غير صالح", en: "invalid rows" },
+  "members.ready": { ar: "جاهز", en: "Ready" },
+  "members.more_rows": { ar: "صفوف إضافية", en: "more rows" },
+  "members.import_now": { ar: "استيراد الأفراد", en: "Import individuals" },
+  "members.imported": { ar: "تم استيراد الأفراد بنجاح", en: "Individuals imported successfully" },
+  "members.list_title": { ar: "الأفراد المسجلون تحت هذا الكيان", en: "Individuals registered under this entity" },
+  "members.none": { ar: "لا يوجد أفراد مسجلون بعد — قم برفع ملف إكسل لاستيرادهم", en: "No individuals yet — upload an Excel file to import them" },
+  // Supplier types
+  "stype.hotel_supplier": { ar: "مورد فنادق", en: "Hotel Supplier" },
+  "stype.dmc": { ar: "DMC", en: "DMC" },
+  "stype.direct_hotel": { ar: "فندق مباشر", en: "Direct Hotel" },
+  "stype.wholesaler": { ar: "وكيل جملة", en: "Wholesaler" },
+  "stype.other": { ar: "أخرى", en: "Other" },
+  // Meal plans
+  "board.RO": { ar: "بدون وجبات", en: "Room Only" },
+  "board.BB": { ar: "إفطار", en: "Bed & Breakfast" },
+  "board.HB": { ar: "نصف إقامة", en: "Half Board" },
+  "board.FB": { ar: "إقامة كاملة", en: "Full Board" },
+  "board.AI": { ar: "كل شيء مشمول", en: "All Inclusive" },
+  "board.UAI": { ar: "كل شيء مشمول فاخر", en: "Ultra All Inclusive" },
+  // Roles
+  "role.super_admin": { ar: "مدير عام", en: "Super Admin" },
+  "role.admin": { ar: "مدير", en: "Administrator" },
+  "role.sales_manager": { ar: "مدير مبيعات", en: "Sales Manager" },
+  "role.sales_agent": { ar: "موظف مبيعات", en: "Sales Agent" },
+  "role.operations_manager": { ar: "مدير عمليات", en: "Operations Manager" },
+  "role.operations_agent": { ar: "موظف عمليات", en: "Operations Agent" },
+  "role.finance_manager": { ar: "مدير مالية", en: "Finance Manager" },
+  "role.finance_agent": { ar: "موظف مالية", en: "Finance Agent" },
+  "role.viewer": { ar: "مشاهد فقط", en: "Viewer" },
+  "role.supplier": { ar: "مورد", en: "Supplier" },
+  // Supplier types
+  "supplier.type.direct_hotel": { ar: "فندق مباشر", en: "Direct Hotel" },
+  "supplier.type.wholesaler": { ar: "تاجر جملة", en: "Wholesaler" },
+  "supplier.type.dmc": { ar: "وكيل وجهة (DMC)", en: "DMC" },
+  "supplier.type.hotel_supplier": { ar: "مورد فنادق", en: "Hotel Supplier" },
+  "supplier.type.other": { ar: "أخرى", en: "Other" },
+  // Supplier apply (public)
+  "supplier.apply.title": { ar: "طلب الانضمام كمورد", en: "Apply as a Supplier" },
+  "supplier.apply.subtitle": { ar: "املأ النموذج وسيراجع المسؤول طلبك ثم نرسل لك بيانات الدخول", en: "Fill the form. An administrator will review and send you login credentials." },
+  "supplier.apply.type": { ar: "نوع المورد", en: "Supplier Type" },
+  "supplier.apply.contact_name": { ar: "اسم جهة الاتصال", en: "Contact Name" },
+  "supplier.apply.contact_position": { ar: "المنصب", en: "Position" },
+  "supplier.apply.step_company": { ar: "الشركة", en: "Company" },
+  "supplier.apply.step_details": { ar: "التفاصيل", en: "Details" },
+  "supplier.apply.step_contact": { ar: "جهة الاتصال", en: "Contact" },
+  "supplier.apply.step_review": { ar: "المراجعة", en: "Review" },
+  "supplier.apply.step0_desc": { ar: "بيانات الشركة الأساسية", en: "Basic company info" },
+  "supplier.apply.step1_desc": { ar: "تفاصيل قانونية واختيارية", en: "Legal & optional details" },
+  "supplier.apply.step2_desc": { ar: "كيف نتواصل معك", en: "How we'll reach you" },
+  "supplier.apply.step3_desc": { ar: "تأكد من البيانات قبل الإرسال", en: "Confirm before submitting" },
+  "supplier.apply.next": { ar: "التالي", en: "Next" },
+  "supplier.apply.submit": { ar: "إرسال الطلب", en: "Submit application" },
+  "supplier.apply.review_note": { ar: "بإرسال الطلب أنت توافق على شروط المنصة.", en: "By submitting, you agree to the platform terms." },
+  "supplier.apply.have_account": { ar: "لديك حساب؟ تسجيل الدخول", en: "Have an account? Sign in" },
+  "supplier.apply.back_to_signin": { ar: "العودة لتسجيل الدخول", en: "Back to sign-in" },
+  "supplier.apply.success_title": { ar: "تم استلام طلبك بنجاح", en: "Application received" },
+  "supplier.apply.success_desc": { ar: "سيراجع المسؤول طلبك خلال 24-48 ساعة وسيتم تزويدك ببيانات الدخول عبر البريد المُسجَّل.", en: "An administrator will review your request within 24-48 hours and email you login credentials." },
+  "supplier.apply.err_duplicate": { ar: "يوجد طلب سابق بنفس البريد الإلكتروني.", en: "An application with this email already exists." },
+  "supplier.apply.err_email": { ar: "بريد إلكتروني غير صالح.", en: "Invalid email address." },
+  "supplier.apply.err_missing": { ar: "حقول مطلوبة ناقصة.", en: "Required fields are missing." },
+  "supplier.apply_cta": { ar: "تقديم كمورد", en: "Apply as supplier" },
+  // Supplier applications (admin)
+  "supplier.applications.title": { ar: "طلبات الموردين", en: "Supplier Applications" },
+  "supplier.applications.subtitle": { ar: "مراجعة طلبات الانضمام للموردين", en: "Review supplier onboarding requests" },
+  "supplier.applications.empty": { ar: "لا توجد طلبات", en: "No applications" },
+  "supplier.applications.tab_pending": { ar: "قيد المراجعة", en: "Pending" },
+  "supplier.applications.tab_approved": { ar: "مقبولة", en: "Approved" },
+  "supplier.applications.tab_rejected": { ar: "مرفوضة", en: "Rejected" },
+  "supplier.applications.tab_all": { ar: "الكل", en: "All" },
+  "supplier.applications.status_pending": { ar: "قيد الانتظار", en: "Pending" },
+  "supplier.applications.status_under_review": { ar: "قيد المراجعة", en: "Under review" },
+  "supplier.applications.status_approved": { ar: "مقبول", en: "Approved" },
+  "supplier.applications.status_rejected": { ar: "مرفوض", en: "Rejected" },
+  "supplier.applications.approved": { ar: "تمت الموافقة وإنشاء الحساب", en: "Approved and account created" },
+  "supplier.applications.rejected": { ar: "تم رفض الطلب", en: "Application rejected" },
+  "supplier.applications.reject_title": { ar: "رفض الطلب", en: "Reject application" },
+  "supplier.applications.reject_desc": { ar: "اكتب سبب الرفض ليتم إبلاغ المتقدم", en: "Provide a reason for the applicant" },
+  "supplier.applications.reason_placeholder": { ar: "سبب الرفض...", en: "Rejection reason..." },
+  "supplier.applications.rejection_reason": { ar: "سبب الرفض", en: "Rejection reason" },
+  "supplier.applications.creds_title": { ar: "بيانات دخول المورد", en: "Supplier credentials" },
+  "supplier.applications.creds_desc": { ar: "احفظ كلمة المرور المؤقتة وأرسلها للمورد، سيُطلب منه تغييرها عند أول دخول.", en: "Save the temporary password and share it with the supplier. They will be asked to change it on first sign-in." },
+  // Supplier portal
+  "supplier.portal.no_link_title": { ar: "حسابك غير مرتبط بمورد", en: "Account not linked to a supplier" },
+  "supplier.portal.no_link_desc": { ar: "تواصل مع المسؤول لإكمال الربط.", en: "Contact your administrator to complete the link." },
+  "supplier.portal.profile": { ar: "ملف المورد", en: "Supplier Profile" },
+  "supplier.portal.outstanding": { ar: "مستحقات معلقة", en: "Outstanding" },
+  "supplier.portal.tab_overview": { ar: "نظرة عامة", en: "Overview" },
+  "supplier.portal.empty_hotels": { ar: "لا توجد فنادق مرتبطة", en: "No linked hotels" },
+  "supplier.portal.empty_rates": { ar: "لا توجد أسعار", en: "No rates yet" },
+  "supplier.portal.empty_bookings": { ar: "لا توجد حجوزات", en: "No bookings yet" },
+  "supplier.portal.empty_payables": { ar: "لا توجد مستحقات", en: "No payables" },
+  "nav.supplier_applications": { ar: "طلبات الموردين", en: "Supplier Applications" },
+  "nav.supplier_portal": { ar: "بوابة المورد", en: "Supplier Portal" },
+  // Modules headings
+  "customers.title": { ar: "العملاء", en: "Customers" },
+  "customers.new": { ar: "عميل جديد", en: "New Customer" },
+  "customers.edit": { ar: "تعديل العميل", en: "Edit Customer" },
+  "customers.contacts": { ar: "جهات الاتصال", en: "Contacts" },
+  "customers.attachments": { ar: "المرفقات", en: "Attachments" },
+  "customers.communications": { ar: "سجل التواصل", en: "Communications" },
+  "customers.overview": { ar: "نظرة عامة", en: "Overview" },
+  "hotels.title": { ar: "الفنادق", en: "Hotels" },
+  "hotels.new": { ar: "فندق جديد", en: "New Hotel" },
+  "hotels.edit": { ar: "تعديل الفندق", en: "Edit Hotel" },
+  "hotels.profile": { ar: "بيانات الفندق", en: "Profile" },
+  "hotels.rooms": { ar: "أنواع الغرف", en: "Room Types" },
+  "hotels.views": { ar: "الإطلالات", en: "Views" },
+  "hotels.meal_plans": { ar: "خطط الوجبات", en: "Meal Plans" },
+  "hotels.facilities": { ar: "المرافق", en: "Facilities" },
+  "hotels.suppliers": { ar: "الموردون المرتبطون", en: "Linked Suppliers" },
+  "hotels.images": { ar: "الصور", en: "Images" },
+  "hotels.contacts": { ar: "جهات الاتصال", en: "Contacts" },
+  "hotels.bookings": { ar: "سجل الحجوزات", en: "Booking History" },
+  "hotels.rates_history": { ar: "سجل الأسعار", en: "Rates History" },
+  "hotels.location": { ar: "الموقع والعنوان", en: "Location & Address" },
+  "hotels.contact_info": { ar: "بيانات الاتصال", en: "Contact Information" },
+  "hotels.policies": { ar: "السياسات والوصف", en: "Policies & Description" },
+  "hotels.no_bookings": { ar: "لا توجد حجوزات لهذا الفندق بعد.", en: "No bookings recorded for this hotel yet." },
+  "hotels.no_rates": { ar: "لا توجد أسعار مسجلة لهذا الفندق.", en: "No rates recorded for this hotel." },
+  "label.department": { ar: "القسم", en: "Department" },
+  "label.whatsapp": { ar: "واتساب", en: "WhatsApp" },
+  "label.district": { ar: "الحي/المنطقة", en: "District" },
+  "label.latitude": { ar: "خط العرض", en: "Latitude" },
+  "label.longitude": { ar: "خط الطول", en: "Longitude" },
+  "label.postal_code": { ar: "الرمز البريدي", en: "Postal Code" },
+  "label.cover_image": { ar: "صورة الغلاف", en: "Cover Image URL" },
+  "label.facility_category": { ar: "الفئة", en: "Category" },
+  "suppliers.title": { ar: "الموردون", en: "Suppliers" },
+  "suppliers.new": { ar: "مورد جديد", en: "New Supplier" },
+  "suppliers.edit": { ar: "تعديل المورد", en: "Edit Supplier" },
+  "suppliers.profile": { ar: "بيانات المورد", en: "Profile" },
+  "suppliers.contacts": { ar: "جهات الاتصال", en: "Contacts" },
+  "suppliers.contracts": { ar: "العقود", en: "Contracts" },
+  "suppliers.banks": { ar: "الحسابات البنكية", en: "Bank Accounts" },
+  "suppliers.ratings": { ar: "التقييمات", en: "Ratings" },
+  "suppliers.hotels": { ar: "الفنادق المرتبطة", en: "Linked Hotels" },
+  "suppliers.commercial": { ar: "البيانات التجارية والمالية", en: "Commercial & Financial" },
+  "suppliers.address": { ar: "العنوان", en: "Address" },
+  "suppliers.no_ratings": { ar: "لا توجد تقييمات بعد.", en: "No ratings yet." },
+  "suppliers.add_rating": { ar: "إضافة تقييم", en: "Add Rating" },
+  "suppliers.avg_rating": { ar: "متوسط التقييم", en: "Average rating" },
+  "suppliers.contract_status.draft": { ar: "مسودة", en: "Draft" },
+  "suppliers.contract_status.active": { ar: "ساري", en: "Active" },
+  "suppliers.contract_status.expired": { ar: "منتهي", en: "Expired" },
+  "suppliers.contract_status.terminated": { ar: "ملغي", en: "Terminated" },
+  "label.legal_name": { ar: "الاسم القانوني", en: "Legal name" },
+  "label.tags": { ar: "الوسوم", en: "Tags" },
+  "label.file": { ar: "ملف", en: "File" },
+  "rates.title": { ar: "الأسعار", en: "Rates" },
+  "rates.new": { ar: "سعر جديد", en: "New Rate" },
+  "rates.edit": { ar: "تعديل السعر", en: "Edit Rate" },
+  "rates.hotel": { ar: "الفندق", en: "Hotel" },
+  "rates.supplier": { ar: "المورد", en: "Supplier" },
+  "rates.room_type": { ar: "نوع الغرفة", en: "Room Type" },
+  "rates.view": { ar: "الإطلالة", en: "View" },
+  "rates.meal_plan": { ar: "خطة الوجبة", en: "Meal Plan" },
+  "rates.valid_from": { ar: "صالح من", en: "Valid from" },
+  "rates.valid_to": { ar: "صالح إلى", en: "Valid to" },
+  "rates.cost": { ar: "التكلفة لليلة", en: "Cost / night" },
+  "rates.selling": { ar: "سعر البيع", en: "Selling price" },
+  "rates.markup": { ar: "هامش الربح %", en: "Markup %" },
+  "rates.min_nights": { ar: "أقل عدد ليالٍ", en: "Min nights" },
+  "rates.max_nights": { ar: "أكثر عدد ليالٍ", en: "Max nights" },
+  "rates.release_days": { ar: "أيام التحرير", en: "Release days" },
+  "rates.allotment": { ar: "المخصص", en: "Allotment" },
+  "rates.cancellation": { ar: "سياسة الإلغاء", en: "Cancellation Policy" },
+  "rates.seasons": { ar: "المواسم", en: "Seasons" },
+  "rates.taxes": { ar: "الضرائب", en: "Taxes" },
+  "rates.approvals": { ar: "سجل الاعتمادات", en: "Approval History" },
+  "rates.contract": { ar: "العقد", en: "Contract" },
+  "rates.season_name": { ar: "اسم الموسم", en: "Season name" },
+  "rates.tax_name": { ar: "اسم الضريبة/الرسم", en: "Tax / Fee name" },
+  "rates.tax_type": { ar: "النوع", en: "Type" },
+  "rates.tax_value": { ar: "القيمة", en: "Value" },
+  "rates.tax_inclusive": { ar: "شامل", en: "Inclusive" },
+  "rates.tax_applies_to": { ar: "يطبق على", en: "Applies to" },
+  "rates.cxl_days": { ar: "أيام قبل الوصول", en: "Days before check-in" },
+  "rates.penalty_type": { ar: "نوع الغرامة", en: "Penalty type" },
+  "rates.penalty_value": { ar: "قيمة الغرامة", en: "Penalty value" },
+  "rates.approval_action": { ar: "الإجراء", en: "Action" },
+  "rates.comments": { ar: "الملاحظات", en: "Comments" },
+  "rates.submit_confirm": { ar: "إرسال هذا السعر للاعتماد؟", en: "Submit this rate for approval?" },
+  "rates.approve_confirm": { ar: "اعتماد هذا السعر؟", en: "Approve this rate?" },
+  "rates.reject_reason": { ar: "سبب الرفض", en: "Rejection reason" },
+  "rates.no_rate": { ar: "لا يوجد سعر", en: "No rate found" },
+  "rates.margin": { ar: "الهامش", en: "Margin" },
+  "rates.tab.profile": { ar: "البيانات", en: "Profile" },
+  "rates.tab.seasons": { ar: "المواسم", en: "Seasons" },
+  "rates.tab.taxes": { ar: "الضرائب والرسوم", en: "Taxes & Fees" },
+  "rates.tab.cancellation": { ar: "الإلغاء", en: "Cancellation" },
+  "rates.tab.approvals": { ar: "الاعتمادات", en: "Approvals" },
+  "rates.notes_en": { ar: "ملاحظات (إنجليزي)", en: "Notes (English)" },
+  "rates.notes_ar": { ar: "ملاحظات (عربي)", en: "Notes (Arabic)" },
+  "rates.cxl_en": { ar: "سياسة الإلغاء (إنجليزي)", en: "Cancellation Policy (EN)" },
+  "rates.cxl_ar": { ar: "سياسة الإلغاء (عربي)", en: "Cancellation Policy (AR)" },
+  "rates.tab.occupancy": { ar: "أسعار الإشغال", en: "Occupancy Pricing" },
+  // Multi-rate / versioning / direct
+  "rates.compare": { ar: "مقارنة الأسعار", en: "Compare Rates" },
+  "rates.compare_title": { ar: "مقارنة الأسعار بين الموردين", en: "Rates Comparison" },
+  "rates.compare_hint": { ar: "اختر الفندق والفترة لعرض جميع الأسعار المتاحة. أفضل سعر يظهر بالأعلى.", en: "Select hotel and dates to see all available rates. The best price is shown at the top." },
+  "rates.source": { ar: "المصدر", en: "Source" },
+  "rates.source.direct": { ar: "الفندق مباشرة", en: "Hotel direct" },
+  "rates.is_direct": { ar: "سعر مباشر من الفندق", en: "Direct from hotel" },
+  "rates.is_direct_short": { ar: "مباشر", en: "Direct" },
+  "rates.version": { ar: "الإصدار", en: "Version" },
+  "rates.entered_at": { ar: "تاريخ الإدخال", en: "Entered at" },
+  "rates.entered_by": { ar: "أدخل بواسطة", en: "Entered by" },
+  "rates.latest_only": { ar: "أحدث نسخة فقط", en: "Latest version only" },
+  "rates.create_new_version": { ar: "إنشاء نسخة جديدة", en: "Create new version" },
+  "rates.versioned_saved": { ar: "تم إنشاء نسخة جديدة من السعر (مسودة).", en: "A new draft version of the rate has been created." },
+  "rates.best_price": { ar: "أفضل سعر", en: "Best price" },
+  "rates.select_for_quote": { ar: "اختيار لعرض السعر", en: "Select for quotation" },
+  "rates.superseded": { ar: "مستبدل", en: "Superseded" },
+  "rates.history": { ar: "سجل النسخ", en: "Version history" },
+  "rates.archive_old_btn": { ar: "أرشفة الأسعار الأقدم من سنة", en: "Archive rates older than 1 year" },
+  "rates.archived_count": { ar: "تمت أرشفة {n} سعر", en: "{n} rates archived" },
+  // Hotels: direct supplier
+  "hotels.is_direct_supplier": { ar: "هذا الفندق يقدم أسعاراً مباشرة (مورد مباشر)", en: "This hotel offers direct rates (acts as a supplier)" },
+  // Approval thresholds
+  "nav.approval_thresholds": { ar: "عتبات الموافقة المالية", en: "Approval Thresholds" },
+  "thresholds.title": { ar: "عتبات الموافقة المزدوجة", en: "Maker-Checker Thresholds" },
+  "thresholds.subtitle": { ar: "تحدد المبالغ التي تستوجب موافقة شخص ثانٍ (مبدأ فصل المهام).", en: "Amounts that require a second approver (segregation of duties)." },
+  "thresholds.entity_type": { ar: "نوع العملية", en: "Operation type" },
+  "thresholds.amount": { ar: "المبلغ", en: "Amount" },
+  "thresholds.requires_second": { ar: "يتطلب موافقة ثانية", en: "Requires second approver" },
+  "thresholds.entity.payment_order": { ar: "أمر دفع", en: "Payment Order" },
+  "thresholds.entity.supplier_payment": { ar: "دفعة مورد", en: "Supplier Payment" },
+  "thresholds.entity.invoice": { ar: "فاتورة", en: "Invoice" },
+  "thresholds.entity.rate": { ar: "سعر", en: "Rate" },
+  // Occupancy pricing
+  "occupancy.type": { ar: "نوع الإشغال", en: "Occupancy" },
+  "occupancy.SGL": { ar: "مفرد (SGL)", en: "Single (SGL)" },
+  "occupancy.DBL": { ar: "مزدوج (DBL)", en: "Double (DBL)" },
+  "occupancy.TPL": { ar: "ثلاثي (TPL)", en: "Triple (TPL)" },
+  "occupancy.QUAD": { ar: "رباعي (QUAD)", en: "Quad (QUAD)" },
+  "occupancy.CHD": { ar: "طفل (CHD)", en: "Child (CHD)" },
+  "occupancy.INF": { ar: "رضيع (INF)", en: "Infant (INF)" },
+  "occupancy.active": { ar: "نشط", en: "Active" },
+  "occupancy.inactive": { ar: "غير نشط", en: "Inactive" },
+  "occupancy.core_required": { ar: "يجب إضافة سعر مفرد ومزدوج نشط قبل اعتماد السعر", en: "Active SGL and DBL prices are required before rate activation" },
+  "occupancy.err_type_required": { ar: "اختر نوع الإشغال", en: "Select an occupancy type" },
+  "occupancy.err_duplicate": { ar: "نوع الإشغال مضاف مسبقًا لهذا السعر", en: "This occupancy type already exists for this rate" },
+  "occupancy.err_negative": { ar: "لا يسمح بقيم سالبة أو فارغة", en: "Negative or empty values are not allowed" },
+  "occupancy.err_sell_below_cost": { ar: "سعر البيع لا يمكن أن يكون أقل من التكلفة", en: "Selling price cannot be lower than cost price" },
+  // Dashboard
+  "dash.welcome": { ar: "مرحبًا بك", en: "Welcome" },
+  "dash.summary": { ar: "ملخص النظام", en: "System Summary" },
+  "dash.customers_count": { ar: "إجمالي العملاء", en: "Total Customers" },
+  "dash.hotels_count": { ar: "إجمالي الفنادق", en: "Total Hotels" },
+  "dash.suppliers_count": { ar: "إجمالي الموردين", en: "Total Suppliers" },
+  "dash.rates_count": { ar: "إجمالي الأسعار", en: "Total Rates" },
+  "dash.pending_approvals": { ar: "بانتظار الاعتماد", en: "Pending Approvals" },
+  "dash.recent_activity": { ar: "آخر النشاطات", en: "Recent Activity" },
+  "dash.pricing_metrics": { ar: "مؤشرات التسعير", en: "Pricing Metrics" },
+  "dash.avg_cost": { ar: "متوسط التكلفة", en: "Average Cost" },
+  "dash.avg_selling": { ar: "متوسط البيع", en: "Average Selling" },
+  "dash.avg_margin": { ar: "متوسط الهامش", en: "Average Margin" },
+  // List-page KPIs (customers / suppliers / hotels / rates)
+  "kpi.total": { ar: "الإجمالي", en: "Total" },
+  "kpi.active": { ar: "نشط", en: "Active" },
+  "kpi.inactive": { ar: "غير نشط", en: "Inactive" },
+  "kpi.archived": { ar: "مؤرشف", en: "Archived" },
+  "kpi.this_month": { ar: "هذا الشهر", en: "This Month" },
+  "kpi.top_rated": { ar: "الأعلى تقييماً", en: "Top Rated" },
+  "kpi.luxury": { ar: "5 نجوم", en: "5-Star" },
+  "kpi.with_credit": { ar: "بحد ائتماني", en: "With Credit" },
+  "kpi.expiring_soon": { ar: "تنتهي قريباً", en: "Expiring Soon" },
+  "kpi.expired": { ar: "منتهية", en: "Expired" },
+  "kpi.draft": { ar: "مسودة", en: "Draft" },
+  // Users
+  "users.title": { ar: "إدارة المستخدمين", en: "User Management" },
+  "users.invite": { ar: "إنشاء مستخدم", en: "Create User" },
+  "users.must_change_pwd": { ar: "تغيير كلمة المرور إلزامي", en: "Must change password" },
+  "users.locked": { ar: "مقفل", en: "Locked" },
+  "users.unlock": { ar: "إلغاء القفل", en: "Unlock" },
+  "users.last_login": { ar: "آخر دخول", en: "Last Login" },
+  "users.assign_role": { ar: "تعيين دور", en: "Assign role" },
+  "users.remove_role": { ar: "إزالة الدور", en: "Remove role" },
+  // Audit
+  "audit.title": { ar: "سجل التدقيق", en: "Audit Log" },
+  "audit.action": { ar: "العملية", en: "Action" },
+  "audit.entity": { ar: "الكيان", en: "Entity" },
+  "audit.user": { ar: "المستخدم", en: "User" },
+  "audit.time": { ar: "الوقت", en: "Time" },
+  "audit.ip": { ar: "عنوان IP", en: "IP Address" },
+  // Settings
+  "settings.title": { ar: "إعدادات النظام", en: "System Settings" },
+  "settings.company": { ar: "بيانات الشركة", en: "Company Information" },
+  "settings.security": { ar: "إعدادات الأمان", en: "Security Settings" },
+  "settings.localization": { ar: "اللغة والمنطقة", en: "Localization" },
+  "settings.session_timeout": { ar: "مهلة الجلسة (دقائق)", en: "Session timeout (minutes)" },
+  "settings.max_attempts": { ar: "الحد الأقصى لمحاولات الدخول", en: "Max failed attempts" },
+  "settings.lock_duration": { ar: "مدة قفل الحساب (دقائق)", en: "Lock duration (minutes)" },
+  "settings.pwd_min": { ar: "أقل طول لكلمة المرور", en: "Min password length" },
+  "settings.default_lang": { ar: "اللغة الافتراضية", en: "Default Language" },
+  // Toasts
+  "toast.saved": { ar: "تم الحفظ بنجاح", en: "Saved successfully" },
+  "toast.deleted": { ar: "تم الحذف بنجاح", en: "Deleted successfully" },
+  "toast.restored": { ar: "تمت الاستعادة", en: "Restored successfully" },
+  "toast.error": { ar: "حدث خطأ", en: "An error occurred" },
+  "toast.confirm_delete": { ar: "هل أنت متأكد من الحذف؟", en: "Are you sure you want to delete this?" },
+  "toast.confirm_archive": { ar: "تأكيد الأرشفة؟", en: "Archive this record?" },
+  // Filters
+  "filter.all": { ar: "الكل", en: "All" },
+  "filter.type": { ar: "النوع", en: "Type" },
+  "filter.status": { ar: "الحالة", en: "Status" },
+  "filter.country": { ar: "الدولة", en: "Country" },
+  "filter.hotel": { ar: "الفندق", en: "Hotel" },
+  "filter.supplier": { ar: "المورد", en: "Supplier" },
+  "filter.from": { ar: "من", en: "From" },
+  "filter.to": { ar: "إلى", en: "To" },
+  "filter.show_archived": { ar: "عرض المؤرشف", en: "Show archived" },
+  // Contact / detail labels
+  "label.full_name": { ar: "الاسم الكامل", en: "Full name" },
+  "label.title_position": { ar: "المسمى الوظيفي", en: "Job title" },
+  "label.is_primary": { ar: "أساسي", en: "Primary" },
+  "label.channel": { ar: "القناة", en: "Channel" },
+  "label.direction": { ar: "الاتجاه", en: "Direction" },
+  "label.subject": { ar: "الموضوع", en: "Subject" },
+  "label.message": { ar: "الرسالة", en: "Message" },
+  "label.occurred_at": { ar: "وقت الحدث", en: "Occurred at" },
+  "label.file_name": { ar: "اسم الملف", en: "File name" },
+  "label.file_url": { ar: "رابط الملف", en: "File URL / path" },
+  "label.category": { ar: "الفئة", en: "Category" },
+  "label.contract_number": { ar: "رقم العقد", en: "Contract #" },
+  "label.start_date": { ar: "تاريخ البداية", en: "Start date" },
+  "label.end_date": { ar: "تاريخ النهاية", en: "End date" },
+  "label.commission_pct": { ar: "نسبة العمولة %", en: "Commission %" },
+  "label.bank_name": { ar: "اسم البنك", en: "Bank name" },
+  "label.account_holder": { ar: "اسم صاحب الحساب", en: "Account holder" },
+  "label.account_number": { ar: "رقم الحساب", en: "Account number" },
+  "label.iban": { ar: "IBAN", en: "IBAN" },
+  "label.swift": { ar: "SWIFT/BIC", en: "SWIFT / BIC" },
+  "label.branch": { ar: "الفرع", en: "Branch" },
+  "label.is_default": { ar: "افتراضي", en: "Default" },
+  "label.score": { ar: "الدرجة", en: "Score" },
+  "label.comment": { ar: "التعليق", en: "Comment" },
+  "label.is_preferred": { ar: "مفضل", en: "Preferred" },
+  "label.max_adults": { ar: "أقصى كبار", en: "Max adults" },
+  "label.max_children": { ar: "أقصى أطفال", en: "Max children" },
+  "label.max_occupancy": { ar: "أقصى إشغال", en: "Max occupancy" },
+  "label.bed_type": { ar: "نوع السرير", en: "Bed type" },
+  "label.size_sqm": { ar: "المساحة م²", en: "Size m²" },
+  "label.caption": { ar: "التعليق", en: "Caption" },
+  "label.is_cover": { ar: "الغلاف", en: "Cover" },
+  "label.sort_order": { ar: "الترتيب", en: "Sort" },
+  "label.is_active": { ar: "مفعّل", en: "Active" },
+  "label.tax_value": { ar: "القيمة", en: "Value" },
+  "label.tax_type": { ar: "نوع الضريبة", en: "Tax type" },
+  "label.inclusive": { ar: "شامل", en: "Inclusive" },
+  "label.applies_to": { ar: "يطبق على", en: "Applies to" },
+  "label.days_before": { ar: "أيام قبل الوصول", en: "Days before check-in" },
+  "label.penalty": { ar: "الغرامة", en: "Penalty" },
+  "label.penalty_type": { ar: "نوع الغرامة", en: "Penalty type" },
+  "label.season_name": { ar: "اسم الموسم", en: "Season name" },
+  "label.action_history": { ar: "سجل الإجراءات", en: "Action history" },
+  // Channels
+  "channel.email": { ar: "بريد", en: "Email" },
+  "channel.phone": { ar: "هاتف", en: "Phone" },
+  "channel.whatsapp": { ar: "واتساب", en: "WhatsApp" },
+  "channel.meeting": { ar: "اجتماع", en: "Meeting" },
+  "channel.note": { ar: "ملاحظة", en: "Note" },
+  "channel.other": { ar: "أخرى", en: "Other" },
+  "direction.inbound": { ar: "وارد", en: "Inbound" },
+  "direction.outbound": { ar: "صادر", en: "Outbound" },
+  // Empty
+  "empty.title": { ar: "لا توجد بيانات بعد", en: "Nothing here yet" },
+  "empty.cta": { ar: "ابدأ بإضافة سجل جديد.", en: "Get started by adding a new record." },
+  // Contracting navigation
+  "nav.room_types": { ar: "أنواع الغرف", en: "Room Types" },
+  "nav.contracts": { ar: "العقود", en: "Contracts" },
+  "nav.seasons": { ar: "المواسم", en: "Seasons" },
+  "nav.taxes": { ar: "الضرائب والرسوم", en: "Taxes & Fees" },
+  // Contract statuses
+  "status.suspended": { ar: "موقوف مؤقتًا", en: "Suspended" },
+  "status.closed": { ar: "مغلق", en: "Closed" },
+  "status.terminated": { ar: "ملغي", en: "Terminated" },
+  // Room Types module
+  "room_types.title": { ar: "أنواع الغرف", en: "Room Types" },
+  "room_types.new": { ar: "نوع غرفة جديد", en: "New Room Type" },
+  "room_types.edit": { ar: "تعديل نوع الغرفة", en: "Edit Room Type" },
+  "room_types.hotel": { ar: "الفندق", en: "Hotel" },
+  "room_types.capacity": { ar: "السعة", en: "Capacity" },
+  "room_types.smoking": { ar: "مسموح التدخين", en: "Smoking allowed" },
+  "room_types.no_found": { ar: "نوع الغرفة غير موجود", en: "Room type not found" },
+  "room_types.tab.profile": { ar: "البيانات", en: "Profile" },
+  "room_types.tab.history": { ar: "السجل", en: "History" },
+  "room_types.err_occupancy": { ar: "أقصى إشغال يجب أن يكون بين عدد الكبار ومجموع الكبار والأطفال", en: "Max occupancy must be between adults and adults + children" },
+  "room_types.desc_en": { ar: "الوصف (إنجليزي)", en: "Description (English)" },
+  "room_types.desc_ar": { ar: "الوصف (عربي)", en: "Description (Arabic)" },
+  // Contracts module
+  "contracts.title": { ar: "عقود الفنادق", en: "Hotel Contracts" },
+  "contracts.new": { ar: "عقد جديد", en: "New Contract" },
+  "contracts.edit": { ar: "تعديل العقد", en: "Edit Contract" },
+  "contracts.name": { ar: "اسم العقد", en: "Contract Name" },
+  "contracts.type": { ar: "نوع العقد", en: "Contract Type" },
+  "contracts.hotel": { ar: "الفندق", en: "Hotel" },
+  "contracts.supplier": { ar: "المورد", en: "Supplier" },
+  "contracts.period": { ar: "مدة العقد", en: "Contract Period" },
+  "contracts.no_found": { ar: "العقد غير موجود", en: "Contract not found" },
+  "contracts.tab.profile": { ar: "البيانات", en: "Profile" },
+  "contracts.tab.rates": { ar: "الأسعار المرتبطة", en: "Linked Rates" },
+  "contracts.tab.history": { ar: "سجل العقد", en: "Contract History" },
+  "contracts.no_rates": { ar: "لا توجد أسعار مرتبطة بهذا العقد.", en: "No rates linked to this contract." },
+  "contracts.activate": { ar: "تفعيل", en: "Activate" },
+  "contracts.suspend": { ar: "إيقاف مؤقت", en: "Suspend" },
+  "contracts.resume": { ar: "استئناف", en: "Resume" },
+  "contracts.close": { ar: "إغلاق", en: "Close" },
+  "contracts.mark_expired": { ar: "تحديد كمنتهي", en: "Mark Expired" },
+  "contracts.confirm_status": { ar: "تأكيد تغيير حالة العقد؟", en: "Confirm contract status change?" },
+  "contracts.err_overlap": { ar: "تواريخ العقد تتداخل مع عقد آخر لنفس المورد والفندق", en: "Contract dates overlap with an existing contract for the same supplier and hotel" },
+  "contracts.err_not_active": { ar: "لا يمكن اعتماد الأسعار إلا ضمن عقد نشط", en: "Rates can only be approved under an active contract" },
+  "ctrtype.allotment": { ar: "حصة غرف", en: "Allotment" },
+  "ctrtype.free_sale": { ar: "بيع حر", en: "Free Sale" },
+  "ctrtype.on_request": { ar: "عند الطلب", en: "On Request" },
+  "ctrtype.commitment": { ar: "التزام", en: "Commitment" },
+  "ctrtype.other": { ar: "أخرى", en: "Other" },
+  // Seasons module
+  "seasons.title": { ar: "المواسم", en: "Seasons" },
+  "seasons.new": { ar: "موسم جديد", en: "New Season" },
+  "seasons.edit": { ar: "تعديل الموسم", en: "Edit Season" },
+  "seasons.type": { ar: "نوع الموسم", en: "Season Type" },
+  "seasons.err_duplicate": { ar: "يوجد موسم بنفس الاسم مسبقًا", en: "A season with the same name already exists" },
+  "seasons.err_overlap": { ar: "تواريخ الموسم تتداخل مع موسم آخر من نفس النوع", en: "Season dates overlap with an existing season of the same type" },
+  "season_type.low": { ar: "موسم منخفض", en: "Low Season" },
+  "season_type.high": { ar: "موسم مرتفع", en: "High Season" },
+  "season_type.peak": { ar: "موسم الذروة", en: "Peak Season" },
+  "season_type.ramadan": { ar: "رمضان", en: "Ramadan" },
+  "season_type.eid": { ar: "العيد", en: "Eid" },
+  "season_type.hajj": { ar: "الحج", en: "Hajj" },
+  "season_type.new_year": { ar: "رأس السنة", en: "New Year" },
+  "season_type.custom": { ar: "مخصص", en: "Custom" },
+  // Taxes & Fees module
+  "taxes.title": { ar: "الضرائب والرسوم", en: "Taxes & Fees" },
+  "taxes.new": { ar: "ضريبة / رسم جديد", en: "New Tax / Fee" },
+  "taxes.edit": { ar: "تعديل الضريبة / الرسم", en: "Edit Tax / Fee" },
+  "taxes.calc_method": { ar: "طريقة الاحتساب", en: "Calculation Method" },
+  "taxes.effective_date": { ar: "تاريخ السريان", en: "Effective Date" },
+  "taxes.err_pct": { ar: "النسبة المئوية لا يمكن أن تتجاوز 100", en: "Percentage value cannot exceed 100" },
+  "taxes.err_currency": { ar: "الرسوم الثابتة تتطلب تحديد العملة", en: "Fixed amount fees require a currency" },
+  "taxtype.vat": { ar: "ضريبة القيمة المضافة", en: "VAT" },
+  "taxtype.municipality_fee": { ar: "رسوم البلدية", en: "Municipality Fee" },
+  "taxtype.tourism_fee": { ar: "رسوم السياحة", en: "Tourism Fee" },
+  "taxtype.service_charge": { ar: "رسوم الخدمة", en: "Service Charge" },
+  "taxtype.resort_fee": { ar: "رسوم المنتجع", en: "Resort Fee" },
+  "taxtype.custom": { ar: "رسم مخصص", en: "Custom Fee" },
+  "calc.fixed": { ar: "مبلغ ثابت", en: "Fixed Amount" },
+  "calc.percentage": { ar: "نسبة مئوية", en: "Percentage" },
+  "scope.per_room": { ar: "لكل غرفة", en: "Per Room" },
+  "scope.per_night": { ar: "لكل ليلة", en: "Per Night" },
+  "scope.per_person": { ar: "لكل شخص", en: "Per Person" },
+  "scope.per_stay": { ar: "لكل إقامة", en: "Per Stay" },
+  "taxes.expiry_date": { ar: "تاريخ الانتهاء", en: "Expiry Date" },
+  "taxes.apply_scope": { ar: "نطاق التطبيق", en: "Applies Per" },
+  "taxes.err_dates": { ar: "تاريخ الانتهاء لا يمكن أن يسبق تاريخ السريان", en: "Expiry date cannot be before the effective date" },
+  "taxes.no_found": { ar: "الضريبة / الرسم غير موجود", en: "Tax / fee not found" },
+  "contracts.commission_type": { ar: "نوع العمولة", en: "Commission Type" },
+  "contracts.terminate": { ar: "إنهاء العقد", en: "Terminate" },
+  "contracts.err_overlap_dates": { ar: "تاريخ النهاية يجب أن يكون بعد تاريخ البداية", en: "End date must be after start date" },
+  "seasons.no_found": { ar: "الموسم غير موجود", en: "Season not found" },
+  "room_types.err_linked_rates": { ar: "لا يمكن حذف أو أرشفة نوع الغرفة لارتباطه بأسعار نشطة", en: "Cannot delete or archive: room type is linked to active rates" },
+  // Audit / history
+  "history.action": { ar: "الإجراء", en: "Action" },
+  "history.user": { ar: "المستخدم", en: "User" },
+  "history.time": { ar: "الوقت", en: "Time" },
+  "history.changes": { ar: "التغييرات", en: "Changes" },
+  "history.empty": { ar: "لا يوجد سجل تغييرات (قد يتطلب صلاحية مدير).", en: "No history records (admin permission may be required)." },
+  "history.action.create": { ar: "إنشاء", en: "Create" },
+  "history.action.update": { ar: "تعديل", en: "Update" },
+  "history.action.delete": { ar: "حذف", en: "Delete" },
+  "history.action.upload": { ar: "رفع ملف", en: "Upload" },
+  "history.action.archive": { ar: "أرشفة", en: "Archive" },
+  "history.action.restore": { ar: "استعادة", en: "Restore" },
+  "history.action.submit": { ar: "إرسال للاعتماد", en: "Submit" },
+  "history.action.approve": { ar: "اعتماد", en: "Approve" },
+  "history.action.reject": { ar: "رفض", en: "Reject" },
+  "history.action.return": { ar: "إعادة للمراجعة", en: "Return" },
+  // Attachments engine
+  "tab.attachments": { ar: "المرفقات", en: "Attachments" },
+  "tab.approval": { ar: "الاعتماد", en: "Approval" },
+  "attach.upload": { ar: "رفع ملف", en: "Upload File" },
+  "attach.uploading": { ar: "جارٍ الرفع…", en: "Uploading…" },
+  "attach.uploaded": { ar: "تم رفع الملف بنجاح", en: "File uploaded successfully" },
+  "attach.file": { ar: "الملف", en: "File" },
+  "attach.size": { ar: "الحجم", en: "Size" },
+  "attach.uploaded_at": { ar: "تاريخ الرفع", en: "Uploaded At" },
+  "attach.preview": { ar: "معاينة", en: "Preview" },
+  "attach.download": { ar: "تنزيل", en: "Download" },
+  "attach.empty": { ar: "لا توجد مرفقات.", en: "No attachments." },
+  "attach.hint": { ar: "الملفات المسموحة: PDF / DOCX / XLSX / JPG / PNG — بحد أقصى 25 ميجابايت.", en: "Allowed files: PDF / DOCX / XLSX / JPG / PNG — maximum 25 MB." },
+  "attach.err_type": { ar: "نوع الملف غير مدعوم. الأنواع المسموحة: PDF / DOCX / XLSX / JPG / PNG", en: "Unsupported file type. Allowed: PDF / DOCX / XLSX / JPG / PNG" },
+  "attach.err_size": { ar: "حجم الملف يتجاوز الحد الأقصى (25 ميجابايت)", en: "File exceeds the maximum size (25 MB)" },
+  "attach.confirm_archive": { ar: "أرشفة هذا المرفق؟", en: "Archive this attachment?" },
+  // Approval workflow engine
+  "approval.current": { ar: "حالة الاعتماد الحالية", en: "Current Approval Status" },
+  "approval.submit": { ar: "إرسال للاعتماد", en: "Submit for Approval" },
+  "approval.resubmit": { ar: "إعادة الإرسال", en: "Resubmit" },
+  "approval.approve": { ar: "اعتماد", en: "Approve" },
+  "approval.reject": { ar: "رفض", en: "Reject" },
+  "approval.return": { ar: "إعادة للمراجعة", en: "Return for Revision" },
+  "approval.notes": { ar: "ملاحظات الاعتماد", en: "Approval Notes" },
+  "approval.notes_placeholder": { ar: "سبب الرفض أو الإعادة…", en: "Reason for rejection or return…" },
+  "approval.submitted_by": { ar: "مقدم الطلب", en: "Submitted By" },
+  "approval.submitted_at": { ar: "تاريخ الإرسال", en: "Submitted At" },
+  "approval.decided_by": { ar: "تم البت بواسطة", en: "Decided By" },
+  "approval.decided_at": { ar: "تاريخ البت", en: "Decided At" },
+  "approval.empty": { ar: "لا توجد طلبات اعتماد.", en: "No approval requests." },
+  "approval.submitted_ok": { ar: "تم إرسال طلب الاعتماد", en: "Approval request submitted" },
+  "approval.status.draft": { ar: "مسودة", en: "Draft" },
+  "approval.status.submitted": { ar: "بانتظار الاعتماد", en: "Submitted" },
+  "approval.status.approved": { ar: "معتمد", en: "Approved" },
+  "approval.status.rejected": { ar: "مرفوض", en: "Rejected" },
+  "approval.status.returned": { ar: "معاد للمراجعة", en: "Returned" },
+  "approval.status.archived": { ar: "مؤرشف", en: "Archived" },
+  "approval.err_transition": { ar: "لا يمكن تنفيذ هذا الانتقال في حالة الطلب الحالية", en: "This status transition is not allowed for the current request" },
+  "approval.err_forbidden": { ar: "هذا الإجراء متاح للمديرين والمسؤولين فقط", en: "Only managers or admins can perform this action" },
+  "approval.err_notes": { ar: "الملاحظات مطلوبة عند الرفض أو الإعادة", en: "Notes are required when rejecting or returning a request" },
+  "approval.err_open_exists": { ar: "يوجد طلب اعتماد مفتوح بالفعل لهذا السجل", en: "An open approval request already exists for this record" },
+  "err.not_allowed": { ar: "هذا الإجراء غير مسموح", en: "This action is not allowed" },
+  "err.no_immutable": { ar: "رقم المستند لا يمكن تغييره", en: "The document number cannot be changed" },
+  "err.record_missing": { ar: "السجل غير موجود", en: "Record not found" },
+  "rates.err_below_cost": { ar: "سعر البيع لا يمكن أن يقل عن سعر التكلفة", en: "Selling price cannot be lower than cost price" },
+  "rates.err_missing_occupancy": { ar: "يتطلب التفعيل أسعار إشغال نشطة (مفرد ومزدوج) على الأقل", en: "Activation requires active SGL and DBL occupancy prices" },
+  // Quotations module
+  "nav.quotations": { ar: "عروض الأسعار", en: "Quotations" },
+  "quotes.title": { ar: "عروض الأسعار", en: "Quotations" },
+  "quotes.new": { ar: "عرض سعر جديد", en: "New Quotation" },
+  "quotes.edit": { ar: "تعديل عرض السعر", en: "Edit Quotation" },
+  "quotes.number": { ar: "رقم العرض", en: "Quotation No." },
+  "quotes.customer": { ar: "العميل", en: "Customer" },
+  "quotes.quotation_date": { ar: "تاريخ العرض", en: "Quotation Date" },
+  "quotes.travel_date": { ar: "تاريخ السفر", en: "Travel Date" },
+  "quotes.expiry_date": { ar: "تاريخ انتهاء الصلاحية", en: "Expiry Date" },
+  "quotes.creator": { ar: "أنشئ بواسطة", en: "Created By" },
+  "label.employee": { ar: "الموظف", en: "Employee" },
+  "label.recorded_at": { ar: "وقت التسجيل", en: "Recorded At" },
+  "perm.denied_title": { ar: "لا تملك صلاحية الوصول", en: "Access Denied" },
+  "perm.denied_desc": { ar: "تم إخفاء هذا القسم من حسابك. تواصل مع المدير العام إذا كنت بحاجة للوصول.", en: "This section has been hidden from your account. Contact the general manager if you need access." },
+  "perm.manage": { ar: "إدارة الصلاحيات", en: "Manage Permissions" },
+  "perm.dialog_desc": { ar: "أوقف أي قسم لإخفائه عن هذا الموظف فوراً.", en: "Toggle off any section to hide it from this employee immediately." },
+  "perm.visible": { ar: "ظاهر", en: "Visible" },
+  "perm.hidden": { ar: "مخفي", en: "Hidden" },
+  "perm.super_admin_note": { ar: "لا يمكن تقييد صلاحيات المدير العام.", en: "The super admin's access cannot be restricted." },
+  "quotes.no_found": { ar: "عرض السعر غير موجود", en: "Quotation not found" },
+  "quotes.value": { ar: "قيمة العرض", en: "Quotation Value" },
+  "quotes.tab.general": { ar: "البيانات العامة", en: "General" },
+  "quotes.tab.items": { ar: "البنود", en: "Items" },
+  "quotes.tab.pricing": { ar: "التسعير", en: "Pricing" },
+  "quotes.tab.history": { ar: "سجل التغييرات", en: "History" },
+  "quotes.submit": { ar: "إرسال للاعتماد", en: "Submit for Approval" },
+  "quotes.send": { ar: "إرسال للعميل", en: "Send to Customer" },
+  "quotes.accept": { ar: "تحديد كمقبول", en: "Mark Accepted" },
+  "quotes.expire_action": { ar: "تحديد كمنتهي", en: "Mark Expired" },
+  "quotes.cancel": { ar: "إلغاء العرض", en: "Cancel Quotation" },
+  "quotes.reopen": { ar: "إعادة فتح كمسودة", en: "Reopen as Draft" },
+  "quotes.print": { ar: "طباعة / PDF", en: "Print / PDF" },
+  "quotes.confirm_status": { ar: "تأكيد تغيير حالة عرض السعر؟", en: "Confirm quotation status change?" },
+  "quotes.items.add": { ar: "إضافة بند", en: "Add Item" },
+  "quotes.items.edit": { ar: "تعديل البند", en: "Edit Item" },
+  "quotes.items.hotel": { ar: "الفندق", en: "Hotel" },
+  "quotes.items.rate": { ar: "السعر التعاقدي", en: "Rate" },
+  "quotes.items.occupancy": { ar: "نوع الإشغال", en: "Occupancy" },
+  "quotes.items.check_in": { ar: "تاريخ الدخول", en: "Check-in" },
+  "quotes.items.check_out": { ar: "تاريخ الخروج", en: "Check-out" },
+  "quotes.items.nights": { ar: "الليالي", en: "Nights" },
+  "quotes.items.rooms": { ar: "الغرف", en: "Rooms" },
+  "quotes.items.cost": { ar: "التكلفة/ليلة", en: "Cost/Night" },
+  "quotes.items.selling": { ar: "البيع/ليلة", en: "Selling/Night" },
+  "quotes.items.taxes": { ar: "الضرائب", en: "Taxes" },
+  "quotes.items.fees": { ar: "الرسوم", en: "Fees" },
+  "quotes.items.margin": { ar: "الهامش", en: "Margin" },
+  "quotes.items.total_cost": { ar: "إجمالي التكلفة", en: "Total Cost" },
+  "quotes.items.total_selling": { ar: "إجمالي البيع", en: "Total Selling" },
+  "quotes.items.empty": { ar: "لا توجد بنود. أضف بندًا واحدًا على الأقل.", en: "No items. Add at least one item." },
+  "quotes.items.locked": { ar: "البنود قابلة للتعديل فقط في حالة المسودة أو المرفوض.", en: "Items are editable only while the quotation is draft or rejected." },
+  "quotes.items.price_hint": { ar: "سيتم سحب الأسعار تلقائيًا من محرك تسعير الإشغال.", en: "Prices are pulled automatically from the occupancy pricing engine." },
+  "quotes.pricing.room_total": { ar: "إجمالي الغرف (بيع)", en: "Rooms Total (Selling)" },
+  "quotes.pricing.total_cost": { ar: "إجمالي التكلفة", en: "Total Cost" },
+  "quotes.pricing.taxes": { ar: "إجمالي الضرائب", en: "Total Taxes" },
+  "quotes.pricing.fees": { ar: "إجمالي الرسوم", en: "Total Fees" },
+  "quotes.pricing.margin": { ar: "إجمالي الهامش", en: "Total Margin" },
+  "quotes.pricing.grand_total": { ar: "الإجمالي النهائي", en: "Grand Total" },
+  "quotes.err_transition": { ar: "لا يمكن تنفيذ هذا الانتقال في حالة العرض الحالية", en: "This status transition is not allowed for the current quotation" },
+  "quotes.err_no_items": { ar: "يجب إضافة بند واحد على الأقل قبل الإرسال", en: "At least one item is required before submitting or sending" },
+  "quotes.err_locked": { ar: "لا يمكن تعديل البنود إلا في حالة المسودة أو المرفوض", en: "Items can only be modified while the quotation is draft or rejected" },
+  "quotes.err_no_price": { ar: "لا يوجد سعر إشغال نشط لهذا السعر ونوع الإشغال", en: "No active occupancy price found for this rate and occupancy type" },
+  "quotes.err_price_required": { ar: "التكلفة وسعر البيع مطلوبان (اختر سعرًا أو أدخلهما يدويًا)", en: "Cost and selling prices are required (select a rate or enter manually)" },
+  "quotes.err_dates": { ar: "تاريخ الخروج يجب أن يكون بعد تاريخ الدخول", en: "Check-out must be after check-in" },
+  "quotes.err_approval_required": { ar: "هذا العرض يتجاوز حد الاعتماد ويجب اعتماده قبل الإرسال", en: "This quotation exceeds the approval threshold and must be approved before sending" },
+  "qstatus.draft": { ar: "مسودة", en: "Draft" },
+  "qstatus.pending_approval": { ar: "بانتظار الاعتماد", en: "Pending Approval" },
+  "qstatus.approved": { ar: "معتمد", en: "Approved" },
+  "qstatus.rejected": { ar: "مرفوض", en: "Rejected" },
+  "qstatus.sent": { ar: "مرسل", en: "Sent" },
+  "qstatus.accepted": { ar: "مقبول", en: "Accepted" },
+  "qstatus.expired": { ar: "منتهي", en: "Expired" },
+  "qstatus.cancelled": { ar: "ملغي", en: "Cancelled" },
+  "ctype.agent": { ar: "وكيل", en: "Agent" },
+  "ctype.retail": { ar: "تجزئة", en: "Retail" },
+  "ctype.vip": { ar: "كبار الشخصيات", en: "VIP" },
+  "dash.quotes_metrics": { ar: "مؤشرات عروض الأسعار", en: "Quotation Metrics" },
+  "dash.quotes_total": { ar: "إجمالي العروض", en: "Total Quotations" },
+  "dash.quotes_pending": { ar: "بانتظار الاعتماد", en: "Pending Approval" },
+  "dash.quotes_approved": { ar: "معتمدة", en: "Approved" },
+  "dash.quotes_accepted": { ar: "مقبولة", en: "Accepted" },
+  "dash.quotes_rejected": { ar: "مرفوضة", en: "Rejected" },
+  "dash.quotes_value": { ar: "قيمة العروض", en: "Quotation Value" },
+  "quotes.print.title": { ar: "عرض سعر", en: "Quotation" },
+  "quotes.print.to": { ar: "مقدم إلى", en: "Presented To" },
+  "quotes.print.valid_until": { ar: "صالح حتى", en: "Valid Until" },
+  "quotes.print.notes": { ar: "ملاحظات", en: "Notes" },
+  "quotes.print.footer": { ar: "شكرًا لتعاملكم معنا. هذا العرض صالح حتى التاريخ المذكور أعلاه.", en: "Thank you for your business. This quotation is valid until the date stated above." },
+  "quotes.expiring_soon": { ar: "عروض ستنتهي صلاحيتها خلال 7 أيام", en: "quotations expiring within 7 days" },
+  "quotes.items.contract": { ar: "العقد", en: "Contract" },
+  "quotes.items.room_type": { ar: "نوع الغرفة", en: "Room Type" },
+  "quotes.items.season": { ar: "الموسم", en: "Season" },
+  "quotes.items.season_any": { ar: "بدون موسم محدد", en: "No specific season" },
+  "quotes.items.no_contracts": { ar: "لا توجد عقود نشطة لهذا الفندق", en: "No active contracts for this hotel" },
+  "quotes.items.no_rates": { ar: "لا توجد أسعار معتمدة لهذا العقد", en: "No approved rates for this contract" },
+  "quotes.items.no_occ": { ar: "لا توجد أسعار إشغال نشطة لهذا السعر", en: "No active occupancy prices for this rate" },
+  "quotes.items.preview": { ar: "معاينة التسعير", en: "Pricing Preview" },
+  "quotes.items.pricing_auto": { ar: "الأسعار تُسحب تلقائيًا من محرك تسعير الإشغال ولا يمكن إدخالها يدويًا.", en: "Prices are pulled automatically from the Occupancy Pricing engine and cannot be entered manually." },
+  "quotes.items.grand": { ar: "إجمالي البند", en: "Item Total" },
+  "quotes.err_duplicate": { ar: "يوجد بند لنفس الفندق ونوع الغرفة والإشغال في نفس الفترة", en: "An item for the same hotel, room type and occupancy already covers these dates" },
+  "quotes.err_expiry": { ar: "تاريخ انتهاء الصلاحية يجب أن يكون بعد تاريخ العرض", en: "Expiry date must be after the quotation date" },
+  "quotes.err_locked_edit": { ar: "لا يمكن تعديل بيانات العرض إلا في حالة المسودة أو المرفوض", en: "Quotation details can only be edited while draft or rejected" },
+  "quotes.return": { ar: "إعادة للمسودة", en: "Return to Draft" },
+  "quotes.pdf_ok": { ar: "تم إنشاء نسخة الطباعة", en: "Print view generated" },
+  "dash.quotes_expired": { ar: "منتهية", en: "Expired" },
+  // RFQ module
+  "nav.rfqs": { ar: "طلبات الأسعار", en: "RFQs" },
+  "rfq.title": { ar: "طلبات الأسعار والتوافر", en: "RFQs & Availability" },
+  "rfq.new": { ar: "طلب سعر جديد", en: "New RFQ" },
+  "rfq.number": { ar: "رقم الطلب", en: "RFQ No." },
+  "rfq.customer": { ar: "العميل", en: "Customer" },
+  "rfq.destination": { ar: "الوجهة", en: "Destination" },
+  "rfq.travel_start": { ar: "بداية السفر", en: "Travel Start" },
+  "rfq.travel_end": { ar: "نهاية السفر", en: "Travel End" },
+  "rfq.no_found": { ar: "طلب السعر غير موجود", en: "RFQ not found" },
+  "rfq.tab.general": { ar: "البيانات العامة", en: "General" },
+  "rfq.tab.items": { ar: "البنود", en: "Items" },
+  "rfq.tab.suppliers": { ar: "الموردون", en: "Suppliers" },
+  "rfq.tab.responses": { ar: "الردود", en: "Responses" },
+  "rfq.tab.comparison": { ar: "المقارنة", en: "Comparison" },
+  "rfq.tab.history": { ar: "سجل التغييرات", en: "History" },
+  "rfq.send": { ar: "إرسال للموردين", en: "Send to Suppliers" },
+  "rfq.complete": { ar: "تحديد كمكتمل", en: "Mark Completed" },
+  "rfq.expire_action": { ar: "تحديد كمنتهي", en: "Mark Expired" },
+  "rfq.cancel": { ar: "إلغاء الطلب", en: "Cancel RFQ" },
+  "rfq.reopen": { ar: "إعادة فتح كمسودة", en: "Reopen as Draft" },
+  "rfq.confirm_status": { ar: "تأكيد تغيير حالة طلب السعر؟", en: "Confirm RFQ status change?" },
+  "rfq.status_history": { ar: "سجل الحالات", en: "Status History" },
+  "rstatus.draft": { ar: "مسودة", en: "Draft" },
+  "rstatus.sent": { ar: "بانتظار الردود", en: "Waiting Responses" },
+  "rstatus.partial": { ar: "ردود جزئية", en: "Partial Responses" },
+  "rstatus.completed": { ar: "مكتمل", en: "Completed" },
+  "rstatus.approved": { ar: "معتمد", en: "Approved" },
+  "rstatus.rejected": { ar: "مرفوض", en: "Rejected" },
+  "rstatus.expired": { ar: "منتهي", en: "Expired" },
+  "rstatus.cancelled": { ar: "ملغي", en: "Cancelled" },
+  "reqstatus.pending": { ar: "قيد الإعداد", en: "Pending" },
+  "reqstatus.sent": { ar: "مرسل", en: "Sent" },
+  "reqstatus.responded": { ar: "تم الرد", en: "Responded" },
+  "reqstatus.overdue": { ar: "متأخر", en: "Overdue" },
+  "reqstatus.cancelled": { ar: "ملغي", en: "Cancelled" },
+  "avail.available": { ar: "متاح", en: "Available" },
+  "avail.unavailable": { ar: "غير متاح", en: "Unavailable" },
+  "avail.on_request": { ar: "عند الطلب", en: "On Request" },
+  "respstatus.submitted": { ar: "مستلم", en: "Submitted" },
+  "respstatus.approved": { ar: "معتمد", en: "Approved" },
+  "respstatus.rejected": { ar: "مرفوض", en: "Rejected" },
+  "rfq.items.add": { ar: "إضافة بند", en: "Add Item" },
+  "rfq.items.edit": { ar: "تعديل البند", en: "Edit Item" },
+  "rfq.items.quantity": { ar: "عدد الغرف", en: "Quantity" },
+  "rfq.items.meal_plan": { ar: "نظام الوجبات", en: "Meal Plan" },
+  "rfq.items.special": { ar: "طلبات خاصة", en: "Special Requests" },
+  "rfq.items.empty": { ar: "لا توجد بنود. أضف بندًا واحدًا على الأقل.", en: "No items. Add at least one item." },
+  "rfq.items.locked": { ar: "البنود قابلة للتعديل فقط في حالة المسودة.", en: "Items are editable only while the RFQ is in draft." },
+  "rfq.sup.add": { ar: "إضافة مورد", en: "Add Supplier" },
+  "rfq.sup.due": { ar: "موعد الرد", en: "Response Due" },
+  "rfq.sup.sent_at": { ar: "تاريخ الإرسال", en: "Sent At" },
+  "rfq.sup.overdue": { ar: "متأخر عن الموعد", en: "Overdue" },
+  "rfq.sup.empty": { ar: "لم تتم إضافة موردين بعد.", en: "No suppliers added yet." },
+  "rfq.sup.locked": { ar: "الموردون قابلون للتعديل فقط في حالة المسودة.", en: "Suppliers are editable only while the RFQ is in draft." },
+  "rfq.sup.email_note": { ar: "سيتم تفعيل إرسال البريد الإلكتروني للموردين بعد إعداد نطاق البريد.", en: "Automatic supplier emails will activate once an email domain is configured." },
+  "rfq.resp.add": { ar: "تسجيل رد", en: "Record Response" },
+  "rfq.resp.supplier": { ar: "المورد", en: "Supplier" },
+  "rfq.resp.item": { ar: "البند", en: "Item" },
+  "rfq.resp.availability": { ar: "التوافر", en: "Availability" },
+  "rfq.resp.rooms": { ar: "الغرف المتاحة", en: "Available Rooms" },
+  "rfq.resp.cost": { ar: "سعر التكلفة", en: "Cost Price" },
+  "rfq.resp.cancellation": { ar: "سياسة الإلغاء", en: "Cancellation Policy" },
+  "rfq.resp.release": { ar: "أيام الإفراج", en: "Release Days" },
+  "rfq.resp.remarks": { ar: "ملاحظات", en: "Remarks" },
+  "rfq.resp.empty": { ar: "لا توجد ردود بعد.", en: "No responses yet." },
+  "rfq.cmp.best": { ar: "أفضل سعر", en: "Best Price" },
+  "rfq.cmp.empty": { ar: "لا توجد ردود للمقارنة.", en: "No responses to compare." },
+  "rfq.to_quote": { ar: "إنشاء عرض سعر", en: "Create Quotation" },
+  "rfq.to_quote_markup": { ar: "نسبة الربح %", en: "Markup %" },
+  "rfq.to_quote_hint": { ar: "سيتم إنشاء عرض سعر من أفضل الردود المعتمدة لكل بند دون إعادة إدخال الأسعار.", en: "A quotation will be created from the best approved response per item — no manual re-entry of prices." },
+  "rfq.to_quote_ok": { ar: "تم إنشاء عرض السعر من ردود الموردين", en: "Quotation created from supplier responses" },
+  "rfq.to_quote_expiry": { ar: "تاريخ انتهاء العرض", en: "Quotation Expiry Date" },
+  "dash.rfq_metrics": { ar: "مؤشرات طلبات الأسعار", en: "RFQ Metrics" },
+  "dash.rfq_total": { ar: "طلبات منشأة", en: "RFQs Created" },
+  "dash.rfq_waiting": { ar: "بانتظار الردود", en: "Waiting Responses" },
+  "dash.rfq_completed": { ar: "مكتملة", en: "Completed" },
+  "dash.rfq_approved": { ar: "معتمدة", en: "Approved" },
+  "dash.rfq_expired": { ar: "منتهية", en: "Expired" },
+  "dash.rfq_avg_response": { ar: "متوسط زمن الرد (أيام)", en: "Avg Response Time (days)" },
+  "rfq.err_transition": { ar: "لا يمكن تنفيذ هذا الانتقال في حالة الطلب الحالية", en: "This status transition is not allowed for the current RFQ" },
+  "rfq.err_no_items": { ar: "يجب إضافة بند واحد على الأقل قبل الإرسال", en: "At least one item is required before sending" },
+  "rfq.err_no_supplier": { ar: "لا يمكن إرسال طلب سعر بدون مورد واحد على الأقل", en: "An RFQ cannot be sent without at least one supplier" },
+  "rfq.err_locked": { ar: "البنود قابلة للتعديل فقط في حالة المسودة", en: "Items can only be modified while the RFQ is in draft" },
+  "rfq.err_item_dates": { ar: "تاريخ الخروج يجب أن يكون بعد تاريخ الدخول", en: "Check-out must be after check-in" },
+  "rfq.err_resp_closed": { ar: "لا تُقبل الردود إلا أثناء انتظار الردود", en: "Responses are only accepted while the RFQ is awaiting responses" },
+  "rfq.err_resp_overdue": { ar: "انتهى الموعد النهائي للرد", en: "The response deadline has passed" },
+  "rfq.err_resp_price": { ar: "سعر التكلفة مطلوب عند توفر الغرف", en: "Cost price is required when rooms are available" },
+  "rfq.err_resp_not_avail": { ar: "يمكن اعتماد الردود المتاحة فقط", en: "Only available responses can be approved" },
+  "rfq.err_no_approved_resp": { ar: "يجب اعتماد رد مورد واحد على الأقل أولاً", en: "At least one supplier response must be approved first" },
+  "rfq.err_qitem_not_approved": { ar: "لا يمكن إنشاء بنود عرض سعر إلا من ردود معتمدة", en: "Quotation items can only be created from approved RFQ responses" },
+  "rfq.err_duplicate_supplier": { ar: "هذا المورد مضاف بالفعل لهذا الطلب", en: "This supplier is already added to this RFQ" },
+  // ===== Bookings (Section 14) =====
+  "nav.bookings": { ar: "الحجوزات", en: "Bookings" },
+  "bk.title": { ar: "إدارة الحجوزات", en: "Booking Management" },
+  "bk.new": { ar: "حجز جديد", en: "New Booking" },
+  "bk.edit": { ar: "تعديل الحجز", en: "Edit Booking" },
+  "bk.number": { ar: "رقم الحجز", en: "Booking No." },
+  "bk.customer": { ar: "العميل", en: "Customer" },
+  "bk.booking_date": { ar: "تاريخ الحجز", en: "Booking Date" },
+  "bk.source": { ar: "المصدر", en: "Source" },
+  "bk.source_direct": { ar: "حجز مباشر", en: "Direct Booking" },
+  "bk.source_quotation": { ar: "من عرض سعر", en: "From Quotation" },
+  "bk.quotation": { ar: "عرض السعر", en: "Quotation" },
+  "bk.pick_quotation": { ar: "اختر عرض سعر مقبول", en: "Select an accepted quotation" },
+  "bk.no_accepted_quotes": { ar: "لا توجد عروض أسعار مقبولة غير محوّلة", en: "No accepted, unconverted quotations available" },
+  "bk.create_from_quote": { ar: "إنشاء حجز", en: "Create Booking" },
+  "bk.special_requests": { ar: "طلبات خاصة", en: "Special Requests" },
+  "bk.no_found": { ar: "الحجز غير موجود", en: "Booking not found" },
+  "bk.value": { ar: "القيمة", en: "Value" },
+  "bk.creator": { ar: "أنشأه", en: "Created by" },
+  "bk.tab.general": { ar: "عام", en: "General" },
+  "bk.tab.rooms": { ar: "الغرف", en: "Rooms" },
+  "bk.tab.guests": { ar: "النزلاء", en: "Guests" },
+  "bk.tab.pricing": { ar: "التسعير", en: "Pricing" },
+  "bk.tab.history": { ar: "السجل", en: "History" },
+  "bk.tab.timeline": { ar: "مسار الحالة", en: "Status Timeline" },
+  // statuses
+  "bkstatus.draft": { ar: "مسودة", en: "Draft" },
+  "bkstatus.pending_confirmation": { ar: "بانتظار تأكيد المورد", en: "Pending Confirmation" },
+  "bkstatus.confirmed": { ar: "مؤكد", en: "Confirmed" },
+  "bkstatus.checked_in": { ar: "تم تسجيل الدخول", en: "Checked-In" },
+  "bkstatus.checked_out": { ar: "تم تسجيل الخروج", en: "Checked-Out" },
+  "bkstatus.cancelled": { ar: "ملغي", en: "Cancelled" },
+  "bkstatus.no_show": { ar: "لم يحضر", en: "No-Show" },
+  // workflow actions
+  "bk.submit": { ar: "طلب التأكيد", en: "Request Confirmation" },
+  "bk.confirm": { ar: "تأكيد الحجز", en: "Confirm Booking" },
+  "bk.return_draft": { ar: "إعادة للمسودة", en: "Return to Draft" },
+  "bk.check_in": { ar: "تسجيل دخول", en: "Check-In" },
+  "bk.check_out": { ar: "تسجيل خروج", en: "Check-Out" },
+  "bk.cancel": { ar: "إلغاء الحجز", en: "Cancel Booking" },
+  "bk.no_show_action": { ar: "تسجيل عدم حضور", en: "Mark No-Show" },
+  "bk.confirm_status": { ar: "تأكيد تغيير الحالة؟", en: "Confirm status change?" },
+  "bk.cancel_reason": { ar: "سبب الإلغاء", en: "Cancellation Reason" },
+  "bk.cancel_reason_req": { ar: "سبب الإلغاء مطلوب", en: "A cancellation reason is required" },
+  // rooms
+  "bk.rooms.add": { ar: "إضافة غرفة", en: "Add Room" },
+  "bk.rooms.edit": { ar: "تعديل الغرفة", en: "Edit Room" },
+  "bk.rooms.empty": { ar: "لا توجد غرف بعد", en: "No rooms yet" },
+  "bk.rooms.locked": { ar: "الغرف قابلة للتعديل فقط في حالة المسودة", en: "Rooms can only be modified while the booking is draft" },
+  "bk.rooms.supplier": { ar: "المورد", en: "Supplier" },
+  "bk.rooms.confirmation": { ar: "تأكيد المورد", en: "Supplier Confirmation" },
+  "bk.rooms.confirmation_no": { ar: "رقم التأكيد", en: "Confirmation No." },
+  "bk.rooms.confirm_room": { ar: "تأكيد", en: "Confirm" },
+  "bk.rooms.reject_room": { ar: "رفض", en: "Reject" },
+  "bkconf.pending": { ar: "بانتظار التأكيد", en: "Pending" },
+  "bkconf.confirmed": { ar: "مؤكد", en: "Confirmed" },
+  "bkconf.rejected": { ar: "مرفوض", en: "Rejected" },
+  // guests
+  "bk.guests.add": { ar: "إضافة نزيل", en: "Add Guest" },
+  "bk.guests.edit": { ar: "تعديل النزيل", en: "Edit Guest" },
+  "bk.guests.empty": { ar: "لا يوجد نزلاء بعد", en: "No guests yet" },
+  "bk.guests.name": { ar: "الاسم الكامل", en: "Full Name" },
+  "bk.guests.type": { ar: "النوع", en: "Type" },
+  "bk.guests.nationality": { ar: "الجنسية", en: "Nationality" },
+  "bk.guests.passport": { ar: "رقم الجواز", en: "Passport No." },
+  "bk.guests.room": { ar: "الغرفة", en: "Room" },
+  "bk.guests.lead": { ar: "النزيل الرئيسي", en: "Lead Guest" },
+  "bk.guests.set_lead": { ar: "تعيين كنزيل رئيسي", en: "Set as Lead" },
+  "bk.guests.locked": { ar: "النزلاء قابلون للتعديل قبل تسجيل الدخول فقط", en: "Guests can only be modified before check-in" },
+  "gtype.adult": { ar: "بالغ", en: "Adult" },
+  "gtype.child": { ar: "طفل", en: "Child" },
+  "gtype.infant": { ar: "رضيع", en: "Infant" },
+  // KPIs
+  "bk.kpi.total": { ar: "إجمالي الحجوزات", en: "Total Bookings" },
+  "bk.kpi.confirmed": { ar: "مؤكدة", en: "Confirmed" },
+  "bk.kpi.in_house": { ar: "نزلاء حاليون", en: "In-House" },
+  "bk.kpi.completed": { ar: "مكتملة", en: "Completed" },
+  "bk.kpi.cancelled": { ar: "ملغاة / لم يحضر", en: "Cancelled / No-Show" },
+  "bk.kpi.value": { ar: "إجمالي المبيعات", en: "Total Sales" },
+  "bk.kpi.draft": { ar: "مسودات", en: "Drafts" },
+  "bk.kpi.pending": { ar: "بانتظار التأكيد", en: "Pending" },
+  "bk.col.hotels": { ar: "الفنادق", en: "Hotels" },
+  "bk.col.checkin": { ar: "الوصول", en: "Check-in" },
+  "bk.col.nights": { ar: "ليالٍ", en: "Nights" },
+  "bk.filter.quick": { ar: "تصفية سريعة", en: "Quick filter" },
+  "bk.no_results_hint": { ar: "لا توجد حجوزات تطابق التصفية الحالية. جرّب تعديل المعايير أو إنشاء حجز جديد.", en: "No bookings match the current filters. Adjust the criteria or create a new booking." },
+  "actions.reset": { ar: "إعادة تعيين", en: "Reset" },
+  // errors
+  "bk.err_transition": { ar: "لا يمكن تنفيذ هذا الانتقال في حالة الحجز الحالية", en: "This status transition is not allowed for the current booking" },
+  "bk.err_no_rooms": { ar: "يجب إضافة غرفة واحدة على الأقل", en: "A booking requires at least one room" },
+  "bk.err_no_lead": { ar: "يجب تحديد نزيل رئيسي قبل التأكيد", en: "A lead guest is required before confirmation" },
+  "bk.err_supplier_unconfirmed": { ar: "يجب تسجيل تأكيد المورد لكل الغرف قبل تأكيد الحجز", en: "Every room requires a supplier confirmation before the booking can be confirmed" },
+  "bk.err_early_checkin": { ar: "تسجيل الدخول متاح فقط في تاريخ الوصول أو بعده", en: "Check-in is only allowed on or after the arrival date" },
+  "bk.err_no_show_early": { ar: "لا يمكن تسجيل عدم الحضور قبل تاريخ الوصول", en: "No-show can only be recorded on or after the arrival date" },
+  "bk.err_cancel_reason": { ar: "سبب الإلغاء مطلوب", en: "A cancellation reason is required" },
+  "bk.err_locked": { ar: "الحجوزات المكتملة أو الملغاة لا يمكن تعديلها", en: "Completed or cancelled bookings cannot be edited" },
+  "bk.err_locked_edit": { ar: "بيانات العميل والعملة قابلة للتعديل في حالة المسودة فقط", en: "Customer and currency can only be edited while the booking is draft" },
+  "bk.err_rooms_locked": { ar: "الغرف قابلة للتعديل في حالة المسودة فقط", en: "Rooms can only be modified while the booking is draft" },
+  "bk.err_guests_locked": { ar: "النزلاء قابلون للتعديل قبل تسجيل الدخول فقط", en: "Guests can only be modified before check-in" },
+  "bk.err_room_dates": { ar: "تاريخ الخروج يجب أن يكون بعد تاريخ الدخول", en: "Check-out must be after check-in" },
+  "bk.err_no_price": { ar: "لا يوجد سعر إشغال نشط لهذا النوع", en: "No active occupancy price found for this rate and occupancy type" },
+  "bk.err_price_required": { ar: "أسعار التكلفة والبيع مطلوبة", en: "Cost and selling prices are required" },
+  "bk.err_confirmation_no": { ar: "رقم تأكيد المورد مطلوب", en: "A supplier confirmation number is required" },
+  "bk.err_lead_unique": { ar: "يوجد نزيل رئيسي واحد فقط لكل حجز", en: "Only one lead guest is allowed per booking" },
+  "bk.err_quote_missing": { ar: "عرض السعر غير موجود", en: "Quotation not found" },
+  "bk.err_quote_not_accepted": { ar: "يمكن تحويل عروض الأسعار المقبولة فقط إلى حجوزات", en: "Only accepted quotations can be converted to bookings" },
+  "bk.err_quote_converted": { ar: "تم تحويل عرض السعر هذا إلى حجز بالفعل", en: "This quotation has already been converted to a booking" },
+  "bk.err_no_immutable": { ar: "رقم الحجز لا يمكن تغييره", en: "The booking number cannot be changed" },
+  "bk.history.empty": { ar: "لا يوجد سجل حالات", en: "No status history" },
+  "bk.history.from": { ar: "من", en: "From" },
+  "bk.history.to": { ar: "إلى", en: "To" },
+  // ===== Finance: navigation =====
+  "nav.finance": { ar: "المالية", en: "Finance" },
+  "nav.invoices": { ar: "الفواتير", en: "Invoices" },
+  "nav.receipts": { ar: "سندات القبض", en: "Receipts" },
+  "nav.payables": { ar: "مستحقات الموردين", en: "Supplier Payables" },
+  // ===== Invoices =====
+  "inv.title": { ar: "الفواتير", en: "Invoices" },
+  "inv.new": { ar: "فاتورة جديدة", en: "New Invoice" },
+  "inv.number": { ar: "رقم الفاتورة", en: "Invoice No." },
+  "inv.customer": { ar: "العميل", en: "Customer" },
+  "inv.booking": { ar: "الحجز", en: "Booking" },
+  "inv.date": { ar: "تاريخ الفاتورة", en: "Invoice Date" },
+  "inv.due_date": { ar: "تاريخ الاستحقاق", en: "Due Date" },
+  "inv.currency": { ar: "العملة", en: "Currency" },
+  "inv.exchange_rate": { ar: "سعر الصرف", en: "Exchange Rate" },
+  "inv.subtotal": { ar: "المجموع الفرعي", en: "Subtotal" },
+  "inv.taxes": { ar: "الضرائب", en: "Taxes" },
+  "inv.fees": { ar: "الرسوم", en: "Fees" },
+  "inv.discount": { ar: "الخصم", en: "Discount" },
+  "inv.total": { ar: "الإجمالي", en: "Total" },
+  "inv.paid": { ar: "المدفوع", en: "Paid" },
+  "inv.balance": { ar: "الرصيد المستحق", en: "Balance Due" },
+  "inv.items": { ar: "البنود", en: "Items" },
+  "inv.item_desc": { ar: "الوصف", en: "Description" },
+  "inv.item_desc_ar": { ar: "الوصف (عربي)", en: "Description (Arabic)" },
+  "inv.qty": { ar: "الكمية", en: "Qty" },
+  "inv.unit_price": { ar: "سعر الوحدة", en: "Unit Price" },
+  "inv.line_total": { ar: "إجمالي البند", en: "Line Total" },
+  "inv.add_item": { ar: "إضافة بند", en: "Add Item" },
+  "inv.issue": { ar: "إصدار", en: "Issue" },
+  "inv.mark_sent": { ar: "تحديد كمرسلة", en: "Mark as Sent" },
+  "inv.cancel": { ar: "إلغاء الفاتورة", en: "Cancel Invoice" },
+  "inv.cancel_reason": { ar: "سبب الإلغاء", en: "Cancellation reason" },
+  "inv.pdf": { ar: "PDF / طباعة", en: "PDF / Print" },
+  "inv.send_email": { ar: "إرسال بالبريد", en: "Send by Email" },
+  "inv.send_whatsapp": { ar: "إرسال واتساب", en: "Send via WhatsApp" },
+  "quotes.send_whatsapp": { ar: "إرسال واتساب", en: "Send via WhatsApp" },
+  "wa.no_template": { ar: "لا يوجد قالب معتمد لهذه اللغة — لا يمكن الإرسال", en: "No approved template exists for this language — sending blocked" },
+  "wa.sent": { ar: "تم تجهيز رسالة واتساب وتسجيلها", en: "WhatsApp message prepared and logged" },
+  "doc.missing_translations": { ar: "ترجمات إلزامية مفقودة — لا يمكن إنشاء PDF", en: "Mandatory translations missing — PDF generation blocked" },
+  "hotels.preview_info": { ar: "معاينة معلومات الفندق", en: "Preview Hotel Info" },
+  "hotels.print_info": { ar: "طباعة / PDF", en: "Print / PDF" },
+  "hotels.send_whatsapp": { ar: "إرسال واتساب", en: "Send via WhatsApp" },
+  "hotels.info_doc": { ar: "وثيقة معلومات الفندق", en: "Hotel Information Document" },
+  "wa.language": { ar: "لغة الرسالة", en: "Message language" },
+  "wa.customer": { ar: "العميل", en: "Customer" },
+  "wa.select_customer": { ar: "اختر العميل قبل الإرسال", en: "Select a customer before sending" },
+  "wa.message_preview": { ar: "معاينة الرسالة", en: "Message preview" },
+  "wa.send": { ar: "إرسال", en: "Send" },
+  "wa.failed": { ar: "فشل تسجيل الرسالة — تم تسجيل الفشل في سجل التدقيق", en: "Failed to log message — failure recorded in Audit Log" },
+  "actions.close": { ar: "إغلاق", en: "Close" },
+  "inv.history": { ar: "السجل", en: "History" },
+  "inv.payments": { ar: "المدفوعات", en: "Payments" },
+  "inv.general": { ar: "عام", en: "General" },
+  "inv.attachments": { ar: "المرفقات", en: "Attachments" },
+  "inv.from_booking": { ar: "من حجز", en: "From Booking" },
+  "inv.manual": { ar: "يدوية", en: "Manual" },
+  "inv.select_booking": { ar: "اختر الحجز المؤكد", en: "Select confirmed booking" },
+  "inv.kpi.total": { ar: "إجمالي الفواتير", en: "Total Invoices" },
+  "inv.kpi.outstanding": { ar: "المستحق", en: "Outstanding" },
+  "inv.kpi.overdue": { ar: "متأخرة", en: "Overdue" },
+  "inv.kpi.paid": { ar: "مدفوعة", en: "Paid" },
+  "inv.kpi.draft": { ar: "مسودة", en: "Draft" },
+  "inv.email_subject": { ar: "فاتورة رقم", en: "Invoice" },
+  "inv.email_body": { ar: "تحية طيبة، مرفق تفاصيل الفاتورة", en: "Dear customer, please find your invoice details" },
+  "invstatus.draft": { ar: "مسودة", en: "Draft" },
+  "invstatus.issued": { ar: "صادرة", en: "Issued" },
+  "invstatus.sent": { ar: "مرسلة", en: "Sent" },
+  "invstatus.partially_paid": { ar: "مدفوعة جزئياً", en: "Partially Paid" },
+  "invstatus.paid": { ar: "مدفوعة", en: "Paid" },
+  "invstatus.cancelled": { ar: "ملغاة", en: "Cancelled" },
+  "inv.err_transition": { ar: "انتقال حالة الفاتورة غير صالح", en: "Invalid invoice status transition" },
+  "inv.err_no_items": { ar: "الفاتورة تتطلب بنداً واحداً على الأقل قبل الإصدار", en: "An invoice requires at least one item before issuing" },
+  "inv.err_due_date": { ar: "تاريخ الاستحقاق لا يمكن أن يسبق تاريخ الفاتورة", en: "Due date cannot be before the invoice date" },
+  "inv.err_locked_edit": { ar: "بيانات الفاتورة قابلة للتعديل في حالة المسودة فقط", en: "Invoice details can only be edited while draft" },
+  "inv.err_items_locked": { ar: "البنود قابلة للتعديل في حالة المسودة فقط", en: "Items can only be modified while the invoice is draft" },
+  "inv.err_cancel_paid": { ar: "لا يمكن إلغاء فاتورة عليها مدفوعات", en: "Invoices with recorded payments cannot be cancelled" },
+  "inv.err_cancel_reason": { ar: "سبب الإلغاء مطلوب", en: "A cancellation reason is required" },
+  "inv.err_booking_missing": { ar: "الحجز غير موجود", en: "Booking not found" },
+  "inv.err_booking_not_confirmed": { ar: "الفواتير تُنشأ للحجوزات المؤكدة فقط", en: "Invoices can only be created for confirmed bookings" },
+  "inv.err_already_invoiced": { ar: "هذا الحجز له فاتورة نشطة بالفعل", en: "This booking already has an active invoice" },
+  "inv.err_no_immutable": { ar: "رقم الفاتورة لا يمكن تغييره", en: "The invoice number cannot be changed" },
+  "inv.err_paid_protected": { ar: "المبلغ المدفوع يُحدَّث عبر تخصيص سندات القبض فقط", en: "Paid amount is maintained by receipt allocations" },
+  // ===== Receipts =====
+  "rct.title": { ar: "سندات القبض", en: "Receipts" },
+  "rct.new": { ar: "سند قبض جديد", en: "New Receipt" },
+  "rct.number": { ar: "رقم السند", en: "Receipt No." },
+  "rct.date": { ar: "تاريخ السند", en: "Receipt Date" },
+  "rct.method": { ar: "طريقة الدفع", en: "Payment Method" },
+  "rct.reference": { ar: "رقم المرجع", en: "Reference No." },
+  "rct.amount": { ar: "المبلغ", en: "Amount" },
+  "rct.allocated": { ar: "المخصص", en: "Allocated" },
+  "rct.unallocated": { ar: "غير المخصص", en: "Unallocated" },
+  "rct.allocate": { ar: "تخصيص لفاتورة", en: "Allocate to Invoice" },
+  "rct.allocations": { ar: "التخصيصات", en: "Allocations" },
+  "rct.cancel": { ar: "إلغاء السند", en: "Cancel Receipt" },
+  "rct.balances": { ar: "أرصدة العملاء", en: "Customer Balances" },
+  "rct.adjustments": { ar: "التسويات المالية", en: "Financial Adjustments" },
+  "rct.adj_new": { ar: "تسوية جديدة", en: "New Adjustment" },
+  "rct.adj_type": { ar: "نوع التسوية", en: "Adjustment Type" },
+  "rct.credit": { ar: "دائن (لصالح العميل)", en: "Credit (in customer's favor)" },
+  "rct.debit": { ar: "مدين (على العميل)", en: "Debit (against customer)" },
+  "rct.reason": { ar: "السبب", en: "Reason" },
+  "rct.invoiced": { ar: "إجمالي الفواتير", en: "Total Invoiced" },
+  "rct.received": { ar: "إجمالي المقبوضات", en: "Total Received" },
+  "rct.balance": { ar: "الرصيد", en: "Balance" },
+  "rctstatus.confirmed": { ar: "مؤكد", en: "Confirmed" },
+  "rctstatus.cancelled": { ar: "ملغى", en: "Cancelled" },
+  "pm.cash": { ar: "نقدي", en: "Cash" },
+  "pm.bank_transfer": { ar: "تحويل بنكي", en: "Bank Transfer" },
+  "pm.cheque": { ar: "شيك", en: "Cheque" },
+  "pm.card": { ar: "بطاقة", en: "Card" },
+  "pm.online": { ar: "دفع إلكتروني", en: "Online" },
+  "rct.err_not_confirmed": { ar: "يمكن تخصيص السندات المؤكدة فقط", en: "Only confirmed receipts can be allocated" },
+  "rct.err_invoice_status": { ar: "التخصيص متاح للفواتير الصادرة أو المرسلة أو المدفوعة جزئياً فقط", en: "Allocations are only allowed on issued, sent or partially paid invoices" },
+  "rct.err_currency": { ar: "عملة السند والفاتورة يجب أن تتطابق", en: "Receipt and invoice currencies must match" },
+  "rct.err_customer": { ar: "السند والفاتورة لعميلين مختلفين", en: "Receipt and invoice belong to different customers" },
+  "rct.err_over_allocated": { ar: "التخصيص يتجاوز المبلغ غير المخصص من السند", en: "Allocation exceeds the unallocated receipt amount" },
+  "rct.err_exceeds_balance": { ar: "التخصيص يتجاوز رصيد الفاتورة المستحق", en: "Allocation exceeds the invoice balance due" },
+  "rct.err_cancel_allocated": { ar: "أزل التخصيصات قبل إلغاء السند", en: "Remove allocations before cancelling the receipt" },
+  "rct.err_cancel_reason": { ar: "سبب الإلغاء مطلوب", en: "A cancellation reason is required" },
+  "rct.err_locked": { ar: "السندات الملغاة لا يمكن تعديلها", en: "Cancelled receipts cannot be edited" },
+  "rct.err_amount_below": { ar: "المبلغ لا يمكن أن يقل عن إجمالي التخصيصات", en: "Amount cannot be lower than the allocated total" },
+  // ===== Supplier Payables =====
+  "pyb.title": { ar: "مستحقات الموردين", en: "Supplier Payables" },
+  "pyb.payables": { ar: "المستحقات", en: "Payables" },
+  "pyb.orders": { ar: "أوامر الدفع", en: "Payment Orders" },
+  "pyb.payments": { ar: "المدفوعات", en: "Payments" },
+  "pyb.statement": { ar: "كشف حساب مورد", en: "Supplier Statement" },
+  "pyb.aging": { ar: "أعمار الديون", en: "Aging Report" },
+  "pyb.number": { ar: "رقم المستحق", en: "Payable No." },
+  "pyb.supplier": { ar: "المورد", en: "Supplier" },
+  "pyb.amount": { ar: "المبلغ", en: "Amount" },
+  "pyb.paid": { ar: "المدفوع", en: "Paid" },
+  "pyb.balance": { ar: "الرصيد", en: "Balance" },
+  "pyb.due": { ar: "تاريخ الاستحقاق", en: "Due Date" },
+  "pyb.new": { ar: "مستحق جديد", en: "New Payable" },
+  "pyb.from_booking": { ar: "توليد من حجز", en: "Generate from Booking" },
+  "pyb.generated": { ar: "تم إنشاء المستحقات", en: "Payables generated" },
+  "pybstatus.pending": { ar: "معلق", en: "Pending" },
+  "pybstatus.partially_paid": { ar: "مدفوع جزئياً", en: "Partially Paid" },
+  "pybstatus.paid": { ar: "مدفوع", en: "Paid" },
+  "pybstatus.cancelled": { ar: "ملغى", en: "Cancelled" },
+  "pyb.err_locked": { ar: "المستحقات المدفوعة لا يمكن تعديلها", en: "Paid payables cannot be edited" },
+  "pyb.err_cancel_paid": { ar: "لا يمكن إلغاء مستحق عليه مدفوعات", en: "Payables with recorded payments cannot be cancelled" },
+  "pyb.err_cancel_reason": { ar: "سبب الإلغاء مطلوب", en: "A cancellation reason is required" },
+  "pyb.err_amount_below": { ar: "المبلغ لا يمكن أن يقل عن المدفوع", en: "Amount cannot be lower than the paid total" },
+  "pyb.err_missing": { ar: "المستحق غير موجود", en: "Payable not found" },
+  "pyb.err_exceeds_balance": { ar: "التخصيص يتجاوز رصيد المستحق", en: "Allocation exceeds the payable balance" },
+  "pyb.err_not_confirmed": { ar: "المستحقات تُنشأ للحجوزات المؤكدة فقط", en: "Payables can only be created for confirmed bookings" },
+  "pyb.err_nothing": { ar: "كل الغرف لها مستحقات بالفعل أو لا يوجد مورد محدد", en: "All rooms already have payables or no supplier is set" },
+  "pyb.err_paid_protected": { ar: "المبلغ المدفوع يُحدَّث عبر تخصيص المدفوعات فقط", en: "Paid amount is maintained by payment allocations" },
+  // ===== Payment Orders =====
+  "po.number": { ar: "رقم أمر الدفع", en: "Order No." },
+  "po.new": { ar: "أمر دفع جديد", en: "New Payment Order" },
+  "po.total": { ar: "إجمالي الأمر", en: "Order Total" },
+  "po.items": { ar: "بنود الأمر", en: "Order Items" },
+  "po.add_payable": { ar: "إضافة مستحق", en: "Add Payable" },
+  "po.submit": { ar: "إرسال للاعتماد", en: "Submit for Approval" },
+  "po.approve": { ar: "اعتماد", en: "Approve" },
+  "po.reject": { ar: "رفض", en: "Reject" },
+  "po.rejection_reason": { ar: "سبب الرفض", en: "Rejection reason" },
+  "po.record_payment": { ar: "تسجيل دفعة", en: "Record Payment" },
+  "postatus.draft": { ar: "مسودة", en: "Draft" },
+  "postatus.pending_approval": { ar: "بانتظار الاعتماد", en: "Pending Approval" },
+  "postatus.approved": { ar: "معتمد", en: "Approved" },
+  "postatus.rejected": { ar: "مرفوض", en: "Rejected" },
+  "postatus.paid": { ar: "مدفوع", en: "Paid" },
+  "postatus.cancelled": { ar: "ملغى", en: "Cancelled" },
+  "po.err_transition": { ar: "انتقال حالة أمر الدفع غير صالح", en: "Invalid payment order status transition" },
+  "po.err_no_items": { ar: "أمر الدفع يتطلب مستحقاً واحداً على الأقل", en: "A payment order requires at least one payable" },
+  "po.err_reject_reason": { ar: "سبب الرفض مطلوب", en: "A rejection reason is required" },
+  "po.err_items_locked": { ar: "بنود الأمر قابلة للتعديل في حالة المسودة فقط", en: "Order items can only be modified while the order is draft" },
+  "po.err_supplier_mismatch": { ar: "المستحق يخص مورداً آخر", en: "Payable belongs to a different supplier" },
+  "po.err_currency_mismatch": { ar: "عملة المستحق والأمر يجب أن تتطابق", en: "Payable and order currencies must match" },
+  "po.err_exceeds_balance": { ar: "المبلغ يتجاوز رصيد المستحق المتبقي", en: "Amount exceeds the remaining payable balance" },
+  "po.err_payable_closed": { ar: "هذا المستحق مدفوع أو ملغى بالفعل", en: "This payable is already paid or cancelled" },
+  "po.err_locked_edit": { ar: "بيانات الأمر قابلة للتعديل في حالة المسودة أو المرفوض فقط", en: "Order details can only be edited while draft or rejected" },
+  "po.err_paid_protected": { ar: "يُحدَّد الأمر كمدفوع تلقائياً عند اكتمال المدفوعات", en: "Orders are marked paid automatically when payments cover the total" },
+  "po.err_missing": { ar: "أمر الدفع غير موجود", en: "Payment order not found" },
+  // ===== Supplier Payments =====
+  "spy.number": { ar: "رقم الدفعة", en: "Payment No." },
+  "spy.date": { ar: "تاريخ الدفعة", en: "Payment Date" },
+  "spy.allocate": { ar: "تخصيص لمستحق", en: "Allocate to Payable" },
+  "spy.cancel": { ar: "إلغاء الدفعة", en: "Cancel Payment" },
+  "spystatus.confirmed": { ar: "مؤكدة", en: "Confirmed" },
+  "spystatus.cancelled": { ar: "ملغاة", en: "Cancelled" },
+  "spy.err_not_approved": { ar: "المدفوعات تُسجل على أوامر دفع معتمدة فقط", en: "Payments can only be recorded against approved payment orders" },
+  "spy.err_exceeds_order": { ar: "إجمالي المدفوعات لا يمكن أن يتجاوز إجمالي الأمر", en: "Total payments cannot exceed the order total" },
+  "spy.err_currency": { ar: "عملة الدفعة والأمر يجب أن تتطابق", en: "Payment and order currencies must match" },
+  "spy.err_not_confirmed": { ar: "يمكن تخصيص الدفعات المؤكدة فقط", en: "Only confirmed payments can be allocated" },
+  "spy.err_over_allocated": { ar: "التخصيص يتجاوز المبلغ غير المخصص من الدفعة", en: "Allocation exceeds the unallocated payment amount" },
+  "spy.err_cancel_allocated": { ar: "أزل التخصيصات قبل إلغاء الدفعة", en: "Remove allocations before cancelling the payment" },
+  "spy.err_locked": { ar: "الدفعات الملغاة لا يمكن تعديلها", en: "Cancelled payments cannot be edited" },
+  // ===== Aging buckets =====
+  "aging.current": { ar: "غير مستحقة", en: "Current" },
+  "aging.b30": { ar: "1-30 يوم", en: "1-30 days" },
+  "aging.b60": { ar: "31-60 يوم", en: "31-60 days" },
+  "aging.b90": { ar: "61-90 يوم", en: "61-90 days" },
+  "aging.b90p": { ar: "أكثر من 90 يوم", en: "90+ days" },
+  // ===== Reports & Dashboards (Section 17) =====
+  "nav.reports": { ar: "التقارير", en: "Reports" },
+  "nav.rpt_dashboards": { ar: "المؤشر العام", en: "Overview" },
+  "nav.rpt_operational": { ar: "التقرير التشغيلي", en: "Operational Report" },
+  "nav.rpt_financial": { ar: "التقرير المالي", en: "Financial Report" },
+  "nav.rpt_tax": { ar: "تقرير الضرائب", en: "Tax Report" },
+  "nav.rpt_templates": { ar: "قوالب التقارير", en: "Report Templates" },
+  "rpt.title": { ar: "المؤشر العام", en: "Overview" },
+  "rpt.subtitle_dash": { ar: "مؤشرات أداء حية محسوبة من البيانات التشغيلية والمالية", en: "Live KPIs computed from operational and financial data" },
+  "rpt.no_access": { ar: "ليس لديك صلاحية لعرض هذا القسم", en: "You do not have permission to view this section" },
+  "rpt.base_note": { ar: "جميع المبالغ محوّلة إلى الريال السعودي بأحدث أسعار الصرف", en: "All amounts are converted to SAR using the latest exchange rates" },
+  "rpt.tab_executive": { ar: "اللوحة التنفيذية", en: "Executive" },
+  "rpt.tab_sales": { ar: "المبيعات", en: "Sales" },
+  "rpt.tab_bookings": { ar: "الحجوزات", en: "Bookings" },
+  "rpt.tab_suppliers": { ar: "الموردون", en: "Suppliers" },
+  "rpt.tab_receivables": { ar: "الذمم المدينة", en: "Receivables" },
+  "rpt.tab_profit": { ar: "الربحية", en: "Profit" },
+  "rpt.revenue": { ar: "الإيرادات", en: "Revenue" },
+  "rpt.collected": { ar: "المحصّل", en: "Collected" },
+  "rpt.outstanding_ar": { ar: "ذمم مدينة قائمة", en: "Outstanding Receivables" },
+  "rpt.outstanding_ap": { ar: "ذمم دائنة قائمة", en: "Outstanding Payables" },
+  "rpt.gross_margin": { ar: "إجمالي الربح", en: "Gross Margin" },
+  "rpt.margin_pct": { ar: "نسبة الهامش", en: "Margin %" },
+  "rpt.conversion_rate": { ar: "معدل تحويل العروض", en: "Quote Conversion Rate" },
+  "rpt.total_bookings": { ar: "إجمالي الحجوزات", en: "Total Bookings" },
+  "rpt.total_quotations": { ar: "إجمالي عروض الأسعار", en: "Total Quotations" },
+  "rpt.total_invoices": { ar: "إجمالي الفواتير", en: "Total Invoices" },
+  "rpt.monthly_revenue": { ar: "الإيرادات الشهرية", en: "Monthly Revenue" },
+  "rpt.quotes_by_status": { ar: "العروض حسب الحالة", en: "Quotations by Status" },
+  "rpt.bookings_by_status": { ar: "الحجوزات حسب الحالة", en: "Bookings by Status" },
+  "rpt.top_customers": { ar: "أهم العملاء", en: "Top Customers" },
+  "rpt.quoted_value": { ar: "قيمة العروض", en: "Quoted Value" },
+  "rpt.invoiced": { ar: "المفوتر", en: "Invoiced" },
+  "rpt.room_nights": { ar: "ليالي الغرف", en: "Room Nights" },
+  "rpt.upcoming_checkins": { ar: "وصول خلال 7 أيام", en: "Check-ins (next 7 days)" },
+  "rpt.rooms_by_hotel": { ar: "الغرف حسب الفندق", en: "Rooms by Hotel" },
+  "rpt.rooms": { ar: "الغرف", en: "Rooms" },
+  "rpt.nights": { ar: "الليالي", en: "Nights" },
+  "rpt.payables_total": { ar: "إجمالي المستحقات", en: "Total Payables" },
+  "rpt.payables_paid": { ar: "المدفوع للموردين", en: "Paid to Suppliers" },
+  "rpt.suppliers_with_dues": { ar: "موردون لهم مستحقات", en: "Suppliers with Dues" },
+  "rpt.payables_by_supplier": { ar: "المستحقات حسب المورد", en: "Outstanding by Supplier" },
+  "rpt.outstanding": { ar: "القائم", en: "Outstanding" },
+  "rpt.overdue": { ar: "المتأخر", en: "Overdue" },
+  "rpt.aging_title": { ar: "أعمار الذمم المدينة", en: "Receivables Aging" },
+  "rpt.top_debtors": { ar: "أعلى العملاء مديونية", en: "Top Debtors" },
+  "rpt.balance": { ar: "الرصيد", en: "Balance" },
+  "rpt.cost": { ar: "التكلفة", en: "Cost" },
+  "rpt.revenue_vs_cost": { ar: "الإيرادات مقابل التكلفة", en: "Revenue vs Cost" },
+  "rpt.profit_by_hotel": { ar: "الربح حسب الفندق", en: "Profit by Hotel" },
+  "rpt.export_csv": { ar: "تصدير CSV", en: "Export CSV" },
+  "rpt.export_excel": { ar: "تصدير Excel", en: "Export Excel" },
+  "rpt.export_pdf": { ar: "تصدير PDF", en: "Export PDF" },
+  "rpt.save_template": { ar: "حفظ كقالب", en: "Save as Template" },
+  "rpt.template_saved": { ar: "تم حفظ القالب", en: "Template saved" },
+  "rpt.shared": { ar: "مشترك", en: "Shared" },
+  "rpt.private": { ar: "خاص", en: "Private" },
+  "rpt.generated_at": { ar: "تاريخ الإصدار", en: "Generated at" },
+  "rpt.operational_title": { ar: "التقرير التشغيلي", en: "Operational Report" },
+  "rpt.operational_sub": { ar: "نشاط الحجوزات حسب الفترة والحالة", en: "Booking activity by period and status" },
+  "rpt.financial_title": { ar: "التقرير المالي", en: "Financial Report" },
+  "rpt.financial_sub": { ar: "ملخص شهري للفواتير والتحصيل والمستحقات", en: "Monthly summary of invoicing, collections and payables" },
+  "rpt.tax_title": { ar: "تقرير الضرائب", en: "Tax Report" },
+  "rpt.tax_sub": { ar: "ضريبة القيمة المضافة المحصلة من الفواتير", en: "VAT/taxes collected from invoices" },
+  "rpt.from": { ar: "من تاريخ", en: "From" },
+  "rpt.to": { ar: "إلى تاريخ", en: "To" },
+  "rpt.month": { ar: "الشهر", en: "Month" },
+  "rpt.payables": { ar: "المستحقات", en: "Payables" },
+  "rpt.net_cash": { ar: "صافي النقد", en: "Net Cash" },
+  "rpt.customer_balances": { ar: "أرصدة العملاء", en: "Customer Balances" },
+  "rpt.subtotal": { ar: "المجموع الفرعي", en: "Subtotal" },
+  "rpt.taxes": { ar: "الضرائب", en: "Taxes" },
+  "rpt.paid": { ar: "المدفوع", en: "Paid" },
+  "rpt.records": { ar: "سجل", en: "records" },
+  "rpt.templates_title": { ar: "قوالب التقارير والجدولة", en: "Report Templates & Scheduling" },
+  "rpt.templates_sub": { ar: "احفظ إعدادات التقارير وجدولها للتشغيل الدوري", en: "Save report configurations and schedule recurring runs" },
+  "rpt.templates": { ar: "القوالب المحفوظة", en: "Saved Templates" },
+  "rpt.schedules": { ar: "الجدولة", en: "Schedules" },
+  "rpt.report_type": { ar: "نوع التقرير", en: "Report Type" },
+  "rpt.no_templates": { ar: "لا توجد قوالب محفوظة — احفظ قالبًا من أي تقرير", en: "No saved templates — save one from any report screen" },
+  "rpt.no_schedules": { ar: "لا توجد جدولة", en: "No schedules" },
+  "rpt.add_schedule": { ar: "إضافة جدولة", en: "Add Schedule" },
+  "rpt.frequency": { ar: "التكرار", en: "Frequency" },
+  "rpt.freq_daily": { ar: "يومي", en: "Daily" },
+  "rpt.freq_weekly": { ar: "أسبوعي", en: "Weekly" },
+  "rpt.freq_monthly": { ar: "شهري", en: "Monthly" },
+  "rpt.format": { ar: "صيغة التصدير", en: "Export Format" },
+  "rpt.recipients": { ar: "المستلمون", en: "Recipients" },
+  "rpt.recipients_ph": { ar: "بريد إلكتروني مفصول بفواصل", en: "Comma-separated emails" },
+  "rpt.next_run": { ar: "التشغيل القادم", en: "Next Run" },
+  "rpt.last_run": { ar: "آخر تشغيل", en: "Last Run" },
+  "rpt.active": { ar: "مفعّل", en: "Active" },
+  "rpt.open": { ar: "فتح", en: "Open" },
+  "rpt.deleted": { ar: "تم الحذف", en: "Deleted" },
+  "rpt.schedule_saved": { ar: "تم حفظ الجدولة", en: "Schedule saved" },
+  // Page descriptions (shown under page titles)
+  "pagedesc.dashboard": { ar: "نظرة عامة على مؤشرات الأداء والعمليات اليومية للمنصة من حجوزات وعقود وإيرادات.", en: "Overview of the platform's KPIs and daily operations across bookings, contracts, and revenue." },
+  "pagedesc.customers": { ar: "إدارة بيانات العملاء (أفراد وشركات ومجموعات)، وملفاتهم وسجل تعاملاتهم.", en: "Manage customer records (individuals, companies, and groups), their profiles, and transaction history." },
+  "pagedesc.hotels": { ar: "قاعدة بيانات الفنادق المتعاقد معها مع الصور والتصنيف والمواقع وأنواع الغرف.", en: "Database of contracted hotels with images, ratings, locations, and room types." },
+  "pagedesc.suppliers": { ar: "إدارة الموردين (مباشر ووسيط) مع التقييمات والعملات والشروط التجارية.", en: "Manage suppliers (direct and intermediary) with ratings, currencies, and commercial terms." },
+  "pagedesc.supplier_applications": { ar: "مراجعة طلبات انضمام الموردين الجدد واعتمادها أو رفضها وإنشاء حسابات الدخول.", en: "Review new supplier onboarding applications, approve or reject them, and provision portal accounts." },
+  "pagedesc.supplier_portal": { ar: "بوابة المورد لمتابعة الفنادق المرتبطة، العقود، الأسعار، الحجوزات والمستحقات.", en: "Supplier portal to track linked hotels, contracts, rates, bookings, and outstanding payables." },
+  "pagedesc.rates": { ar: "إدارة قوائم الأسعار التعاقدية للموردين بحسب الموسم ونوع الغرفة والإشغال.", en: "Manage contracted supplier rate plans by season, room type, and occupancy." },
+  "pagedesc.rates_compare": { ar: "مقارنة أسعار الموردين لفندق وفترة محددة لاختيار العرض الأفضل.", en: "Compare supplier rates for a given hotel and period to pick the best offer." },
+  "pagedesc.contracts": { ar: "عقود التوريد مع الموردين، تواريخ السريان، العمولات والشروط المالية.", en: "Supplier contracts with validity dates, commissions, and financial terms." },
+  "pagedesc.rfqs": { ar: "طلبات الأسعار المرسلة للموردين ومتابعة الردود واعتماد العروض.", en: "Requests for quotation sent to suppliers with response tracking and offer approval." },
+  "pagedesc.quotations": { ar: "عروض الأسعار المقدّمة للعملاء، حالات الاعتماد والقبول والتحويل إلى حجوزات.", en: "Customer-facing price quotations with approval, acceptance, and conversion to bookings." },
+  "pagedesc.bookings": { ar: "حجوزات العملاء، تفاصيل الغرف والضيوف، حالات التأكيد والتعديل والإلغاء.", en: "Customer bookings with room and guest details, plus confirmation, modification, and cancellation states." },
+  "pagedesc.invoices": { ar: "فواتير العملاء، حالات الدفع، المتأخرات والربط بالحجوزات.", en: "Customer invoices, payment status, overdue tracking, and booking links." },
+  "pagedesc.receipts": { ar: "سندات القبض من العملاء وربطها بالفواتير وطرق الدفع.", en: "Customer receipts with invoice allocations and payment methods." },
+  "pagedesc.payables": { ar: "المستحقات للموردين، تواريخ الاستحقاق، الدفعات والأرصدة المتبقية.", en: "Amounts payable to suppliers with due dates, payments, and outstanding balances." },
+  "pagedesc.reports": { ar: "مركز التقارير: مالية، تشغيلية، ضريبية ولوحات تنفيذية.", en: "Reports hub: financial, operational, tax, and executive dashboards." },
+  "pagedesc.reports_financial": { ar: "تقارير مالية تشمل الإيرادات، الأرباح، المدينين والدائنين.", en: "Financial reports covering revenue, profit, receivables, and payables." },
+  "pagedesc.reports_operational": { ar: "تقارير تشغيلية للحجوزات، الإشغال وأداء الموردين والوكلاء.", en: "Operational reports on bookings, occupancy, and supplier/agent performance." },
+  "pagedesc.reports_tax": { ar: "تقارير الضرائب: ضريبة القيمة المضافة والمخرجات والمدخلات.", en: "Tax reports: VAT, output, and input tax summaries." },
+  "pagedesc.reports_templates": { ar: "قوالب التقارير المجدولة وإعداداتها والمستلمين.", en: "Scheduled report templates with settings and recipients." },
+  "pagedesc.room_types": { ar: "تعريف أنواع الغرف المعتمدة في النظام (Standard, Deluxe, Suite ...).", en: "Standard room type definitions used across the system (Standard, Deluxe, Suite...)." },
+  "pagedesc.seasons": { ar: "تعريف المواسم وتواريخها لربطها بأسعار الموردين والعقود.", en: "Define seasons and their dates to link with supplier rates and contracts." },
+  "pagedesc.taxes": { ar: "تعريف الضرائب والرسوم وقواعد احتسابها على الأسعار والفواتير.", en: "Define taxes and fees and the rules used to compute them on rates and invoices." },
+  "pagedesc.users": { ar: "إدارة مستخدمي النظام، أدوارهم وصلاحياتهم وحالة حساباتهم.", en: "Manage system users, their roles, permissions, and account status." },
+  "pagedesc.audit": { ar: "سجل تدقيق شامل لجميع العمليات الحساسة لأغراض الحوكمة والامتثال.", en: "Full audit trail of sensitive operations for governance and compliance." },
+  "pagedesc.settings": { ar: "إعدادات المنصة العامة: الهوية، اللغة، العملات، والتكاملات.", en: "Global platform settings: identity, language, currencies, and integrations." },
+  "pagedesc.approval_thresholds": { ar: "إعداد حدود الاعتماد المالي ومسارات الموافقة حسب الدور والقيمة.", en: "Configure financial approval thresholds and routing by role and amount." }
+};
+const I18nContext = reactExports.createContext(null);
+const STORAGE_KEY = "app.lang";
+function I18nProvider({ children }) {
+  const [lang, setLangState] = reactExports.useState(() => {
+    if (typeof window === "undefined") return "ar";
+    return localStorage.getItem(STORAGE_KEY) || "ar";
+  });
+  const dir = lang === "ar" ? "rtl" : "ltr";
+  const setLang = (l) => {
+    setLangState(l);
+    try {
+      localStorage.setItem(STORAGE_KEY, l);
+    } catch {
+    }
+  };
+  reactExports.useEffect(() => {
+    const html = document.documentElement;
+    html.lang = lang;
+    html.dir = dir;
+  }, [lang, dir]);
+  const t = reactExports.useMemo(
+    () => (key, fallback) => {
+      const entry = dict[key];
+      if (!entry) return fallback ?? key;
+      return entry[lang] ?? entry.en ?? key;
+    },
+    [lang]
+  );
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(I18nContext.Provider, { value: { lang, dir, setLang, t }, children });
+}
+function useI18n() {
+  const c = reactExports.useContext(I18nContext);
+  if (!c) throw new Error("useI18n must be used within I18nProvider");
+  return c;
+}
+const Ctx = reactExports.createContext(null);
+function AuthProvider({ children }) {
+  const [session, setSession] = reactExports.useState(null);
+  const [user, setUser] = reactExports.useState(null);
+  const [profile, setProfile] = reactExports.useState(null);
+  const [roles, setRoles] = reactExports.useState([]);
+  const [blockedModules, setBlockedModules] = reactExports.useState([]);
+  const [loading, setLoading] = reactExports.useState(true);
+  async function loadProfile(uid) {
+    const [{ data: p }, { data: r }, { data: b }] = await Promise.all([
+      supabase.from("profiles").select("*").eq("id", uid).maybeSingle(),
+      supabase.from("user_roles").select("role").eq("user_id", uid),
+      supabase.from("user_module_blocks").select("module_key").eq("user_id", uid)
+    ]);
+    setProfile(p ?? null);
+    setRoles((r ?? []).map((x) => x.role));
+    setBlockedModules((b ?? []).map((x) => x.module_key));
+  }
+  async function refresh() {
+    const { data } = await supabase.auth.getSession();
+    setSession(data.session);
+    setUser(data.session?.user ?? null);
+    if (data.session?.user) await loadProfile(data.session.user.id);
+    else {
+      setProfile(null);
+      setRoles([]);
+      setBlockedModules([]);
+    }
+  }
+  reactExports.useEffect(() => {
+    let mounted = true;
+    const { data: sub } = supabase.auth.onAuthStateChange(async (event, sess) => {
+      if (!mounted) return;
+      setSession(sess);
+      setUser(sess?.user ?? null);
+      if (sess?.user) {
+        setTimeout(() => {
+          void loadProfile(sess.user.id);
+        }, 0);
+      } else {
+        setProfile(null);
+        setRoles([]);
+        setBlockedModules([]);
+      }
+    });
+    void (async () => {
+      await refresh();
+      if (mounted) setLoading(false);
+    })();
+    return () => {
+      mounted = false;
+      sub.subscription.unsubscribe();
+    };
+  }, []);
+  const hasRole = (r) => roles.includes(r);
+  const hasAnyRole = (rs) => rs.some((r) => roles.includes(r));
+  const isAdmin = hasAnyRole(["super_admin", "admin"]);
+  const canAccessModule = (key) => !key || hasRole("super_admin") || !blockedModules.includes(key);
+  async function signOut() {
+    if (typeof window !== "undefined") window.localStorage.removeItem("demo_role");
+    await supabase.auth.signOut();
+    setSession(null);
+    setUser(null);
+    setProfile(null);
+    setRoles([]);
+    setBlockedModules([]);
+  }
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(Ctx.Provider, { value: { loading, session, user, profile, roles, blockedModules, hasRole, hasAnyRole, canAccessModule, isAdmin, refresh, signOut }, children });
+}
+function useAuth() {
+  const c = reactExports.useContext(Ctx);
+  if (!c) throw new Error("useAuth must be used within AuthProvider");
+  return c;
+}
+const Toaster = ({ ...props }) => {
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(
+    Toaster$1,
+    {
+      className: "toaster group",
+      toastOptions: {
+        classNames: {
+          toast: "group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg",
+          description: "group-[.toast]:text-muted-foreground",
+          actionButton: "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground",
+          cancelButton: "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground"
+        }
+      },
+      ...props
+    }
+  );
+};
+function cn(...inputs) {
+  return twMerge(clsx(inputs));
+}
+const TooltipProvider = Provider;
+const Tooltip = Root3;
+const TooltipTrigger = Trigger;
+const TooltipContent = reactExports.forwardRef(({ className, sideOffset = 4, ...props }, ref) => /* @__PURE__ */ jsxRuntimeExports.jsx(Portal, { children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+  Content2,
+  {
+    ref,
+    sideOffset,
+    className: cn(
+      "z-50 overflow-hidden rounded-md bg-primary px-3 py-1.5 text-xs text-primary-foreground animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 origin-(--radix-tooltip-content-transform-origin)",
+      className
+    ),
+    ...props
+  }
+) }));
+TooltipContent.displayName = Content2.displayName;
+function NotFoundComponent() {
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex min-h-screen items-center justify-center bg-background px-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-w-md text-center", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-7xl font-bold text-foreground", children: "404" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "mt-4 text-xl font-semibold text-foreground", children: "Page not found" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-sm text-muted-foreground", children: "The page you're looking for doesn't exist or has been moved." }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+      Link,
+      {
+        to: "/",
+        className: "inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90",
+        children: "Go home"
+      }
+    ) })
+  ] }) });
+}
+function ErrorComponent({ error, reset }) {
+  console.error(error);
+  const router2 = useRouter();
+  reactExports.useEffect(() => {
+    reportLovableError(error, { boundary: "tanstack_root_error_component" });
+  }, [error]);
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex min-h-screen items-center justify-center bg-background px-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-w-md text-center", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-xl font-semibold tracking-tight text-foreground", children: "This page didn't load" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-sm text-muted-foreground", children: "Something went wrong on our end." }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-6 flex flex-wrap justify-center gap-2", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          onClick: () => {
+            router2.invalidate();
+            reset();
+          },
+          className: "inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90",
+          children: "Try again"
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "a",
+        {
+          href: "/",
+          className: "inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-accent",
+          children: "Go home"
+        }
+      )
+    ] })
+  ] }) });
+}
+const Route$Q = createRootRouteWithContext()({
+  head: () => ({
+    meta: [
+      { charSet: "utf-8" },
+      { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { title: "نظام إدارة الحجوزات الفندقية" },
+      { name: "description", content: "Enterprise hotel quotation and reservation management system" },
+      { property: "og:title", content: "نظام إدارة الحجوزات الفندقية" },
+      { name: "twitter:title", content: "نظام إدارة الحجوزات الفندقية" },
+      { property: "og:description", content: "Enterprise hotel quotation and reservation management system" },
+      { name: "twitter:description", content: "Enterprise hotel quotation and reservation management system" },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/c1d51ef0-3b0c-47f8-9a74-465d862a9eac/id-preview-862ac66c--2d28f67f-e9e1-4975-bb2e-db98999a94f7.lovable.app-1781104211536.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/c1d51ef0-3b0c-47f8-9a74-465d862a9eac/id-preview-862ac66c--2d28f67f-e9e1-4975-bb2e-db98999a94f7.lovable.app-1781104211536.png" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { property: "og:type", content: "website" }
+    ],
+    links: [
+      { rel: "stylesheet", href: appCss },
+      { rel: "preconnect", href: "https://fonts.googleapis.com" },
+      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
+      {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap"
+      }
+    ]
+  }),
+  shellComponent: RootShell,
+  component: RootComponent,
+  notFoundComponent: NotFoundComponent,
+  errorComponent: ErrorComponent
+});
+function RootShell({ children }) {
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("html", { lang: "ar", dir: "rtl", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("head", { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "script",
+        {
+          dangerouslySetInnerHTML: {
+            __html: "try{if(localStorage.getItem('theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}"
+          }
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(HeadContent, {})
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("body", { children: [
+      children,
+      /* @__PURE__ */ jsxRuntimeExports.jsx(Scripts, {})
+    ] })
+  ] });
+}
+function DirectionWrapper({ children }) {
+  const { dir } = useI18n();
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(DirectionProvider, { dir, children });
+}
+function RootComponent() {
+  const { queryClient } = Route$Q.useRouteContext();
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(QueryClientProvider, { client: queryClient, children: /* @__PURE__ */ jsxRuntimeExports.jsx(I18nProvider, { children: /* @__PURE__ */ jsxRuntimeExports.jsx(DirectionWrapper, { children: /* @__PURE__ */ jsxRuntimeExports.jsx(AuthProvider, { children: /* @__PURE__ */ jsxRuntimeExports.jsxs(TooltipProvider, { children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx(Outlet, {}),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(Toaster, { richColors: true, position: "top-center" })
+  ] }) }) }) }) });
+}
+const $$splitComponentImporter$O = () => import("./supplier-apply-BPXBMugP.mjs");
+const Route$P = createFileRoute("/supplier-apply")({
+  ssr: false,
+  component: lazyRouteComponent($$splitComponentImporter$O, "component")
+});
+const $$splitComponentImporter$N = () => import("./auth-BD_D91qQ.mjs");
+const Route$O = createFileRoute("/auth")({
+  ssr: false,
+  component: lazyRouteComponent($$splitComponentImporter$N, "component")
+});
+const $$splitComponentImporter$M = () => import("./route-DWt631W9.mjs");
+const Route$N = createFileRoute("/_authenticated")({
+  ssr: false,
+  beforeLoad: async () => {
+    if (typeof window !== "undefined") window.localStorage.removeItem("demo_role");
+    const {
+      data,
+      error
+    } = await supabase.auth.getUser();
+    if (error || !data.user) throw redirect({
+      to: "/auth"
+    });
+    return {
+      user: data.user
+    };
+  },
+  component: lazyRouteComponent($$splitComponentImporter$M, "component")
+});
+const $$splitComponentImporter$L = () => import("./index-C6mpTzI3.mjs");
+const Route$M = createFileRoute("/_authenticated/")({
+  component: lazyRouteComponent($$splitComponentImporter$L, "component")
+});
+const $$splitComponentImporter$K = () => import("./users-C41OISFx.mjs");
+const Route$L = createFileRoute("/_authenticated/users")({
+  beforeLoad: async () => {
+    const {
+      data
+    } = await supabase.auth.getUser();
+    if (!data.user) throw redirect({
+      to: "/auth"
+    });
+    const {
+      data: isAdmin
+    } = await supabase.rpc("is_admin", {
+      _user_id: data.user.id
+    });
+    if (!isAdmin) throw redirect({
+      to: "/"
+    });
+  },
+  component: lazyRouteComponent($$splitComponentImporter$K, "component")
+});
+const $$splitComponentImporter$J = () => import("./supplier-portal-BDOruRbc.mjs");
+const Route$K = createFileRoute("/_authenticated/supplier-portal")({
+  ssr: false,
+  component: lazyRouteComponent($$splitComponentImporter$J, "component")
+});
+const $$splitComponentImporter$I = () => import("./supplier-applications-B3Wn8btA.mjs");
+const Route$J = createFileRoute("/_authenticated/supplier-applications")({
+  ssr: false,
+  component: lazyRouteComponent($$splitComponentImporter$I, "component")
+});
+const $$splitComponentImporter$H = () => import("./simulation-CVlv9hO7.mjs");
+const Route$I = createFileRoute("/_authenticated/simulation")({
+  beforeLoad: async () => {
+    const {
+      data
+    } = await supabase.auth.getUser();
+    if (!data.user) throw redirect({
+      to: "/auth"
+    });
+    const {
+      data: ok
+    } = await supabase.rpc("has_any_role", {
+      _user_id: data.user.id,
+      _roles: ["super_admin", "admin"]
+    });
+    if (!ok) throw redirect({
+      to: "/"
+    });
+  },
+  component: lazyRouteComponent($$splitComponentImporter$H, "component")
+});
+const $$splitComponentImporter$G = () => import("./settings-C97TFJtB.mjs");
+const Route$H = createFileRoute("/_authenticated/settings")({
+  beforeLoad: async () => {
+    const {
+      data
+    } = await supabase.auth.getUser();
+    if (!data.user) throw redirect({
+      to: "/auth"
+    });
+    const {
+      data: isAdmin
+    } = await supabase.rpc("is_admin", {
+      _user_id: data.user.id
+    });
+    if (!isAdmin) throw redirect({
+      to: "/"
+    });
+  },
+  component: lazyRouteComponent($$splitComponentImporter$G, "component")
+});
+const $$splitComponentImporter$F = () => import("./audit-BmRnGFCx.mjs");
+const Route$G = createFileRoute("/_authenticated/audit")({
+  beforeLoad: async () => {
+    const {
+      data
+    } = await supabase.auth.getUser();
+    if (!data.user) throw redirect({
+      to: "/auth"
+    });
+    const {
+      data: isAdmin
+    } = await supabase.rpc("is_admin", {
+      _user_id: data.user.id
+    });
+    if (!isAdmin) throw redirect({
+      to: "/"
+    });
+  },
+  component: lazyRouteComponent($$splitComponentImporter$F, "component")
+});
+const $$splitComponentImporter$E = () => import("./approval-thresholds-CIPAfVFk.mjs");
+const Route$F = createFileRoute("/_authenticated/approval-thresholds")({
+  beforeLoad: async () => {
+    const {
+      data
+    } = await supabase.auth.getUser();
+    if (!data.user) throw redirect({
+      to: "/auth"
+    });
+    const {
+      data: ok
+    } = await supabase.rpc("has_any_role", {
+      _user_id: data.user.id,
+      _roles: ["super_admin", "admin", "finance_manager"]
+    });
+    if (!ok) throw redirect({
+      to: "/"
+    });
+  },
+  component: lazyRouteComponent($$splitComponentImporter$E, "component")
+});
+const $$splitComponentImporter$D = () => import("./index-Dsltn7Qw.mjs");
+const Route$E = createFileRoute("/_authenticated/taxes/")({
+  component: lazyRouteComponent($$splitComponentImporter$D, "component")
+});
+const $$splitComponentImporter$C = () => import("./index-CWKs0_Oc.mjs");
+const Route$D = createFileRoute("/_authenticated/suppliers/")({
+  component: lazyRouteComponent($$splitComponentImporter$C, "component")
+});
+const $$splitComponentImporter$B = () => import("./index-CDeDRu2X.mjs");
+const Route$C = createFileRoute("/_authenticated/seasons/")({
+  component: lazyRouteComponent($$splitComponentImporter$B, "component")
+});
+const $$splitComponentImporter$A = () => import("./index-scXdiN1i.mjs");
+const Route$B = createFileRoute("/_authenticated/room-types/")({
+  component: lazyRouteComponent($$splitComponentImporter$A, "component")
+});
+const badgeVariants = cva(
+  "inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+  {
+    variants: {
+      variant: {
+        default: "border-transparent bg-primary text-primary-foreground shadow hover:bg-primary/80",
+        secondary: "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        destructive: "border-transparent bg-destructive text-destructive-foreground shadow hover:bg-destructive/80",
+        outline: "text-foreground"
+      }
+    },
+    defaultVariants: {
+      variant: "default"
+    }
+  }
+);
+function Badge({ className, variant, ...props }) {
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: cn(badgeVariants({ variant }), className), ...props });
+}
+const $$splitComponentImporter$z = () => import("./index-MdZysNPt.mjs");
+const Route$A = createFileRoute("/_authenticated/rfqs/")({
+  component: lazyRouteComponent($$splitComponentImporter$z, "component")
+});
+function RStatusBadge({
+  status,
+  t
+}) {
+  const variant = status === "rejected" || status === "cancelled" ? "destructive" : status === "draft" || status === "expired" ? "outline" : "default";
+  const cls = status === "approved" || status === "completed" ? "bg-emerald-600 text-white hover:bg-emerald-600" : void 0;
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(Badge, { variant, className: cls, children: t(`rstatus.${status}`) });
+}
+const $$splitComponentImporter$y = () => import("./index-TU5Hsi5-.mjs");
+const Route$z = createFileRoute("/_authenticated/reports/")({
+  component: lazyRouteComponent($$splitComponentImporter$y, "component")
+});
+const $$splitComponentImporter$x = () => import("./index-C_R9Yuo1.mjs");
+const Route$y = createFileRoute("/_authenticated/receipts/")({
+  component: lazyRouteComponent($$splitComponentImporter$x, "component")
+});
+const $$splitComponentImporter$w = () => import("./index-NuBZzqFW.mjs");
+const Route$x = createFileRoute("/_authenticated/rates/")({
+  component: lazyRouteComponent($$splitComponentImporter$w, "component")
+});
+const $$splitComponentImporter$v = () => import("./index-ChqR8_2P.mjs");
+const Route$w = createFileRoute("/_authenticated/quotations/")({
+  component: lazyRouteComponent($$splitComponentImporter$v, "component")
+});
+function QStatusBadge({
+  status,
+  t
+}) {
+  const variant = status === "rejected" || status === "cancelled" ? "destructive" : status === "draft" || status === "expired" ? "outline" : "default";
+  const cls = status === "approved" || status === "accepted" ? "bg-emerald-600 text-white hover:bg-emerald-600" : void 0;
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(Badge, { variant, className: cls, children: t(`qstatus.${status}`) });
+}
+const $$splitComponentImporter$u = () => import("./index-DJVMbZmF.mjs");
+const Route$v = createFileRoute("/_authenticated/payables/")({
+  component: lazyRouteComponent($$splitComponentImporter$u, "component")
+});
+const $$splitComponentImporter$t = () => import("./index-Dmh5K1ld.mjs");
+const Route$u = createFileRoute("/_authenticated/invoices/")({
+  component: lazyRouteComponent($$splitComponentImporter$t, "component")
+});
+const FINANCE_WRITE = ["super_admin", "admin", "finance_manager", "finance_agent"];
+function InvStatusBadge({
+  status,
+  t
+}) {
+  const variant = status === "cancelled" ? "destructive" : status === "draft" ? "outline" : "default";
+  const cls = status === "paid" ? "bg-emerald-600 text-white hover:bg-emerald-600" : status === "partially_paid" ? "bg-amber-500 text-white hover:bg-amber-500" : void 0;
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(Badge, { variant, className: cls, children: t(`invstatus.${status}`) });
+}
+const $$splitComponentImporter$s = () => import("./index-DMP3ecck.mjs");
+const Route$t = createFileRoute("/_authenticated/hotels/")({
+  component: lazyRouteComponent($$splitComponentImporter$s, "component")
+});
+const $$splitComponentImporter$r = () => import("./index-BNQ5nUMy.mjs");
+const Route$s = createFileRoute("/_authenticated/customers/")({
+  component: lazyRouteComponent($$splitComponentImporter$r, "component")
+});
+const $$splitComponentImporter$q = () => import("./index-D4RRa_45.mjs");
+const Route$r = createFileRoute("/_authenticated/contracts/")({
+  component: lazyRouteComponent($$splitComponentImporter$q, "component")
+});
+const $$splitComponentImporter$p = () => import("./index-Bsx80cec.mjs");
+const Route$q = createFileRoute("/_authenticated/bookings/")({
+  component: lazyRouteComponent($$splitComponentImporter$p, "component")
+});
+const BK_WRITE_ROLES = ["super_admin", "admin", "sales_manager", "sales_agent", "operations_manager", "operations_agent"];
+function BkStatusBadge({
+  status,
+  t
+}) {
+  const variant = status === "cancelled" || status === "no_show" ? "destructive" : status === "draft" || status === "checked_out" ? "outline" : "default";
+  const cls = status === "confirmed" || status === "checked_in" ? "bg-emerald-600 text-white hover:bg-emerald-600" : void 0;
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(Badge, { variant, className: cls, children: t(`bkstatus.${status}`) });
+}
+const $$splitComponentImporter$o = () => import("../_id-CFqniSMu.mjs");
+const Route$p = createFileRoute("/_authenticated/taxes/$id")({
+  component: lazyRouteComponent($$splitComponentImporter$o, "component")
+});
+const $$splitComponentImporter$n = () => import("./new-D5BhcZmq.mjs");
+const Route$o = createFileRoute("/_authenticated/suppliers/new")({
+  component: lazyRouteComponent($$splitComponentImporter$n, "component")
+});
+const $$splitComponentImporter$m = () => import("../_id-CS7_1zeR.mjs");
+const Route$n = createFileRoute("/_authenticated/suppliers/$id")({
+  validateSearch: (s) => ({
+    edit: s.edit ? 1 : void 0
+  }),
+  component: lazyRouteComponent($$splitComponentImporter$m, "component")
+});
+const $$splitComponentImporter$l = () => import("../_id-BnO-SCUz.mjs");
+const Route$m = createFileRoute("/_authenticated/seasons/$id")({
+  component: lazyRouteComponent($$splitComponentImporter$l, "component")
+});
+const $$splitComponentImporter$k = () => import("../_id-B5geU1sI.mjs");
+const Route$l = createFileRoute("/_authenticated/room-types/$id")({
+  component: lazyRouteComponent($$splitComponentImporter$k, "component")
+});
+const $$splitComponentImporter$j = () => import("./new-DGutzEoV.mjs");
+const Route$k = createFileRoute("/_authenticated/rfqs/new")({
+  component: lazyRouteComponent($$splitComponentImporter$j, "component")
+});
+const $$splitComponentImporter$i = () => import("../_id-Cbbp7UfX.mjs");
+const Route$j = createFileRoute("/_authenticated/rfqs/$id")({
+  component: lazyRouteComponent($$splitComponentImporter$i, "component")
+});
+const $$splitComponentImporter$h = () => import("./templates-DAWelJF1.mjs");
+const Route$i = createFileRoute("/_authenticated/reports/templates")({
+  component: lazyRouteComponent($$splitComponentImporter$h, "component")
+});
+const $$splitComponentImporter$g = () => import("./tax-BYE3YK7b.mjs");
+const Route$h = createFileRoute("/_authenticated/reports/tax")({
+  validateSearch: (s) => ({
+    from: typeof s.from === "string" ? s.from : void 0,
+    to: typeof s.to === "string" ? s.to : void 0
+  }),
+  component: lazyRouteComponent($$splitComponentImporter$g, "component")
+});
+const $$splitComponentImporter$f = () => import("./operational-CH5yCT6q.mjs");
+const Route$g = createFileRoute("/_authenticated/reports/operational")({
+  validateSearch: (s) => ({
+    from: typeof s.from === "string" ? s.from : void 0,
+    to: typeof s.to === "string" ? s.to : void 0,
+    status: typeof s.status === "string" ? s.status : void 0
+  }),
+  component: lazyRouteComponent($$splitComponentImporter$f, "component")
+});
+const $$splitComponentImporter$e = () => import("./financial-CfW-VoFZ.mjs");
+const Route$f = createFileRoute("/_authenticated/reports/financial")({
+  validateSearch: (s) => ({
+    from: typeof s.from === "string" ? s.from : void 0,
+    to: typeof s.to === "string" ? s.to : void 0
+  }),
+  component: lazyRouteComponent($$splitComponentImporter$e, "component")
+});
+const $$splitComponentImporter$d = () => import("./new-D40gnjou.mjs");
+const Route$e = createFileRoute("/_authenticated/rates/new")({
+  component: lazyRouteComponent($$splitComponentImporter$d, "component")
+});
+const $$splitComponentImporter$c = () => import("./compare-C64nxq3g.mjs");
+const Route$d = createFileRoute("/_authenticated/rates/compare")({
+  component: lazyRouteComponent($$splitComponentImporter$c, "component")
+});
+const $$splitComponentImporter$b = () => import("../_id-CDs4m_9e.mjs");
+const Route$c = createFileRoute("/_authenticated/rates/$id")({
+  validateSearch: (s) => ({
+    edit: s.edit ? 1 : void 0
+  }),
+  component: lazyRouteComponent($$splitComponentImporter$b, "component")
+});
+const $$splitComponentImporter$a = () => import("./new-BaVCIJ7f.mjs");
+const Route$b = createFileRoute("/_authenticated/quotations/new")({
+  component: lazyRouteComponent($$splitComponentImporter$a, "component")
+});
+const $$splitComponentImporter$9 = () => import("../_id-VDYx9kSa.mjs");
+const Route$a = createFileRoute("/_authenticated/quotations/$id")({
+  component: lazyRouteComponent($$splitComponentImporter$9, "component")
+});
+const $$splitComponentImporter$8 = () => import("../_id-XoUo0sTs.mjs");
+const Route$9 = createFileRoute("/_authenticated/invoices/$id")({
+  component: lazyRouteComponent($$splitComponentImporter$8, "component")
+});
+const $$splitComponentImporter$7 = () => import("./new-DXrCMhId.mjs");
+const Route$8 = createFileRoute("/_authenticated/hotels/new")({
+  component: lazyRouteComponent($$splitComponentImporter$7, "component")
+});
+const $$splitComponentImporter$6 = () => import("../_id-eComerJi.mjs");
+const Route$7 = createFileRoute("/_authenticated/hotels/$id")({
+  validateSearch: (s) => ({
+    edit: s.edit ? 1 : void 0,
+    customer: typeof s.customer === "string" ? s.customer : void 0
+  }),
+  component: lazyRouteComponent($$splitComponentImporter$6, "component")
+});
+const $$splitComponentImporter$5 = () => import("./new-Ct_ShxKM.mjs");
+const Route$6 = createFileRoute("/_authenticated/customers/new")({
+  component: lazyRouteComponent($$splitComponentImporter$5, "component")
+});
+const $$splitComponentImporter$4 = () => import("../_id-czUbudOZ.mjs");
+const Route$5 = createFileRoute("/_authenticated/customers/$id")({
+  validateSearch: (s) => ({
+    edit: s.edit ? 1 : void 0
+  }),
+  component: lazyRouteComponent($$splitComponentImporter$4, "component")
+});
+const $$splitComponentImporter$3 = () => import("./new-DsPf-JjL.mjs");
+const Route$4 = createFileRoute("/_authenticated/contracts/new")({
+  component: lazyRouteComponent($$splitComponentImporter$3, "component")
+});
+const $$splitComponentImporter$2 = () => import("../_id-AGctamFL.mjs");
+const Route$3 = createFileRoute("/_authenticated/contracts/$id")({
+  validateSearch: (s) => ({
+    edit: s.edit ? 1 : void 0
+  }),
+  component: lazyRouteComponent($$splitComponentImporter$2, "component")
+});
+const $$splitComponentImporter$1 = () => import("./new-ut1J16SK.mjs");
+const Route$2 = createFileRoute("/_authenticated/bookings/new")({
+  component: lazyRouteComponent($$splitComponentImporter$1, "component")
+});
+const $$splitComponentImporter = () => import("../_id-C6tjpBLP.mjs");
+const Route$1 = createFileRoute("/_authenticated/bookings/$id")({
+  component: lazyRouteComponent($$splitComponentImporter, "component")
+});
+const Route = createFileRoute("/api/public/hooks/simulation-tick")({
+  server: {
+    handlers: {
+      POST: async () => {
+        const result = await runSimulationTick();
+        return new Response(JSON.stringify(result), {
+          status: 200,
+          headers: { "Content-Type": "application/json" }
+        });
+      },
+      GET: async () => {
+        const result = await runSimulationTick();
+        return new Response(JSON.stringify(result), {
+          status: 200,
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+    }
+  }
+});
+const SupplierApplyRoute = Route$P.update({
+  id: "/supplier-apply",
+  path: "/supplier-apply",
+  getParentRoute: () => Route$Q
+});
+const AuthRoute = Route$O.update({
+  id: "/auth",
+  path: "/auth",
+  getParentRoute: () => Route$Q
+});
+const AuthenticatedRouteRoute = Route$N.update({
+  id: "/_authenticated",
+  getParentRoute: () => Route$Q
+});
+const AuthenticatedIndexRoute = Route$M.update({
+  id: "/",
+  path: "/",
+  getParentRoute: () => AuthenticatedRouteRoute
+});
+const AuthenticatedUsersRoute = Route$L.update({
+  id: "/users",
+  path: "/users",
+  getParentRoute: () => AuthenticatedRouteRoute
+});
+const AuthenticatedSupplierPortalRoute = Route$K.update({
+  id: "/supplier-portal",
+  path: "/supplier-portal",
+  getParentRoute: () => AuthenticatedRouteRoute
+});
+const AuthenticatedSupplierApplicationsRoute = Route$J.update({
+  id: "/supplier-applications",
+  path: "/supplier-applications",
+  getParentRoute: () => AuthenticatedRouteRoute
+});
+const AuthenticatedSimulationRoute = Route$I.update({
+  id: "/simulation",
+  path: "/simulation",
+  getParentRoute: () => AuthenticatedRouteRoute
+});
+const AuthenticatedSettingsRoute = Route$H.update({
+  id: "/settings",
+  path: "/settings",
+  getParentRoute: () => AuthenticatedRouteRoute
+});
+const AuthenticatedAuditRoute = Route$G.update({
+  id: "/audit",
+  path: "/audit",
+  getParentRoute: () => AuthenticatedRouteRoute
+});
+const AuthenticatedApprovalThresholdsRoute = Route$F.update({
+  id: "/approval-thresholds",
+  path: "/approval-thresholds",
+  getParentRoute: () => AuthenticatedRouteRoute
+});
+const AuthenticatedTaxesIndexRoute = Route$E.update({
+  id: "/taxes/",
+  path: "/taxes/",
+  getParentRoute: () => AuthenticatedRouteRoute
+});
+const AuthenticatedSuppliersIndexRoute = Route$D.update({
+  id: "/suppliers/",
+  path: "/suppliers/",
+  getParentRoute: () => AuthenticatedRouteRoute
+});
+const AuthenticatedSeasonsIndexRoute = Route$C.update({
+  id: "/seasons/",
+  path: "/seasons/",
+  getParentRoute: () => AuthenticatedRouteRoute
+});
+const AuthenticatedRoomTypesIndexRoute = Route$B.update({
+  id: "/room-types/",
+  path: "/room-types/",
+  getParentRoute: () => AuthenticatedRouteRoute
+});
+const AuthenticatedRfqsIndexRoute = Route$A.update({
+  id: "/rfqs/",
+  path: "/rfqs/",
+  getParentRoute: () => AuthenticatedRouteRoute
+});
+const AuthenticatedReportsIndexRoute = Route$z.update({
+  id: "/reports/",
+  path: "/reports/",
+  getParentRoute: () => AuthenticatedRouteRoute
+});
+const AuthenticatedReceiptsIndexRoute = Route$y.update({
+  id: "/receipts/",
+  path: "/receipts/",
+  getParentRoute: () => AuthenticatedRouteRoute
+});
+const AuthenticatedRatesIndexRoute = Route$x.update({
+  id: "/rates/",
+  path: "/rates/",
+  getParentRoute: () => AuthenticatedRouteRoute
+});
+const AuthenticatedQuotationsIndexRoute = Route$w.update({
+  id: "/quotations/",
+  path: "/quotations/",
+  getParentRoute: () => AuthenticatedRouteRoute
+});
+const AuthenticatedPayablesIndexRoute = Route$v.update({
+  id: "/payables/",
+  path: "/payables/",
+  getParentRoute: () => AuthenticatedRouteRoute
+});
+const AuthenticatedInvoicesIndexRoute = Route$u.update({
+  id: "/invoices/",
+  path: "/invoices/",
+  getParentRoute: () => AuthenticatedRouteRoute
+});
+const AuthenticatedHotelsIndexRoute = Route$t.update({
+  id: "/hotels/",
+  path: "/hotels/",
+  getParentRoute: () => AuthenticatedRouteRoute
+});
+const AuthenticatedCustomersIndexRoute = Route$s.update({
+  id: "/customers/",
+  path: "/customers/",
+  getParentRoute: () => AuthenticatedRouteRoute
+});
+const AuthenticatedContractsIndexRoute = Route$r.update({
+  id: "/contracts/",
+  path: "/contracts/",
+  getParentRoute: () => AuthenticatedRouteRoute
+});
+const AuthenticatedBookingsIndexRoute = Route$q.update({
+  id: "/bookings/",
+  path: "/bookings/",
+  getParentRoute: () => AuthenticatedRouteRoute
+});
+const AuthenticatedTaxesIdRoute = Route$p.update({
+  id: "/taxes/$id",
+  path: "/taxes/$id",
+  getParentRoute: () => AuthenticatedRouteRoute
+});
+const AuthenticatedSuppliersNewRoute = Route$o.update({
+  id: "/suppliers/new",
+  path: "/suppliers/new",
+  getParentRoute: () => AuthenticatedRouteRoute
+});
+const AuthenticatedSuppliersIdRoute = Route$n.update({
+  id: "/suppliers/$id",
+  path: "/suppliers/$id",
+  getParentRoute: () => AuthenticatedRouteRoute
+});
+const AuthenticatedSeasonsIdRoute = Route$m.update({
+  id: "/seasons/$id",
+  path: "/seasons/$id",
+  getParentRoute: () => AuthenticatedRouteRoute
+});
+const AuthenticatedRoomTypesIdRoute = Route$l.update({
+  id: "/room-types/$id",
+  path: "/room-types/$id",
+  getParentRoute: () => AuthenticatedRouteRoute
+});
+const AuthenticatedRfqsNewRoute = Route$k.update({
+  id: "/rfqs/new",
+  path: "/rfqs/new",
+  getParentRoute: () => AuthenticatedRouteRoute
+});
+const AuthenticatedRfqsIdRoute = Route$j.update({
+  id: "/rfqs/$id",
+  path: "/rfqs/$id",
+  getParentRoute: () => AuthenticatedRouteRoute
+});
+const AuthenticatedReportsTemplatesRoute = Route$i.update({
+  id: "/reports/templates",
+  path: "/reports/templates",
+  getParentRoute: () => AuthenticatedRouteRoute
+});
+const AuthenticatedReportsTaxRoute = Route$h.update({
+  id: "/reports/tax",
+  path: "/reports/tax",
+  getParentRoute: () => AuthenticatedRouteRoute
+});
+const AuthenticatedReportsOperationalRoute = Route$g.update({
+  id: "/reports/operational",
+  path: "/reports/operational",
+  getParentRoute: () => AuthenticatedRouteRoute
+});
+const AuthenticatedReportsFinancialRoute = Route$f.update({
+  id: "/reports/financial",
+  path: "/reports/financial",
+  getParentRoute: () => AuthenticatedRouteRoute
+});
+const AuthenticatedRatesNewRoute = Route$e.update({
+  id: "/rates/new",
+  path: "/rates/new",
+  getParentRoute: () => AuthenticatedRouteRoute
+});
+const AuthenticatedRatesCompareRoute = Route$d.update({
+  id: "/rates/compare",
+  path: "/rates/compare",
+  getParentRoute: () => AuthenticatedRouteRoute
+});
+const AuthenticatedRatesIdRoute = Route$c.update({
+  id: "/rates/$id",
+  path: "/rates/$id",
+  getParentRoute: () => AuthenticatedRouteRoute
+});
+const AuthenticatedQuotationsNewRoute = Route$b.update({
+  id: "/quotations/new",
+  path: "/quotations/new",
+  getParentRoute: () => AuthenticatedRouteRoute
+});
+const AuthenticatedQuotationsIdRoute = Route$a.update({
+  id: "/quotations/$id",
+  path: "/quotations/$id",
+  getParentRoute: () => AuthenticatedRouteRoute
+});
+const AuthenticatedInvoicesIdRoute = Route$9.update({
+  id: "/invoices/$id",
+  path: "/invoices/$id",
+  getParentRoute: () => AuthenticatedRouteRoute
+});
+const AuthenticatedHotelsNewRoute = Route$8.update({
+  id: "/hotels/new",
+  path: "/hotels/new",
+  getParentRoute: () => AuthenticatedRouteRoute
+});
+const AuthenticatedHotelsIdRoute = Route$7.update({
+  id: "/hotels/$id",
+  path: "/hotels/$id",
+  getParentRoute: () => AuthenticatedRouteRoute
+});
+const AuthenticatedCustomersNewRoute = Route$6.update({
+  id: "/customers/new",
+  path: "/customers/new",
+  getParentRoute: () => AuthenticatedRouteRoute
+});
+const AuthenticatedCustomersIdRoute = Route$5.update({
+  id: "/customers/$id",
+  path: "/customers/$id",
+  getParentRoute: () => AuthenticatedRouteRoute
+});
+const AuthenticatedContractsNewRoute = Route$4.update({
+  id: "/contracts/new",
+  path: "/contracts/new",
+  getParentRoute: () => AuthenticatedRouteRoute
+});
+const AuthenticatedContractsIdRoute = Route$3.update({
+  id: "/contracts/$id",
+  path: "/contracts/$id",
+  getParentRoute: () => AuthenticatedRouteRoute
+});
+const AuthenticatedBookingsNewRoute = Route$2.update({
+  id: "/bookings/new",
+  path: "/bookings/new",
+  getParentRoute: () => AuthenticatedRouteRoute
+});
+const AuthenticatedBookingsIdRoute = Route$1.update({
+  id: "/bookings/$id",
+  path: "/bookings/$id",
+  getParentRoute: () => AuthenticatedRouteRoute
+});
+const ApiPublicHooksSimulationTickRoute = Route.update({
+  id: "/api/public/hooks/simulation-tick",
+  path: "/api/public/hooks/simulation-tick",
+  getParentRoute: () => Route$Q
+});
+const AuthenticatedRouteRouteChildren = {
+  AuthenticatedApprovalThresholdsRoute,
+  AuthenticatedAuditRoute,
+  AuthenticatedSettingsRoute,
+  AuthenticatedSimulationRoute,
+  AuthenticatedSupplierApplicationsRoute,
+  AuthenticatedSupplierPortalRoute,
+  AuthenticatedUsersRoute,
+  AuthenticatedIndexRoute,
+  AuthenticatedBookingsIdRoute,
+  AuthenticatedBookingsNewRoute,
+  AuthenticatedContractsIdRoute,
+  AuthenticatedContractsNewRoute,
+  AuthenticatedCustomersIdRoute,
+  AuthenticatedCustomersNewRoute,
+  AuthenticatedHotelsIdRoute,
+  AuthenticatedHotelsNewRoute,
+  AuthenticatedInvoicesIdRoute,
+  AuthenticatedQuotationsIdRoute,
+  AuthenticatedQuotationsNewRoute,
+  AuthenticatedRatesIdRoute,
+  AuthenticatedRatesCompareRoute,
+  AuthenticatedRatesNewRoute,
+  AuthenticatedReportsFinancialRoute,
+  AuthenticatedReportsOperationalRoute,
+  AuthenticatedReportsTaxRoute,
+  AuthenticatedReportsTemplatesRoute,
+  AuthenticatedRfqsIdRoute,
+  AuthenticatedRfqsNewRoute,
+  AuthenticatedRoomTypesIdRoute,
+  AuthenticatedSeasonsIdRoute,
+  AuthenticatedSuppliersIdRoute,
+  AuthenticatedSuppliersNewRoute,
+  AuthenticatedTaxesIdRoute,
+  AuthenticatedBookingsIndexRoute,
+  AuthenticatedContractsIndexRoute,
+  AuthenticatedCustomersIndexRoute,
+  AuthenticatedHotelsIndexRoute,
+  AuthenticatedInvoicesIndexRoute,
+  AuthenticatedPayablesIndexRoute,
+  AuthenticatedQuotationsIndexRoute,
+  AuthenticatedRatesIndexRoute,
+  AuthenticatedReceiptsIndexRoute,
+  AuthenticatedReportsIndexRoute,
+  AuthenticatedRfqsIndexRoute,
+  AuthenticatedRoomTypesIndexRoute,
+  AuthenticatedSeasonsIndexRoute,
+  AuthenticatedSuppliersIndexRoute,
+  AuthenticatedTaxesIndexRoute
+};
+const AuthenticatedRouteRouteWithChildren = AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren);
+const rootRouteChildren = {
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AuthRoute,
+  SupplierApplyRoute,
+  ApiPublicHooksSimulationTickRoute
+};
+const routeTree = Route$Q._addFileChildren(rootRouteChildren)._addFileTypes();
+const getRouter = () => {
+  const queryClient = new QueryClient();
+  const router2 = createRouter({
+    routeTree,
+    context: { queryClient },
+    scrollRestoration: true,
+    defaultPreloadStaleTime: 0
+  });
+  return router2;
+};
+const router = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  getRouter
+}, Symbol.toStringTag, { value: "Module" }));
+export {
+  Badge as B,
+  FINANCE_WRITE as F,
+  InvStatusBadge as I,
+  QStatusBadge as Q,
+  Route$p as R,
+  TooltipProvider as T,
+  Tooltip as a,
+  TooltipTrigger as b,
+  cn as c,
+  TooltipContent as d,
+  useAuth as e,
+  BK_WRITE_ROLES as f,
+  Route$n as g,
+  Route$m as h,
+  Route$l as i,
+  Route$j as j,
+  RStatusBadge as k,
+  Route$h as l,
+  Route$g as m,
+  Route$f as n,
+  Route$c as o,
+  Route$a as p,
+  Route$9 as q,
+  Route$7 as r,
+  Route$5 as s,
+  Route$3 as t,
+  useI18n as u,
+  Route$1 as v,
+  BkStatusBadge as w,
+  router as x
+};

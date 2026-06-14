@@ -1,4 +1,4 @@
-@import "tailwindcss" source(none);
+@import "tailwindcss";
 @source "../src";
 @import "tw-animate-css";
 
@@ -62,6 +62,7 @@
 }
 
 :root {
+  color-scheme: light;
   --radius: 0.75rem;
   --background: oklch(0.99 0.005 80);
   --foreground: oklch(0.18 0.015 60);
@@ -103,6 +104,7 @@
 }
 
 .dark {
+  color-scheme: dark;
   --background: oklch(0.15 0.012 60);
   --foreground: oklch(0.95 0.01 80);
   --card: oklch(0.19 0.015 60);
@@ -196,5 +198,44 @@
   html[dir="rtl"] input[type="datetime-local"]::-webkit-calendar-picker-indicator {
     margin-inline-start: 0.25rem;
     margin-inline-end: 0;
+  }
+
+  /* Style calendar/time icon color based on light/dark mode */
+  input[type="date"]::-webkit-calendar-picker-indicator,
+  input[type="time"]::-webkit-calendar-picker-indicator,
+  input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+  input[type="month"]::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    filter: invert(0);
+  }
+
+  .dark input[type="date"]::-webkit-calendar-picker-indicator,
+  .dark input[type="time"]::-webkit-calendar-picker-indicator,
+  .dark input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+  .dark input[type="month"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+  }
+
+  /* ================= Scroll Up ==================== */
+  .scrollup {
+    @apply !w-[25px] !h-[25px] md:!w-[35px] md:!h-[35px] fixed right-[1rem] md:right-[1rem] bottom-[-20%] transition-[0.4s];
+  }
+
+  /* Show scroll */
+  .show-scroll {
+    @apply bottom-[5rem] md:bottom-[3rem];
+  }
+
+  /*=============== SCROLL BAR ===============*/
+  ::-webkit-scrollbar {
+    @apply w-[0.5rem];
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-primary rounded-[18rem];
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-primary/60;
   }
 }

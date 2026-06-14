@@ -1453,6 +1453,7 @@ export type Database = {
           id: string
           is_direct_supplier: boolean
           latitude: number | null
+          location_url: string | null
           longitude: number | null
           name_ar: string
           name_en: string
@@ -1486,6 +1487,7 @@ export type Database = {
           id?: string
           is_direct_supplier?: boolean
           latitude?: number | null
+          location_url?: string | null
           longitude?: number | null
           name_ar: string
           name_en: string
@@ -1519,6 +1521,7 @@ export type Database = {
           id?: string
           is_direct_supplier?: boolean
           latitude?: number | null
+          location_url?: string | null
           longitude?: number | null
           name_ar?: string
           name_en?: string

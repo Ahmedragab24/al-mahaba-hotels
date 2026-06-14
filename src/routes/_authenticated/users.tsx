@@ -43,7 +43,10 @@ function UsersPage() {
         arr.push(r.role);
         rolesMap.set(r.user_id, arr);
       });
-      return (profiles ?? []).map((p: any) => ({ ...p, roles: rolesMap.get(p.id) ?? [] }));
+      const allowedRoles = ["super_admin", "sales_manager", "finance_manager", "viewer"];
+      return (profiles ?? [])
+        .map((p: any) => ({ ...p, roles: rolesMap.get(p.id) ?? [] }))
+        .filter((u: any) => u.roles.some((r: string) => allowedRoles.includes(r)));
     },
   });
   const isSuperAdmin = auth.hasRole("super_admin");

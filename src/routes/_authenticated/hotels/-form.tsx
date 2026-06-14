@@ -25,8 +25,7 @@ const schema = z.object({
   address_line1: z.string().trim().max(200).optional().or(z.literal("")),
   address_line2: z.string().trim().max(200).optional().or(z.literal("")),
   postal_code: z.string().trim().max(20).optional().or(z.literal("")),
-  latitude: z.union([z.coerce.number().min(-90).max(90), z.literal("")]).optional(),
-  longitude: z.union([z.coerce.number().min(-180).max(180), z.literal("")]).optional(),
+  location_url: z.string().trim().max(1000).optional().or(z.literal("")),
   phone: z.string().trim().max(40).optional().or(z.literal("")),
   email: z.string().trim().email().max(255).optional().or(z.literal("")),
   website: z.string().trim().max(200).optional().or(z.literal("")),
@@ -60,8 +59,7 @@ export function HotelForm({ initial, onSaved }: { initial?: any; onSaved: (id: s
       address_line1: initial?.address_line1 ?? "",
       address_line2: initial?.address_line2 ?? "",
       postal_code: initial?.postal_code ?? "",
-      latitude: initial?.latitude ?? "",
-      longitude: initial?.longitude ?? "",
+      location_url: initial?.location_url ?? "",
       phone: initial?.phone ?? "",
       email: initial?.email ?? "",
       website: initial?.website ?? "",
@@ -169,11 +167,8 @@ export function HotelForm({ initial, onSaved }: { initial?: any; onSaved: (id: s
           <FormField control={form.control} name="address_line2" render={({ field }) => (
             <FormItem className="md:col-span-3"><FormLabel>{t("label.address")} 2</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
           )} />
-          <FormField control={form.control} name="latitude" render={({ field }) => (
-            <FormItem><FormLabel>{t("label.latitude")}</FormLabel><FormControl><Input type="number" step="0.0000001" dir="ltr" {...field} /></FormControl><FormMessage /></FormItem>
-          )} />
-          <FormField control={form.control} name="longitude" render={({ field }) => (
-            <FormItem><FormLabel>{t("label.longitude")}</FormLabel><FormControl><Input type="number" step="0.0000001" dir="ltr" {...field} /></FormControl><FormMessage /></FormItem>
+          <FormField control={form.control} name="location_url" render={({ field }) => (
+            <FormItem className="md:col-span-3"><FormLabel>{t("label.location_url")}</FormLabel><FormControl><Input dir="ltr" placeholder="https://maps.google.com/..." {...field} /></FormControl><FormMessage /></FormItem>
           )} />
         </CardContent></Card>
 

@@ -10,6 +10,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import {
   LayoutDashboard,
@@ -47,46 +48,75 @@ type NavItem = { to: string; labelKey: string; icon: React.ComponentType<{ class
 
 const operational: NavItem[] = [
   { to: "/", labelKey: "nav.dashboard", icon: LayoutDashboard },
-  { to: "/bookings", labelKey: "nav.bookings", icon: CalendarCheck,
-    roles: ["super_admin","admin","sales_manager","sales_agent","operations_manager","operations_agent","finance_manager","finance_agent","viewer"] },
-  { to: "/rfqs", labelKey: "nav.rfqs", icon: MailQuestion,
-    roles: ["super_admin","admin","sales_manager","sales_agent","operations_manager","operations_agent","finance_manager","finance_agent","viewer"] },
-  { to: "/quotations", labelKey: "nav.quotations", icon: FileSpreadsheet,
-    roles: ["super_admin","admin","sales_manager","sales_agent","operations_manager","finance_manager","finance_agent","viewer"] },
+  {
+    to: "/bookings", labelKey: "nav.bookings", icon: CalendarCheck,
+    roles: ["super_admin", "admin", "sales_manager", "sales_agent", "operations_manager", "operations_agent", "finance_manager", "finance_agent", "viewer"]
+  },
+  {
+    to: "/rfqs", labelKey: "nav.rfqs", icon: MailQuestion,
+    roles: ["super_admin", "admin", "sales_manager", "sales_agent", "operations_manager", "operations_agent", "finance_manager", "finance_agent", "viewer"]
+  },
+  {
+    to: "/quotations", labelKey: "nav.quotations", icon: FileSpreadsheet,
+    roles: ["super_admin", "admin", "sales_manager", "sales_agent", "operations_manager", "finance_manager", "finance_agent", "viewer"]
+  },
 ];
 const master: NavItem[] = [
-  { to: "/customers", labelKey: "nav.customers", icon: Users,
-    roles: ["super_admin","admin","sales_manager","sales_agent","operations_manager","operations_agent","finance_manager","finance_agent","viewer"] },
-  { to: "/hotels", labelKey: "nav.hotels", icon: Hotel,
-    roles: ["super_admin","admin","sales_manager","sales_agent","operations_manager","operations_agent","finance_manager","finance_agent","viewer"] },
-  { to: "/suppliers", labelKey: "nav.suppliers", icon: Handshake,
-    roles: ["super_admin","admin","operations_manager","operations_agent","finance_manager","finance_agent","viewer"] },
-  { to: "/rates", labelKey: "nav.rates", icon: Tags,
-    roles: ["super_admin","admin","sales_manager","sales_agent","operations_manager","operations_agent","finance_manager","finance_agent","viewer"] },
-  { to: "/rates/compare", labelKey: "rates.compare", icon: Tags,
-    roles: ["super_admin","admin","sales_manager","sales_agent","operations_manager","operations_agent","finance_manager","finance_agent","viewer"] },
+  {
+    to: "/customers", labelKey: "nav.customers", icon: Users,
+    roles: ["super_admin", "admin", "sales_manager", "sales_agent", "operations_manager", "operations_agent", "finance_manager", "finance_agent", "viewer"]
+  },
+  {
+    to: "/hotels", labelKey: "nav.hotels", icon: Hotel,
+    roles: ["super_admin", "admin", "sales_manager", "sales_agent", "operations_manager", "operations_agent", "finance_manager", "finance_agent", "viewer"]
+  },
+  {
+    to: "/suppliers", labelKey: "nav.suppliers", icon: Handshake,
+    roles: ["super_admin", "admin", "operations_manager", "operations_agent", "finance_manager", "finance_agent", "viewer"]
+  },
+  {
+    to: "/rates", labelKey: "nav.rates", icon: Tags,
+    roles: ["super_admin", "admin", "sales_manager", "sales_agent", "operations_manager", "operations_agent", "finance_manager", "finance_agent", "viewer"]
+  },
+  {
+    to: "/rates/compare", labelKey: "rates.compare", icon: Tags,
+    roles: ["super_admin", "admin", "sales_manager", "sales_agent", "operations_manager", "operations_agent", "finance_manager", "finance_agent", "viewer"]
+  },
 ];
 const contracting: NavItem[] = [
-  { to: "/room-types", labelKey: "nav.room_types", icon: BedDouble,
-    roles: ["super_admin","admin","sales_manager","sales_agent","operations_manager","operations_agent","viewer"] },
+  {
+    to: "/room-types", labelKey: "nav.room_types", icon: BedDouble,
+    roles: ["super_admin", "admin", "sales_manager", "sales_agent", "operations_manager", "operations_agent", "viewer"]
+  },
+  /* Hidden temporarily
   { to: "/contracts", labelKey: "nav.contracts", icon: FileSignature,
     roles: ["super_admin","admin","operations_manager","operations_agent","finance_manager","finance_agent","viewer"] },
   { to: "/seasons", labelKey: "nav.seasons", icon: CalendarRange,
     roles: ["super_admin","admin","sales_manager","sales_agent","operations_manager","operations_agent","viewer"] },
-  { to: "/taxes", labelKey: "nav.taxes", icon: Percent,
-    roles: ["super_admin","admin","operations_manager","operations_agent","finance_manager","finance_agent","viewer"] },
+  */
+  {
+    to: "/taxes", labelKey: "nav.taxes", icon: Percent,
+    roles: ["super_admin", "admin", "operations_manager", "operations_agent", "finance_manager", "finance_agent", "viewer"]
+  },
 ];
 const finance: NavItem[] = [
-  { to: "/invoices", labelKey: "nav.invoices", icon: ReceiptText,
-    roles: ["super_admin","admin","finance_manager","finance_agent"] },
+  {
+    to: "/invoices", labelKey: "nav.invoices", icon: ReceiptText,
+    roles: ["super_admin", "admin", "finance_manager", "finance_agent"]
+  },
+  /* Hidden temporarily
   { to: "/receipts", labelKey: "nav.receipts", icon: Wallet,
     roles: ["super_admin","admin","finance_manager","finance_agent"] },
   { to: "/payables", labelKey: "nav.payables", icon: Landmark,
     roles: ["super_admin","admin","finance_manager","finance_agent"] },
+  */
 ];
 const reports: NavItem[] = [
-  { to: "/reports", labelKey: "nav.rpt_dashboards", icon: BarChart3,
-    roles: ["super_admin","admin","sales_manager","sales_agent","operations_manager","operations_agent","finance_manager","finance_agent","viewer"] },
+  {
+    to: "/reports", labelKey: "nav.rpt_dashboards", icon: BarChart3,
+    roles: ["super_admin", "admin", "sales_manager", "sales_agent", "operations_manager", "operations_agent", "finance_manager", "finance_agent", "viewer"]
+  },
+  /* Hidden temporarily
   { to: "/reports/operational", labelKey: "nav.rpt_operational", icon: ClipboardList,
     roles: ["super_admin","admin","sales_manager","sales_agent","operations_manager","operations_agent","finance_manager","finance_agent","viewer"] },
   { to: "/reports/financial", labelKey: "nav.rpt_financial", icon: TrendingUp,
@@ -95,14 +125,17 @@ const reports: NavItem[] = [
     roles: ["super_admin","admin","finance_manager","finance_agent"] },
   { to: "/reports/templates", labelKey: "nav.rpt_templates", icon: LayoutTemplate,
     roles: ["super_admin","admin","sales_manager","operations_manager","finance_manager","finance_agent"] },
+  */
 ];
 const admin: NavItem[] = [
-  { to: "/users", labelKey: "nav.users", icon: ShieldCheck, roles: ["super_admin","admin"] },
-  { to: "/supplier-applications", labelKey: "nav.supplier_applications", icon: Handshake, roles: ["super_admin","admin"] },
+  { to: "/users", labelKey: "nav.users", icon: ShieldCheck, roles: ["super_admin", "admin"] },
+  { to: "/supplier-applications", labelKey: "nav.supplier_applications", icon: Handshake, roles: ["super_admin", "admin"] },
+  /* Hidden temporarily
   { to: "/approval-thresholds", labelKey: "nav.approval_thresholds", icon: Scale, roles: ["super_admin","admin","finance_manager"] },
   { to: "/audit", labelKey: "nav.audit", icon: History, roles: ["super_admin","admin"] },
   { to: "/simulation", labelKey: "nav.simulation", icon: Activity, roles: ["super_admin","admin"] },
-  { to: "/settings", labelKey: "nav.settings", icon: Settings, roles: ["super_admin","admin"] },
+  */
+  { to: "/settings", labelKey: "nav.settings", icon: Settings, roles: ["super_admin", "admin"] },
 ];
 const supplierNav: NavItem[] = [
   { to: "/supplier-portal", labelKey: "nav.supplier_portal", icon: LayoutDashboard, roles: ["supplier"] },
@@ -112,8 +145,9 @@ export function AppSidebar() {
   const { t, dir } = useI18n();
   const auth = useAuth();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { open: isOpen } = useSidebar();
 
-  const isSupplierOnly = auth.hasRole("supplier") && !auth.hasAnyRole(["super_admin","admin","sales_manager","sales_agent","operations_manager","operations_agent","finance_manager","finance_agent","viewer"]);
+  const isSupplierOnly = auth.hasRole("supplier") && !auth.hasAnyRole(["super_admin", "admin", "sales_manager", "sales_agent", "operations_manager", "operations_agent", "finance_manager", "finance_agent", "viewer"]);
 
   const canSee = (item: NavItem) =>
     (!item.roles || item.roles.length === 0 || auth.hasAnyRole(item.roles)) &&
@@ -132,7 +166,7 @@ export function AppSidebar() {
       <SidebarMenuItem key={item.to}>
         <SidebarMenuButton asChild isActive={active} tooltip={t(item.labelKey)} className="py-3">
           <Link to={item.to} className="flex items-center gap-3">
-          <item.icon className="h-5 w-5 shrink-0" strokeWidth={1.75} />
+            <item.icon className="h-5 w-5 shrink-0" strokeWidth={1.75} />
             <span className="truncate text-sm">{t(item.labelKey)}</span>
           </Link>
         </SidebarMenuButton>
@@ -143,15 +177,17 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon" side={dir === "rtl" ? "right" : "left"}>
       <SidebarHeader>
-        <div className="flex items-center gap-3 px-3 py-3">
+        <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center">
             <img src={logoUrl} alt={t("brand.name")} className="h-10 w-10 object-contain dark:hidden" />
             <img src={logoDarkUrl} alt={t("brand.name")} className="hidden h-10 w-10 object-contain dark:block" />
           </div>
-          <div className="flex flex-col leading-tight group-data-[collapsible=icon]:hidden">
-            <span className="text-base font-semibold truncate">{t("brand.short")}</span>
-            <span className="text-xs text-muted-foreground truncate">{t("brand.name")}</span>
-          </div>
+          {isOpen && (
+            <div className="flex flex-col leading-tight group-data-[collapsible=icon]:hidden">
+              <span className="text-base font-semibold truncate">{t("brand.short")}</span>
+              <span className="text-xs text-muted-foreground truncate">{t("brand.name")}</span>
+            </div>
+          )}
         </div>
       </SidebarHeader>
       <SidebarContent>
@@ -164,12 +200,12 @@ export function AppSidebar() {
           </SidebarGroup>
         )}
         {visibleOperational.length > 0 && (
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-xs font-semibold uppercase tracking-wider">{t("nav.dashboard")}</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>{visibleOperational.map(renderItem)}</SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+          <SidebarGroup>
+            <SidebarGroupLabel className="text-xs font-semibold uppercase tracking-wider">{t("nav.dashboard")}</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>{visibleOperational.map(renderItem)}</SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
         )}
         {visibleContracting.length > 0 && (
           <SidebarGroup>

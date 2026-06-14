@@ -268,6 +268,7 @@ export const dict: Dict = {
   "label.whatsapp": { ar: "واتساب", en: "WhatsApp" },
   "label.district": { ar: "الحي/المنطقة", en: "District" },
   "label.latitude": { ar: "خط العرض", en: "Latitude" },
+  "label.location_url": { ar: "رابط الموقع", en: "Location Link" },
   "label.longitude": { ar: "خط الطول", en: "Longitude" },
   "label.postal_code": { ar: "الرمز البريدي", en: "Postal Code" },
   "label.cover_image": { ar: "صورة الغلاف", en: "Cover Image URL" },

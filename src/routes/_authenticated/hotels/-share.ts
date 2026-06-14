@@ -172,6 +172,7 @@ export function buildHotelInfoHtml(lang: DocLang, data: HotelShareData): string 
     ${meta(s.address, [h.address_line1, h.address_line2, h.postal_code].filter(Boolean).join(", "))}
     ${meta(s.near_haram, haram.meters == null ? "—" : haram.near ? s.yes : s.no)}
     ${meta(s.distance, haram.meters == null ? "—" : haram.meters.toLocaleString("en-US"), true)}
+    ${h.location_url ? `<div class="box"><div class="k">${esc(s.maps)}</div><div class="v"><a href="${esc(h.location_url)}" target="_blank" style="color:#14532d;text-decoration:underline">${esc(s.maps)}</a></div></div>` : ""}
     ${meta(s.phone, h.phone, true)}
     ${meta(s.email, h.email, true)}
     ${meta(s.website, h.website, true)}

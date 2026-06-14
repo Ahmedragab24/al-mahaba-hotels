@@ -121,8 +121,23 @@ function HotelDetail() {
                 <KV label={t("label.city")} value={h.city ? (lang === "ar" ? h.city.name_ar : h.city.name_en) : ""} />
                 <KV label={t("label.district")} value={h.district} />
                 <KV label={t("label.address")} value={[h.address_line1, h.address_line2, h.postal_code].filter(Boolean).join(", ")} />
-                <KV label={t("label.latitude")} value={h.latitude} />
-                <KV label={t("label.longitude")} value={h.longitude} />
+                <KV
+                  label={t("label.location_url")}
+                  value={
+                    h.location_url ? (
+                      <a
+                        href={h.location_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[var(--brand-gold-deep)] hover:underline truncate max-w-xs block"
+                      >
+                        {h.location_url}
+                      </a>
+                    ) : (
+                      "—"
+                    )
+                  }
+                />
                 <KV label={t("label.phone")} value={h.phone} />
                 <KV label={t("label.email")} value={h.email} />
                 <KV label={t("label.website")} value={h.website} />

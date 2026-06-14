@@ -72,7 +72,7 @@ function HotelsList() {
     queryFn: async () => {
       const { data } = await supabase.from("hotels").select("status,star_rating,created_at,deleted_at");
       const rows = data ?? [];
-      const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0,0,0,0);
+      const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
       return {
         total: rows.filter(r => !r.deleted_at).length,
         active: rows.filter(r => r.status === "active" && !r.deleted_at).length,

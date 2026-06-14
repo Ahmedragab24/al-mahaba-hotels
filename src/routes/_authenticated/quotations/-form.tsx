@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { dbErrorMessage } from "@/lib/db-errors";
 import { toast } from "sonner";
+import { Label } from "@/components/ui/label";
 
 type Props = {
   initial?: any;
@@ -65,8 +66,8 @@ export function QuotationForm({ initial, onSaved }: Props) {
   return (
     <Card>
       <CardContent className="grid gap-4 p-6 md:grid-cols-2">
-        <div className="space-y-1.5">
-          <label className="text-sm">{t("quotes.customer")} *</label>
+        <div className="flex flex-col gap-2">
+          <Label>{t("quotes.customer")} *</Label>
           <Select value={form.customer_id} onValueChange={(v) => set("customer_id", v)}>
             <SelectTrigger><SelectValue placeholder={t("quotes.customer")} /></SelectTrigger>
             <SelectContent>
@@ -78,25 +79,30 @@ export function QuotationForm({ initial, onSaved }: Props) {
             </SelectContent>
           </Select>
         </div>
-        <div className="space-y-1.5">
-          <label className="text-sm">{t("label.currency")}</label>
-          <Input value={form.currency} onChange={(e) => set("currency", e.target.value.toUpperCase().slice(0, 3))} dir="ltr" />
+        <div className="flex flex-col gap-2">
+          <Label>{t("label.currency")} *</Label>
+          <Select value={form.currency} onValueChange={(v) => set("currency", v)}>
+            <SelectTrigger><SelectValue placeholder={t("label.currency")} /></SelectTrigger>
+            <SelectContent>
+              {["SAR", "USD", "EUR"].map((c) => (
+                <SelectItem key={c} value={c}>
+                  {c}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-        <div className="space-y-1.5">
-          <label className="text-sm">{t("quotes.quotation_date")}</label>
-          <Input type="date" value={form.quotation_date} onChange={(e) => set("quotation_date", e.target.value)} />
+        <div className="flex flex-col gap-2">
+          <Label>{t("quotes.quotation_date")} *</Label>
+          <Input type="datetime-local" value={form.quotation_date} onChange={(e) => set("quotation_date", e.target.value)} />
         </div>
-        <div className="space-y-1.5">
-          <label className="text-sm">{t("quotes.travel_date")}</label>
-          <Input type="date" value={form.travel_date} onChange={(e) => set("travel_date", e.target.value)} />
+        <div className="flex flex-col gap-2">
+          <Label>{t("quotes.expiry_date")} *</Label>
+          <Input type="datetime-local" value={form.expiry_date} onChange={(e) => set("expiry_date", e.target.value)} />
         </div>
-        <div className="space-y-1.5">
-          <label className="text-sm">{t("quotes.expiry_date")} *</label>
-          <Input type="date" value={form.expiry_date} onChange={(e) => set("expiry_date", e.target.value)} />
-        </div>
-        <div className="space-y-1.5 md:col-span-2">
-          <label className="text-sm">{t("label.notes")}</label>
-          <Textarea rows={3} value={form.notes} onChange={(e) => set("notes", e.target.value)} />
+        <div className="md:col-span-2 flex flex-col gap-2">
+          <Label>{t("label.notes")}</Label>
+          <Textarea className="min-h-[120px]" value={form.notes} onChange={(e) => set("notes", e.target.value)} />
         </div>
         <div className="md:col-span-2 flex justify-end">
           <Button disabled={save.isPending} onClick={() => save.mutate()}>{t("actions.save")}</Button>

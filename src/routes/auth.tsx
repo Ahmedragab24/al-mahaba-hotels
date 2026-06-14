@@ -27,13 +27,8 @@ export const Route = createFileRoute("/auth")({
 
 const DEMO_ROLES = [
   "super_admin",
-  "admin",
   "sales_manager",
-  "sales_agent",
-  "operations_manager",
-  "operations_agent",
   "finance_manager",
-  "finance_agent",
   "viewer",
 ] as const;
 

@@ -86,11 +86,11 @@ function SupplierApplicationsPage() {
 
   return (
     <div className="p-6 space-y-4">
-      <PageHeader title={t("supplier.applications.title")} subtitle={t("supplier.applications.subtitle")} />
+      <PageHeader title={t("supplier.applications.title")} subtitle={t("supplier.applications.subtitle")} children={
+        <Input placeholder={t("actions.search")} value={search} onChange={(e) => setSearch(e.target.value)} className="w-full" />
+      } />
 
-      <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
-        <Input placeholder={t("actions.search")} value={search} onChange={(e) => setSearch(e.target.value)} className="sm:max-w-xs" />
-      </div>
+
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>

@@ -1,10 +1,10 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/hooks/use-auth";
-import { useFacilities, useSuppliersLite } from "@/lib/lookups";
+import { useFacilities, useSuppliersLite, useHotelViews } from "@/lib/lookups";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -23,6 +23,10 @@ import { ConfirmDialog } from "@/components/confirm-dialog";
 import { ArrowLeft, Pencil, Plus, Trash2, Star } from "lucide-react";
 import { formatDateTime } from "@/lib/format";
 import { toast } from "sonner";
+import { RoomTypeDialog } from "../room-types/-dialog";
+import { MealPlanSelector, MEAL_PLANS } from "@/components/meal-plan-selector";
+import { MealPlanConfigurator } from "@/components/meal-plan-configurator";
+import { useLocation } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_authenticated/hotels/$id")({
   validateSearch: (s: Record<string, unknown>) =>
@@ -78,7 +82,7 @@ function HotelDetail() {
       <PageHeader
         title={displayName}
         subtitle={`${h.code}${h.brand ? " · " + h.brand : ""}${h.star_rating ? " · " + "★".repeat(h.star_rating) : ""}`}
-        actions={
+        children={
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => navigate({ to: "/hotels" })}>
               <ArrowLeft className="h-4 w-4 rtl:rotate-180" />{t("actions.back")}
@@ -231,60 +235,13 @@ function RoomsTab({ hotelId, canWrite }: { hotelId: string; canWrite: boolean })
           ))}
         </TableBody>
       </Table>
-      <RoomDialog open={open} onOpenChange={setOpen} hotelId={hotelId} initial={editing}
+      <RoomTypeDialog open={open} onOpenChange={setOpen} fixedHotelId={hotelId} initial={editing}
         onSaved={() => qc.invalidateQueries({ queryKey: ["hotel-rooms", hotelId] })} />
       <ConfirmDialog open={!!delId} onOpenChange={(v) => !v && setDelId(null)} title={t("actions.delete")} description={t("toast.confirm_delete")} destructive onConfirm={() => delId && del.mutate(delId)} />
     </CardContent></Card>
   );
 }
-function RoomDialog({ open, onOpenChange, hotelId, initial, onSaved }: any) {
-  const { t } = useI18n();
-  const [v, setV] = useState<any>({});
-  const isEdit = !!initial?.id;
-  const save = useMutation({
-    mutationFn: async () => {
-      if (!v.code?.trim() || !v.name_en?.trim() || !v.name_ar?.trim()) throw new Error(t("label.required"));
-      const payload: any = {
-        hotel_id: hotelId,
-        code: v.code.trim(), name_en: v.name_en.trim(), name_ar: v.name_ar.trim(),
-        max_adults: Number(v.max_adults ?? 2), max_children: Number(v.max_children ?? 0),
-        max_occupancy: Number(v.max_occupancy ?? (Number(v.max_adults ?? 2) + Number(v.max_children ?? 0))),
-        bed_type: v.bed_type || null, size_sqm: v.size_sqm ? Number(v.size_sqm) : null,
-        description_en: v.description_en || null, description_ar: v.description_ar || null,
-        is_active: v.is_active ?? true, sort_order: Number(v.sort_order ?? 0),
-      };
-      if (isEdit) { const { error } = await supabase.from("hotel_room_types").update(payload).eq("id", initial.id); if (error) throw error; }
-      else { const { error } = await supabase.from("hotel_room_types").insert(payload); if (error) throw error; }
-    },
-    onSuccess: () => { toast.success(t("toast.saved")); onSaved(); onOpenChange(false); },
-    onError: (e: any) => toast.error(e.message),
-  });
-  return (
-    <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if (o) setV(initial ?? { max_adults: 2, max_children: 0, max_occupancy: 2, is_active: true, sort_order: 0 }); }}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader><DialogTitle>{isEdit ? t("actions.edit") : t("actions.add")} — {t("hotels.rooms")}</DialogTitle></DialogHeader>
-        <div className="grid gap-3 md:grid-cols-2">
-          <Field label={`${t("label.code")} *`}><Input value={v.code ?? ""} onChange={(e) => setV({ ...v, code: e.target.value })} /></Field>
-          <Field label={t("label.bed_type")}><Input value={v.bed_type ?? ""} onChange={(e) => setV({ ...v, bed_type: e.target.value })} /></Field>
-          <Field label={`${t("label.name_en")} *`}><Input dir="ltr" value={v.name_en ?? ""} onChange={(e) => setV({ ...v, name_en: e.target.value })} /></Field>
-          <Field label={`${t("label.name_ar")} *`}><Input dir="rtl" value={v.name_ar ?? ""} onChange={(e) => setV({ ...v, name_ar: e.target.value })} /></Field>
-          <Field label={t("label.max_adults")}><Input type="number" min={1} value={v.max_adults ?? 2} onChange={(e) => setV({ ...v, max_adults: e.target.value })} /></Field>
-          <Field label={t("label.max_children")}><Input type="number" min={0} value={v.max_children ?? 0} onChange={(e) => setV({ ...v, max_children: e.target.value })} /></Field>
-          <Field label={t("label.max_occupancy")}><Input type="number" min={1} value={v.max_occupancy ?? 2} onChange={(e) => setV({ ...v, max_occupancy: e.target.value })} /></Field>
-          <Field label={t("label.size_sqm")}><Input type="number" step="0.01" value={v.size_sqm ?? ""} onChange={(e) => setV({ ...v, size_sqm: e.target.value })} /></Field>
-          <Field label={t("label.sort_order")}><Input type="number" value={v.sort_order ?? 0} onChange={(e) => setV({ ...v, sort_order: e.target.value })} /></Field>
-          <label className="flex items-center gap-2 text-sm self-end"><Checkbox checked={!!v.is_active} onCheckedChange={(x) => setV({ ...v, is_active: !!x })} />{t("label.is_active")}</label>
-          <Field label={`${t("label.description")} (EN)`}><Textarea rows={2} dir="ltr" value={v.description_en ?? ""} onChange={(e) => setV({ ...v, description_en: e.target.value })} /></Field>
-          <Field label={`${t("label.description")} (AR)`}><Textarea rows={2} dir="rtl" value={v.description_ar ?? ""} onChange={(e) => setV({ ...v, description_ar: e.target.value })} /></Field>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>{t("actions.cancel")}</Button>
-          <Button onClick={() => save.mutate()} disabled={save.isPending}>{save.isPending ? t("actions.saving") : t("actions.save")}</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
+
 
 /* ---------- Views ---------- */
 function ViewsTab({ hotelId, canWrite }: { hotelId: string; canWrite: boolean }) {
@@ -371,92 +328,77 @@ function ViewDialog({ open, onOpenChange, hotelId, initial, onSaved }: any) {
 function MealsTab({ hotelId, canWrite }: { hotelId: string; canWrite: boolean }) {
   const { t, lang } = useI18n();
   const qc = useQueryClient();
-  const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState<any>(null);
-  const [delId, setDelId] = useState<string | null>(null);
   const q = useQuery({
     queryKey: ["hotel-meals", hotelId],
     queryFn: async () => (await supabase.from("hotel_meal_plans").select("*").eq("hotel_id", hotelId)).data ?? [],
   });
-  const del = useMutation({
-    mutationFn: async (rid: string) => { const { error } = await supabase.from("hotel_meal_plans").delete().eq("id", rid); if (error) throw error; },
-    onSuccess: () => { toast.success(t("toast.deleted")); qc.invalidateQueries({ queryKey: ["hotel-meals", hotelId] }); setDelId(null); },
-  });
-  return (
-    <Card><CardContent className="p-0">
-      <div className="flex items-center justify-between border-b p-3">
-        <h3 className="font-medium">{t("hotels.meal_plans")}</h3>
-        {canWrite && <Button size="sm" onClick={() => { setEditing(null); setOpen(true); }}><Plus className="h-4 w-4" />{t("actions.add")}</Button>}
-      </div>
-      <Table>
-        <TableHeader><TableRow>
-          <TableHead>{t("label.code")}</TableHead><TableHead>{t("label.name")}</TableHead>
-          <TableHead>{t("label.description")}</TableHead>
-          <TableHead>{t("label.is_active")}</TableHead><TableHead></TableHead>
-        </TableRow></TableHeader>
-        <TableBody>
-          {q.data?.length === 0 && <TableRow><TableCell colSpan={5} className="py-10 text-center text-muted-foreground">{t("empty.title")}</TableCell></TableRow>}
-          {q.data?.map((r: any) => (
-            <TableRow key={r.id}>
-              <TableCell><Badge variant="outline">{r.board}</Badge> <span className="ms-2 text-xs text-muted-foreground">{t(`board.${r.board}`)}</span></TableCell>
-              <TableCell>{lang === "ar" ? r.name_ar : r.name_en}</TableCell>
-              <TableCell className="text-xs text-muted-foreground line-clamp-2">{lang === "ar" ? r.description_ar : r.description_en}</TableCell>
-              <TableCell>{r.is_active ? <Badge>{t("status.active")}</Badge> : <Badge variant="secondary">{t("status.inactive")}</Badge>}</TableCell>
-              <TableCell className="text-end">
-                {canWrite && <>
-                  <Button variant="ghost" size="icon" onClick={() => { setEditing(r); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
-                  <Button variant="ghost" size="icon" onClick={() => setDelId(r.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                </>}
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-      <MealDialog open={open} onOpenChange={setOpen} hotelId={hotelId} initial={editing} onSaved={() => qc.invalidateQueries({ queryKey: ["hotel-meals", hotelId] })} />
-      <ConfirmDialog open={!!delId} onOpenChange={(v) => !v && setDelId(null)} title={t("actions.delete")} description={t("toast.confirm_delete")} destructive onConfirm={() => delId && del.mutate(delId)} />
-    </CardContent></Card>
-  );
-}
-function MealDialog({ open, onOpenChange, hotelId, initial, onSaved }: any) {
-  const { t } = useI18n();
-  const [v, setV] = useState<any>({});
-  const isEdit = !!initial?.id;
+
+  const [mealsIncluded, setMealsIncluded] = useState(true);
+  const [mealPlanComponents, setMealPlanComponents] = useState<string[]>([]);
+
+  // Initialize mealPlanComponents from query data
+  useEffect(() => {
+    if (q.data) {
+      setMealPlanComponents(q.data.map((r: any) => r.board));
+    }
+  }, [q.data]);
+
   const save = useMutation({
     mutationFn: async () => {
-      if (!v.board || !v.name_en?.trim() || !v.name_ar?.trim()) throw new Error(t("label.required"));
-      const payload: any = {
-        hotel_id: hotelId, board: v.board, name_en: v.name_en.trim(), name_ar: v.name_ar.trim(),
-        description_en: v.description_en || null, description_ar: v.description_ar || null, is_active: v.is_active ?? true,
-      };
-      if (isEdit) { const { error } = await supabase.from("hotel_meal_plans").update(payload).eq("id", initial.id); if (error) throw error; }
-      else { const { error } = await supabase.from("hotel_meal_plans").insert(payload); if (error) throw error; }
+      const currentBoards = q.data?.map((r: any) => r.board) || [];
+      const toDelete = currentBoards.filter((b: string) => !mealPlanComponents.includes(b));
+      const toAdd = mealPlanComponents.filter(b => !currentBoards.includes(b));
+
+      if (toDelete.length > 0) {
+        const { error } = await supabase.from("hotel_meal_plans").delete().eq("hotel_id", hotelId).in("board", toDelete);
+        if (error) throw error;
+      }
+
+      if (toAdd.length > 0) {
+        const payloads = toAdd.map(b => {
+          const mealDef = MEAL_PLANS.find(m => m.id === b);
+          return {
+            hotel_id: hotelId,
+            board: b as "RO" | "BB" | "HB" | "FB" | "AI" | "UAI",
+            name_en: mealDef?.label_en || b,
+            name_ar: mealDef?.label_ar || b,
+            description_en: "",
+            description_ar: "",
+            is_active: true
+          };
+        });
+        const { error } = await supabase.from("hotel_meal_plans").insert(payloads);
+        if (error) throw error;
+      }
     },
-    onSuccess: () => { toast.success(t("toast.saved")); onSaved(); onOpenChange(false); },
+    onSuccess: () => { 
+      toast.success(t("toast.saved")); 
+      qc.invalidateQueries({ queryKey: ["hotel-meals", hotelId] }); 
+      qc.invalidateQueries({ queryKey: ["hotel-counts", hotelId] });
+    },
     onError: (e: any) => toast.error(e.message),
   });
+
   return (
-    <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if (o) setV(initial ?? { board: "BB", is_active: true }); }}>
-      <DialogContent>
-        <DialogHeader><DialogTitle>{isEdit ? t("actions.edit") : t("actions.add")} — {t("hotels.meal_plans")}</DialogTitle></DialogHeader>
-        <div className="grid gap-3">
-          <Field label={`${t("label.type")} *`}>
-            <Select value={v.board ?? ""} onValueChange={(x) => setV({ ...v, board: x })} disabled={isEdit}>
-              <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
-              <SelectContent>{BOARDS.map((b) => <SelectItem key={b} value={b}>{b} — {t(`board.${b}`)}</SelectItem>)}</SelectContent>
-            </Select>
-          </Field>
-          <Field label={`${t("label.name_en")} *`}><Input dir="ltr" value={v.name_en ?? ""} onChange={(e) => setV({ ...v, name_en: e.target.value })} /></Field>
-          <Field label={`${t("label.name_ar")} *`}><Input dir="rtl" value={v.name_ar ?? ""} onChange={(e) => setV({ ...v, name_ar: e.target.value })} /></Field>
-          <Field label={`${t("label.description")} (EN)`}><Textarea rows={2} dir="ltr" value={v.description_en ?? ""} onChange={(e) => setV({ ...v, description_en: e.target.value })} /></Field>
-          <Field label={`${t("label.description")} (AR)`}><Textarea rows={2} dir="rtl" value={v.description_ar ?? ""} onChange={(e) => setV({ ...v, description_ar: e.target.value })} /></Field>
-          <label className="flex items-center gap-2 text-sm"><Checkbox checked={!!v.is_active} onCheckedChange={(x) => setV({ ...v, is_active: !!x })} />{t("label.is_active")}</label>
+    <Card><CardContent className="p-6">
+      <MealPlanConfigurator
+        mealsIncluded={mealsIncluded}
+        onMealsIncludedChange={setMealsIncluded}
+        mealPlanComponents={mealPlanComponents}
+        onMealPlanComponentsChange={setMealPlanComponents}
+        currency={"USD"}
+        prices={{}}
+        onPriceChange={() => {}}
+        lang={lang as any}
+      />
+      {canWrite && (
+        <div className="mt-8 flex justify-end">
+          <Button onClick={() => save.mutate()} disabled={save.isPending}>
+            {t("actions.save")}
+          </Button>
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>{t("actions.cancel")}</Button>
-          <Button onClick={() => save.mutate()} disabled={save.isPending}>{t("actions.save")}</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      )}
+    </CardContent></Card>
   );
 }
 

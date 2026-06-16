@@ -14,7 +14,7 @@ function CreateRate() {
   const navigate = useNavigate();
   return (
     <>
-      <PageHeader title={t("rates.new")} actions={
+      <PageHeader title={t("rates.new")} children={
         <Button variant="outline" size="sm" onClick={() => navigate({ to: "/rates" })}>
           <ArrowLeft className="h-4 w-4 rtl:rotate-180" />{t("actions.back")}
         </Button>

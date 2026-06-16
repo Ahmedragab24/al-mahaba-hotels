@@ -103,16 +103,14 @@ export function SupplierForm({ initial, onSaved }: { initial?: any; onSaved: (id
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit((v) => mut.mutate(v))} className="space-y-4">
-        <Card><CardContent className="grid gap-4 p-6 md:grid-cols-3">
+        <Card><CardContent className="grid gap-4 p-6 md:grid-cols-2">
           <FormField control={form.control} name="name_en" render={({ field }) => (
             <FormItem><FormLabel>{t("label.name_en")} *</FormLabel><FormControl><Input dir="ltr" {...field} /></FormControl><FormMessage /></FormItem>
           )} />
           <FormField control={form.control} name="name_ar" render={({ field }) => (
             <FormItem><FormLabel>{t("label.name_ar")} *</FormLabel><FormControl><Input dir="rtl" {...field} /></FormControl><FormMessage /></FormItem>
           )} />
-          <FormField control={form.control} name="legal_name" render={({ field }) => (
-            <FormItem><FormLabel>{t("label.legal_name")}</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-          )} />
+
           <FormField control={form.control} name="supplier_type" render={({ field }) => (
             <FormItem><FormLabel>{t("filter.type")} *</FormLabel>
               <Select value={field.value} onValueChange={field.onChange}>
@@ -129,9 +127,7 @@ export function SupplierForm({ initial, onSaved }: { initial?: any; onSaved: (id
                 </SelectContent>
               </Select><FormMessage /></FormItem>
           )} />
-          <FormField control={form.control} name="tags" render={({ field }) => (
-            <FormItem><FormLabel>{t("label.tags")}</FormLabel><FormControl><Input placeholder="vip, partner" {...field} /></FormControl><FormMessage /></FormItem>
-          )} />
+
         </CardContent></Card>
 
         <Card><CardContent className="grid gap-4 p-6 md:grid-cols-3">
@@ -149,15 +145,10 @@ export function SupplierForm({ initial, onSaved }: { initial?: any; onSaved: (id
                 <SelectContent>{currencies.data?.map((c) => <SelectItem key={c.code} value={c.code}>{c.code} — {lang === "ar" ? c.name_ar : c.name_en}</SelectItem>)}</SelectContent>
               </Select><FormMessage /></FormItem>
           )} />
-          <FormField control={form.control} name="credit_days" render={({ field }) => (
-            <FormItem><FormLabel>{t("label.credit_days")}</FormLabel><FormControl><Input type="number" min={0} {...field} /></FormControl><FormMessage /></FormItem>
-          )} />
-          <FormField control={form.control} name="payment_terms" render={({ field }) => (
-            <FormItem className="md:col-span-2"><FormLabel>{t("label.payment_terms")}</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-          )} />
+
         </CardContent></Card>
 
-        <Card><CardContent className="grid gap-4 p-6 md:grid-cols-3">
+        <Card><CardContent className="grid gap-4 p-6 md:grid-cols-2">
           <div className="md:col-span-3 text-sm font-medium text-muted-foreground">{t("suppliers.address")}</div>
           <FormField control={form.control} name="country_code" render={({ field }) => (
             <FormItem><FormLabel>{t("label.country")}</FormLabel>
@@ -182,9 +173,7 @@ export function SupplierForm({ initial, onSaved }: { initial?: any; onSaved: (id
           <FormField control={form.control} name="phone" render={({ field }) => (
             <FormItem><FormLabel>{t("label.phone")}</FormLabel><FormControl><Input dir="ltr" {...field} /></FormControl><FormMessage /></FormItem>
           )} />
-          <FormField control={form.control} name="mobile" render={({ field }) => (
-            <FormItem><FormLabel>{t("label.mobile")}</FormLabel><FormControl><Input dir="ltr" {...field} /></FormControl><FormMessage /></FormItem>
-          )} />
+
           <FormField control={form.control} name="email" render={({ field }) => (
             <FormItem><FormLabel>{t("label.email")}</FormLabel><FormControl><Input type="email" dir="ltr" {...field} /></FormControl><FormMessage /></FormItem>
           )} />
@@ -197,7 +186,7 @@ export function SupplierForm({ initial, onSaved }: { initial?: any; onSaved: (id
         </CardContent></Card>
 
         <div className="flex justify-end gap-2">
-          <Button type="submit" disabled={mut.isPending}>
+          <Button className="w-[200px]" type="submit" disabled={mut.isPending}>
             {mut.isPending ? t("actions.saving") : t("actions.save")}
           </Button>
         </div>

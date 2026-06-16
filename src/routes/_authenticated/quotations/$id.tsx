@@ -10,7 +10,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import { ArrowLeft, Pencil, Send, Check, X, Undo2, Printer, Ban, Clock, RotateCcw, MessageCircle } from "lucide-react";
+import { ArrowLeft, Pencil, Send, Check, X, Undo2, Printer, Ban, Clock, RotateCcw, MessageCircle, ThumbsUp } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { toast } from "sonner";
 import { dbErrorMessage } from "@/lib/db-errors";
@@ -152,7 +153,7 @@ function QuotationDetail() {
       <PageHeader
         title={`${r.quotation_no} — ${customerName ?? ""}`}
         subtitle={`${formatDate(r.quotation_date)} → ${formatDate(r.expiry_date)} · ${r.currency} · ${t("quotes.creator")}: ${(lang === "ar" ? creator.data?.full_name_ar : creator.data?.full_name_en) || creator.data?.email || "—"} (${formatDateTime(r.created_at, lang)})`}
-        actions={
+        children={
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => navigate({ to: "/quotations" })}>
               <ArrowLeft className="h-4 w-4 rtl:rotate-180" />{t("actions.back")}
@@ -220,6 +221,14 @@ function QuotationDetail() {
                   <KV k={t("quotes.quotation_date")} v={formatDate(r.quotation_date)} />
                   <KV k={t("quotes.travel_date")} v={r.travel_date ? formatDate(r.travel_date) : "—"} />
                   <KV k={t("quotes.expiry_date")} v={formatDate(r.expiry_date)} />
+                  <KV k={lang === "ar" ? "توصية الشركة" : "Company Recommendation"} v={r.is_recommended ? (
+                    <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-800 flex items-center gap-1 w-fit">
+                      <ThumbsUp className="h-3 w-3 fill-current" />
+                      {lang === "ar" ? "عرض موصى به للعميل" : "Recommended Offer for Customer"}
+                    </Badge>
+                  ) : (
+                    lang === "ar" ? "عرض عادي" : "Standard Offer"
+                  )} />
                   <KV k={t("label.notes")} v={r.notes ?? "—"} />
                 </CardContent>
               </Card>

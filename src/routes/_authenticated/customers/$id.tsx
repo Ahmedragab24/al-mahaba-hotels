@@ -35,7 +35,7 @@ function CustomerDetail() {
   const auth = useAuth();
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const canWrite = auth.hasAnyRole(["super_admin","admin","sales_manager","sales_agent","operations_manager"]);
+  const canWrite = auth.hasAnyRole(["super_admin", "admin", "sales_manager", "sales_agent", "operations_manager"]);
   const [editing, setEditing] = useState(!!search.edit);
 
   const cust = useQuery({
@@ -73,7 +73,7 @@ function CustomerDetail() {
       <PageHeader
         title={displayName}
         subtitle={`${c.code} · ${t(`ctype.${c.customer_type}`)}`}
-        actions={
+        children={
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={() => navigate({ to: "/customers" })}>
               <ArrowLeft className="h-4 w-4 rtl:rotate-180" />{t("actions.back")}
@@ -364,7 +364,7 @@ function CommunicationsTab({ customerId, canWrite }: { customerId: string; canWr
                   <Field label={t("label.channel")}>
                     <Select value={v.channel ?? "note"} onValueChange={x => setV({ ...v, channel: x })}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>{["email","phone","whatsapp","meeting","note","other"].map(c => <SelectItem key={c} value={c}>{t(`channel.${c}`)}</SelectItem>)}</SelectContent>
+                      <SelectContent>{["email", "phone", "whatsapp", "meeting", "note", "other"].map(c => <SelectItem key={c} value={c}>{t(`channel.${c}`)}</SelectItem>)}</SelectContent>
                     </Select>
                   </Field>
                   <Field label={t("label.direction")}>
@@ -377,7 +377,7 @@ function CommunicationsTab({ customerId, canWrite }: { customerId: string; canWr
                 <Field label={t("label.subject")}><Input value={v.subject ?? ""} onChange={e => setV({ ...v, subject: e.target.value })} /></Field>
                 <Field label={t("label.message")}><Textarea rows={4} value={v.body ?? ""} onChange={e => setV({ ...v, body: e.target.value })} /></Field>
                 <Field label={t("label.occurred_at")}>
-                  <Input type="datetime-local" value={v.occurred_at?.slice(0,16) ?? ""} onChange={e => setV({ ...v, occurred_at: e.target.value ? new Date(e.target.value).toISOString() : "" })} />
+                  <Input type="datetime-local" value={v.occurred_at?.slice(0, 16) ?? ""} onChange={e => setV({ ...v, occurred_at: e.target.value ? new Date(e.target.value).toISOString() : "" })} />
                 </Field>
               </div>
               <DialogFooter><Button variant="outline" onClick={() => setOpen(false)}>{t("actions.cancel")}</Button><Button onClick={() => save.mutate()} disabled={save.isPending}>{t("actions.save")}</Button></DialogFooter>

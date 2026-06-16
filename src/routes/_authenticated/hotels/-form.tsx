@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { ImageUpload } from "@/components/image-upload";
 
 const schema = z.object({
   name_en: z.string().trim().min(1).max(200),
@@ -130,9 +131,24 @@ export function HotelForm({ initial, onSaved }: { initial?: any; onSaved: (id: s
                 </SelectContent>
               </Select><FormMessage /></FormItem>
           )} />
-          <FormField control={form.control} name="cover_image_path" render={({ field }) => (
-            <FormItem><FormLabel>{t("label.cover_image")}</FormLabel><FormControl><Input dir="ltr" {...field} /></FormControl><FormMessage /></FormItem>
-          )} />
+
+          <div className="md:col-span-2">
+            <FormField control={form.control} name="cover_image_path" render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t("label.cover_image")}</FormLabel>
+                <FormControl>
+                  <ImageUpload
+                    value={field.value || ""}
+                    onChange={field.onChange}
+                    lang={lang}
+                    pathPrefix="hotels/covers"
+                    className="h-70"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+          </div>
         </CardContent></Card>
 
         <Card><CardContent className="grid gap-4 p-6 md:grid-cols-3">
@@ -208,7 +224,7 @@ export function HotelForm({ initial, onSaved }: { initial?: any; onSaved: (id: s
         </CardContent></Card>
 
         <div className="flex justify-end gap-2">
-          <Button type="submit" disabled={mut.isPending}>
+          <Button className="w-[300px]" type="submit" disabled={mut.isPending}>
             {mut.isPending ? t("actions.saving") : t("actions.save")}
           </Button>
         </div>

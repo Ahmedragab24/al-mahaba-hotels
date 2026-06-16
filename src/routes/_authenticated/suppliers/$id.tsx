@@ -76,7 +76,7 @@ function SupplierDetail() {
       <PageHeader
         title={displayName}
         subtitle={`${s.code} · ${t(`stype.${s.supplier_type}`, s.supplier_type)}${s.rating ? " · ★ " + Number(s.rating).toFixed(1) : ""}`}
-        actions={
+        children={
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={() => navigate({ to: "/suppliers" })}>
               <ArrowLeft className="h-4 w-4 rtl:rotate-180" />{t("actions.back")}
@@ -109,25 +109,21 @@ function SupplierDetail() {
                 <KV label={t("label.status")} value={t(`status.${s.status}`)} />
                 <KV label={t("label.name_en")} value={s.name_en} />
                 <KV label={t("label.name_ar")} value={s.name_ar} />
-                <KV label={t("label.legal_name")} value={s.legal_name} />
+
                 <KV label={t("label.tax_number")} value={s.tax_number} />
                 <KV label={t("label.cr")} value={s.commercial_registration} />
                 <KV label={t("label.currency")} value={s.currency ? `${s.currency.code} ${s.currency.symbol ?? ""}` : ""} />
-                <KV label={t("label.credit_days")} value={s.credit_days} />
-                <KV label={t("label.payment_terms")} value={s.payment_terms} />
+
                 <KV label={t("label.rating")} value={s.rating ? Number(s.rating).toFixed(2) : ""} />
                 <KV label={t("label.country")} value={s.country ? (lang === "ar" ? s.country.name_ar : s.country.name_en) : ""} />
                 <KV label={t("label.city")} value={s.city ? (lang === "ar" ? s.city.name_ar : s.city.name_en) : ""} />
                 <KV label={t("label.address")} value={[s.address_line1, s.address_line2].filter(Boolean).join(", ")} />
                 <KV label={t("label.phone")} value={s.phone} />
-                <KV label={t("label.mobile")} value={s.mobile} />
+
                 <KV label={t("label.email")} value={s.email} />
                 <KV label={t("label.website")} value={s.website} />
                 <KV label={t("label.created_at")} value={formatDateTime(s.created_at, lang)} />
-                {s.tags?.length ? (
-                  <div className="md:col-span-3"><div className="text-xs text-muted-foreground mb-1">{t("label.tags")}</div>
-                    <div className="flex flex-wrap gap-1">{s.tags.map((tg: string) => <Badge key={tg} variant="secondary">{tg}</Badge>)}</div></div>
-                ) : null}
+
                 {s.notes && (
                   <div className="md:col-span-3 space-y-1"><div className="text-xs text-muted-foreground">{t("label.notes")}</div>
                     <div className="whitespace-pre-wrap">{s.notes}</div></div>
@@ -367,7 +363,7 @@ function ContractDialog({ open, onOpenChange, supplierId, initial, onSaved }: an
           </Field>
           <Field label={t("label.commission_pct")}><Input type="number" step="0.01" min={0} max={100} value={v.commission_pct ?? ""} onChange={(e) => setV({ ...v, commission_pct: e.target.value })} /></Field>
           <Field label={t("label.file")}><Input dir="ltr" value={v.file_path ?? ""} onChange={(e) => setV({ ...v, file_path: e.target.value })} /></Field>
-          <div /> 
+          <div />
           <div className="md:col-span-3"><Field label={t("label.payment_terms")}><Textarea rows={2} value={v.payment_terms ?? ""} onChange={(e) => setV({ ...v, payment_terms: e.target.value })} /></Field></div>
           <div className="md:col-span-3"><Field label={t("rates.cancellation")}><Textarea rows={2} value={v.cancellation_terms ?? ""} onChange={(e) => setV({ ...v, cancellation_terms: e.target.value })} /></Field></div>
           <div className="md:col-span-3"><Field label={t("label.notes")}><Textarea rows={2} value={v.notes ?? ""} onChange={(e) => setV({ ...v, notes: e.target.value })} /></Field></div>

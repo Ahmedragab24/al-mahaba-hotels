@@ -16,6 +16,7 @@ import { Plus, Trash2, Check, X, Trophy, FileOutput } from "lucide-react";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { dbErrorMessage } from "@/lib/db-errors";
 import { toast } from "sonner";
+import { useCurrencies } from "@/lib/lookups";
 import { useRfqItems, rfqItemLabel } from "./-items";
 
 const APPROVER_ROLES = ["super_admin", "admin", "sales_manager", "operations_manager"] as const;
@@ -171,6 +172,7 @@ export function RfqResponsesTab({ rfqId, rfqStatus, currency }: { rfqId: string;
   const { t, lang } = useI18n();
   const auth = useAuth();
   const qc = useQueryClient();
+  const currencies = useCurrencies();
   const canApprove = auth.hasAnyRole([...APPROVER_ROLES]);
   const canRespond = ["sent", "partial"].includes(rfqStatus);
   const [open, setOpen] = useState(false);
@@ -334,7 +336,16 @@ export function RfqResponsesTab({ rfqId, rfqStatus, currency }: { rfqId: string;
             </div>
             <div className="space-y-1.5">
               <label className="text-sm">{t("label.currency")}</label>
-              <Input value={form.currency} onChange={(e) => set("currency", e.target.value.toUpperCase().slice(0, 3))} dir="ltr" />
+              <Select value={form.currency} onValueChange={(val) => set("currency", val)}>
+                <SelectTrigger className="w-full"><SelectValue placeholder={t("label.currency")} /></SelectTrigger>
+                <SelectContent>
+                  {currencies.data?.map((c) => (
+                    <SelectItem key={c.code} value={c.code}>
+                      {c.code}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-1.5">
               <label className="text-sm">{t("rfq.resp.release")}</label>

@@ -104,7 +104,7 @@ function RateDetail() {
       <PageHeader
         title={`${r.code} — ${hotelName}`}
         subtitle={`${supplierName} · ${formatDate(r.valid_from)} → ${formatDate(r.valid_to)}`}
-        actions={
+        children={
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" size="sm" onClick={() => navigate({ to: "/rates" })}>
               <ArrowLeft className="h-4 w-4 rtl:rotate-180" />{t("actions.back")}

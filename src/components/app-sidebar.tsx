@@ -104,6 +104,10 @@ const finance: NavItem[] = [
     to: "/invoices", labelKey: "nav.invoices", icon: ReceiptText,
     roles: ["super_admin", "admin", "finance_manager", "finance_agent"]
   },
+  {
+    to: "/receivables", labelKey: "nav.receivables", icon: Landmark,
+    roles: ["super_admin", "admin", "finance_manager", "finance_agent", "sales_manager"]
+  },
   /* Hidden temporarily
   { to: "/receipts", labelKey: "nav.receipts", icon: Wallet,
     roles: ["super_admin","admin","finance_manager","finance_agent"] },

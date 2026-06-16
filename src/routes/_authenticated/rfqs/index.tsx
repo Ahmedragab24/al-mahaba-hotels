@@ -9,9 +9,9 @@ import { useDebounce } from "@/lib/use-debounce";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DataPagination } from "@/components/data-pagination";
 import {
   Plus, Search, Eye, X, Mailbox, Hourglass, PackageCheck, CheckCircle2, XCircle,
@@ -29,7 +29,7 @@ const PAGE_SIZE = 20;
 export function RStatusBadge({ status, t }: { status: string; t: (k: string, f?: string) => string }) {
   const variant = status === "rejected" || status === "cancelled" ? "destructive"
     : status === "draft" || status === "expired" ? "outline"
-    : "default";
+      : "default";
   const cls = status === "approved" || status === "completed" ? "bg-emerald-600 text-white hover:bg-emerald-600" : undefined;
   return <Badge variant={variant as any} className={cls}>{t(`rstatus.${status}`)}</Badge>;
 }
@@ -38,7 +38,7 @@ function RfqList() {
   const { t, lang } = useI18n();
   const auth = useAuth();
   const navigate = useNavigate();
-  const canWrite = auth.hasAnyRole(["super_admin","admin","sales_manager","sales_agent","operations_manager","operations_agent"]);
+  const canWrite = auth.hasAnyRole(["super_admin", "admin", "sales_manager", "sales_agent", "operations_manager", "operations_agent"]);
 
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
@@ -69,10 +69,10 @@ function RfqList() {
         draft: by("draft"),
         sent: by("sent"),
         partial: by("partial"),
-        waiting: by("sent","partial"),
+        waiting: by("sent", "partial"),
         completed: by("completed"),
         approved: by("approved"),
-        rejected: by("rejected","cancelled"),
+        rejected: by("rejected", "cancelled"),
         expired: by("expired"),
         avgDays: avg,
       };
@@ -107,14 +107,14 @@ function RfqList() {
   ), [canWrite, navigate, t]);
 
   const quickFilters: { key: string; label: string; count?: number; tone: KpiTone }[] = [
-    { key: "all",       label: t("filter.all"),       count: metrics.data?.total,     tone: "primary" },
-    { key: "draft",     label: t("rstatus.draft"),    count: metrics.data?.draft,     tone: "muted" },
-    { key: "sent",      label: t("rstatus.sent"),     count: metrics.data?.sent,      tone: "info" },
-    { key: "partial",   label: t("rstatus.partial"),  count: metrics.data?.partial,   tone: "warning" },
-    { key: "completed", label: t("rstatus.completed"),count: metrics.data?.completed, tone: "success" },
-    { key: "approved",  label: t("rstatus.approved"), count: metrics.data?.approved,  tone: "success" },
-    { key: "rejected",  label: t("rstatus.rejected"), count: metrics.data?.rejected,  tone: "destructive" },
-    { key: "expired",   label: t("rstatus.expired"),  count: metrics.data?.expired,   tone: "muted" },
+    { key: "all", label: t("filter.all"), count: metrics.data?.total, tone: "primary" },
+    { key: "draft", label: t("rstatus.draft"), count: metrics.data?.draft, tone: "muted" },
+    { key: "sent", label: t("rstatus.sent"), count: metrics.data?.sent, tone: "info" },
+    { key: "partial", label: t("rstatus.partial"), count: metrics.data?.partial, tone: "warning" },
+    { key: "completed", label: t("rstatus.completed"), count: metrics.data?.completed, tone: "success" },
+    { key: "approved", label: t("rstatus.approved"), count: metrics.data?.approved, tone: "success" },
+    { key: "rejected", label: t("rstatus.rejected"), count: metrics.data?.rejected, tone: "destructive" },
+    { key: "expired", label: t("rstatus.expired"), count: metrics.data?.expired, tone: "muted" },
   ];
 
   return (
@@ -122,17 +122,17 @@ function RfqList() {
       <PageHeader
         title={t("rfq.title")}
         subtitle={`${total} ${t("label.total")}`}
-        actions={actions}
+        children={actions}
       />
       <div className="space-y-5 p-4 sm:p-6">
         {/* KPI cards */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          <KpiCard icon={Mailbox}      tone="primary" label={t("dash.rfq_total")}       value={metrics.data?.total}     active={status==="all"}       onClick={() => setStatusAndReset("all")} />
-          <KpiCard icon={Hourglass}    tone="warning" label={t("dash.rfq_waiting")}     value={metrics.data?.waiting}   active={status==="sent"}      onClick={() => setStatusAndReset("sent")} />
-          <KpiCard icon={PackageCheck} tone="success" label={t("dash.rfq_completed")}   value={metrics.data?.completed} active={status==="completed"} onClick={() => setStatusAndReset("completed")} />
-          <KpiCard icon={CheckCircle2} tone="success" label={t("dash.rfq_approved")}    value={metrics.data?.approved}  active={status==="approved"}  onClick={() => setStatusAndReset("approved")} />
-          <KpiCard icon={XCircle}      tone="muted"   label={t("dash.rfq_expired")}     value={metrics.data?.expired}   active={status==="expired"}   onClick={() => setStatusAndReset("expired")} />
-          <KpiCard icon={Timer}        tone="info"    label={t("dash.rfq_avg_response")} value={metrics.data?.avgDays} />
+          <KpiCard icon={Mailbox} tone="primary" label={t("dash.rfq_total")} value={metrics.data?.total} active={status === "all"} onClick={() => setStatusAndReset("all")} />
+          <KpiCard icon={Hourglass} tone="warning" label={t("dash.rfq_waiting")} value={metrics.data?.waiting} active={status === "sent"} onClick={() => setStatusAndReset("sent")} />
+          <KpiCard icon={PackageCheck} tone="success" label={t("dash.rfq_completed")} value={metrics.data?.completed} active={status === "completed"} onClick={() => setStatusAndReset("completed")} />
+          <KpiCard icon={CheckCircle2} tone="success" label={t("dash.rfq_approved")} value={metrics.data?.approved} active={status === "approved"} onClick={() => setStatusAndReset("approved")} />
+          <KpiCard icon={XCircle} tone="muted" label={t("dash.rfq_expired")} value={metrics.data?.expired} active={status === "expired"} onClick={() => setStatusAndReset("expired")} />
+          <KpiCard icon={Timer} tone="info" label={t("dash.rfq_avg_response")} value={metrics.data?.avgDays} />
         </div>
 
         {/* Quick status pills */}
@@ -146,13 +146,22 @@ function RfqList() {
         {/* Filters */}
         <Card>
           <CardContent className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="relative">
-              <Search className="absolute top-2.5 start-2 h-4 w-4 text-muted-foreground" />
-              <Input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder={`${t("rfq.number")} / ${t("rfq.destination")}`} className="ps-8" />
+            <div className="flex items-center gap-2">
+              <Label className="shrink-0 text-muted-foreground">{t("actions.search")}</Label>
+              <div className="relative flex-1">
+                <Search className="absolute top-2.5 start-2 h-4 w-4 text-muted-foreground" />
+                <Input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder={`${t("rfq.number")} / ${t("rfq.destination")}`} className="ps-8" />
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-2 sm:col-span-2 xl:col-span-2">
-              <Input type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} className="w-full" />
-              <Input type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} className="w-full" />
+              <div className="flex items-center gap-2">
+                <Label className="shrink-0 text-muted-foreground">{t("filter.from")}</Label>
+                <Input type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} className="w-full" />
+              </div>
+              <div className="flex items-center gap-2">
+                <Label className="shrink-0 text-muted-foreground">{t("filter.to")}</Label>
+                <Input type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} className="w-full" />
+              </div>
             </div>
             {filtersActive && (
               <div className="flex justify-end sm:col-span-2 xl:col-span-4">

@@ -1222,12 +1222,13 @@ export type Database = {
           max_adults: number
           max_children: number
           max_occupancy: number
-          name_ar: string
+           name_ar: string
           name_en: string
           size_sqm: number | null
           smoking_allowed: boolean
           sort_order: number
           updated_at: string
+          view_id: string | null
         }
         Insert: {
           bed_type?: string | null
@@ -1249,6 +1250,7 @@ export type Database = {
           smoking_allowed?: boolean
           sort_order?: number
           updated_at?: string
+          view_id?: string | null
         }
         Update: {
           bed_type?: string | null
@@ -1270,6 +1272,7 @@ export type Database = {
           smoking_allowed?: boolean
           sort_order?: number
           updated_at?: string
+          view_id?: string | null
         }
         Relationships: [
           {
@@ -1277,6 +1280,13 @@ export type Database = {
             columns: ["hotel_id"]
             isOneToOne: false
             referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hotel_room_types_view_id_fkey"
+            columns: ["view_id"]
+            isOneToOne: false
+            referencedRelation: "hotel_views"
             referencedColumns: ["id"]
           },
         ]
@@ -2079,14 +2089,20 @@ export type Database = {
       }
       quotations: {
         Row: {
+          city_id: string | null
+          country_code: string | null
           created_at: string
           created_by: string | null
           currency: string
           customer_id: string
           deleted_at: string | null
           expiry_date: string
+          group_name: string | null
+          hotel_id: string | null
           id: string
+          is_recommended: boolean
           is_simulated: boolean
+          language: string | null
           notes: string | null
           quotation_date: string
           quotation_no: string
@@ -2095,14 +2111,20 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          city_id?: string | null
+          country_code?: string | null
           created_at?: string
           created_by?: string | null
           currency?: string
           customer_id: string
           deleted_at?: string | null
           expiry_date: string
+          group_name?: string | null
+          hotel_id?: string | null
           id?: string
+          is_recommended?: boolean
           is_simulated?: boolean
+          language?: string | null
           notes?: string | null
           quotation_date?: string
           quotation_no?: string
@@ -2111,14 +2133,20 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          city_id?: string | null
+          country_code?: string | null
           created_at?: string
           created_by?: string | null
           currency?: string
           customer_id?: string
           deleted_at?: string | null
           expiry_date?: string
+          group_name?: string | null
+          hotel_id?: string | null
           id?: string
+          is_recommended?: boolean
           is_simulated?: boolean
+          language?: string | null
           notes?: string | null
           quotation_date?: string
           quotation_no?: string
@@ -2338,8 +2366,10 @@ export type Database = {
       rates: {
         Row: {
           allotment: number | null
+          allow_extra_bed: boolean
           approved_at: string | null
           approved_by: string | null
+          breakfast_price: number | null
           cancellation_policy_ar: string | null
           cancellation_policy_en: string | null
           code: string
@@ -2349,6 +2379,10 @@ export type Database = {
           created_by: string | null
           currency: string
           deleted_at: string | null
+          extra_bed_limit: number | null
+          extra_bed_price: number | null
+          full_board_price: number | null
+          half_board_price: number | null
           hotel_id: string
           id: string
           is_direct: boolean
@@ -2356,6 +2390,7 @@ export type Database = {
           markup_pct: number | null
           max_nights: number | null
           meal_plan: Database["public"]["Enums"]["rate_board"]
+          meals_included: boolean
           min_nights: number
           notes_ar: string | null
           notes_en: string | null
@@ -2379,8 +2414,10 @@ export type Database = {
         }
         Insert: {
           allotment?: number | null
+          allow_extra_bed?: boolean
           approved_at?: string | null
           approved_by?: string | null
+          breakfast_price?: number | null
           cancellation_policy_ar?: string | null
           cancellation_policy_en?: string | null
           code: string
@@ -2390,6 +2427,10 @@ export type Database = {
           created_by?: string | null
           currency: string
           deleted_at?: string | null
+          extra_bed_limit?: number | null
+          extra_bed_price?: number | null
+          full_board_price?: number | null
+          half_board_price?: number | null
           hotel_id: string
           id?: string
           is_direct?: boolean
@@ -2397,6 +2438,7 @@ export type Database = {
           markup_pct?: number | null
           max_nights?: number | null
           meal_plan: Database["public"]["Enums"]["rate_board"]
+          meals_included?: boolean
           min_nights?: number
           notes_ar?: string | null
           notes_en?: string | null
@@ -2420,8 +2462,10 @@ export type Database = {
         }
         Update: {
           allotment?: number | null
+          allow_extra_bed?: boolean
           approved_at?: string | null
           approved_by?: string | null
+          breakfast_price?: number | null
           cancellation_policy_ar?: string | null
           cancellation_policy_en?: string | null
           code?: string
@@ -2431,6 +2475,10 @@ export type Database = {
           created_by?: string | null
           currency?: string
           deleted_at?: string | null
+          extra_bed_limit?: number | null
+          extra_bed_price?: number | null
+          full_board_price?: number | null
+          half_board_price?: number | null
           hotel_id?: string
           id?: string
           is_direct?: boolean
@@ -2438,6 +2486,7 @@ export type Database = {
           markup_pct?: number | null
           max_nights?: number | null
           meal_plan?: Database["public"]["Enums"]["rate_board"]
+          meals_included?: boolean
           min_nights?: number
           notes_ar?: string | null
           notes_en?: string | null

@@ -48,6 +48,7 @@ export const dict: Dict = {
   "nav.settings": { ar: "الإعدادات", en: "Settings" },
   "nav.master_data": { ar: "البيانات الأساسية", en: "Master Data" },
   "nav.contracting": { ar: "التعاقدات", en: "Contracting" },
+  "nav.receivables": { ar: "المستحقات المالية", en: "Receivables" },
 
   // Common actions
   "actions.new": { ar: "جديد", en: "New" },
@@ -72,6 +73,7 @@ export const dict: Dict = {
 
   // Common labels
   "label.code": { ar: "الرمز", en: "Code" },
+  "label.view": { ar: "الإطلالة", en: "View" },
   "label.name": { ar: "الاسم", en: "Name" },
   "label.name_ar": { ar: "الاسم بالعربية", en: "Name (Arabic)" },
   "label.name_en": { ar: "الاسم بالإنجليزية", en: "Name (English)" },
@@ -324,6 +326,9 @@ export const dict: Dict = {
   "rates.tax_type": { ar: "النوع", en: "Type" },
   "rates.tax_value": { ar: "القيمة", en: "Value" },
   "rates.tax_inclusive": { ar: "شامل", en: "Inclusive" },
+  "rates.tax_inclusive_select": { ar: "الضريبة", en: "Tax" },
+  "rates.tax_inclusive_yes": { ar: "شامل الضريبة", en: "Tax included" },
+  "rates.tax_inclusive_no": { ar: "غير شامل الضريبة", en: "Tax excluded" },
   "rates.tax_applies_to": { ar: "يطبق على", en: "Applies to" },
   "rates.cxl_days": { ar: "أيام قبل الوصول", en: "Days before check-in" },
   "rates.penalty_type": { ar: "نوع الغرامة", en: "Penalty type" },
@@ -353,6 +358,16 @@ export const dict: Dict = {
   "rates.source.direct": { ar: "الفندق مباشرة", en: "Hotel direct" },
   "rates.is_direct": { ar: "سعر مباشر من الفندق", en: "Direct from hotel" },
   "rates.is_direct_short": { ar: "مباشر", en: "Direct" },
+  "rates.meals_included": { ar: "السعر شامل الوجبات", en: "Price includes meals" },
+  "rates.meals_not_included": { ar: "السعر غير شامل الوجبات", en: "Price does not include meals" },
+  "rates.extra_bed.title": { ar: "اضافه سرير اضافي", en: "Add extra bed" },
+  "rates.extra_bed.description": { ar: "يمكن اضافة سرير اضافي مقابل رسوم", en: "An extra bed can be added for a fee" },
+  "rates.extra_bed.limit": { ar: "عدد الاسرة الاضافية", en: "Number of extra beds" },
+  "rates.extra_bed.max_limit_disclaimer": { ar: "الحد الاقصى سرير واحد", en: "Maximum 1 bed" },
+  "rates.extra_bed.per_night": { ar: "لكل ليلة", en: "per night" },
+  "rates.extra_bed.price": { ar: "سعر السرير الإضافي لكل ليلة", en: "Extra bed price per night" },
+  "rates.meal_pricing.title": { ar: "أسعار الوجبات الاختيارية", en: "Optional meals pricing" },
+  "rates.optional": { ar: "اختياري", en: "Optional" },
   "rates.version": { ar: "الإصدار", en: "Version" },
   "rates.entered_at": { ar: "تاريخ الإدخال", en: "Entered at" },
   "rates.entered_by": { ar: "أدخل بواسطة", en: "Entered by" },
@@ -456,6 +471,14 @@ export const dict: Dict = {
   "settings.lock_duration": { ar: "مدة قفل الحساب (دقائق)", en: "Lock duration (minutes)" },
   "settings.pwd_min": { ar: "أقل طول لكلمة المرور", en: "Min password length" },
   "settings.default_lang": { ar: "اللغة الافتراضية", en: "Default Language" },
+  "settings.finance": { ar: "الإعدادات المالية", en: "Financial Settings" },
+  "settings.company_name_ar": { ar: "اسم الشركة بالعربية", en: "Company Name (Arabic)" },
+  "settings.company_name_en": { ar: "اسم الشركة بالإنجليزية", en: "Company Name (English)" },
+  "settings.default_currency": { ar: "العملة الافتراضية للعملاء", en: "Default Customer Currency" },
+  "settings.base_currency": { ar: "عملة الأساس للتقارير المالية", en: "Reporting Base Currency" },
+  "settings.approval_threshold": { ar: "حد الاعتماد التلقائي لعروض الأسعار", en: "Quotation Auto-approval Threshold" },
+  "settings.approval_threshold_desc": { ar: "عروض الأسعار التي تساوي أو تتجاوز هذه القيمة تتطلب اعتماداً يدوياً قبل إمكانية إرسالها للعملاء.", en: "Quotations equal to or exceeding this amount require manual approval before being sent to customers." },
+  "settings.saving_settings": { ar: "جاري حفظ الإعدادات...", en: "Saving settings..." },
 
   // Toasts
   "toast.saved": { ar: "تم الحفظ بنجاح", en: "Saved successfully" },

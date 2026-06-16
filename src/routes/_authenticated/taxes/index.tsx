@@ -99,7 +99,7 @@ function TaxesList() {
       <PageHeader
         title={t("taxes.title")}
         subtitle={`${total} ${t("label.total")}`}
-        actions={canWrite && (
+        children={canWrite && (
           <Button size="sm" onClick={() => setDialog({ open: true })}>
             <Plus className="h-4 w-4" /> {t("taxes.new")}
           </Button>

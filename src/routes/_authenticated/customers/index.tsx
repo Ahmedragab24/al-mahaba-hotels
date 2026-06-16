@@ -34,7 +34,7 @@ function CustomersList() {
   const auth = useAuth();
   const qc = useQueryClient();
   const navigate = useNavigate();
-  const canWrite = auth.hasAnyRole(["super_admin","admin","sales_manager","sales_agent","operations_manager"]);
+  const canWrite = auth.hasAnyRole(["super_admin", "admin", "sales_manager", "sales_agent", "operations_manager"]);
 
   const [search, setSearch] = useState("");
   const [type, setType] = useState<string>("all");
@@ -52,7 +52,7 @@ function CustomersList() {
     queryFn: async () => {
       const { data } = await supabase.from("customers").select("status,credit_limit,created_at,deleted_at");
       const rows = data ?? [];
-      const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0,0,0,0);
+      const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
       return {
         total: rows.filter(r => !r.deleted_at).length,
         active: rows.filter(r => r.status === "active" && !r.deleted_at).length,
@@ -118,7 +118,7 @@ function CustomersList() {
 
   return (
     <>
-      <PageHeader title={t("customers.title")} subtitle={`${total} ${t("label.total")}`} actions={actions} />
+      <PageHeader title={t("customers.title")} subtitle={`${total} ${t("label.total")}`} children={actions} />
       <div className="space-y-4 p-6">
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
           <KpiCard icon={Users} tone="primary" label={t("kpi.total")} value={metrics.data?.total ?? "—"}

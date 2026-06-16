@@ -31,8 +31,8 @@ function RfqDetail() {
   const auth = useAuth();
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const canWrite = auth.hasAnyRole(["super_admin","admin","sales_manager","sales_agent","operations_manager","operations_agent"]);
-  const canApprove = auth.hasAnyRole(["super_admin","admin","sales_manager","operations_manager"]);
+  const canWrite = auth.hasAnyRole(["super_admin", "admin", "sales_manager", "sales_agent", "operations_manager", "operations_agent"]);
+  const canApprove = auth.hasAnyRole(["super_admin", "admin", "sales_manager", "operations_manager"]);
   const [editing, setEditing] = useState(false);
   const [confirmStatus, setConfirmStatus] = useState<string | null>(null);
 
@@ -88,12 +88,12 @@ function RfqDetail() {
 
   const actions: { key: string; label: string; status: string; icon: React.ComponentType<{ className?: string }>; variant?: "destructive" | "outline"; show: boolean }[] = [
     { key: "send", label: t("rfq.send"), status: "sent", icon: Send, show: canWrite && r.status === "draft" },
-    { key: "complete", label: t("rfq.complete"), status: "completed", icon: CheckCheck, show: canWrite && ["sent","partial"].includes(r.status) },
+    { key: "complete", label: t("rfq.complete"), status: "completed", icon: CheckCheck, show: canWrite && ["sent", "partial"].includes(r.status) },
     { key: "approve", label: t("actions.approve"), status: "approved", icon: Check, show: canApprove && r.status === "completed" },
     { key: "reject", label: t("actions.reject"), status: "rejected", icon: X, variant: "destructive", show: canApprove && r.status === "completed" },
-    { key: "expire", label: t("rfq.expire_action"), status: "expired", icon: Clock, variant: "outline", show: canWrite && ["sent","partial","completed"].includes(r.status) },
+    { key: "expire", label: t("rfq.expire_action"), status: "expired", icon: Clock, variant: "outline", show: canWrite && ["sent", "partial", "completed"].includes(r.status) },
     { key: "reopen", label: t("rfq.reopen"), status: "draft", icon: RotateCcw, variant: "outline", show: canWrite && r.status === "rejected" },
-    { key: "cancel", label: t("rfq.cancel"), status: "cancelled", icon: Ban, variant: "destructive", show: canWrite && ["draft","sent","partial","rejected"].includes(r.status) },
+    { key: "cancel", label: t("rfq.cancel"), status: "cancelled", icon: Ban, variant: "destructive", show: canWrite && ["draft", "sent", "partial", "rejected"].includes(r.status) },
   ];
 
   return (
@@ -102,7 +102,7 @@ function RfqDetail() {
         title={`${r.rfq_no}${r.destination ? " — " + r.destination : ""}`}
         subtitle={`${formatDate(r.travel_start)} → ${formatDate(r.travel_end)} · ${r.currency}`}
 
-        actions={
+        children={
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => navigate({ to: "/rfqs" })}>
               <ArrowLeft className="h-4 w-4 rtl:rotate-180" />{t("actions.back")}

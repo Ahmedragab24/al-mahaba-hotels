@@ -16,7 +16,7 @@ function NewQuotation() {
     <>
       <PageHeader
         title={t("quotes.new")}
-        actions={
+        children={
           <Button asChild variant="outline" size="sm">
             <Link to="/quotations"><ArrowLeft className="h-4 w-4 rtl:rotate-180" /> {t("actions.back")}</Link>
           </Button>

@@ -25,13 +25,13 @@ export const Route = createFileRoute("/_authenticated/bookings/")({
 });
 
 const PAGE_SIZE = 20;
-export const BK_STATUSES = ["draft","pending_confirmation","confirmed","checked_in","checked_out","cancelled","no_show"] as const;
-export const BK_WRITE_ROLES = ["super_admin","admin","sales_manager","sales_agent","operations_manager","operations_agent"] as const;
+export const BK_STATUSES = ["draft", "pending_confirmation", "confirmed", "checked_in", "checked_out", "cancelled", "no_show"] as const;
+export const BK_WRITE_ROLES = ["super_admin", "admin", "sales_manager", "sales_agent", "operations_manager", "operations_agent"] as const;
 
 export function BkStatusBadge({ status, t }: { status: string; t: (k: string, f?: string) => string }) {
   const variant = status === "cancelled" || status === "no_show" ? "destructive"
     : status === "draft" || status === "checked_out" ? "outline"
-    : "default";
+      : "default";
   const cls = status === "confirmed" || status === "checked_in" ? "bg-emerald-600 text-white hover:bg-emerald-600" : undefined;
   return <Badge variant={variant as any} className={cls}>{t(`bkstatus.${status}`)}</Badge>;
 }
@@ -78,7 +78,7 @@ function BookingsList() {
         confirmed: by("confirmed"),
         inHouse: by("checked_in"),
         completed: by("checked_out"),
-        cancelled: by("cancelled","no_show"),
+        cancelled: by("cancelled", "no_show"),
         value: sum,
       };
     },
@@ -122,13 +122,13 @@ function BookingsList() {
   const setStatusAndReset = (s: string) => { setStatus(s); setPage(1); };
 
   const quickFilters: { key: string; label: string; count?: number; tone: KpiTone }[] = [
-    { key: "all",                   label: t("filter.all"),                    count: metrics.data?.total,     tone: "primary" },
-    { key: "draft",                 label: t("bkstatus.draft"),                count: metrics.data?.draft,     tone: "muted" },
-    { key: "pending_confirmation",  label: t("bkstatus.pending_confirmation"), count: metrics.data?.pending,   tone: "warning" },
-    { key: "confirmed",             label: t("bkstatus.confirmed"),            count: metrics.data?.confirmed, tone: "success" },
-    { key: "checked_in",            label: t("bkstatus.checked_in"),           count: metrics.data?.inHouse,   tone: "info" },
-    { key: "checked_out",           label: t("bkstatus.checked_out"),          count: metrics.data?.completed, tone: "muted" },
-    { key: "cancelled",             label: t("bkstatus.cancelled"),            count: metrics.data?.cancelled, tone: "destructive" },
+    { key: "all", label: t("filter.all"), count: metrics.data?.total, tone: "primary" },
+    { key: "draft", label: t("bkstatus.draft"), count: metrics.data?.draft, tone: "muted" },
+    { key: "pending_confirmation", label: t("bkstatus.pending_confirmation"), count: metrics.data?.pending, tone: "warning" },
+    { key: "confirmed", label: t("bkstatus.confirmed"), count: metrics.data?.confirmed, tone: "success" },
+    { key: "checked_in", label: t("bkstatus.checked_in"), count: metrics.data?.inHouse, tone: "info" },
+    { key: "checked_out", label: t("bkstatus.checked_out"), count: metrics.data?.completed, tone: "muted" },
+    { key: "cancelled", label: t("bkstatus.cancelled"), count: metrics.data?.cancelled, tone: "destructive" },
   ];
 
   return (
@@ -136,17 +136,17 @@ function BookingsList() {
       <PageHeader
         title={t("bk.title")}
         subtitle={`${total} ${t("label.total")}`}
-        actions={actions}
+        children={actions}
       />
       <div className="space-y-5 p-4 sm:p-6">
         {/* KPI cards */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          <KpiCard icon={ClipboardList}  tone="primary"     label={t("bk.kpi.total")}     value={metrics.data?.total}     active={status==="all"}                  onClick={() => setStatusAndReset("all")} />
-          <KpiCard icon={CheckCircle2}   tone="success"     label={t("bk.kpi.confirmed")} value={metrics.data?.confirmed} active={status==="confirmed"}            onClick={() => setStatusAndReset("confirmed")} />
-          <KpiCard icon={LogIn}          tone="info"        label={t("bk.kpi.in_house")}  value={metrics.data?.inHouse}   active={status==="checked_in"}           onClick={() => setStatusAndReset("checked_in")} />
-          <KpiCard icon={CheckCheck}     tone="muted"       label={t("bk.kpi.completed")} value={metrics.data?.completed} active={status==="checked_out"}          onClick={() => setStatusAndReset("checked_out")} />
-          <KpiCard icon={XCircle}        tone="destructive" label={t("bk.kpi.cancelled")} value={metrics.data?.cancelled} active={status==="cancelled"}            onClick={() => setStatusAndReset("cancelled")} />
-          <KpiCard icon={DollarSign}     tone="warning"     label={t("bk.kpi.value")}     value={metrics.data ? fmt(metrics.data.value) : undefined} />
+          <KpiCard icon={ClipboardList} tone="primary" label={t("bk.kpi.total")} value={metrics.data?.total} active={status === "all"} onClick={() => setStatusAndReset("all")} />
+          <KpiCard icon={CheckCircle2} tone="success" label={t("bk.kpi.confirmed")} value={metrics.data?.confirmed} active={status === "confirmed"} onClick={() => setStatusAndReset("confirmed")} />
+          <KpiCard icon={LogIn} tone="info" label={t("bk.kpi.in_house")} value={metrics.data?.inHouse} active={status === "checked_in"} onClick={() => setStatusAndReset("checked_in")} />
+          <KpiCard icon={CheckCheck} tone="muted" label={t("bk.kpi.completed")} value={metrics.data?.completed} active={status === "checked_out"} onClick={() => setStatusAndReset("checked_out")} />
+          <KpiCard icon={XCircle} tone="destructive" label={t("bk.kpi.cancelled")} value={metrics.data?.cancelled} active={status === "cancelled"} onClick={() => setStatusAndReset("cancelled")} />
+          <KpiCard icon={DollarSign} tone="warning" label={t("bk.kpi.value")} value={metrics.data ? fmt(metrics.data.value) : undefined} />
         </div>
 
         {/* Quick status pills */}

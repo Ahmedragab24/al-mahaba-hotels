@@ -63,7 +63,7 @@ export function useHotelsLite() {
     staleTime: 60_000,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("hotels").select("id,code,name_en,name_ar")
+        .from("hotels").select("id,code,name_en,name_ar,star_rating")
         .is("deleted_at", null).order("name_en");
       if (error) throw error;
       return data ?? [];

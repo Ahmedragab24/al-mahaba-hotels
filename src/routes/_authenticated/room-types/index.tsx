@@ -112,7 +112,7 @@ function RoomTypesList() {
       <PageHeader
         title={t("room_types.title")}
         subtitle={`${total} ${t("label.total")}`}
-        actions={canWrite && (
+        children={canWrite && (
           <Button size="sm" onClick={() => setDialog({ open: true })}>
             <Plus className="h-4 w-4" /> {t("room_types.new")}
           </Button>
@@ -170,7 +170,6 @@ function RoomTypesList() {
           {list.data?.rows.map((r: any) => {
             const name = lang === "ar" ? (r.name_ar || r.name_en) : (r.name_en || r.name_ar);
             const hotelName = r.hotel ? (lang === "ar" ? (r.hotel.name_ar || r.hotel.name_en) : (r.hotel.name_en || r.hotel.name_ar)) : "—";
-            const occupancy = `${r.max_adults}+${r.max_children} / ${r.max_occupancy}`;
             return (
               <Card
                 key={r.id}
@@ -194,11 +193,6 @@ function RoomTypesList() {
                         : <Badge variant="secondary">{t("status.inactive")}</Badge>
                     }
                   </div>
-                  {r.smoking_allowed && (
-                    <Badge className="absolute top-3 end-3 gap-1 bg-card/90 text-muted-foreground shadow backdrop-blur hover:bg-card/90">
-                      <CigaretteOff className="h-3 w-3" />
-                    </Badge>
-                  )}
                   <div className="absolute bottom-2 start-3 end-3">
                     <span className="font-mono text-[11px] text-background/90">{r.code}</span>
                   </div>
@@ -210,26 +204,13 @@ function RoomTypesList() {
                     </Link>
                   </div>
                   <div className="text-xs font-medium text-primary">{hotelName}</div>
-                  <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                    <Users className="h-3.5 w-3.5 shrink-0" />
-                    <span>{occupancy}</span>
-                  </div>
                   {r.bed_type && (
                     <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                       <BedDouble className="h-3.5 w-3.5 shrink-0" />
                       <span>{r.bed_type}</span>
                     </div>
                   )}
-                  {r.size_sqm && (
-                    <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                      <Ruler className="h-3.5 w-3.5 shrink-0" />
-                      <span>{r.size_sqm} m²</span>
-                    </div>
-                  )}
-                  <div className="flex items-center justify-between border-t pt-3">
-                    <div className="text-sm text-muted-foreground">
-                      {r.smoking_allowed ? t("room_types.smoking") : ""}
-                    </div>
+                  <div className="flex items-center justify-end border-t pt-3">
                     <div className="flex gap-1">
                       <Button asChild variant="ghost" size="icon" className="h-8 w-8" title={t("actions.view")}>
                         <Link to="/room-types/$id" params={{ id: r.id }}><Eye className="h-4 w-4" /></Link>

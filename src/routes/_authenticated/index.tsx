@@ -14,7 +14,7 @@ export const Route = createFileRoute("/_authenticated/")({
 
 function DashboardOrRedirect() {
   const auth = useAuth();
-  if (!auth.loading && auth.hasRole("supplier") && !auth.hasAnyRole(["super_admin","admin","sales_manager","sales_agent","operations_manager","operations_agent","finance_manager","finance_agent","viewer"])) {
+  if (!auth.loading && auth.hasRole("supplier") && !auth.hasAnyRole(["super_admin", "admin", "sales_manager", "sales_agent", "operations_manager", "operations_agent", "finance_manager", "finance_agent", "viewer"])) {
     return <Navigate to="/supplier-portal" replace />;
   }
   return <Dashboard />;
@@ -127,7 +127,7 @@ function Dashboard() {
 
   return (
     <>
-      <PageHeader title={`${t("dash.welcome")}, ${greet ?? ""}`} subtitle={t("dash.summary")} />
+      <PageHeader title={`${t("dash.welcome")}, ${greet ?? ""}`} />
       <div className="space-y-8 p-6">
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-5">
           <StatCard icon={Users} label={t("dash.customers_count")} value={stats.data?.customers ?? "—"} to="/customers" />

@@ -69,7 +69,7 @@ function RoomTypeDetail() {
       <PageHeader
         title={name}
         subtitle={`${r.code} · ${r.hotel ? (lang === "ar" ? (r.hotel.name_ar || r.hotel.name_en) : (r.hotel.name_en || r.hotel.name_ar)) : ""}`}
-        actions={
+        children={
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => navigate({ to: "/room-types" })}>
               <ArrowLeft className="h-4 w-4 rtl:rotate-180" />{t("actions.back")}

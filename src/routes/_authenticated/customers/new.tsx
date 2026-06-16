@@ -14,7 +14,7 @@ function CreateCustomer() {
   const navigate = useNavigate();
   return (
     <>
-      <PageHeader title={t("customers.new")} actions={
+      <PageHeader title={t("customers.new")} children={
         <Button variant="outline" size="sm" onClick={() => navigate({ to: "/customers" })}>
           <ArrowLeft className="h-4 w-4 rtl:rotate-180" />{t("actions.back")}
         </Button>

@@ -149,7 +149,7 @@ function InvoicesList() {
   return (
     <>
       <PageHeader title={t("inv.title")} subtitle={`${total} ${t("label.total")}`}
-        actions={canWrite && <Button size="sm" onClick={() => setOpenNew(true)}><Plus className="h-4 w-4" /> {t("inv.new")}</Button>} />
+        children={canWrite && <Button size="sm" onClick={() => setOpenNew(true)}><Plus className="h-4 w-4" /> {t("inv.new")}</Button>} />
       <div className="space-y-4 p-6">
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
           <KpiCard icon={FileText} tone="primary" label={t("inv.kpi.total")} value={metrics.data?.total ?? "—"}

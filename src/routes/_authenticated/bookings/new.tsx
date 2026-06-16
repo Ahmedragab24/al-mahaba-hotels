@@ -51,7 +51,7 @@ function NewBooking() {
     <>
       <PageHeader
         title={t("bk.new")}
-        actions={
+        children={
           <Button variant="outline" size="sm" onClick={() => navigate({ to: "/bookings" })}>
             <ArrowLeft className="h-4 w-4 rtl:rotate-180" />{t("actions.back")}
           </Button>

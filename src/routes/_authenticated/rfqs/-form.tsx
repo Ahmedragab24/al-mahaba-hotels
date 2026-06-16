@@ -3,10 +3,12 @@ import { useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/hooks/use-auth";
+import { useCurrencies } from "@/lib/lookups";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { dbErrorMessage } from "@/lib/db-errors";
 import { toast } from "sonner";
 
@@ -18,6 +20,7 @@ type Props = {
 export function RfqForm({ initial, onSaved }: Props) {
   const { t } = useI18n();
   const auth = useAuth();
+  const currencies = useCurrencies();
   const [form, setForm] = useState({
     destination: initial?.destination ?? "",
     travel_start: initial?.travel_start ?? "",
@@ -55,14 +58,23 @@ export function RfqForm({ initial, onSaved }: Props) {
 
   return (
     <Card>
-      <CardContent className="grid gap-4 p-6 sm:grid-cols-2 lg:grid-cols-3">
+      <CardContent className="grid gap-4 p-6 sm:grid-cols-2">
         <div className="space-y-1.5">
           <label className="text-sm">{t("rfq.destination")}</label>
           <Input value={form.destination} onChange={(e) => set("destination", e.target.value)} />
         </div>
         <div className="space-y-1.5">
           <label className="text-sm">{t("label.currency")}</label>
-          <Input value={form.currency} onChange={(e) => set("currency", e.target.value.toUpperCase().slice(0, 3))} dir="ltr" />
+          <Select value={form.currency} onValueChange={(val) => set("currency", val)}>
+            <SelectTrigger className="w-full"><SelectValue placeholder={t("label.currency")} /></SelectTrigger>
+            <SelectContent>
+              {currencies.data?.map((c) => (
+                <SelectItem key={c.code} value={c.code}>
+                  {c.code}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div className="space-y-1.5">
           <label className="text-sm">{t("rfq.travel_start")} *</label>
@@ -72,14 +84,14 @@ export function RfqForm({ initial, onSaved }: Props) {
           <label className="text-sm">{t("rfq.travel_end")} *</label>
           <Input type="date" value={form.travel_end} onChange={(e) => set("travel_end", e.target.value)} />
         </div>
-        <div className="space-y-1.5 sm:col-span-2 lg:col-span-3">
+        <div className="space-y-1.5 sm:col-span-2">
           <label className="text-sm">{t("label.notes")}</label>
           <Textarea value={form.notes} onChange={(e) => set("notes", e.target.value)} rows={3} />
         </div>
-        <div className="sm:col-span-2 lg:col-span-3 text-xs text-muted-foreground">
+        <div className="text-xs text-muted-foreground sm:col-span-2">
           {t("rfq.suppliers_hint", "بعد الحفظ، اختر الموردين من تبويب \"الموردون\" لإرسال طلب السعر إليهم.")}
         </div>
-        <div className="sm:col-span-2 lg:col-span-3">
+        <div className="flex justify-end md:col-span-2">
           <Button onClick={() => save.mutate()} disabled={save.isPending}>{t("actions.save")}</Button>
         </div>
       </CardContent>

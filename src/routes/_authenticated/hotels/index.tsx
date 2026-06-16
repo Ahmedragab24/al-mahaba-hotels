@@ -138,7 +138,7 @@ function HotelsList() {
 
   return (
     <>
-      <PageHeader title={t("hotels.title")} subtitle={`${total} ${t("label.total")}`} actions={actions} />
+      <PageHeader title={t("hotels.title")} subtitle={`${total} ${t("label.total")}`} children={actions} />
       <div className="space-y-4 p-6">
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
           <KpiCard icon={Hotel} tone="primary" label={t("kpi.total")} value={metrics.data?.total ?? "—"}

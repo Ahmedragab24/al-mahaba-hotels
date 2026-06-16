@@ -14,7 +14,7 @@ function CreateHotel() {
   const navigate = useNavigate();
   return (
     <>
-      <PageHeader title={t("hotels.new")} actions={
+      <PageHeader title={t("hotels.new")} children={
         <Button variant="outline" size="sm" onClick={() => navigate({ to: "/hotels" })}>
           <ArrowLeft className="h-4 w-4 rtl:rotate-180" />{t("actions.back")}
         </Button>

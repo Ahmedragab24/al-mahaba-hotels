@@ -138,7 +138,7 @@ function InvoiceDetail() {
       <PageHeader
         title={x.invoice_no}
         subtitle={`${custName} · ${formatMoney(Number(x.total_amount), x.currency, lang)}`}
-        actions={
+        children={
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => navigate({ to: "/invoices" })}>
               <ArrowLeft className="h-4 w-4 rtl:rotate-180" />{t("actions.back")}

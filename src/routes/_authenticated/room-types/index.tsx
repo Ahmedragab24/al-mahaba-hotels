@@ -9,6 +9,7 @@ import { useDebounce } from "@/lib/use-debounce";
 import { useHotelsLite } from "@/lib/lookups";
 import { dbErrorMessage } from "@/lib/db-errors";
 import { Card, CardContent } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -120,27 +121,36 @@ function RoomTypesList() {
       />
       <div className="space-y-4 p-6">
         <Card>
-          <CardContent className="flex flex-wrap items-center gap-3 p-4">
-            <div className="relative min-w-[220px] flex-1">
-              <Search className="absolute top-2.5 start-2 h-4 w-4 text-muted-foreground" />
-              <Input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder={t("actions.search")} className="ps-8" />
+          <CardContent className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="flex flex-col gap-1.5 sm:col-span-2 lg:col-span-3 xl:col-span-4">
+              <Label className="text-muted-foreground">{t("actions.search")}</Label>
+              <div className="relative w-full">
+                <Search className="absolute top-2.5 start-2 h-4 w-4 text-muted-foreground" />
+                <Input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder={t("actions.search")} className="ps-8 w-full" />
+              </div>
             </div>
-            <Select value={hotel} onValueChange={(v) => { setHotel(v); setPage(1); }}>
-              <SelectTrigger className="w-[200px]"><SelectValue placeholder={t("filter.hotel")} /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t("filter.all")}</SelectItem>
-                {hotels.data?.map((h) => <SelectItem key={h.id} value={h.id}>{lang === "ar" ? (h.name_ar || h.name_en) : (h.name_en || h.name_ar)}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={active} onValueChange={(v) => { setActive(v); setPage(1); }}>
-              <SelectTrigger className="w-[140px]"><SelectValue placeholder={t("filter.status")} /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t("filter.all")}</SelectItem>
-                <SelectItem value="active">{t("status.active")}</SelectItem>
-                <SelectItem value="inactive">{t("status.inactive")}</SelectItem>
-              </SelectContent>
-            </Select>
-            <label className="ms-auto flex items-center gap-2 text-sm">
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-muted-foreground">{t("filter.hotel")}</Label>
+              <Select value={hotel} onValueChange={(v) => { setHotel(v); setPage(1); }}>
+                <SelectTrigger className="w-full"><SelectValue placeholder={t("filter.hotel")} /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t("filter.all")}</SelectItem>
+                  {hotels.data?.map((h) => <SelectItem key={h.id} value={h.id}>{lang === "ar" ? (h.name_ar || h.name_en) : (h.name_en || h.name_ar)}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-muted-foreground">{t("filter.status")}</Label>
+              <Select value={active} onValueChange={(v) => { setActive(v); setPage(1); }}>
+                <SelectTrigger className="w-full"><SelectValue placeholder={t("filter.status")} /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t("filter.all")}</SelectItem>
+                  <SelectItem value="active">{t("status.active")}</SelectItem>
+                  <SelectItem value="inactive">{t("status.inactive")}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <label className="flex items-center gap-2 text-sm self-end pb-2 cursor-pointer mt-auto">
               <Checkbox checked={showArchived} onCheckedChange={(v) => { setShowArchived(!!v); setPage(1); }} />
               {t("filter.show_archived")}
             </label>

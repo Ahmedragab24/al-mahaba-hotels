@@ -174,26 +174,45 @@ function InvoicesList() {
 
         <Card>
           <CardContent className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 xl:grid-cols-5">
-            <div className="relative">
-              <Search className="absolute top-2.5 start-2 h-4 w-4 text-muted-foreground" />
-              <Input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder={t("inv.number")} className="ps-8" />
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-muted-foreground">{t("actions.search")}</Label>
+              <div className="relative w-full">
+                <Search className="absolute top-2.5 start-2 h-4 w-4 text-muted-foreground" />
+                <Input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder={t("inv.number")} className="ps-8 w-full" />
+              </div>
             </div>
-            <Select value={customer} onValueChange={(v) => { setCustomer(v); setPage(1); }}>
-              <SelectTrigger className="w-full"><SelectValue placeholder={t("inv.customer")} /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t("filter.all")}</SelectItem>
-                {customers.data?.map((c: any) => <SelectItem key={c.id} value={c.id}>{name(c)}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={status} onValueChange={(v) => { setStatus(v); setPage(1); }}>
-              <SelectTrigger className="w-full"><SelectValue placeholder={t("filter.status")} /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t("filter.all")}</SelectItem>
-                {STATUSES.map((s) => <SelectItem key={s} value={s}>{t(`invstatus.${s}`)}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Input type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} />
-            <Input type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} />
+            
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-muted-foreground">{t("inv.customer")}</Label>
+              <Select value={customer} onValueChange={(v) => { setCustomer(v); setPage(1); }}>
+                <SelectTrigger className="w-full"><SelectValue placeholder={t("inv.customer")} /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t("filter.all")}</SelectItem>
+                  {customers.data?.map((c: any) => <SelectItem key={c.id} value={c.id}>{name(c)}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-muted-foreground">{t("filter.status")}</Label>
+              <Select value={status} onValueChange={(v) => { setStatus(v); setPage(1); }}>
+                <SelectTrigger className="w-full"><SelectValue placeholder={t("filter.status")} /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t("filter.all")}</SelectItem>
+                  {STATUSES.map((s) => <SelectItem key={s} value={s}>{t(`invstatus.${s}`)}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-muted-foreground">{t("filter.from")}</Label>
+              <Input className="w-full justify-center" type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} />
+            </div>
+            
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-muted-foreground">{t("filter.to")}</Label>
+              <Input className="w-full justify-center" type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} />
+            </div>
           </CardContent>
         </Card>
 

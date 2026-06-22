@@ -9,6 +9,7 @@ import { useDebounce } from "@/lib/use-debounce";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -132,19 +133,27 @@ function ReceivablesList() {
         {/* Filters */}
         <Card>
           <CardContent className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="relative">
-              <Search className="absolute top-2.5 start-2 h-4 w-4 text-muted-foreground" />
-              <Input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder={t("bk.number")} className="ps-8" />
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-muted-foreground">{t("actions.search")}</Label>
+              <div className="relative w-full">
+                <Search className="absolute top-2.5 start-2 h-4 w-4 text-muted-foreground" />
+                <Input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder={t("bk.number")} className="ps-8 w-full" />
+              </div>
             </div>
-            <Select value={customer} onValueChange={(v) => { setCustomer(v); setPage(1); }}>
-              <SelectTrigger className="w-full"><SelectValue placeholder={t("bk.customer")} /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t("filter.all")}</SelectItem>
-                {customers.data?.map((c: any) => <SelectItem key={c.id} value={c.id}>{lang === "ar" ? (c.name_ar || c.name_en) : (c.name_en || c.name_ar)}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-muted-foreground">{t("bk.customer")}</Label>
+              <Select value={customer} onValueChange={(v) => { setCustomer(v); setPage(1); }}>
+                <SelectTrigger className="w-full"><SelectValue placeholder={t("bk.customer")} /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t("filter.all")}</SelectItem>
+                  {customers.data?.map((c: any) => <SelectItem key={c.id} value={c.id}>{lang === "ar" ? (c.name_ar || c.name_en) : (c.name_en || c.name_ar)}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            
             {filtersActive && (
-              <div className="sm:col-span-2 xl:col-span-2 flex justify-end">
+              <div className="flex items-center self-end pb-1 mt-auto">
                 <Button variant="ghost" size="sm" onClick={resetAll}>
                   <X className="h-4 w-4" /> {t("actions.reset")}
                 </Button>

@@ -146,21 +146,21 @@ function RfqList() {
         {/* Filters */}
         <Card>
           <CardContent className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="flex items-center gap-2">
-              <Label className="shrink-0 text-muted-foreground">{t("actions.search")}</Label>
-              <div className="relative flex-1">
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-muted-foreground">{t("actions.search")}</Label>
+              <div className="relative w-full">
                 <Search className="absolute top-2.5 start-2 h-4 w-4 text-muted-foreground" />
-                <Input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder={`${t("rfq.number")} / ${t("rfq.destination")}`} className="ps-8" />
+                <Input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder={`${t("rfq.number")} / ${t("rfq.destination")}`} className="ps-8 w-full" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-2 sm:col-span-2 xl:col-span-2">
-              <div className="flex items-center gap-2">
-                <Label className="shrink-0 text-muted-foreground">{t("filter.from")}</Label>
-                <Input type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} className="w-full" />
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-muted-foreground">{t("filter.from")}</Label>
+                <Input className="justify-center" type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} />
               </div>
-              <div className="flex items-center gap-2">
-                <Label className="shrink-0 text-muted-foreground">{t("filter.to")}</Label>
-                <Input type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} className="w-full" />
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-muted-foreground">{t("filter.to")}</Label>
+                <Input className="justify-center" type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} />
               </div>
             </div>
             {filtersActive && (

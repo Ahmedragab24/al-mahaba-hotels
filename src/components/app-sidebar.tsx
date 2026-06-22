@@ -53,22 +53,22 @@ const operational: NavItem[] = [
     roles: ["super_admin", "admin", "sales_manager", "sales_agent", "operations_manager", "operations_agent", "finance_manager", "finance_agent", "viewer"]
   },
   {
-    to: "/rfqs", labelKey: "nav.rfqs", icon: MailQuestion,
-    roles: ["super_admin", "admin", "sales_manager", "sales_agent", "operations_manager", "operations_agent", "finance_manager", "finance_agent", "viewer"]
-  },
-  {
     to: "/quotations", labelKey: "nav.quotations", icon: FileSpreadsheet,
     roles: ["super_admin", "admin", "sales_manager", "sales_agent", "operations_manager", "finance_manager", "finance_agent", "viewer"]
+  },
+  {
+    to: "/rfqs", labelKey: "nav.rfqs", icon: MailQuestion,
+    roles: ["super_admin", "admin", "sales_manager", "sales_agent", "operations_manager", "operations_agent", "finance_manager", "finance_agent", "viewer"]
   },
 ];
 const master: NavItem[] = [
   {
-    to: "/customers", labelKey: "nav.customers", icon: Users,
+    to: "/hotels", labelKey: "nav.hotels", icon: Hotel,
     roles: ["super_admin", "admin", "sales_manager", "sales_agent", "operations_manager", "operations_agent", "finance_manager", "finance_agent", "viewer"]
   },
   {
-    to: "/hotels", labelKey: "nav.hotels", icon: Hotel,
-    roles: ["super_admin", "admin", "sales_manager", "sales_agent", "operations_manager", "operations_agent", "finance_manager", "finance_agent", "viewer"]
+    to: "/room-types", labelKey: "nav.room_types", icon: BedDouble,
+    roles: ["super_admin", "admin", "sales_manager", "sales_agent", "operations_manager", "operations_agent", "viewer"]
   },
   {
     to: "/suppliers", labelKey: "nav.suppliers", icon: Handshake,
@@ -82,12 +82,12 @@ const master: NavItem[] = [
     to: "/rates/compare", labelKey: "rates.compare", icon: Tags,
     roles: ["super_admin", "admin", "sales_manager", "sales_agent", "operations_manager", "operations_agent", "finance_manager", "finance_agent", "viewer"]
   },
+  {
+    to: "/customers", labelKey: "nav.customers", icon: Users,
+    roles: ["super_admin", "admin", "sales_manager", "sales_agent", "operations_manager", "operations_agent", "finance_manager", "finance_agent", "viewer"]
+  },
 ];
 const contracting: NavItem[] = [
-  {
-    to: "/room-types", labelKey: "nav.room_types", icon: BedDouble,
-    roles: ["super_admin", "admin", "sales_manager", "sales_agent", "operations_manager", "operations_agent", "viewer"]
-  },
   /* Hidden temporarily
   { to: "/contracts", labelKey: "nav.contracts", icon: FileSignature,
     roles: ["super_admin","admin","operations_manager","operations_agent","finance_manager","finance_agent","viewer"] },
@@ -133,6 +133,7 @@ const reports: NavItem[] = [
 ];
 const admin: NavItem[] = [
   { to: "/users", labelKey: "nav.users", icon: ShieldCheck, roles: ["super_admin", "admin"] },
+  { to: "/tasks", labelKey: "nav.tasks", icon: ClipboardList, roles: ["super_admin", "admin", "sales_manager", "sales_agent", "operations_manager", "operations_agent", "finance_manager", "finance_agent", "viewer"] },
   { to: "/supplier-applications", labelKey: "nav.supplier_applications", icon: Handshake, roles: ["super_admin", "admin"] },
   /* Hidden temporarily
   { to: "/approval-thresholds", labelKey: "nav.approval_thresholds", icon: Scale, roles: ["super_admin","admin","finance_manager"] },
@@ -211,19 +212,19 @@ export function AppSidebar() {
             </SidebarGroupContent>
           </SidebarGroup>
         )}
-        {visibleContracting.length > 0 && (
-          <SidebarGroup>
-            <SidebarGroupLabel className="text-xs font-semibold uppercase tracking-wider">{t("nav.contracting")}</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>{visibleContracting.map(renderItem)}</SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
         {visibleMaster.length > 0 && (
           <SidebarGroup>
             <SidebarGroupLabel className="text-xs font-semibold uppercase tracking-wider">{t("nav.master_data")}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>{visibleMaster.map(renderItem)}</SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+        {visibleContracting.length > 0 && (
+          <SidebarGroup>
+            <SidebarGroupLabel className="text-xs font-semibold uppercase tracking-wider">{t("nav.contracting")}</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>{visibleContracting.map(renderItem)}</SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
         )}

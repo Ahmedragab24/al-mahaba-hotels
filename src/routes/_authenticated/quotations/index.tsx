@@ -187,14 +187,14 @@ function QuotationsList() {
         {/* Filters */}
         <Card>
           <CardContent className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col gap-2">
               <Label className="shrink-0 text-muted-foreground">{t("actions.search")}</Label>
               <div className="relative flex-1">
                 <Search className="absolute top-2.5 start-2 h-4 w-4 text-muted-foreground" />
                 <Input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder={t("quotes.number")} className="ps-8" />
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col gap-2">
               <Label className="shrink-0 text-muted-foreground">{t("quotes.customer")}</Label>
               <Select value={customer} onValueChange={(v) => { setCustomer(v); setPage(1); }}>
                 <SelectTrigger className="w-full"><SelectValue placeholder={t("quotes.customer")} /></SelectTrigger>
@@ -204,7 +204,7 @@ function QuotationsList() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col gap-2">
               <Label className="shrink-0 text-muted-foreground">{t("filter.hotel")}</Label>
               <Select value={hotel} onValueChange={(v) => { setHotel(v); setPage(1); }}>
                 <SelectTrigger className="w-full"><SelectValue placeholder={t("quotes.items.hotel")} /></SelectTrigger>
@@ -214,7 +214,7 @@ function QuotationsList() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col gap-2">
               <Label className="shrink-0 text-muted-foreground">{t("quotes.creator")}</Label>
               <Select value={creator} onValueChange={(v) => { setCreator(v); setPage(1); }}>
                 <SelectTrigger className="w-full"><SelectValue placeholder={t("quotes.creator")} /></SelectTrigger>
@@ -225,13 +225,13 @@ function QuotationsList() {
               </Select>
             </div>
             <div className="grid grid-cols-2 gap-2 sm:col-span-2 xl:col-span-2">
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col gap-2">
                 <Label className="shrink-0 text-muted-foreground">{t("filter.from")}</Label>
-                <Input type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} className="w-full" />
+                <Input type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} className="w-full justify-center" />
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col gap-2">
                 <Label className="shrink-0 text-muted-foreground">{t("filter.to")}</Label>
-                <Input type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} className="w-full" />
+                <Input type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} className="w-full justify-center" />
               </div>
             </div>
             {filtersActive && (

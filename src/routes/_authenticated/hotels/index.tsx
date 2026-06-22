@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useDebounce } from "@/lib/use-debounce";
 import { useCountries, useCities } from "@/lib/lookups";
 import { Card, CardContent } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -160,36 +161,52 @@ function HotelsList() {
         </div>
 
         <Card>
-          <CardContent className="flex flex-wrap items-center gap-3 p-4">
-            <div className="relative min-w-[220px] flex-1">
-              <Search className="absolute top-2.5 start-2 h-4 w-4 text-muted-foreground" />
-              <Input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                placeholder={t("actions.search")} className="ps-8" />
+          <CardContent className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="flex flex-col gap-1.5 sm:col-span-2 lg:col-span-3 xl:col-span-4">
+              <Label className="text-muted-foreground">{t("actions.search")}</Label>
+              <div className="relative w-full">
+                <Search className="absolute top-2.5 start-2 h-4 w-4 text-muted-foreground" />
+                <Input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                  placeholder={t("actions.search")} className="ps-8 w-full" />
+              </div>
             </div>
-            <Select value={status} onValueChange={(v) => { setStatus(v); setPage(1); }}>
-              <SelectTrigger className="w-[150px]"><SelectValue placeholder={t("filter.status")} /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t("filter.all")}</SelectItem>
-                {STATUSES.map((s) => <SelectItem key={s} value={s}>{t(`status.${s}`)}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={country} onValueChange={(v) => { setCountry(v); setPage(1); }}>
-              <SelectTrigger className="w-[180px]"><SelectValue placeholder={t("filter.country")} /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t("filter.all")}</SelectItem>
-                {countries.data?.map((c) => (
-                  <SelectItem key={c.code} value={c.code}>{lang === "ar" ? c.name_ar : c.name_en}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={stars} onValueChange={(v) => { setStars(v); setPage(1); }}>
-              <SelectTrigger className="w-[130px]"><SelectValue placeholder={t("label.stars")} /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t("filter.all")}</SelectItem>
-                {STARS.map((n) => <SelectItem key={n} value={String(n)}>{"★".repeat(n)}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <label className="ms-auto flex items-center gap-2 text-sm">
+
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-muted-foreground">{t("filter.status")}</Label>
+              <Select value={status} onValueChange={(v) => { setStatus(v); setPage(1); }}>
+                <SelectTrigger className="w-full"><SelectValue placeholder={t("filter.status")} /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t("filter.all")}</SelectItem>
+                  {STATUSES.map((s) => <SelectItem key={s} value={s}>{t(`status.${s}`)}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-muted-foreground">{t("filter.country")}</Label>
+              <Select value={country} onValueChange={(v) => { setCountry(v); setPage(1); }}>
+                <SelectTrigger className="w-full"><SelectValue placeholder={t("filter.country")} /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t("filter.all")}</SelectItem>
+                  {countries.data?.map((c) => (
+                    <SelectItem key={c.code} value={c.code}>{lang === "ar" ? c.name_ar : c.name_en}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-muted-foreground">{t("label.stars")}</Label>
+              <Select value={stars} onValueChange={(v) => { setStars(v); setPage(1); }}>
+                <SelectTrigger className="w-full"><SelectValue placeholder={t("label.stars")} /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t("filter.all")}</SelectItem>
+                  {STARS.map((n) => <SelectItem key={n} value={String(n)}>{"★".repeat(n)}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <label className="flex items-center gap-2 text-sm self-end pb-2 cursor-pointer mt-auto">
               <Checkbox checked={showArchived} onCheckedChange={(v) => { setShowArchived(!!v); setPage(1); }} />
               {t("filter.show_archived")}
             </label>

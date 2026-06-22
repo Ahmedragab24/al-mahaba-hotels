@@ -10,6 +10,7 @@ import { useHotelsLite, useSuppliersLite } from "@/lib/lookups";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -120,50 +121,79 @@ function RatesList() {
       <div className="space-y-4 p-6">
         <Card>
           <CardContent className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            <div className="relative sm:col-span-2 lg:col-span-3 xl:col-span-4">
-              <Search className="absolute top-2.5 start-2 h-4 w-4 text-muted-foreground" />
-              <Input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                placeholder={t("actions.search")} className="ps-8" />
+            <div className="flex flex-col gap-1.5 sm:col-span-2 lg:col-span-3 xl:col-span-4">
+              <Label className="text-muted-foreground">{t("actions.search")}</Label>
+              <div className="relative w-full">
+                <Search className="absolute top-2.5 start-2 h-4 w-4 text-muted-foreground" />
+                <Input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                  placeholder={t("actions.search")} className="ps-8 w-full" />
+              </div>
             </div>
-            <Select value={hotelId} onValueChange={(v) => { setHotelId(v); setPage(1); }}>
-              <SelectTrigger className="w-full"><SelectValue placeholder={t("filter.hotel")} /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t("filter.all")}</SelectItem>
-                {hotels.data?.map((h) => (
-                  <SelectItem key={h.id} value={h.id}>{lang === "ar" ? (h.name_ar || h.name_en) : (h.name_en || h.name_ar)}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={supplierId} onValueChange={(v) => { setSupplierId(v); setPage(1); }}>
-              <SelectTrigger className="w-full"><SelectValue placeholder={t("filter.supplier")} /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t("filter.all")}</SelectItem>
-                {suppliers.data?.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>{lang === "ar" ? (s.name_ar || s.name_en) : (s.name_en || s.name_ar)}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={board} onValueChange={(v) => { setBoard(v); setPage(1); }}>
-              <SelectTrigger className="w-full"><SelectValue placeholder={t("rates.meal_plan")} /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t("filter.all")}</SelectItem>
-                {BOARDS.map((b) => <SelectItem key={b} value={b}>{t(`board.${b}`)}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={status} onValueChange={(v) => { setStatus(v); setPage(1); }}>
-              <SelectTrigger className="w-full"><SelectValue placeholder={t("filter.status")} /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t("filter.all")}</SelectItem>
-                {STATUSES.map((s) => <SelectItem key={s} value={s}>{t(`status.${s}`)}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Input type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} className="w-full" />
-            <Input type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} className="w-full" />
-            <label className="flex items-center gap-2 text-sm">
+
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-muted-foreground">{t("rates.hotel")}</Label>
+              <Select value={hotelId} onValueChange={(v) => { setHotelId(v); setPage(1); }}>
+                <SelectTrigger className="w-full"><SelectValue placeholder={t("filter.hotel")} /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t("filter.all")}</SelectItem>
+                  {hotels.data?.map((h) => (
+                    <SelectItem key={h.id} value={h.id}>{lang === "ar" ? (h.name_ar || h.name_en) : (h.name_en || h.name_ar)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-muted-foreground">{t("rates.supplier")}</Label>
+              <Select value={supplierId} onValueChange={(v) => { setSupplierId(v); setPage(1); }}>
+                <SelectTrigger className="w-full"><SelectValue placeholder={t("filter.supplier")} /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t("filter.all")}</SelectItem>
+                  {suppliers.data?.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>{lang === "ar" ? (s.name_ar || s.name_en) : (s.name_en || s.name_ar)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-muted-foreground">{t("rates.meal_plan")}</Label>
+              <Select value={board} onValueChange={(v) => { setBoard(v); setPage(1); }}>
+                <SelectTrigger className="w-full"><SelectValue placeholder={t("rates.meal_plan")} /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t("filter.all")}</SelectItem>
+                  {BOARDS.map((b) => <SelectItem key={b} value={b}>{t(`board.${b}`)}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-muted-foreground">{t("filter.status")}</Label>
+              <Select value={status} onValueChange={(v) => { setStatus(v); setPage(1); }}>
+                <SelectTrigger className="w-full"><SelectValue placeholder={t("filter.status")} /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t("filter.all")}</SelectItem>
+                  {STATUSES.map((s) => <SelectItem key={s} value={s}>{t(`status.${s}`)}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-muted-foreground">{t("filter.from")}</Label>
+              <Input className="w-full justify-center" type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-muted-foreground">{t("filter.to")}</Label>
+              <Input className="w-full justify-center" type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} />
+            </div>
+
+            <label className="flex items-center gap-2 text-sm self-end pb-2 cursor-pointer mt-auto">
               <Checkbox checked={latestOnly} onCheckedChange={(v) => { setLatestOnly(!!v); setPage(1); }} />
               {t("rates.latest_only")}
             </label>
-            <label className="flex items-center gap-2 text-sm">
+
+            <label className="flex items-center gap-2 text-sm self-end pb-2 cursor-pointer mt-auto">
               <Checkbox checked={showArchived} onCheckedChange={(v) => { setShowArchived(!!v); setPage(1); }} />
               {t("filter.show_archived")}
             </label>

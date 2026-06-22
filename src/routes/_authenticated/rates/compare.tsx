@@ -8,6 +8,7 @@ import { useHotelsLite, useHotelRoomTypes } from "@/lib/lookups";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -58,25 +59,40 @@ function CompareRates() {
       <div className="space-y-4 p-6">
         <Card>
           <CardContent className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Select value={hotelId} onValueChange={(v) => { setHotelId(v); setRoomTypeId("all"); }}>
-              <SelectTrigger><SelectValue placeholder={t("rates.hotel")} /></SelectTrigger>
-              <SelectContent>
-                {hotels.data?.map((h) => (
-                  <SelectItem key={h.id} value={h.id}>{lang === "ar" ? (h.name_ar || h.name_en) : (h.name_en || h.name_ar)}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={roomTypeId} onValueChange={setRoomTypeId} disabled={!hotelId}>
-              <SelectTrigger><SelectValue placeholder={t("rates.room_type")} /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t("filter.all")}</SelectItem>
-                {roomTypes.data?.map((r) => (
-                  <SelectItem key={r.id} value={r.id}>{lang === "ar" ? (r.name_ar || r.name_en) : (r.name_en || r.name_ar)}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Input type="date" value={checkIn} onChange={(e) => setCheckIn(e.target.value)} placeholder={t("rates.valid_from")} />
-            <Input type="date" value={checkOut} onChange={(e) => setCheckOut(e.target.value)} placeholder={t("rates.valid_to")} />
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-muted-foreground">{t("rates.hotel")}</Label>
+              <Select value={hotelId} onValueChange={(v) => { setHotelId(v); setRoomTypeId("all"); }}>
+                <SelectTrigger className="w-full"><SelectValue placeholder={t("rates.hotel")} /></SelectTrigger>
+                <SelectContent>
+                  {hotels.data?.map((h) => (
+                    <SelectItem key={h.id} value={h.id}>{lang === "ar" ? (h.name_ar || h.name_en) : (h.name_en || h.name_ar)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-muted-foreground">{t("rates.room_type")}</Label>
+              <Select value={roomTypeId} onValueChange={setRoomTypeId} disabled={!hotelId}>
+                <SelectTrigger className="w-full"><SelectValue placeholder={t("rates.room_type")} /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t("filter.all")}</SelectItem>
+                  {roomTypes.data?.map((r) => (
+                    <SelectItem key={r.id} value={r.id}>{lang === "ar" ? (r.name_ar || r.name_en) : (r.name_en || r.name_ar)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-muted-foreground">{t("rates.valid_from")}</Label>
+              <Input className="w-full justify-center" type="date" value={checkIn} onChange={(e) => setCheckIn(e.target.value)} />
+            </div>
+            
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-muted-foreground">{t("rates.valid_to")}</Label>
+              <Input className="w-full justify-center" type="date" value={checkOut} onChange={(e) => setCheckOut(e.target.value)} />
+            </div>
           </CardContent>
         </Card>
 

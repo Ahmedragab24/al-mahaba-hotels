@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Building2, Store } from "lucide-react";
+import { Building2, Store, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
@@ -25,16 +25,19 @@ export interface SelectedRate {
   room_name_ar?: string;
   view_name_en?: string;
   view_name_ar?: string;
+  supplier_name_en?: string;
+  supplier_name_ar?: string;
 }
 
 interface QuotationRatesDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   hotelId: string;
+  initialSelected?: SelectedRate[];
   onSave: (selected: SelectedRate[]) => void;
 }
 
-export function QuotationRatesDialog({ open, onOpenChange, hotelId, onSave }: QuotationRatesDialogProps) {
+export function QuotationRatesDialog({ open, onOpenChange, hotelId, initialSelected, onSave }: QuotationRatesDialogProps) {
   const { t, lang } = useI18n();
 
   // Selected state per rate_id: quantity
@@ -43,9 +46,17 @@ export function QuotationRatesDialog({ open, onOpenChange, hotelId, onSave }: Qu
   // Reset state when opened with a new hotel
   useEffect(() => {
     if (open) {
-      setSelected({});
+      if (initialSelected && initialSelected.length > 0) {
+        const state: Record<string, { selected: boolean; quantity: number }> = {};
+        initialSelected.forEach(item => {
+          state[item.rate_id] = { selected: true, quantity: item.rooms };
+        });
+        setSelected(state);
+      } else {
+        setSelected({});
+      }
     }
-  }, [open, hotelId]);
+  }, [open, hotelId, initialSelected]);
 
   const q = useQuery({
     queryKey: ["rates-for-quotation", hotelId],
@@ -73,7 +84,7 @@ export function QuotationRatesDialog({ open, onOpenChange, hotelId, onSave }: Qu
 
   const groupedRates = useMemo(() => {
     const groups: Record<string, { supplier_id: string | null; name_en: string; name_ar: string; is_direct: boolean; rates: any[] }> = {};
-    
+
     // Direct Group
     groups["direct"] = {
       supplier_id: null,
@@ -130,6 +141,7 @@ export function QuotationRatesDialog({ open, onOpenChange, hotelId, onSave }: Qu
     (q.data || []).forEach(r => {
       const state = selected[r.id];
       if (state?.selected && state.quantity > 0) {
+        const actualSupplier = r.supplier || r.contract?.supplier;
         results.push({
           rate_id: r.id,
           room_type_id: r.room_type_id,
@@ -143,6 +155,8 @@ export function QuotationRatesDialog({ open, onOpenChange, hotelId, onSave }: Qu
           room_name_ar: r.room?.name_ar,
           view_name_en: r.view?.name_en,
           view_name_ar: r.view?.name_ar,
+          supplier_name_en: actualSupplier?.name_en || (r.is_direct ? "Direct Hotel" : "Supplier"),
+          supplier_name_ar: actualSupplier?.name_ar || (r.is_direct ? "فندق مباشر" : "مورد"),
         });
       }
     });
@@ -160,63 +174,69 @@ export function QuotationRatesDialog({ open, onOpenChange, hotelId, onSave }: Qu
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-muted/50">
+        <div className="flex-1 overflow-y-auto p-6 bg-white dark:bg-card">
           {q.isLoading && <div className="text-center py-10 text-muted-foreground">{t("label.loading")}</div>}
           {!q.isLoading && groupedRates.length === 0 && (
             <div className="text-center py-10 text-muted-foreground">لا توجد أسعار متاحة لهذا الفندق.</div>
           )}
 
-          {groupedRates.map((group) => (
-            <Card key={group.supplier_id || "direct"} className="overflow-hidden border-border/50 shadow-sm">
-              <div className="bg-card px-4 py-3 border-b flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center">
-                  {group.is_direct ? <Building2 className="w-4 h-4 text-amber-600 dark:text-amber-500" /> : <Store className="w-4 h-4 text-amber-600 dark:text-amber-500" />}
+          <div className="space-y-10">
+            {groupedRates.map((group) => (
+              <div key={group.supplier_id || "direct"} className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
+                    <Building2 className="w-5 h-5 text-amber-700 dark:text-amber-500" />
+                  </div>
+                  <h3 className="font-bold text-lg text-slate-800 dark:text-slate-200">{lang === "ar" ? group.name_ar : group.name_en}</h3>
+                  {group.is_direct && <Badge variant="secondary" className="bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-normal px-3 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800">مصدر رئيسي</Badge>}
                 </div>
-                <h3 className="font-bold text-lg">{lang === "ar" ? group.name_ar : group.name_en}</h3>
-                {group.is_direct && <Badge variant="secondary" className="mr-auto text-xs bg-secondary">مصدر رئيسي</Badge>}
-              </div>
-              <CardContent className="p-0">
+
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="bg-muted/50 text-muted-foreground text-center border-b">
-                        <th className="py-3 px-4 font-medium text-start">الغرفة</th>
-                        <th className="py-3 px-4 font-medium">الإطلالة</th>
-                        <th className="py-3 px-4 font-medium">خطة الوجبات</th>
-                        <th className="py-3 px-4 font-medium">سعر الليلة</th>
-                        <th className="py-3 px-4 font-medium w-32">العدد</th>
+                      <tr className="text-slate-400 dark:text-slate-500 font-normal text-center">
+                        <th className="py-2 px-4 font-normal text-start">الغرفة</th>
+                        <th className="py-2 px-4 font-normal">الإطلالة</th>
+                        <th className="py-2 px-4 font-normal">خطة الوجبات</th>
+                        <th className="py-2 px-4 font-normal">سعر الليلة</th>
+                        <th className="py-2 px-4 font-normal w-32">العدد</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y">
+                    <tbody>
                       {group.rates.map(rate => {
                         const isSelected = selected[rate.id]?.selected || false;
                         const qty = selected[rate.id]?.quantity || "";
                         const price = rate.selling_price || rate.cost_per_night;
 
                         return (
-                          <tr key={rate.id} className={cn("hover:bg-muted/50 transition-colors", isSelected && "bg-amber-50 dark:bg-amber-900/20")}>
+                          <tr key={rate.id}>
                             <td className="py-3 px-4">
                               <div className="flex items-center gap-3">
-                                <Checkbox 
-                                  checked={isSelected} 
-                                  onCheckedChange={(c) => handleToggle(rate.id, !!c)} 
-                                  className={cn("data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600")}
+                                <Checkbox
+                                  checked={isSelected}
+                                  onCheckedChange={(c) => handleToggle(rate.id, !!c)}
+                                  className={cn("border-slate-300 dark:border-slate-600 rounded", isSelected && "bg-amber-600 border-amber-600 dark:border-amber-600")}
                                 />
-                                <span className={cn("font-medium", isSelected ? "text-amber-900 dark:text-amber-200" : "")}>
+                                <span className="font-bold text-slate-800 dark:text-slate-200">
                                   {lang === "ar" ? rate.room?.name_ar : rate.room?.name_en}
                                 </span>
                               </div>
                             </td>
                             <td className="py-3 px-4 text-center">
-                              {rate.view ? (lang === "ar" ? rate.view.name_ar : rate.view.name_en) : "—"}
+                              <div className="flex items-center justify-center gap-1 text-slate-600 dark:text-slate-300 font-medium">
+                                {rate.view ? (lang === "ar" ? rate.view.name_ar : rate.view.name_en) : "—"}
+                                <MapPin className="w-3.5 h-3.5 text-amber-600" />
+                              </div>
                             </td>
                             <td className="py-3 px-4 text-center">
-                              <Badge variant="outline" className="font-normal bg-background">
+                              <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-medium py-2 px-4 rounded-lg mx-auto w-fit min-w-[100px]">
                                 {t(`board.${rate.meal_plan}`)}
-                              </Badge>
+                              </div>
                             </td>
                             <td className="py-3 px-4 text-center">
-                              <span className="text-amber-700 dark:text-amber-500 font-bold">{price} {rate.currency}</span>
+                              <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 text-amber-600/90 dark:text-amber-500 font-medium py-2 px-4 rounded-lg mx-auto w-fit min-w-[100px]">
+                                {price} {rate.currency}
+                              </div>
                             </td>
                             <td className="py-3 px-4">
                               <Input
@@ -224,8 +244,8 @@ export function QuotationRatesDialog({ open, onOpenChange, hotelId, onSave }: Qu
                                 min={1}
                                 value={qty}
                                 onChange={(e) => handleQuantity(rate.id, parseInt(e.target.value) || 0)}
-                                className={cn("h-9 text-center", isSelected ? "border-amber-300 dark:border-amber-700 focus-visible:ring-amber-500" : "")}
-                                placeholder="0"
+                                className="h-10 text-center bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 rounded-lg text-slate-600 dark:text-slate-300 font-medium focus-visible:ring-amber-500"
+                                placeholder=""
                               />
                             </td>
                           </tr>
@@ -234,9 +254,9 @@ export function QuotationRatesDialog({ open, onOpenChange, hotelId, onSave }: Qu
                     </tbody>
                   </table>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className="p-6 border-t bg-background flex justify-end gap-3">

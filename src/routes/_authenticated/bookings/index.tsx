@@ -9,6 +9,7 @@ import { useDebounce } from "@/lib/use-debounce";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -160,28 +161,47 @@ function BookingsList() {
         {/* Filters */}
         <Card>
           <CardContent className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="relative">
-              <Search className="absolute top-2.5 start-2 h-4 w-4 text-muted-foreground" />
-              <Input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder={t("bk.number")} className="ps-8" />
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-muted-foreground">{t("actions.search")}</Label>
+              <div className="relative w-full">
+                <Search className="absolute top-2.5 start-2 h-4 w-4 text-muted-foreground" />
+                <Input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder={t("bk.number")} className="ps-8 w-full" />
+              </div>
             </div>
-            <Select value={customer} onValueChange={(v) => { setCustomer(v); setPage(1); }}>
-              <SelectTrigger className="w-full"><SelectValue placeholder={t("bk.customer")} /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t("filter.all")}</SelectItem>
-                {customers.data?.map((c: any) => <SelectItem key={c.id} value={c.id}>{lang === "ar" ? (c.name_ar || c.name_en) : (c.name_en || c.name_ar)}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={hotel} onValueChange={(v) => { setHotel(v); setPage(1); }}>
-              <SelectTrigger className="w-full"><SelectValue placeholder={t("quotes.items.hotel")} /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t("filter.all")}</SelectItem>
-                {hotels.data?.map((h: any) => <SelectItem key={h.id} value={h.id}>{lang === "ar" ? (h.name_ar || h.name_en) : (h.name_en || h.name_ar)}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <div className="grid grid-cols-2 gap-2">
-              <Input type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} className="w-full" />
-              <Input type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} className="w-full" />
+            
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-muted-foreground">{t("bk.customer")}</Label>
+              <Select value={customer} onValueChange={(v) => { setCustomer(v); setPage(1); }}>
+                <SelectTrigger className="w-full"><SelectValue placeholder={t("bk.customer")} /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t("filter.all")}</SelectItem>
+                  {customers.data?.map((c: any) => <SelectItem key={c.id} value={c.id}>{lang === "ar" ? (c.name_ar || c.name_en) : (c.name_en || c.name_ar)}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
+            
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-muted-foreground">{t("filter.hotel")}</Label>
+              <Select value={hotel} onValueChange={(v) => { setHotel(v); setPage(1); }}>
+                <SelectTrigger className="w-full"><SelectValue placeholder={t("quotes.items.hotel")} /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t("filter.all")}</SelectItem>
+                  {hotels.data?.map((h: any) => <SelectItem key={h.id} value={h.id}>{lang === "ar" ? (h.name_ar || h.name_en) : (h.name_en || h.name_ar)}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-2 sm:col-span-2 xl:col-span-1">
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-muted-foreground">{t("filter.from")}</Label>
+                <Input className="w-full justify-center" type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-muted-foreground">{t("filter.to")}</Label>
+                <Input className="w-full justify-center" type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} />
+              </div>
+            </div>
+            
             {filtersActive && (
               <div className="sm:col-span-2 xl:col-span-4 flex justify-end">
                 <Button variant="ghost" size="sm" onClick={resetAll}>

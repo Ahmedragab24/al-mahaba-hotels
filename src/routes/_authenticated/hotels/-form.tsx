@@ -197,13 +197,13 @@ export function HotelForm({ initial, onSaved }: { initial?: any; onSaved: (id: s
             <FormItem><FormLabel>{t("label.email")}</FormLabel><FormControl><Input type="email" dir="ltr" {...field} /></FormControl><FormMessage /></FormItem>
           )} />
           <FormField control={form.control} name="website" render={({ field }) => (
-            <FormItem><FormLabel>{t("label.website")}</FormLabel><FormControl><Input dir="ltr" {...field} /></FormControl><FormMessage /></FormItem>
+            <FormItem><FormLabel>{t("label.website")}</FormLabel><FormControl><Input dir="ltr"  {...field} /></FormControl><FormMessage /></FormItem>
           )} />
           <FormField control={form.control} name="check_in_time" render={({ field }) => (
-            <FormItem><FormLabel>{t("label.checkin")}</FormLabel><FormControl><Input type="time" dir="ltr" {...field} /></FormControl><FormMessage /></FormItem>
+            <FormItem><FormLabel>{t("label.checkin")}</FormLabel><FormControl><Input type="time" className="flex! justify-center! gap-4!" dir="ltr" {...field} /></FormControl><FormMessage /></FormItem>
           )} />
           <FormField control={form.control} name="check_out_time" render={({ field }) => (
-            <FormItem><FormLabel>{t("label.checkout")}</FormLabel><FormControl><Input type="time" dir="ltr" {...field} /></FormControl><FormMessage /></FormItem>
+            <FormItem><FormLabel>{t("label.checkout")}</FormLabel><FormControl><Input type="time" className="flex! justify-center! gap-4!" dir="ltr" {...field} /></FormControl><FormMessage /></FormItem>
           )} />
         </CardContent></Card>
 

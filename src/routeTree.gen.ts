@@ -21,6 +21,7 @@ import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedAuditRouteImport } from './routes/_authenticated/audit'
 import { Route as AuthenticatedApprovalThresholdsRouteImport } from './routes/_authenticated/approval-thresholds'
 import { Route as AuthenticatedTaxesIndexRouteImport } from './routes/_authenticated/taxes/index'
+import { Route as AuthenticatedTasksIndexRouteImport } from './routes/_authenticated/tasks/index'
 import { Route as AuthenticatedSuppliersIndexRouteImport } from './routes/_authenticated/suppliers/index'
 import { Route as AuthenticatedSeasonsIndexRouteImport } from './routes/_authenticated/seasons/index'
 import { Route as AuthenticatedRoomTypesIndexRouteImport } from './routes/_authenticated/room-types/index'
@@ -123,6 +124,11 @@ const AuthenticatedApprovalThresholdsRoute =
 const AuthenticatedTaxesIndexRoute = AuthenticatedTaxesIndexRouteImport.update({
   id: '/taxes/',
   path: '/taxes/',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedTasksIndexRoute = AuthenticatedTasksIndexRouteImport.update({
+  id: '/tasks/',
+  path: '/tasks/',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedSuppliersIndexRoute =
@@ -410,6 +416,7 @@ export interface FileRoutesByFullPath {
   '/room-types/': typeof AuthenticatedRoomTypesIndexRoute
   '/seasons/': typeof AuthenticatedSeasonsIndexRoute
   '/suppliers/': typeof AuthenticatedSuppliersIndexRoute
+  '/tasks/': typeof AuthenticatedTasksIndexRoute
   '/taxes/': typeof AuthenticatedTaxesIndexRoute
   '/api/public/hooks/simulation-tick': typeof ApiPublicHooksSimulationTickRoute
 }
@@ -464,6 +471,7 @@ export interface FileRoutesByTo {
   '/room-types': typeof AuthenticatedRoomTypesIndexRoute
   '/seasons': typeof AuthenticatedSeasonsIndexRoute
   '/suppliers': typeof AuthenticatedSuppliersIndexRoute
+  '/tasks': typeof AuthenticatedTasksIndexRoute
   '/taxes': typeof AuthenticatedTaxesIndexRoute
   '/api/public/hooks/simulation-tick': typeof ApiPublicHooksSimulationTickRoute
 }
@@ -520,6 +528,7 @@ export interface FileRoutesById {
   '/_authenticated/room-types/': typeof AuthenticatedRoomTypesIndexRoute
   '/_authenticated/seasons/': typeof AuthenticatedSeasonsIndexRoute
   '/_authenticated/suppliers/': typeof AuthenticatedSuppliersIndexRoute
+  '/_authenticated/tasks/': typeof AuthenticatedTasksIndexRoute
   '/_authenticated/taxes/': typeof AuthenticatedTaxesIndexRoute
   '/api/public/hooks/simulation-tick': typeof ApiPublicHooksSimulationTickRoute
 }
@@ -576,6 +585,7 @@ export interface FileRouteTypes {
     | '/room-types/'
     | '/seasons/'
     | '/suppliers/'
+    | '/tasks/'
     | '/taxes/'
     | '/api/public/hooks/simulation-tick'
   fileRoutesByTo: FileRoutesByTo
@@ -630,6 +640,7 @@ export interface FileRouteTypes {
     | '/room-types'
     | '/seasons'
     | '/suppliers'
+    | '/tasks'
     | '/taxes'
     | '/api/public/hooks/simulation-tick'
   id:
@@ -685,6 +696,7 @@ export interface FileRouteTypes {
     | '/_authenticated/room-types/'
     | '/_authenticated/seasons/'
     | '/_authenticated/suppliers/'
+    | '/_authenticated/tasks/'
     | '/_authenticated/taxes/'
     | '/api/public/hooks/simulation-tick'
   fileRoutesById: FileRoutesById
@@ -780,6 +792,13 @@ declare module '@tanstack/react-router' {
       path: '/taxes'
       fullPath: '/taxes/'
       preLoaderRoute: typeof AuthenticatedTaxesIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/tasks/': {
+      id: '/_authenticated/tasks/'
+      path: '/tasks'
+      fullPath: '/tasks/'
+      preLoaderRoute: typeof AuthenticatedTasksIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/suppliers/': {
@@ -1121,6 +1140,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedRoomTypesIndexRoute: typeof AuthenticatedRoomTypesIndexRoute
   AuthenticatedSeasonsIndexRoute: typeof AuthenticatedSeasonsIndexRoute
   AuthenticatedSuppliersIndexRoute: typeof AuthenticatedSuppliersIndexRoute
+  AuthenticatedTasksIndexRoute: typeof AuthenticatedTasksIndexRoute
   AuthenticatedTaxesIndexRoute: typeof AuthenticatedTaxesIndexRoute
 }
 
@@ -1174,6 +1194,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedRoomTypesIndexRoute: AuthenticatedRoomTypesIndexRoute,
   AuthenticatedSeasonsIndexRoute: AuthenticatedSeasonsIndexRoute,
   AuthenticatedSuppliersIndexRoute: AuthenticatedSuppliersIndexRoute,
+  AuthenticatedTasksIndexRoute: AuthenticatedTasksIndexRoute,
   AuthenticatedTaxesIndexRoute: AuthenticatedTaxesIndexRoute,
 }
 

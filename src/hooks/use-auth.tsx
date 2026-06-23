@@ -83,7 +83,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     !key || hasRole("super_admin") || !blockedModules.includes(key);
 
   async function signOut() {
-    if (typeof window !== "undefined") window.localStorage.removeItem("demo_role");
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem("demo_role");
+      window.localStorage.removeItem("custom_display_email");
+    }
     await supabase.auth.signOut();
     setSession(null); setUser(null); setProfile(null); setRoles([]); setBlockedModules([]);
   }

@@ -1,5 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { SelectedRate } from "@/components/quotation-rates-dialog";
+import { HotelRatesSelector } from "@/components/hotel-rates-selector";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/hooks/use-auth";
@@ -234,6 +236,10 @@ export function BookingForm({
 
   const ar = (a: string, e: string) => (lang === "ar" ? a : e);
 
+  const [selectedItems, setSelectedItems] = useState<SelectedRate[]>([]);
+
+
+
   const [form, setForm] = useState({
     // Customer & meta
     customer_id: initial?.customer_id ?? "",
@@ -278,7 +284,7 @@ export function BookingForm({
       (
         await supabase
           .from("customers")
-          .select("id,name_en,name_ar,customer_type")
+          .select("id,name_en,name_ar,customer_type,country_code")
           .is("deleted_at", null)
           .order("name_en")
       ).data ?? [],
@@ -297,29 +303,7 @@ export function BookingForm({
     },
   });
 
-  const availableRates = useQuery({
-    queryKey: ["lookup-rates", form.hotel_id, form.room_type_id, form.is_direct],
-    queryFn: async () => {
-      if (!form.hotel_id || !form.room_type_id) return [];
-      let q = supabase
-        .from("rates")
-        .select("id, code, selling_price, cost_per_night, currency, is_direct, meal_plan, supplier:suppliers(name_en,name_ar)")
-        .eq("hotel_id", form.hotel_id)
-        .eq("room_type_id", form.room_type_id)
-        .is("deleted_at", null);
 
-      if (form.is_direct) {
-        q = q.eq("is_direct", true);
-      } else {
-        q = q.eq("is_direct", false);
-      }
-
-      const { data, error } = await q;
-      if (error) throw error;
-      return data ?? [];
-    },
-    enabled: !!form.hotel_id && !!form.room_type_id,
-  });
 
   const filteredHotels = useMemo(() => {
     let list = hotelsQuery.data ?? [];
@@ -342,14 +326,71 @@ export function BookingForm({
   const amountPaid = Number(form.amount_paid) || 0;
   const remaining = totalAmount - amountPaid;
 
+  // Load initial booking rooms if editing
+  const initialRooms = useQuery({
+    queryKey: ["booking-rooms-initial", initial?.id],
+    enabled: !!initial?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("booking_rooms")
+        .select("*, hotel:hotels(name_en,name_ar), room_type:hotel_room_types(name_en,name_ar), supplier:suppliers(name_en,name_ar), rate:rates(*)")
+        .eq("booking_id", initial.id)
+        .order("created_at");
+      if (error) throw error;
+      return (data ?? []) as any[];
+    },
+  });
+
+  // Populate selectedItems when initialRooms finishes loading
+  useEffect(() => {
+    if (initialRooms.data && initialRooms.data.length > 0 && selectedItems.length === 0) {
+      setSelectedItems(
+        initialRooms.data.map((r: any) => ({
+          rate_id: r.rate_id,
+          room_type_id: r.room_type_id || r.rate?.room_type_id,
+          view_id: r.rate?.view_id || null,
+          meal_plan: r.rate?.meal_plan || "RO",
+          selling_price: Number(r.selling_price) || 0,
+          rooms: r.rooms || 1,
+          supplier_id: r.supplier_id || null,
+          is_direct: r.rate?.is_direct ?? true,
+          room_name_en: r.room_type?.name_en,
+          room_name_ar: r.room_type?.name_ar,
+          supplier_name_en: r.supplier?.name_en,
+          supplier_name_ar: r.supplier?.name_ar,
+        }))
+      );
+    }
+  }, [initialRooms.data]);
+
+  // Auto-calculate total from selected items
+  useEffect(() => {
+    if (selectedItems.length > 0) {
+      const totalRoomsCount = selectedItems.reduce((sum, item) => sum + (item.rooms || 0), 0);
+      const roomTotalRate = selectedItems.reduce((sum, item) => sum + (Number(item.selling_price) || 0) * (item.rooms || 1), 0);
+      const autoTotal = roomTotalRate * nights;
+      
+      setForm((f) => ({
+        ...f,
+        rooms: totalRoomsCount,
+        room_rate: String(roomTotalRate / (totalRoomsCount || 1)),
+        total_amount: autoTotal > 0 ? String(autoTotal) : f.total_amount,
+        amount_paid: f.payment_mode === "full" ? (autoTotal > 0 ? String(autoTotal) : f.amount_paid) : f.amount_paid,
+      }));
+    }
+  }, [selectedItems, nights]);
+
   const handleCountryChange = (val: string) => {
-    setForm((f) => ({ ...f, country_code: val, city_id: "", hotel_id: "", room_type_id: "", view_id: "" }));
+    setForm((f) => ({ ...f, country_code: val, city_id: "", hotel_id: "", room_type_id: "" }));
+    setSelectedItems([]);
   };
   const handleCityChange = (val: string) => {
-    setForm((f) => ({ ...f, city_id: val, hotel_id: "", room_type_id: "", view_id: "" }));
+    setForm((f) => ({ ...f, city_id: val, hotel_id: "", room_type_id: "" }));
+    setSelectedItems([]);
   };
   const handleHotelChange = (val: string) => {
-    setForm((f) => ({ ...f, hotel_id: val, room_type_id: "", view_id: "" }));
+    setForm((f) => ({ ...f, hotel_id: val, room_type_id: "" }));
+    setSelectedItems([]);
   };
 
   // Auto-fill total when room_rate / nights / rooms change
@@ -377,13 +418,17 @@ export function BookingForm({
       if (!form.customer_id) throw new Error(t("bk.customer") + " *");
       if (!form.hotel_id) throw new Error(ar("يجب اختيار الفندق", "Hotel is required") + " *");
       if (!form.check_in || !form.check_out) throw new Error(ar("يجب تحديد تواريخ الإقامة", "Check-in/out dates required") + " *");
+      
+      const primaryRoomTypeId = selectedItems[0]?.room_type_id || null;
+      const totalRoomsCount = selectedItems.reduce((sum, item) => sum + (item.rooms || 0), 0) || 1;
+
       const payload: any = {
         customer_id: form.customer_id,
         currency: (form.currency || "SAR").toUpperCase(),
         booking_date: form.booking_date,
         hotel_id: form.hotel_id || null,
-        room_type_id: form.room_type_id || null,
-        rooms: form.rooms || 1,
+        room_type_id: primaryRoomTypeId,
+        rooms: totalRoomsCount,
         check_in: form.check_in || null,
         check_out: form.check_out || null,
         is_direct: form.is_direct,
@@ -395,10 +440,12 @@ export function BookingForm({
         special_requests: form.special_requests || null,
         notes: form.notes || null,
       };
+
+      let bookingId = "";
       if (initial?.id) {
         const { error } = await supabase.from("bookings").update(payload).eq("id", initial.id);
         if (error) throw error;
-        return initial.id as string;
+        bookingId = initial.id;
       } else {
         payload.created_by = auth.user?.id ?? null;
         const { data, error } = await supabase
@@ -407,8 +454,26 @@ export function BookingForm({
           .select("id")
           .single();
         if (error) throw error;
-        return data.id as string;
+        bookingId = data.id as string;
+
+        if (selectedItems.length > 0) {
+          const roomsPayload = selectedItems.map(item => ({
+            booking_id: bookingId,
+            hotel_id: form.hotel_id,
+            rate_id: item.rate_id,
+            room_type_id: item.room_type_id,
+            occupancy_type: "double",
+            check_in: form.check_in,
+            check_out: form.check_out,
+            rooms: item.rooms,
+            cost_price: null,
+            selling_price: item.selling_price,
+          }));
+          const { error: roomsError } = await supabase.from("booking_rooms").insert(roomsPayload);
+          if (roomsError) throw roomsError;
+        }
       }
+      return bookingId;
     },
     onSuccess: (id) => {
       toast.success(t("toast.saved"));
@@ -432,7 +497,24 @@ export function BookingForm({
           />
           <div className="grid gap-4 md:grid-cols-3 mt-4">
             <FormField label={t("bk.customer")} required>
-              <Select value={form.customer_id} onValueChange={(v) => set("customer_id", v)}>
+              <Select
+                value={form.customer_id}
+                onValueChange={(val) => {
+                  const selectedCust = customers.data?.find((c: any) => c.id === val);
+                  if (selectedCust?.country_code) {
+                    setForm((f) => ({
+                      ...f,
+                      customer_id: val,
+                      country_code: selectedCust.country_code,
+                      city_id: selectedCust.country_code !== f.country_code ? "" : f.city_id,
+                      hotel_id: selectedCust.country_code !== f.country_code ? "" : f.hotel_id,
+                      room_type_id: selectedCust.country_code !== f.country_code ? "" : f.room_type_id,
+                    }));
+                  } else {
+                    setForm((f) => ({ ...f, customer_id: val }));
+                  }
+                }}
+              >
                 <SelectTrigger className="h-9">
                   <SelectValue placeholder={ar("اختر العميل", "Select customer")} />
                 </SelectTrigger>
@@ -537,51 +619,17 @@ export function BookingForm({
               </Select>
             </FormField>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* ── 3. Room Details ── */}
-      <Card className="shadow-sm border-border/60">
-        <CardContent className="p-5">
-          <SectionHeader
-            icon={BedDouble}
-            title={ar("تفاصيل الغرفة", "Room Details")}
-            subtitle={ar("نوع الغرفة والإطلالة ونوع الإشغال وعدد الغرف", "Room type, view, occupancy and count")}
+          <HotelRatesSelector
+            hotelId={form.hotel_id}
+            currency={form.currency}
+            selectedItems={selectedItems}
+            onChange={setSelectedItems}
           />
-          <div className="grid gap-4 md:grid-cols-2 mt-4">
-            <FormField label={ar("نوع الغرفة", "Room Type")}>
-              <Select
-                value={form.room_type_id}
-                onValueChange={(v) => set("room_type_id", v)}
-                disabled={!form.hotel_id}
-              >
-                <SelectTrigger className="h-9">
-                  <SelectValue placeholder={ar("اختر نوع الغرفة", "Room type")} />
-                </SelectTrigger>
-                <SelectContent>
-                  {roomTypes.data?.map((rt: any) => (
-                    <SelectItem key={rt.id} value={rt.id}>
-                      {lang === "ar" ? rt.name_ar : rt.name_en}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </FormField>
-
-
-
-            <FormField label={ar("عدد الغرف", "Number of Rooms")}>
-              <Input
-                className="h-9"
-                type="number"
-                min={1}
-                value={form.rooms}
-                onChange={(e) => set("rooms", Number(e.target.value) || 1)}
-              />
-            </FormField>
-          </div>
         </CardContent>
       </Card>
+
+
 
       {/* ── 4. Stay Dates ── */}
       <Card className="shadow-sm border-border/60">
@@ -661,46 +709,18 @@ export function BookingForm({
 
                 {/* Room rate */}
                 <FormField label={ar("سعر الغرفة / ليلة", "Room Rate / Night")}>
-                  {form.is_direct ? (
-                    <Select
-                      value={form.room_rate ? String(form.room_rate) : ""}
-                      onValueChange={(v) => handleRateChange(v)}
-                    >
-                      <SelectTrigger className="h-9">
-                        <SelectValue placeholder={ar("اختر السعر", "Select Rate")} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableRates.data?.length === 0 && (
-                          <SelectItem value="none" disabled>
-                            {ar("لا توجد أسعار متاحة", "No rates available")}
-                          </SelectItem>
-                        )}
-                        {availableRates.data?.map((r: any) => {
-                          const price = r.selling_price ?? r.cost_per_night;
-                          return (
-                            <SelectItem key={r.id} value={String(price)}>
-                              {price} {r.currency} — {r.code} {r.meal_plan ? `(${r.meal_plan})` : ""}
-                            </SelectItem>
-                          );
-                        })}
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <div className="relative">
-                      <Input
-                        className="h-9 pe-12"
-                        type="number"
-                        min={0}
-                        step="0.01"
-                        placeholder="0.00"
-                        value={form.room_rate}
-                        onChange={(e) => handleRateChange(e.target.value)}
-                      />
-                      <span className="absolute end-3 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground pointer-events-none">
-                        {form.currency}
-                      </span>
-                    </div>
-                  )}
+                  <div className="relative">
+                    <Input
+                      className="h-9 pe-12 bg-muted"
+                      type="number"
+                      readOnly
+                      placeholder="0.00"
+                      value={form.room_rate}
+                    />
+                    <span className="absolute end-3 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground pointer-events-none">
+                      {form.currency}
+                    </span>
+                  </div>
                 </FormField>
 
                 {/* Total amount */}

@@ -36,7 +36,6 @@ export function RoomTypeDialog({ open, onOpenChange, initial, onSaved, fixedHote
         name_en: v.name_en.trim(), name_ar: v.name_ar.trim(),
         bed_type: v.bed_type?.trim() || null,
         view_name: v.view_name?.trim() || null,
-        base_price: v.base_price ? Number(v.base_price) : null,
       };
       if (!isEdit) {
         payload.max_adults = 2;
@@ -138,18 +137,6 @@ export function RoomTypeDialog({ open, onOpenChange, initial, onSaved, fixedHote
                   <SelectItem value="sextuple">{lang === "ar" ? "سداسي" : "Sextuple"}</SelectItem>
                 </SelectContent>
               </Select>
-            </Field>
-
-            <Field label={lang === "ar" ? "السعر" : "Price"}>
-              <Input
-                className="h-10"
-                type="number"
-                min="0"
-                step="0.01"
-                placeholder="0.00"
-                value={v.base_price ?? ""}
-                onChange={(e) => setV({ ...v, base_price: e.target.value ? Number(e.target.value) : null })}
-              />
             </Field>
           </div>
         </div>

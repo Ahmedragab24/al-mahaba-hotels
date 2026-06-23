@@ -50,10 +50,11 @@ function AuthenticatedLayout() {
     navigate({ to: "/auth", replace: true });
   }
 
+  const customDisplayEmail = typeof window !== "undefined" ? window.localStorage.getItem("custom_display_email") : null;
   const primaryRole = auth.roles[0];
-  const displayName = lang === "ar"
+  const displayName = customDisplayEmail || (lang === "ar"
     ? (auth.profile?.full_name_ar || auth.profile?.full_name_en || auth.user?.email || (primaryRole ? t(`role.${primaryRole}`) : "—"))
-    : (auth.profile?.full_name_en || auth.profile?.full_name_ar || auth.user?.email || (primaryRole ? t(`role.${primaryRole}`) : "—"));
+    : (auth.profile?.full_name_en || auth.profile?.full_name_ar || auth.user?.email || (primaryRole ? t(`role.${primaryRole}`) : "—")));
   const initials = (displayName || "?").toString().split(" ").map(s => s[0]).join("").slice(0,2).toUpperCase();
 
   return (

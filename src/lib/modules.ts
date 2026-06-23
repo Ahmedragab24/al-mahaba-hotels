@@ -3,6 +3,7 @@ import type { AppRole } from "@/hooks/use-auth";
 const ALL: AppRole[] = ["super_admin", "admin", "sales_manager", "sales_agent", "operations_manager", "operations_agent", "finance_manager", "finance_agent", "viewer"];
 const OPS: AppRole[] = ["super_admin", "admin", "operations_manager", "operations_agent", "finance_manager", "finance_agent", "viewer"];
 const FIN: AppRole[] = ["super_admin", "admin", "finance_manager", "finance_agent"];
+const FIN_SALES: AppRole[] = ["super_admin", "admin", "finance_manager", "finance_agent", "sales_manager"];
 const ADMIN: AppRole[] = ["super_admin", "admin"];
 
 // Central list of app modules: which roles may see each module (mirrors the sidebar),
@@ -22,6 +23,8 @@ export const MODULES: { key: string; labelKey: string; roles: AppRole[] }[] = [
   { key: "taxes", labelKey: "nav.taxes", roles: OPS },
   { key: "invoices", labelKey: "nav.invoices", roles: FIN },
   { key: "receipts", labelKey: "nav.receipts", roles: FIN },
+  { key: "receivables", labelKey: "nav.receivables", roles: FIN_SALES },
+  { key: "payments", labelKey: "nav.payments", roles: FIN_SALES },
   { key: "payables", labelKey: "nav.payables", roles: FIN },
   { key: "reports", labelKey: "nav.reports", roles: ALL },
   { key: "tasks", labelKey: "nav.tasks", roles: ALL },

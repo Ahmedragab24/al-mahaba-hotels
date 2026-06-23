@@ -537,7 +537,7 @@ export function RateForm({ initial, onSaved }: { initial?: any; onSaved: (id: st
         {/* Meal Plan Section */}
         <Card>
           <CardContent className="p-6">
-            <MealPlanConfigurator 
+            <MealPlanConfigurator
               mealsIncluded={mealsIncluded ?? true}
               onMealsIncludedChange={(v) => form.setValue("meals_included", v)}
               mealPlanComponents={mealPlanComponents}

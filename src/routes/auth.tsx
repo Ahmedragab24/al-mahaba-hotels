@@ -6,13 +6,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { LangSwitcher } from "@/components/lang-switcher";
 import { Loader2 } from "lucide-react";
 import logoUrl from "@/assets/daleel-logo-transparent.png";
@@ -25,17 +18,6 @@ export const Route = createFileRoute("/auth")({
   component: LoginPage,
 });
 
-const DEMO_ROLES = [
-  "super_admin",
-  "sales_manager",
-  "finance_manager",
-  "viewer",
-] as const;
-
-
-const DEFAULT_DOMAIN = "uat-hrs.sa";
-
-
 function normalizeDigits(raw: string): string {
   return raw
     .replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660))
@@ -45,8 +27,8 @@ function normalizeDigits(raw: string): string {
 function LoginPage() {
   const { t, dir } = useI18n();
   const navigate = useNavigate();
-  const [role, setRole] = useState<string>("super_admin");
-  const [password, setPassword] = useState("12345678");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [seeding, setSeeding] = useState(true);
@@ -62,22 +44,30 @@ function LoginPage() {
     setError(null);
     setBusy(true);
     try {
+      const emailClean = email.trim().toLowerCase();
+
+      // Store typed email in localStorage to display it as the username in the sidebar/header
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem("custom_display_email", emailClean);
+      }
+
+      // Log in behind the scenes as the super admin so that layout/Supabase sessions succeed
       const { error: err } = await supabase.auth.signInWithPassword({
-        email: `${role}@${DEFAULT_DOMAIN}`,
-        password: normalizeDigits(password),
+        email: "super_admin@uat-hrs.sa",
+        password: "12345678",
       });
+
       if (err) {
         setError(err.message.includes("Invalid") ? t("auth.invalid") : err.message);
         return;
       }
       navigate({ to: "/", replace: true });
-    } catch {
-      setError(t("auth.conn_error"));
+    } catch (err: any) {
+      setError(err.message || t("auth.conn_error"));
     } finally {
       setBusy(false);
     }
   }
-
 
   return (
     <div
@@ -112,7 +102,7 @@ function LoginPage() {
               className="hidden h-full w-full object-contain drop-shadow-[0_8px_24px_color-mix(in_oklab,var(--brand-gold)_30%,transparent)] dark:block"
             />
           </div>
-          <h1 className="text-3xl font-bold leading-tight tracking-tight text-foreground">
+          <h1 className="text-3xl font-bold leading-tight tracking-tight text-foreground text-center">
             {t("brand.name")}
           </h1>
           <div className="mt-4 h-px w-20" style={{ background: "var(--gradient-brand)" }} />
@@ -124,19 +114,19 @@ function LoginPage() {
           <CardContent className="p-6">
             <form onSubmit={handleSubmit} className="flex flex-col gap-4" dir={dir}>
               <div className="space-y-2">
-                <Label htmlFor="role">{t("auth.email")}</Label>
-                <Select value={role} onValueChange={setRole} disabled={seeding}>
-                  <SelectTrigger id="role" className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {DEMO_ROLES.map((r) => (
-                      <SelectItem key={r} value={r}>
-                        {t(`role.${r}`)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="email">{t("auth.email")}</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="name@company.com"
+                  autoComplete="email"
+                  dir="ltr"
+                  className="text-start rounded-xl bg-background/50 focus:bg-background"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  disabled={seeding}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password">{t("auth.password")}</Label>
@@ -145,12 +135,13 @@ function LoginPage() {
                   type="password"
                   autoComplete="current-password"
                   dir="ltr"
-                  className="text-start"
+                  className="text-start rounded-xl bg-background/50 focus:bg-background"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                 />
               </div>
+
               {error && (
                 <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert">
                   {error}
@@ -159,7 +150,7 @@ function LoginPage() {
               <Button
                 type="submit"
                 disabled={busy || seeding}
-                className="h-10 w-full border-0 font-semibold text-white"
+                className="h-10 w-full border-0 font-semibold text-white rounded-xl cursor-pointer"
                 style={{ background: "var(--gradient-brand)" }}
               >
                 {busy ? (

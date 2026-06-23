@@ -154,7 +154,7 @@ BEGIN
 
     FOR j IN 1..3 LOOP
       INSERT INTO hotel_meal_plans(hotel_id, board, name_en, name_ar, is_active)
-      VALUES (hid, meals[j]::rate_board, (ARRAY['Bed & Breakfast','Half Board','Room Only'])[j], (ARRAY['إفطار','نصف إقامة','غرفة فقط'])[j], true);
+      VALUES (hid, meals[j]::rate_board, (ARRAY['Bed & Breakfast','Half Board','Room Only'])[j], (ARRAY['إفطار','Half Board','غرفة فقط'])[j], true);
     END LOOP;
 
     INSERT INTO hotel_facilities(hotel_id, facility_id)

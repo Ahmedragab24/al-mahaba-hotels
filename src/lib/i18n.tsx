@@ -7,8 +7,8 @@ type Dict = Record<string, { ar: string; en: string }>;
 
 export const dict: Dict = {
   // Brand
-  "brand.name": { ar: "شركة دليل المعالم للحج والعمرة", en: "Daleel Almaalem Hajj & Umrah Co." },
-  "brand.short": { ar: "دليل المعالم", en: "Daleel Almaalem" },
+  "brand.name": { ar: "شركة دليل المعالم للحج والمعتمرين", en: "Dalil Al-Maalem Company for Hajj and Umrah Pilgrims" },
+  "brand.short": { ar: "دليل المعالم", en: "Dalil Al-Maalem" },
   "brand.tagline": { ar: "نظام إدارة الحج والعمرة والحجوزات", en: "Hajj, Umrah & Reservations Management" },
 
   // Auth
@@ -50,6 +50,7 @@ export const dict: Dict = {
   "nav.master_data": { ar: "البيانات الأساسية", en: "Master Data" },
   "nav.contracting": { ar: "التعاقدات", en: "Contracting" },
   "nav.receivables": { ar: "المستحقات المالية", en: "Receivables" },
+  "nav.payments": { ar: "المدفوعات المالية", en: "Payments" },
 
   // Common actions
   "actions.new": { ar: "جديد", en: "New" },
@@ -155,8 +156,8 @@ export const dict: Dict = {
   // Meal plans
   "board.RO": { ar: "بدون وجبات", en: "Room Only" },
   "board.BB": { ar: "إفطار", en: "Bed & Breakfast" },
-  "board.HB": { ar: "نصف إقامة", en: "Half Board" },
-  "board.FB": { ar: "إقامة كاملة", en: "Full Board" },
+  "board.HB": { ar: "Half Board", en: "Half Board" },
+  "board.FB": { ar: "Full Board", en: "Full Board" },
   "board.AI": { ar: "كل شيء مشمول", en: "All Inclusive" },
   "board.UAI": { ar: "كل شيء مشمول فاخر", en: "Ultra All Inclusive" },
 
@@ -1391,7 +1392,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
 
   const setLang = (l: Lang) => {
     setLangState(l);
-    try { localStorage.setItem(STORAGE_KEY, l); } catch {}
+    try { localStorage.setItem(STORAGE_KEY, l); } catch { }
   };
 
   useEffect(() => {

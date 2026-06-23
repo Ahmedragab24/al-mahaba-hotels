@@ -31,6 +31,7 @@ import { Route as AuthenticatedReceivablesIndexRouteImport } from './routes/_aut
 import { Route as AuthenticatedReceiptsIndexRouteImport } from './routes/_authenticated/receipts/index'
 import { Route as AuthenticatedRatesIndexRouteImport } from './routes/_authenticated/rates/index'
 import { Route as AuthenticatedQuotationsIndexRouteImport } from './routes/_authenticated/quotations/index'
+import { Route as AuthenticatedPaymentsIndexRouteImport } from './routes/_authenticated/payments/index'
 import { Route as AuthenticatedPayablesIndexRouteImport } from './routes/_authenticated/payables/index'
 import { Route as AuthenticatedInvoicesIndexRouteImport } from './routes/_authenticated/invoices/index'
 import { Route as AuthenticatedHotelsIndexRouteImport } from './routes/_authenticated/hotels/index'
@@ -181,6 +182,12 @@ const AuthenticatedQuotationsIndexRoute =
   AuthenticatedQuotationsIndexRouteImport.update({
     id: '/quotations/',
     path: '/quotations/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedPaymentsIndexRoute =
+  AuthenticatedPaymentsIndexRouteImport.update({
+    id: '/payments/',
+    path: '/payments/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedPayablesIndexRoute =
@@ -407,6 +414,7 @@ export interface FileRoutesByFullPath {
   '/hotels/': typeof AuthenticatedHotelsIndexRoute
   '/invoices/': typeof AuthenticatedInvoicesIndexRoute
   '/payables/': typeof AuthenticatedPayablesIndexRoute
+  '/payments/': typeof AuthenticatedPaymentsIndexRoute
   '/quotations/': typeof AuthenticatedQuotationsIndexRoute
   '/rates/': typeof AuthenticatedRatesIndexRoute
   '/receipts/': typeof AuthenticatedReceiptsIndexRoute
@@ -462,6 +470,7 @@ export interface FileRoutesByTo {
   '/hotels': typeof AuthenticatedHotelsIndexRoute
   '/invoices': typeof AuthenticatedInvoicesIndexRoute
   '/payables': typeof AuthenticatedPayablesIndexRoute
+  '/payments': typeof AuthenticatedPaymentsIndexRoute
   '/quotations': typeof AuthenticatedQuotationsIndexRoute
   '/rates': typeof AuthenticatedRatesIndexRoute
   '/receipts': typeof AuthenticatedReceiptsIndexRoute
@@ -519,6 +528,7 @@ export interface FileRoutesById {
   '/_authenticated/hotels/': typeof AuthenticatedHotelsIndexRoute
   '/_authenticated/invoices/': typeof AuthenticatedInvoicesIndexRoute
   '/_authenticated/payables/': typeof AuthenticatedPayablesIndexRoute
+  '/_authenticated/payments/': typeof AuthenticatedPaymentsIndexRoute
   '/_authenticated/quotations/': typeof AuthenticatedQuotationsIndexRoute
   '/_authenticated/rates/': typeof AuthenticatedRatesIndexRoute
   '/_authenticated/receipts/': typeof AuthenticatedReceiptsIndexRoute
@@ -576,6 +586,7 @@ export interface FileRouteTypes {
     | '/hotels/'
     | '/invoices/'
     | '/payables/'
+    | '/payments/'
     | '/quotations/'
     | '/rates/'
     | '/receipts/'
@@ -631,6 +642,7 @@ export interface FileRouteTypes {
     | '/hotels'
     | '/invoices'
     | '/payables'
+    | '/payments'
     | '/quotations'
     | '/rates'
     | '/receipts'
@@ -687,6 +699,7 @@ export interface FileRouteTypes {
     | '/_authenticated/hotels/'
     | '/_authenticated/invoices/'
     | '/_authenticated/payables/'
+    | '/_authenticated/payments/'
     | '/_authenticated/quotations/'
     | '/_authenticated/rates/'
     | '/_authenticated/receipts/'
@@ -862,6 +875,13 @@ declare module '@tanstack/react-router' {
       path: '/quotations'
       fullPath: '/quotations/'
       preLoaderRoute: typeof AuthenticatedQuotationsIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/payments/': {
+      id: '/_authenticated/payments/'
+      path: '/payments'
+      fullPath: '/payments/'
+      preLoaderRoute: typeof AuthenticatedPaymentsIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/payables/': {
@@ -1131,6 +1151,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedHotelsIndexRoute: typeof AuthenticatedHotelsIndexRoute
   AuthenticatedInvoicesIndexRoute: typeof AuthenticatedInvoicesIndexRoute
   AuthenticatedPayablesIndexRoute: typeof AuthenticatedPayablesIndexRoute
+  AuthenticatedPaymentsIndexRoute: typeof AuthenticatedPaymentsIndexRoute
   AuthenticatedQuotationsIndexRoute: typeof AuthenticatedQuotationsIndexRoute
   AuthenticatedRatesIndexRoute: typeof AuthenticatedRatesIndexRoute
   AuthenticatedReceiptsIndexRoute: typeof AuthenticatedReceiptsIndexRoute
@@ -1185,6 +1206,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedHotelsIndexRoute: AuthenticatedHotelsIndexRoute,
   AuthenticatedInvoicesIndexRoute: AuthenticatedInvoicesIndexRoute,
   AuthenticatedPayablesIndexRoute: AuthenticatedPayablesIndexRoute,
+  AuthenticatedPaymentsIndexRoute: AuthenticatedPaymentsIndexRoute,
   AuthenticatedQuotationsIndexRoute: AuthenticatedQuotationsIndexRoute,
   AuthenticatedRatesIndexRoute: AuthenticatedRatesIndexRoute,
   AuthenticatedReceiptsIndexRoute: AuthenticatedReceiptsIndexRoute,

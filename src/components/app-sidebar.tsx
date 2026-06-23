@@ -56,10 +56,12 @@ const operational: NavItem[] = [
     to: "/quotations", labelKey: "nav.quotations", icon: FileSpreadsheet,
     roles: ["super_admin", "admin", "sales_manager", "sales_agent", "operations_manager", "finance_manager", "finance_agent", "viewer"]
   },
+  /* Hidden temporarily
   {
     to: "/rfqs", labelKey: "nav.rfqs", icon: MailQuestion,
     roles: ["super_admin", "admin", "sales_manager", "sales_agent", "operations_manager", "operations_agent", "finance_manager", "finance_agent", "viewer"]
   },
+  */
 ];
 const master: NavItem[] = [
   {
@@ -78,27 +80,29 @@ const master: NavItem[] = [
     to: "/rates", labelKey: "nav.rates", icon: Tags,
     roles: ["super_admin", "admin", "sales_manager", "sales_agent", "operations_manager", "operations_agent", "finance_manager", "finance_agent", "viewer"]
   },
+  /* Hidden temporarily
   {
     to: "/rates/compare", labelKey: "rates.compare", icon: Tags,
     roles: ["super_admin", "admin", "sales_manager", "sales_agent", "operations_manager", "operations_agent", "finance_manager", "finance_agent", "viewer"]
   },
+  */
   {
     to: "/customers", labelKey: "nav.customers", icon: Users,
     roles: ["super_admin", "admin", "sales_manager", "sales_agent", "operations_manager", "operations_agent", "finance_manager", "finance_agent", "viewer"]
   },
 ];
-const contracting: NavItem[] = [
-  /* Hidden temporarily
-  { to: "/contracts", labelKey: "nav.contracts", icon: FileSignature,
-    roles: ["super_admin","admin","operations_manager","operations_agent","finance_manager","finance_agent","viewer"] },
-  { to: "/seasons", labelKey: "nav.seasons", icon: CalendarRange,
-    roles: ["super_admin","admin","sales_manager","sales_agent","operations_manager","operations_agent","viewer"] },
-  */
-  {
-    to: "/taxes", labelKey: "nav.taxes", icon: Percent,
-    roles: ["super_admin", "admin", "operations_manager", "operations_agent", "finance_manager", "finance_agent", "viewer"]
-  },
-];
+// const contracting: NavItem[] = [
+//   /* Hidden temporarily
+//   { to: "/contracts", labelKey: "nav.contracts", icon: FileSignature,
+//     roles: ["super_admin","admin","operations_manager","operations_agent","finance_manager","finance_agent","viewer"] },
+//   { to: "/seasons", labelKey: "nav.seasons", icon: CalendarRange,
+//     roles: ["super_admin","admin","sales_manager","sales_agent","operations_manager","operations_agent","viewer"] },
+//   */
+//   {
+//     to: "/taxes", labelKey: "nav.taxes", icon: Percent,
+//     roles: ["super_admin", "admin", "operations_manager", "operations_agent", "finance_manager", "finance_agent", "viewer"]
+//   },
+// ];
 const finance: NavItem[] = [
   {
     to: "/invoices", labelKey: "nav.invoices", icon: ReceiptText,
@@ -106,6 +110,10 @@ const finance: NavItem[] = [
   },
   {
     to: "/receivables", labelKey: "nav.receivables", icon: Landmark,
+    roles: ["super_admin", "admin", "finance_manager", "finance_agent", "sales_manager"]
+  },
+  {
+    to: "/payments", labelKey: "nav.payments", icon: Landmark,
     roles: ["super_admin", "admin", "finance_manager", "finance_agent", "sales_manager"]
   },
   /* Hidden temporarily
@@ -158,7 +166,7 @@ export function AppSidebar() {
     (!item.roles || item.roles.length === 0 || auth.hasAnyRole(item.roles)) &&
     auth.canAccessModule(pathToModule(item.to));
   const visibleOperational = isSupplierOnly ? [] : operational.filter(canSee);
-  const visibleContracting = isSupplierOnly ? [] : contracting.filter(canSee);
+  // const visibleContracting = isSupplierOnly ? [] : contracting.filter(canSee);
   const visibleAdmin = isSupplierOnly ? [] : admin.filter(canSee);
   const visibleMaster = isSupplierOnly ? [] : master.filter(canSee);
   const visibleFinance = isSupplierOnly ? [] : finance.filter(canSee);
@@ -220,14 +228,14 @@ export function AppSidebar() {
             </SidebarGroupContent>
           </SidebarGroup>
         )}
-        {visibleContracting.length > 0 && (
+        {/* {visibleContracting.length > 0 && (
           <SidebarGroup>
             <SidebarGroupLabel className="text-xs font-semibold uppercase tracking-wider">{t("nav.contracting")}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>{visibleContracting.map(renderItem)}</SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
-        )}
+        )} */}
         {visibleFinance.length > 0 && (
           <SidebarGroup>
             <SidebarGroupLabel className="text-xs font-semibold uppercase tracking-wider">{t("nav.finance")}</SidebarGroupLabel>

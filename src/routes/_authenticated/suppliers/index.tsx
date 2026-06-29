@@ -1,10 +1,12 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "react-router-dom";
+import { apiClient } from "@/lib/api/api-client";
 import { useState, useMemo } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { PageHeader } from "@/components/page-header";
 import { useI18n } from "@/lib/i18n";
-import { useAuth } from "@/hooks/use-auth";
+import { useSelector } from "react-redux";
+import { selectAuth } from "@/store/features/authSlice";
+import { hasRole, hasAnyRole, isAdmin, canAccessModule } from "@/lib/auth-utils";
 import { useDebounce } from "@/lib/use-debounce";
 import { useCountries } from "@/lib/lookups";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,21 +22,16 @@ import { DataPagination } from "@/components/data-pagination";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Plus, Search, Eye, Pencil, Archive, RotateCcw, Trash2, Star, Building2, CheckCircle2, XCircle, Award, Calendar } from "lucide-react";
 import { toast } from "sonner";
-
-export const Route = createFileRoute("/_authenticated/suppliers/")({
-  component: SuppliersList,
-});
+import { useGetSuppliersQuery } from "@/store/services/suppliers/suppliersService";
 
 const PAGE_SIZE = 20;
-const STATUSES = ["active", "inactive", "archived"] as const;
-const STYPES = ["hotel_supplier", "dmc", "direct_hotel", "wholesaler", "other"] as const;
 
-function SuppliersList() {
+export default function SuppliersList() {
   const { t, lang } = useI18n();
-  const auth = useAuth();
+  const auth = useSelector(selectAuth);
   const qc = useQueryClient();
   const navigate = useNavigate();
-  const canWrite = auth.hasAnyRole(["super_admin", "admin", "operations_manager", "operations_agent"]);
+  const canWrite = hasAnyRole(auth, ["super_admin", "admin", "operations_manager", "operations_agent"]);
 
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<string>("all");
@@ -42,77 +39,50 @@ function SuppliersList() {
   const [stype, setStype] = useState<string>("all");
   const [showArchived, setShowArchived] = useState(false);
   const [page, setPage] = useState(1);
-  const [confirm, setConfirm] = useState<{ id: string; action: "archive" | "restore" | "delete" } | null>(null);
+  const [confirm, setConfirm] = useState<{ id: number } | null>(null);
 
   const dSearch = useDebounce(search, 300);
   const countries = useCountries();
 
-  const metrics = useQuery({
-    queryKey: ["suppliers-metrics"],
-    queryFn: async () => {
-      const { data } = await supabase.from("suppliers").select("status,rating,created_at,deleted_at");
-      const rows = data ?? [];
-      const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
-      return {
-        total: rows.filter(r => !r.deleted_at).length,
-        active: rows.filter(r => r.status === "active" && !r.deleted_at).length,
-        inactive: rows.filter(r => r.status === "inactive" && !r.deleted_at).length,
-        archived: rows.filter(r => r.deleted_at).length,
-        topRated: rows.filter(r => Number(r.rating) >= 4 && !r.deleted_at).length,
-        thisMonth: rows.filter(r => new Date(r.created_at) >= monthStart && !r.deleted_at).length,
-      };
+  const { data: suppliersData, isLoading } = useGetSuppliersQuery(
+    { 
+      lang, 
+      search: dSearch || undefined, 
+      supplier_type_id: stype !== "all" ? Number(stype) : undefined, 
+      status: status !== "all" ? (status === "active" ? 1 : 0) : undefined, 
+      country_id: country !== "all" ? Number(country) : undefined, 
+      all: 1,
+      is_archived: showArchived || undefined 
     },
-  });
+    { refetchOnMountOrArgChange: true }
+  );
 
-  const list = useQuery({
-    queryKey: ["suppliers", { dSearch, status, country, stype, showArchived, page }],
-    queryFn: async () => {
-      let q = supabase.from("suppliers").select(
-        "id,code,name_en,name_ar,supplier_type,country_code,phone,email,rating,preferred_currency,status,created_at,deleted_at",
-        { count: "exact" },
-      );
-      if (!showArchived) q = q.is("deleted_at", null);
-      if (status !== "all") q = q.eq("status", status as any);
-      if (country !== "all") q = q.eq("country_code", country);
-      if (stype !== "all") q = q.eq("supplier_type", stype);
-      if (dSearch.trim()) {
-        const s = `%${dSearch.trim()}%`;
-        q = q.or(`code.ilike.${s},name_en.ilike.${s},name_ar.ilike.${s},legal_name.ilike.${s},email.ilike.${s},phone.ilike.${s},tax_number.ilike.${s}`);
-      }
-      const from = (page - 1) * PAGE_SIZE;
-      q = q.order("created_at", { ascending: false }).range(from, from + PAGE_SIZE - 1);
-      const { data, error, count } = await q;
-      if (error) throw error;
-      return { rows: data ?? [], count: count ?? 0 };
-    },
-  });
+  console.log('[SuppliersList] suppliersData:', suppliersData);
+  console.log('[SuppliersList] isLoading:', isLoading);
 
-  const archiveMut = useMutation({
-    mutationFn: async ({ id, action }: { id: string; action: "archive" | "restore" | "delete" }) => {
-      if (action === "delete") {
-        const { error } = await supabase.from("suppliers").delete().eq("id", id);
-        if (error) throw error;
-      } else if (action === "archive") {
-        const { error } = await supabase.from("suppliers").update({ deleted_at: new Date().toISOString(), status: "archived" }).eq("id", id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from("suppliers").update({ deleted_at: null, status: "active" }).eq("id", id);
-        if (error) throw error;
-      }
+  const suppliers = suppliersData?.data ?? [];
+  const statistics = suppliersData?.statistics;
+
+  console.log('[SuppliersList] suppliers:', suppliers);
+  console.log('[SuppliersList] statistics:', statistics);
+
+  const deleteMut = useMutation({
+    mutationFn: async (id: number) => {
+      console.log('[deleteMut] Calling apiClient.suppliers.delete for id:', id);
+      await apiClient.suppliers.delete(id);
     },
-    onSuccess: (_d, v) => {
-      toast.success(v.action === "restore" ? t("toast.restored") : t("toast.deleted"));
-      qc.invalidateQueries({ queryKey: ["suppliers"] });
-      qc.invalidateQueries({ queryKey: ["lookup", "suppliers-lite"] });
+    onSuccess: () => {
+      toast.success(t("toast.deleted"));
+      qc.invalidateQueries({ queryKey: ["Suppliers"] });
       setConfirm(null);
     },
     onError: (e: any) => toast.error(e.message ?? t("toast.error")),
   });
 
-  const total = list.data?.count ?? 0;
+  const total = suppliers.length;
 
   const actions = useMemo(() => canWrite && (
-    <Button onClick={() => navigate({ to: "/suppliers/new" })} size="sm">
+    <Button onClick={() => navigate("/suppliers/new")} size="sm">
       <Plus className="h-4 w-4" /> {t("suppliers.new")}
     </Button>
   ), [canWrite, navigate, t]);
@@ -122,23 +92,25 @@ function SuppliersList() {
       <PageHeader title={t("suppliers.title")} subtitle={`${total} ${t("label.total")}`} children={actions} />
       <div className="space-y-4 p-6">
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          <KpiCard icon={Building2} tone="primary" label={t("kpi.total")} value={metrics.data?.total ?? "—"}
+          <KpiCard icon={Building2} tone="primary" label={t("kpi.total")} value={statistics?.total ?? "—"}
             active={status === "all" && !showArchived} onClick={() => { setStatus("all"); setShowArchived(false); setPage(1); }} />
-          <KpiCard icon={CheckCircle2} tone="success" label={t("kpi.active")} value={metrics.data?.active ?? "—"}
+          <KpiCard icon={CheckCircle2} tone="success" label={t("kpi.active")} value={statistics?.active ?? "—"}
             active={status === "active"} onClick={() => { setStatus("active"); setShowArchived(false); setPage(1); }} />
-          <KpiCard icon={XCircle} tone="warning" label={t("kpi.inactive")} value={metrics.data?.inactive ?? "—"}
+          <KpiCard icon={XCircle} tone="warning" label={t("kpi.inactive")} value={statistics?.inactive ?? "—"}
             active={status === "inactive"} onClick={() => { setStatus("inactive"); setShowArchived(false); setPage(1); }} />
-          <KpiCard icon={Archive} tone="muted" label={t("kpi.archived")} value={metrics.data?.archived ?? "—"}
+          <KpiCard icon={Archive} tone="muted" label={t("kpi.archived")} value={statistics?.archived ?? "—"}
             active={showArchived} onClick={() => { setShowArchived(true); setStatus("all"); setPage(1); }} />
-          <KpiCard icon={Award} tone="info" label={t("kpi.top_rated")} value={metrics.data?.topRated ?? "—"} />
-          <KpiCard icon={Calendar} tone="info" label={t("kpi.this_month")} value={metrics.data?.thisMonth ?? "—"} />
+          <KpiCard icon={Award} tone="info" label={t("kpi.top_rated")} value={statistics?.top_rated ?? "—"} />
+          <KpiCard icon={Calendar} tone="info" label={t("kpi.this_month")} value={statistics?.this_month ?? "—"} />
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
           <StatusPill label={t("filter.all")} tone="primary" active={stype === "all"} onClick={() => { setStype("all"); setPage(1); }} />
-          {STYPES.map(s => (
-            <StatusPill key={s} label={t(`stype.${s}`, s)} tone="info" active={stype === s} onClick={() => { setStype(s); setPage(1); }} />
-          ))}
+          <StatusPill label="DMC" tone="info" active={stype === "1"} onClick={() => { setStype("1"); setPage(1); }} />
+          <StatusPill label="Hotel Supplier" tone="info" active={stype === "2"} onClick={() => { setStype("2"); setPage(1); }} />
+          <StatusPill label="Direct Hotel" tone="info" active={stype === "3"} onClick={() => { setStype("3"); setPage(1); }} />
+          <StatusPill label="Wholesaler" tone="info" active={stype === "4"} onClick={() => { setStype("4"); setPage(1); }} />
+          <StatusPill label="Other" tone="info" active={stype === "5"} onClick={() => { setStype("5"); setPage(1); }} />
         </div>
 
         <Card>
@@ -158,7 +130,11 @@ function SuppliersList() {
                 <SelectTrigger className="w-full"><SelectValue placeholder={t("filter.type")} /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t("filter.all")}</SelectItem>
-                  {STYPES.map((s) => <SelectItem key={s} value={s}>{t(`stype.${s}`)}</SelectItem>)}
+                  <SelectItem value="1">DMC</SelectItem>
+                  <SelectItem value="2">Hotel Supplier</SelectItem>
+                  <SelectItem value="3">Direct Hotel</SelectItem>
+                  <SelectItem value="4">Wholesaler</SelectItem>
+                  <SelectItem value="5">Other</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -169,7 +145,8 @@ function SuppliersList() {
                 <SelectTrigger className="w-full"><SelectValue placeholder={t("filter.status")} /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t("filter.all")}</SelectItem>
-                  {STATUSES.map((s) => <SelectItem key={s} value={s}>{t(`status.${s}`)}</SelectItem>)}
+                  <SelectItem value="active">{t("status.active")}</SelectItem>
+                  <SelectItem value="inactive">{t("status.inactive")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -180,8 +157,8 @@ function SuppliersList() {
                 <SelectTrigger className="w-full"><SelectValue placeholder={t("filter.country")} /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t("filter.all")}</SelectItem>
-                  {countries.data?.map((c) => (
-                    <SelectItem key={c.code} value={c.code}>{lang === "ar" ? c.name_ar : c.name_en}</SelectItem>
+                  {(Array.isArray(countries.data) ? countries.data : Array.isArray(countries.data?.data) ? countries.data.data : [])?.map((c: any) => (
+                    <SelectItem key={c.id} value={c.id.toString()}>{lang === "ar" ? c.name_ar : c.name_en}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -211,42 +188,38 @@ function SuppliersList() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {list.isLoading && (
+                {isLoading && (
                   <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-10">{t("label.loading")}</TableCell></TableRow>
                 )}
-                {!list.isLoading && (list.data?.rows.length ?? 0) === 0 && (
+                {!isLoading && suppliers.length === 0 && (
                   <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-10">{t("label.no_results")}</TableCell></TableRow>
                 )}
-                {list.data?.rows.map((s: any) => (
-                  <TableRow key={s.id} className={s.deleted_at ? "opacity-60" : ""}>
+                {suppliers.map((s: any) => (
+                  <TableRow key={s.id} className={s.is_archived ? "opacity-60" : ""}>
                     <TableCell className="font-mono text-xs">{s.code}</TableCell>
                     <TableCell className="font-medium">
-                      <Link to="/suppliers/$id" params={{ id: s.id }} className="hover:underline">
+                      <Link to={`/suppliers/${s.id}`} className="hover:underline">
                         {lang === "ar" ? (s.name_ar || s.name_en) : (s.name_en || s.name_ar)}
                       </Link>
                     </TableCell>
-                    <TableCell className="text-xs">{t(`stype.${s.supplier_type}`, s.supplier_type)}</TableCell>
-                    <TableCell className="text-xs">{s.country_code}</TableCell>
-                    <TableCell dir="ltr" className="text-xs">{s.phone}</TableCell>
-                    <TableCell className="text-xs font-mono">{s.preferred_currency}</TableCell>
+                    <TableCell className="text-xs">{s.supplier_type?.name ?? "—"}</TableCell>
+                    <TableCell className="text-xs">{s.country?.name ?? "—"}</TableCell>
+                    <TableCell dir="ltr" className="text-xs">{s.phone ?? "—"}</TableCell>
+                    <TableCell className="text-xs font-mono">{s.currency?.code ?? "—"}</TableCell>
                     <TableCell>{s.rating ? <span className="flex items-center gap-0.5 text-amber-500"><Star className="h-3 w-3 fill-current" />{Number(s.rating).toFixed(1)}</span> : <span className="text-muted-foreground">—</span>}</TableCell>
-                    <TableCell><StatusBadge status={s.status} /></TableCell>
+                    <TableCell><StatusBadge status={s.status ? "active" : "inactive"} /></TableCell>
                     <TableCell className="text-end">
                       <div className="flex justify-end gap-1">
                         <Button asChild variant="ghost" size="icon" title={t("actions.view")}>
-                          <Link to="/suppliers/$id" params={{ id: s.id }}><Eye className="h-4 w-4" /></Link>
+                          <Link to={`/suppliers/${s.id}`}><Eye className="h-4 w-4" /></Link>
                         </Button>
-                        {canWrite && !s.deleted_at && (
+                        {canWrite && !s.is_archived && (
                           <Button asChild variant="ghost" size="icon" title={t("actions.edit")}>
-                            <Link to="/suppliers/$id" params={{ id: s.id }} search={{ edit: 1 } as any}><Pencil className="h-4 w-4" /></Link>
+                            <Link to={`/suppliers/${s.id}?edit=1`}><Pencil className="h-4 w-4" /></Link>
                           </Button>
                         )}
-                        {auth.isAdmin && (s.deleted_at
-                          ? <Button variant="ghost" size="icon" title={t("actions.restore")} onClick={() => setConfirm({ id: s.id, action: "restore" })}><RotateCcw className="h-4 w-4" /></Button>
-                          : <Button variant="ghost" size="icon" title={t("actions.archive")} onClick={() => setConfirm({ id: s.id, action: "archive" })}><Archive className="h-4 w-4" /></Button>
-                        )}
-                        {auth.isAdmin && s.deleted_at && (
-                          <Button variant="ghost" size="icon" title={t("actions.delete")} onClick={() => setConfirm({ id: s.id, action: "delete" })}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                        {isAdmin(auth) && (
+                          <Button variant="ghost" size="icon" title={t("actions.delete")} onClick={() => setConfirm({ id: s.id })}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                         )}
                       </div>
                     </TableCell>
@@ -254,7 +227,6 @@ function SuppliersList() {
                 ))}
               </TableBody>
             </Table>
-            <DataPagination page={page} pageSize={PAGE_SIZE} total={total} onPage={setPage} />
           </CardContent>
         </Card>
       </div>
@@ -262,10 +234,10 @@ function SuppliersList() {
       <ConfirmDialog
         open={!!confirm}
         onOpenChange={(v) => !v && setConfirm(null)}
-        title={confirm?.action === "restore" ? t("actions.restore") : confirm?.action === "delete" ? t("actions.delete") : t("actions.archive")}
-        description={confirm?.action === "delete" ? t("toast.confirm_delete") : confirm?.action === "restore" ? "" : t("toast.confirm_archive")}
-        destructive={confirm?.action !== "restore"}
-        onConfirm={() => confirm && archiveMut.mutate(confirm)}
+        title={t("actions.delete")}
+        description={t("toast.confirm_delete")}
+        destructive={true}
+        onConfirm={() => confirm && deleteMut.mutate(confirm.id)}
       />
     </>
   );

@@ -17,7 +17,7 @@
     "types": [
       "vite/client"
     ],
-    "moduleResolution": "Node",
+    "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": false,
     "noEmit": true,
@@ -31,6 +31,9 @@
     "paths": {
       "@/*": [
         "./src/*"
+      ],
+      "@tanstack/react-query": [
+        "./src/lib/react-query-bridge"
       ]
     }
   }

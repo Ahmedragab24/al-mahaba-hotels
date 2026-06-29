@@ -1,9 +1,13 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { db } from "@/lib/api/db";
+import { getCurrentUserId } from "@/lib/api/base";
+import { apiClient } from "@/lib/api/api-client";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
-import { useAuth } from "@/hooks/use-auth";
+import { useSelector } from "react-redux";
+import { selectAuth } from "@/store/features/authSlice";
+import { hasRole, hasAnyRole, isAdmin, canAccessModule } from "@/lib/auth-utils";
 import { PageHeader } from "@/components/page-header";
 import { EntityHistory } from "@/components/entity-history";
 import { EntityAttachments } from "@/components/entity-attachments";
@@ -20,11 +24,6 @@ import { ContractForm } from "./-form";
 import { ArrowLeft, Pencil, Play, Pause, CheckCircle2, XCircle, Lock } from "lucide-react";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { toast } from "sonner";
-
-export const Route = createFileRoute("/_authenticated/contracts/$id")({
-  validateSearch: (s: Record<string, unknown>) => ({ edit: s.edit ? 1 : undefined }) as { edit?: 1 },
-  component: ContractDetail,
-});
 
 type CStatus = "draft" | "active" | "suspended" | "expired" | "terminated" | "closed";
 
@@ -54,22 +53,23 @@ function KV({ label, value, mono }: { label: string; value: any; mono?: boolean 
   );
 }
 
-function ContractDetail() {
-  const { id } = Route.useParams();
-  const search = Route.useSearch();
+export default function ContractDetail() {
+  const { id } = useParams();
+  const [searchParams] = useSearchParams();
+  const search = Object.fromEntries(searchParams.entries());
   const { t, lang } = useI18n();
-  const auth = useAuth();
+  const auth = useSelector(selectAuth);
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const canWrite = auth.hasAnyRole(["super_admin", "admin", "operations_manager", "operations_agent"]);
-  const canApprove = auth.hasAnyRole(["super_admin", "admin", "operations_manager"]);
+  const canWrite = hasAnyRole(auth, ["super_admin", "admin", "operations_manager", "operations_agent"]);
+  const canApprove = hasAnyRole(auth, ["super_admin", "admin", "operations_manager"]);
   const [editing, setEditing] = useState(!!search.edit);
   const [pendingStatus, setPendingStatus] = useState<CStatus | null>(null);
 
   const q = useQuery({
     queryKey: ["contract", id],
     queryFn: async () => {
-      const { data, error } = await supabase.from("supplier_contracts")
+      const { data, error } = await db.from("supplier_contracts")
         .select("*, supplier:suppliers(id,name_en,name_ar), hotel:hotels(id,name_en,name_ar)")
         .eq("id", id).maybeSingle();
       if (error) throw error;
@@ -80,7 +80,7 @@ function ContractDetail() {
   const rates = useQuery({
     queryKey: ["contract-rates", id],
     queryFn: async () => {
-      const { data, error } = await supabase.from("rates")
+      const { data, error } = await db.from("rates")
         .select("id,code,valid_from,valid_to,currency,selling_price,status,deleted_at,room_type:hotel_room_types(name_en,name_ar)")
         .eq("contract_id", id).order("valid_from", { ascending: false }).limit(100);
       if (error) throw error;
@@ -90,8 +90,8 @@ function ContractDetail() {
 
   const statusMut = useMutation({
     mutationFn: async (to: CStatus) => {
-      const { data: u } = await supabase.auth.getUser();
-      const { error } = await supabase.from("supplier_contracts")
+      const u = { user: { id: getCurrentUserId() } };
+      const { error } = await db.from("supplier_contracts")
         .update({ status: to, updated_by: u.user?.id ?? null } as any).eq("id", id);
       if (error) throw error;
     },
@@ -116,7 +116,7 @@ function ContractDetail() {
         subtitle={`${c.contract_number} · ${t(`ctrtype.${c.contract_type}`)}`}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => navigate({ to: "/contracts" })}>
+            <Button variant="outline" size="sm" onClick={() => navigate("/contracts")}>
               <ArrowLeft className="h-4 w-4 rtl:rotate-180" />{t("actions.back")}
             </Button>
             {canWrite && !editing && !c.deleted_at && c.status === "draft" && (
@@ -190,10 +190,10 @@ function ContractDetail() {
                 </TableRow></TableHeader>
                 <TableBody>
                   {(rates.data?.length ?? 0) === 0 && <TableRow><TableCell colSpan={6} className="py-10 text-center text-muted-foreground">{t("contracts.no_rates")}</TableCell></TableRow>}
-                  {rates.data?.map((x: any) => (
+                  {(Array.isArray(rates.data) ? rates.data : Array.isArray(rates.data?.data) ? rates.data.data : [])?.map((x: any) => (
                     <TableRow key={x.id} className={x.deleted_at ? "opacity-60" : ""}>
                       <TableCell className="font-mono text-xs">
-                        <Link to="/rates/$id" params={{ id: x.id }} className="hover:underline">{x.code}</Link>
+                        <Link to={`/rates/${x.id}`} className="hover:underline">{x.code}</Link>
                       </TableCell>
                       <TableCell className="text-sm">{x.room_type ? (lang === "ar" ? (x.room_type.name_ar || x.room_type.name_en) : (x.room_type.name_en || x.room_type.name_ar)) : "—"}</TableCell>
                       <TableCell dir="ltr" className="text-xs">{formatDate(x.valid_from, lang)}</TableCell>
@@ -208,15 +208,15 @@ function ContractDetail() {
           </TabsContent>
 
           <TabsContent value="attachments">
-            <EntityAttachments entityType="contract" entityId={id} />
+            <EntityAttachments entityType="contract" entityId={id || ""} />
           </TabsContent>
 
           <TabsContent value="approval">
-            <ApprovalWorkflow entityType="contract" entityId={id} />
+            <ApprovalWorkflow entityType="contract" entityId={id || ""} />
           </TabsContent>
 
           <TabsContent value="history">
-            <EntityHistory entityType="supplier_contracts" entityId={id} />
+            <EntityHistory entityType="supplier_contracts" entityId={id || ""} />
           </TabsContent>
         </Tabs>
       </div>

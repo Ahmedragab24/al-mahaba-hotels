@@ -1,18 +1,19 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useState, useRef } from "react";
+import { useNavigate, Link, useParams } from "react-router-dom";
+import { useState, useRef, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/lib/api/db";
+import { useGetBookingByIdQuery, useUpdateBookingMutation } from "@/store/api";
 import { useI18n } from "@/lib/i18n";
-import { useAuth } from "@/hooks/use-auth";
+import { useSelector } from "react-redux";
+import { selectAuth } from "@/store/features/authSlice";
+import { hasRole, hasAnyRole, isAdmin, canAccessModule } from "@/lib/auth-utils";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   ArrowLeft, Pencil, Send, Check, Undo2, LogIn, LogOut, Ban, UserX,
   Printer, Building2, User, CalendarDays, BedDouble, Wallet, Receipt,
@@ -22,15 +23,10 @@ import { formatDate, formatDateTime } from "@/lib/format";
 import { toast } from "sonner";
 import { dbErrorMessage } from "@/lib/db-errors";
 import { BookingForm } from "./-form";
-import { RoomsTab, useBookingRooms } from "./-rooms";
-import { GuestsTab } from "./-guests";
-import { EntityAttachments } from "@/components/entity-attachments";
-import { EntityHistory } from "@/components/entity-history";
+import { useBookingRooms } from "./-rooms";
 import { BkStatusBadge, BK_WRITE_ROLES } from "./index";
 
-export const Route = createFileRoute("/_authenticated/bookings/$id")({
-  component: BookingDetail,
-});
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // KV display component
@@ -158,6 +154,8 @@ function PrintInvoice({
       ? booking.customer?.name_ar || booking.customer?.name_en
       : booking.customer?.name_en || booking.customer?.name_ar;
 
+  const currency = typeof booking.currency === "object" ? booking.currency?.code : (booking.currency || "SAR");
+
   const fmt = (v: number) =>
     new Intl.NumberFormat("en-SA", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v || 0);
 
@@ -217,7 +215,7 @@ function PrintInvoice({
           {ar(`الحالة: ${booking.status}`, `Status: ${booking.status}`)}
         </div>
         <div style={{ padding: "1.5mm 4mm", borderRadius: "4px", background: "#e0e7ff", border: "1px solid #c7d2fe", color: "#3730a3", fontSize: "9pt", fontWeight: "bold" }}>
-          {ar(`العملة: ${booking.currency}`, `Currency: ${booking.currency}`)}
+          {ar(`العملة: ${currency}`, `Currency: ${currency}`)}
         </div>
       </div>
 
@@ -252,12 +250,12 @@ function PrintInvoice({
       </div>
 
       {/* Hotel & Room */}
-      {(booking.hotel_id || rooms.length > 0) && (
+      {(booking.hotel_id || rooms.length > 0 || (booking.items && booking.items.length > 0)) && (
         <div style={{ border: "1px solid #e5e7eb", borderRadius: "6px", overflow: "hidden", marginBottom: "6mm" }}>
           <div style={{ background: "#f8f4ed", borderBottom: "1px solid #e5e7eb", padding: "2mm 4mm", fontSize: "9pt", fontWeight: "bold", color: "#7c5e14" }}>
             {ar("تفاصيل الغرفة والفندق", "Hotel & Room Details")}
           </div>
-          {rooms.length > 0 ? (
+          {(rooms.length > 0 || (booking.items && booking.items.length > 0)) ? (
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "8.5pt" }}>
               <thead>
                 <tr style={{ background: "#f9fafb" }}>
@@ -267,18 +265,28 @@ function PrintInvoice({
                 </tr>
               </thead>
               <tbody>
-                {rooms.map((room: any, i: number) => {
-                  const rn = (o: any) => (lang === "ar" ? o?.name_ar || o?.name_en : o?.name_en || o?.name_ar) ?? "—";
+                {((booking.items && booking.items.length > 0) ? booking.items : rooms).map((room: any, i: number) => {
+                  const isItem = !!room.price;
+                  const hotelName = isItem ? (lang === "ar" ? booking.hotel?.name_ar : booking.hotel?.name_en) : (lang === "ar" ? room.hotel?.name_ar || room.hotel?.name_en : room.hotel?.name_en || room.hotel?.name_ar);
+                  const roomTypeName = isItem ? (room.price?.room?.name || room.price?.room?.name_ar || room.price?.room?.name_en) : (lang === "ar" ? room.room_type?.name_ar || room.room_type?.name_en : room.room_type?.name_en || room.room_type?.name_ar);
+                  const viewName = isItem ? (room.price?.view?.name || room.price?.view?.name_ar || room.price?.view?.name_en) : (lang === "ar" ? room.view?.name_ar || room.view?.name_en : room.view?.name_en || room.view?.name_ar);
+                  const occupancy = isItem ? "—" : room.occupancy_type;
+                  const roomCheckIn = isItem ? formatDate(booking.check_in) : formatDate(room.check_in);
+                  const roomCheckOut = isItem ? formatDate(booking.check_out) : formatDate(room.check_out);
+                  const roomNights = isItem ? booking.nights : room.nights;
+                  const roomCount = isItem ? room.room_count : room.rooms;
+                  const subtotal = isItem ? room.subtotal : room.total_selling;
+
                   return (
                     <tr key={i} style={{ borderBottom: "1px solid #f3f4f6" }}>
-                      <td style={{ padding: "2mm 3mm" }}>{rn(room.hotel)}</td>
-                      <td style={{ padding: "2mm 3mm" }}>{rn(room.room_type)}</td>
-                      <td style={{ padding: "2mm 3mm" }}>{room.occupancy_type}</td>
-                      <td style={{ padding: "2mm 3mm", direction: "ltr" }}>{formatDate(room.check_in)}</td>
-                      <td style={{ padding: "2mm 3mm", direction: "ltr" }}>{formatDate(room.check_out)}</td>
-                      <td style={{ padding: "2mm 3mm", textAlign: "center" }}>{room.nights}</td>
-                      <td style={{ padding: "2mm 3mm", textAlign: "center" }}>{room.rooms}</td>
-                      <td style={{ padding: "2mm 3mm", direction: "ltr", fontWeight: "600" }}>{fmt(room.total_selling)}</td>
+                      <td style={{ padding: "2mm 3mm" }}>{hotelName ?? "—"}</td>
+                      <td style={{ padding: "2mm 3mm" }}>{roomTypeName ?? "—"} ({viewName ?? "—"})</td>
+                      <td style={{ padding: "2mm 3mm" }}>{occupancy ?? "—"}</td>
+                      <td style={{ padding: "2mm 3mm", direction: "ltr" }}>{roomCheckIn}</td>
+                      <td style={{ padding: "2mm 3mm", direction: "ltr" }}>{roomCheckOut}</td>
+                      <td style={{ padding: "2mm 3mm", textAlign: "center" }}>{roomNights}</td>
+                      <td style={{ padding: "2mm 3mm", textAlign: "center" }}>{roomCount}</td>
+                      <td style={{ padding: "2mm 3mm", direction: "ltr", fontWeight: "600" }}>{fmt(subtotal)}</td>
                     </tr>
                   );
                 })}
@@ -288,7 +296,7 @@ function PrintInvoice({
             <div style={{ padding: "3mm 4mm", fontSize: "9pt", lineHeight: 2 }}>
               {booking.room_type_id && <div><strong>{ar("نوع الغرفة:", "Room Type:")}</strong> {booking.room_type_id}</div>}
               {booking.occupancy_type && <div><strong>{ar("نوع الإشغال:", "Occupancy:")}</strong> {booking.occupancy_type}</div>}
-              {booking.room_rate && <div><strong>{ar("سعر الغرفة/ليلة:", "Rate/Night:")}</strong> {fmt(booking.room_rate)} {booking.currency}</div>}
+              {booking.room_rate && <div><strong>{ar("سعر الغرفة/ليلة:", "Rate/Night:")}</strong> {fmt(booking.room_rate)} {currency}</div>}
             </div>
           )}
         </div>
@@ -304,25 +312,24 @@ function PrintInvoice({
             <tbody>
               <tr>
                 <td style={{ padding: "1.5mm 0", color: "#374151" }}>{ar("المبلغ الإجمالي للحجز:", "Total Booking Amount:")}</td>
-                <td style={{ textAlign: lang === "ar" ? "left" : "right", fontWeight: "bold", direction: "ltr" }}>{fmt(total)} {booking.currency}</td>
+                <td style={{ textAlign: lang === "ar" ? "left" : "right", fontWeight: "bold", direction: "ltr" }}>{fmt(total)} {currency}</td>
               </tr>
               <tr>
                 <td style={{ padding: "1.5mm 0", color: "#065f46" }}>{ar("المبلغ المدفوع:", "Amount Paid:")}</td>
-                <td style={{ textAlign: lang === "ar" ? "left" : "right", fontWeight: "bold", color: "#065f46", direction: "ltr" }}>{fmt(paid)} {booking.currency}</td>
+                <td style={{ textAlign: lang === "ar" ? "left" : "right", fontWeight: "bold", color: "#065f46", direction: "ltr" }}>{fmt(paid)} {currency}</td>
               </tr>
               <tr style={{ borderTop: "1.5px solid #e5e7eb" }}>
                 <td style={{ padding: "2mm 0", fontWeight: "bold", fontSize: "11pt", color: remaining > 0 ? "#dc2626" : "#065f46" }}>
                   {ar(remaining > 0 ? "المبلغ المتبقي:" : "الحالة:", remaining > 0 ? "Remaining Balance:" : "Status:")}
                 </td>
                 <td style={{ textAlign: lang === "ar" ? "left" : "right", fontWeight: "bold", fontSize: "11pt", color: remaining > 0 ? "#dc2626" : "#065f46", direction: "ltr" }}>
-                  {remaining > 0 ? `${fmt(remaining)} ${booking.currency}` : (ar("✓ مدفوع بالكامل", "✓ Fully Paid"))}
+                  {remaining > 0 ? `${fmt(remaining)} ${currency}` : (ar("✓ مدفوع بالكامل", "✓ Fully Paid"))}
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
       </div>
-
       {/* Notes */}
       {(booking.special_requests || booking.notes) && (
         <div style={{ border: "1px solid #e5e7eb", borderRadius: "6px", padding: "3mm 4mm", marginBottom: "6mm", fontSize: "8.5pt", color: "#374151" }}>
@@ -350,16 +357,18 @@ function PrintInvoice({
 // ─────────────────────────────────────────────────────────────────────────────
 // Main BookingDetail Component
 // ─────────────────────────────────────────────────────────────────────────────
-function BookingDetail() {
-  const { id } = Route.useParams();
+export default function BookingDetail() {
+  const { id } = useParams<{ id: string }>();
   const { t, lang } = useI18n();
-  const auth = useAuth();
+  const auth = useSelector(selectAuth);
   const navigate = useNavigate();
   const qc = useQueryClient();
   const printRef = useRef<HTMLDivElement>(null);
-  const canWrite = auth.hasAnyRole([...BK_WRITE_ROLES]);
-  const canManage = auth.hasAnyRole(["super_admin", "admin", "sales_manager", "operations_manager"]);
-  const [editing, setEditing] = useState(false);
+  const canWrite = hasAnyRole(auth, [...BK_WRITE_ROLES]);
+  const canManage = hasAnyRole(auth, ["super_admin", "admin", "sales_manager", "operations_manager"]);
+  const { search } = window.location;
+  const hasEditParam = new URLSearchParams(search).get("edit") === "true";
+  const [editing, setEditing] = useState(hasEditParam);
   const [confirmStatus, setConfirmStatus] = useState<string | null>(null);
   const [cancelOpen, setCancelOpen] = useState<"cancelled" | "no_show" | null>(null);
   const [cancelReason, setCancelReason] = useState("");
@@ -367,31 +376,13 @@ function BookingDetail() {
 
   const ar = (a: string, e: string) => (lang === "ar" ? a : e);
 
-  const b = useQuery({
-    queryKey: ["booking", id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("bookings")
-        .select(`
-          *,
-          customer:customers(name_en,name_ar,customer_type,email,phone),
-          quotation:quotations(quotation_no),
-          hotel:hotels(name_en,name_ar,star_rating),
-          room_type:hotel_room_types(name_en,name_ar),
-          view:hotel_views(name_en,name_ar)
-        `)
-        .eq("id", id)
-        .maybeSingle();
-      if (error) throw error;
-      return data as any;
-    },
-  });
-  const rooms = useBookingRooms(id);
+  const b = useGetBookingByIdQuery({ id: id || "", lang });
+  const rooms = useBookingRooms(id || "");
 
   const history = useQuery({
     queryKey: ["booking-status-history", id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from("booking_status_history")
         .select("*")
         .eq("booking_id", id)
@@ -405,7 +396,7 @@ function BookingDetail() {
     mutationFn: async ({ status, reason }: { status: string; reason?: string }) => {
       const patch: any = { status };
       if (reason !== undefined) patch.cancellation_reason = reason;
-      const { error } = await supabase.from("bookings").update(patch).eq("id", id);
+      const { error } = await db.from("bookings").update(patch).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -413,6 +404,7 @@ function BookingDetail() {
       setConfirmStatus(null);
       setCancelOpen(null);
       setCancelReason("");
+      b.refetch();
       qc.invalidateQueries({ queryKey: ["booking", id] });
       qc.invalidateQueries({ queryKey: ["booking-status-history", id] });
       qc.invalidateQueries({ queryKey: ["bookings-metrics"] });
@@ -455,11 +447,12 @@ function BookingDetail() {
   if (b.isLoading) return <div className="p-6 text-muted-foreground">{t("label.loading")}</div>;
   if (!b.data) return <div className="p-6 text-muted-foreground">{t("bk.no_found")}</div>;
 
-  const r = b.data;
+  const r = b.data as any;
   const customerName =
     lang === "ar"
       ? r.customer?.name_ar || r.customer?.name_en
       : r.customer?.name_en || r.customer?.name_ar;
+  const currencyCode = typeof r.currency === "object" ? r.currency?.code : (r.currency || "SAR");
   const hotelName =
     lang === "ar"
       ? r.hotel?.name_ar || r.hotel?.name_en
@@ -479,11 +472,11 @@ function BookingDetail() {
   const editableGuests = canWrite && ["draft", "pending_confirmation", "confirmed"].includes(r.status) && !r.deleted_at;
 
   const total = Number(r.total_amount) || rooms.data?.reduce((s: number, rm: any) => s + Number(rm.total_selling), 0) || 0;
-  const paid = Number(r.amount_paid) || 0;
-  const remaining = Math.max(total - paid, 0);
-  const nights = r.check_in && r.check_out
+  const paid = Number(r.paid_amount) || Number(r.amount_paid) || 0;
+  const remaining = r.remaining_amount !== undefined ? Number(r.remaining_amount) : Math.max(total - paid, 0);
+  const nights = r.nights || (r.check_in && r.check_out
     ? Math.max((new Date(r.check_out).getTime() - new Date(r.check_in).getTime()) / 86400000, 0)
-    : null;
+    : null);
 
   const actions: {
     key: string;
@@ -494,23 +487,23 @@ function BookingDetail() {
     show: boolean;
     needsReason?: boolean;
   }[] = [
-    { key: "submit", label: t("bk.submit"), status: "pending_confirmation", icon: Send, show: canWrite && r.status === "draft" },
-    { key: "return", label: t("bk.return_draft"), status: "draft", icon: Undo2, variant: "outline", show: canWrite && r.status === "pending_confirmation" },
-    { key: "confirm", label: t("bk.confirm"), status: "confirmed", icon: Check, show: canManage && r.status === "pending_confirmation" },
-    { key: "check_in", label: t("bk.check_in"), status: "checked_in", icon: LogIn, show: canWrite && r.status === "confirmed" },
-    { key: "check_out", label: t("bk.check_out"), status: "checked_out", icon: LogOut, show: canWrite && r.status === "checked_in" },
-    { key: "no_show", label: t("bk.no_show_action"), status: "no_show", icon: UserX, variant: "destructive", show: canManage && r.status === "confirmed", needsReason: true },
-    { key: "cancel", label: t("bk.cancel"), status: "cancelled", icon: Ban, variant: "destructive", show: canWrite && ["draft", "pending_confirmation", "confirmed"].includes(r.status), needsReason: true },
-  ];
+      // { key: "submit", label: t("bk.submit"), status: "pending_confirmation", icon: Send, show: canWrite && r.status === "draft" },
+      // { key: "return", label: t("bk.return_draft"), status: "draft", icon: Undo2, variant: "outline", show: canWrite && r.status === "pending_confirmation" },
+      // { key: "confirm", label: t("bk.confirm"), status: "confirmed", icon: Check, show: canManage && r.status === "pending_confirmation" },
+      // { key: "check_in", label: t("bk.check_in"), status: "checked_in", icon: LogIn, show: canWrite && r.status === "confirmed" },
+      // { key: "check_out", label: t("bk.check_out"), status: "checked_out", icon: LogOut, show: canWrite && r.status === "checked_in" },
+      // { key: "no_show", label: t("bk.no_show_action"), status: "no_show", icon: UserX, variant: "destructive", show: canManage && r.status === "confirmed", needsReason: true },
+      { key: "cancel", label: t("bk.cancel"), status: "cancelled", icon: Ban, variant: "destructive", show: canWrite && ["draft", "pending_confirmation", "confirmed"].includes(r.status), needsReason: true },
+    ];
 
   return (
     <>
       <PageHeader
-        title={`${r.booking_no} — ${customerName ?? ""}`}
-        subtitle={`${formatDate(r.booking_date)} · ${r.currency}${r.quotation ? ` · ${t("bk.source_quotation")}: ${r.quotation.quotation_no}` : ""}`}
+        title={`${r.code || r.booking_no} — ${customerName ?? ""}`}
+        subtitle={`${formatDate(r.booking_date)} · ${currencyCode}${r.quotation ? ` · ${t("bk.source_quotation")}: ${r.quotation.quotation_no}` : ""}`}
         children={
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => navigate({ to: "/bookings" })}>
+            <Button variant="outline" size="sm" onClick={() => navigate("/bookings")}>
               <ArrowLeft className="h-4 w-4 rtl:rotate-180" />{t("actions.back")}
             </Button>
             <BkStatusBadge status={r.status} t={t} />
@@ -540,261 +533,247 @@ function BookingDetail() {
       />
 
       <div className="p-4 sm:p-6">
-        <Tabs defaultValue="general" className="space-y-4">
-          <TabsList className="flex-wrap h-auto">
-            <TabsTrigger value="general">{t("bk.tab.general")}</TabsTrigger>
-            <TabsTrigger value="rooms">{t("bk.tab.rooms")}</TabsTrigger>
-            <TabsTrigger value="guests">{t("bk.tab.guests")}</TabsTrigger>
-            <TabsTrigger value="attachments">{t("tab.attachments")}</TabsTrigger>
-            <TabsTrigger value="timeline">{t("bk.tab.timeline")}</TabsTrigger>
-            <TabsTrigger value="history">{t("bk.tab.history")}</TabsTrigger>
-          </TabsList>
+        {editing ? (
+          <BookingForm
+            initial={r}
+            onSaved={() => {
+              setEditing(false);
+              qc.invalidateQueries({ queryKey: ["booking", id] });
+            }}
+          />
+        ) : (
+          <div className="space-y-4">
+            {/* Top row: 3 detail cards */}
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
 
-          {/* ── General Tab ── */}
-          <TabsContent value="general">
-            {editing ? (
-              <BookingForm
-                initial={r}
-                onSaved={() => {
-                  setEditing(false);
-                  qc.invalidateQueries({ queryKey: ["booking", id] });
-                }}
-              />
-            ) : (
-              <div className="space-y-4">
-                {/* Top row: 3 detail cards */}
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {/* Customer Info */}
+              <DetailSection icon={User} title={ar("بيانات العميل", "Customer Info")}>
+                <div className="divide-y divide-border/40">
+                  <KV k={t("bk.customer")} v={customerName} icon={User} />
+                  <KV k={ar("نوع العميل", "Customer Type")} v={r.customer?.type || t(`ctype.${r.customer?.customer_type}`, r.customer?.customer_type ?? "")} />
+                  {r.customer?.email && <KV k={ar("البريد الإلكتروني", "Email")} v={<a href={`mailto:${r.customer.email}`} className="text-primary hover:underline">{r.customer.email}</a>} icon={Mail} />}
+                  {r.customer?.phone && <KV k={ar("الهاتف", "Phone")} v={<a href={`tel:${r.customer.phone}`} className="text-primary hover:underline">{r.customer.phone}</a>} icon={Phone} />}
+                </div>
+              </DetailSection>
 
-                  {/* Customer Info */}
-                  <DetailSection icon={User} title={ar("بيانات العميل", "Customer Info")}>
-                    <div className="divide-y divide-border/40">
-                      <KV k={t("bk.customer")} v={customerName} icon={User} />
-                      <KV k={ar("نوع العميل", "Customer Type")} v={t(`ctype.${r.customer?.customer_type}`, r.customer?.customer_type ?? "")} />
-                      {r.customer?.email && <KV k={ar("البريد الإلكتروني", "Email")} v={<a href={`mailto:${r.customer.email}`} className="text-primary hover:underline">{r.customer.email}</a>} icon={Mail} />}
-                      {r.customer?.phone && <KV k={ar("الهاتف", "Phone")} v={<a href={`tel:${r.customer.phone}`} className="text-primary hover:underline">{r.customer.phone}</a>} icon={Phone} />}
-                    </div>
-                  </DetailSection>
+              {/* Booking Status */}
+              <DetailSection icon={FileText} title={ar("معلومات الحجز", "Booking Info")}>
+                <div className="divide-y divide-border/40">
+                  <KV k={t("bk.number")} v={<span dir="ltr" className="font-mono text-primary">{r.code || r.booking_no}</span>} />
+                  <KV k={t("filter.status")} v={r.status_text || <BkStatusBadge status={r.status} t={t} />} />
+                  <KV k={t("label.currency")} v={currencyCode} />
+                  <KV k={t("bk.booking_date")} v={formatDate(r.booking_date)} icon={CalendarDays} />
+                  <KV k={ar("نوع الحجز", "Booking Type")} v={r.booking_type_text || r.booking_type} />
+                  <KV k={ar("مصدر الحجز", "Booking Source")} v={r.booking_source_text || r.booking_source} />
+                </div>
+              </DetailSection>
 
-                  {/* Booking Status */}
-                  <DetailSection icon={FileText} title={ar("معلومات الحجز", "Booking Info")}>
-                    <div className="divide-y divide-border/40">
-                      <KV k={t("bk.number")} v={<span dir="ltr" className="font-mono text-primary">{r.booking_no}</span>} />
-                      <KV k={t("filter.status")} v={<BkStatusBadge status={r.status} t={t} />} />
-                      <KV k={t("label.currency")} v={r.currency} />
-                      <KV k={t("bk.booking_date")} v={formatDate(r.booking_date)} icon={CalendarDays} />
+              {/* Hotel & Room */}
+              {(hotelName || roomTypeName || r.check_in || r.hotel) && (
+                <DetailSection icon={BedDouble} title={ar("الفندق والغرفة", "Hotel & Room")}>
+                  <div className="divide-y divide-border/40">
+                    {hotelName && (
                       <KV
-                        k={t("bk.source")}
+                        k={ar("الفندق", "Hotel")}
                         v={
-                          r.quotation_id ? (
-                            <Link to="/quotations/$id" params={{ id: r.quotation_id }} className="text-primary hover:underline">
-                              {t("bk.source_quotation")} — {r.quotation?.quotation_no}
-                            </Link>
-                          ) : (
-                            t("bk.source_direct")
-                          )
+                          <span>
+                            {hotelName}
+                            {(() => {
+                              const st = Number(r.hotel?.stars || r.hotel?.star_rating || 0);
+                              return st > 0 ? " " + "★".repeat(st) : "";
+                            })()}
+                          </span>
                         }
+                        icon={Building2}
                       />
-                    </div>
-                  </DetailSection>
+                    )}
+                    {roomTypeName && <KV k={ar("نوع الغرفة", "Room Type")} v={roomTypeName} icon={BedDouble} />}
+                    {viewName && <KV k={ar("الإطلالة", "View")} v={viewName} icon={MapPin} />}
+                    {r.occupancy_type && <KV k={ar("نوع الإشغال", "Occupancy")} v={r.occupancy_type} />}
+                    {r.rooms && <KV k={ar("عدد الغرف", "Rooms")} v={r.rooms} />}
+                  </div>
+                </DetailSection>
+              )}
+            </div>
 
-                  {/* Hotel & Room */}
-                  {(hotelName || roomTypeName || r.check_in) && (
-                    <DetailSection icon={BedDouble} title={ar("الفندق والغرفة", "Hotel & Room")}>
-                      <div className="divide-y divide-border/40">
-                        {hotelName && (
-                          <KV
-                            k={ar("الفندق", "Hotel")}
-                            v={
-                              <span>
-                                {hotelName}
-                                {r.hotel?.star_rating ? " " + "★".repeat(r.hotel.star_rating) : ""}
-                              </span>
-                            }
-                            icon={Building2}
-                          />
-                        )}
-                        {roomTypeName && <KV k={ar("نوع الغرفة", "Room Type")} v={roomTypeName} icon={BedDouble} />}
-                        {viewName && <KV k={ar("الإطلالة", "View")} v={viewName} icon={MapPin} />}
-                        {r.occupancy_type && <KV k={ar("نوع الإشغال", "Occupancy")} v={r.occupancy_type} />}
-                        {r.rooms && <KV k={ar("عدد الغرف", "Rooms")} v={r.rooms} />}
-                      </div>
-                    </DetailSection>
+            {/* Rooms & Pricing Details (Items Table) */}
+            {r.items && r.items.length > 0 && (
+              <DetailSection icon={BedDouble} title={ar("تفاصيل الغرف والأسعار", "Rooms & Pricing Details")}>
+                <div className="overflow-x-auto rounded-lg border border-border/80">
+                  <table className="w-full text-sm border-collapse">
+                    <thead>
+                      <tr className="border-b border-border bg-muted/30 text-muted-foreground text-xs font-semibold uppercase tracking-wider">
+                        <th className="py-3 px-4 text-start">{ar("الغرفة", "Room")}</th>
+                        <th className="py-3 px-4 text-center">{ar("الإطلالة", "View")}</th>
+                        <th className="py-3 px-4 text-center">{ar("العدد", "Qty")}</th>
+                        <th className="py-3 px-4 text-center">{ar("سعر الليلة", "Rate/Night")}</th>
+                        <th className="py-3 px-4 text-end">{ar("الإجمالي", "Subtotal")}</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/60">
+                      {r.items.map((item: any, idx: number) => {
+                        const roomName = item.price?.room?.name || item.price?.room?.name_ar || item.price?.room?.name_en || "—";
+                        const viewName = item.price?.view?.name || item.price?.view?.name_ar || item.price?.view?.name_en || "—";
+                        return (
+                          <tr key={item.id || idx} className="hover:bg-muted/30">
+                            <td className="py-3 px-4 font-medium text-foreground">{roomName}</td>
+                            <td className="py-3 px-4 text-center text-muted-foreground">{viewName}</td>
+                            <td className="py-3 px-4 text-center">{item.room_count}</td>
+                            <td className="py-3 px-4 text-center tabular-nums">{Number(item.night_price).toLocaleString(undefined, { minimumFractionDigits: 2 })} {currencyCode}</td>
+                            <td className="py-3 px-4 text-end font-semibold tabular-nums">{Number(item.subtotal).toLocaleString(undefined, { minimumFractionDigits: 2 })} {currencyCode}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </DetailSection>
+            )}
+
+            {/* Stay Dates Row */}
+            {(r.check_in || r.check_out) && (
+              <DetailSection icon={CalendarDays} title={ar("تواريخ الإقامة", "Stay Dates")}>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {r.check_in && (
+                    <div className="rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 p-3 text-center">
+                      <p className="text-xs text-blue-600 dark:text-blue-400 font-medium mb-1">{ar("الوصول", "Check-in")}</p>
+                      <p className="text-sm font-bold text-blue-700 dark:text-blue-300" dir="ltr">{formatDate(r.check_in)}</p>
+                    </div>
+                  )}
+                  {r.check_out && (
+                    <div className="rounded-lg bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 p-3 text-center">
+                      <p className="text-xs text-purple-600 dark:text-purple-400 font-medium mb-1">{ar("المغادرة", "Check-out")}</p>
+                      <p className="text-sm font-bold text-purple-700 dark:text-purple-300" dir="ltr">{formatDate(r.check_out)}</p>
+                    </div>
+                  )}
+                  {nights != null && nights > 0 && (
+                    <div className="rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-3 text-center">
+                      <p className="text-xs text-amber-600 dark:text-amber-400 font-medium mb-1">{ar("الليالي", "Nights")}</p>
+                      <p className="text-2xl font-bold text-amber-700 dark:text-amber-300 tabular-nums">{nights}</p>
+                    </div>
+                  )}
+                  {r.room_rate && (
+                    <div className="rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 p-3 text-center">
+                      <p className="text-xs text-green-600 dark:text-green-400 font-medium mb-1">{ar("سعر الليلة", "Rate/Night")}</p>
+                      <p className="text-sm font-bold text-green-700 dark:text-green-300 tabular-nums">{Number(r.room_rate).toFixed(2)} {currencyCode}</p>
+                    </div>
                   )}
                 </div>
-
-                {/* Stay Dates Row */}
-                {(r.check_in || r.check_out) && (
-                  <DetailSection icon={CalendarDays} title={ar("تواريخ الإقامة", "Stay Dates")}>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                      {r.check_in && (
-                        <div className="rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 p-3 text-center">
-                          <p className="text-xs text-blue-600 dark:text-blue-400 font-medium mb-1">{ar("الوصول", "Check-in")}</p>
-                          <p className="text-sm font-bold text-blue-700 dark:text-blue-300" dir="ltr">{formatDate(r.check_in)}</p>
-                        </div>
-                      )}
-                      {r.check_out && (
-                        <div className="rounded-lg bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 p-3 text-center">
-                          <p className="text-xs text-purple-600 dark:text-purple-400 font-medium mb-1">{ar("المغادرة", "Check-out")}</p>
-                          <p className="text-sm font-bold text-purple-700 dark:text-purple-300" dir="ltr">{formatDate(r.check_out)}</p>
-                        </div>
-                      )}
-                      {nights != null && nights > 0 && (
-                        <div className="rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-3 text-center">
-                          <p className="text-xs text-amber-600 dark:text-amber-400 font-medium mb-1">{ar("الليالي", "Nights")}</p>
-                          <p className="text-2xl font-bold text-amber-700 dark:text-amber-300 tabular-nums">{nights}</p>
-                        </div>
-                      )}
-                      {r.room_rate && (
-                        <div className="rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 p-3 text-center">
-                          <p className="text-xs text-green-600 dark:text-green-400 font-medium mb-1">{ar("سعر الليلة", "Rate/Night")}</p>
-                          <p className="text-sm font-bold text-green-700 dark:text-green-300 tabular-nums">{Number(r.room_rate).toFixed(2)} {r.currency}</p>
-                        </div>
-                      )}
-                    </div>
-                  </DetailSection>
-                )}
-
-                {/* Payment Section */}
-                {(total > 0 || paid > 0) && (
-                  <DetailSection icon={Wallet} title={ar("الدفع والمالية", "Payment & Finance")}>
-                    <PaymentProgress total={total} paid={paid} currency={r.currency} lang={lang} />
-                    {r.payment_mode && (
-                      <div className="mt-3 flex items-center gap-2">
-                        <CreditCard className="w-3.5 h-3.5 text-muted-foreground" />
-                        <span className="text-xs text-muted-foreground">{ar("طريقة الدفع: ", "Payment mode: ")}</span>
-                        <Badge variant="outline" className="text-xs">
-                          {r.payment_mode === "full" ? ar("دفع كامل", "Full Payment") : r.payment_mode === "partial" ? ar("دفع جزئي", "Partial") : ar("مؤجل", "Deferred")}
-                        </Badge>
-                      </div>
-                    )}
-                  </DetailSection>
-                )}
-
-                {/* Workflow Timestamps */}
-                {(r.confirmed_at || r.checked_in_at || r.checked_out_at || r.cancelled_at) && (
-                  <DetailSection icon={Clock} title={ar("سجل الإجراءات", "Action Log")}>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                      {r.confirmed_at && (
-                        <div className="flex flex-col gap-0.5">
-                          <span className="text-xs text-muted-foreground flex items-center gap-1"><CheckCircle2 className="w-3 h-3 text-emerald-500" />{t("bk.confirm")}</span>
-                          <span className="text-xs font-medium tabular-nums">{formatDateTime(r.confirmed_at, lang)}</span>
-                        </div>
-                      )}
-                      {r.checked_in_at && (
-                        <div className="flex flex-col gap-0.5">
-                          <span className="text-xs text-muted-foreground flex items-center gap-1"><LogIn className="w-3 h-3 text-blue-500" />{t("bk.check_in")}</span>
-                          <span className="text-xs font-medium tabular-nums">{formatDateTime(r.checked_in_at, lang)}</span>
-                        </div>
-                      )}
-                      {r.checked_out_at && (
-                        <div className="flex flex-col gap-0.5">
-                          <span className="text-xs text-muted-foreground flex items-center gap-1"><LogOut className="w-3 h-3 text-purple-500" />{t("bk.check_out")}</span>
-                          <span className="text-xs font-medium tabular-nums">{formatDateTime(r.checked_out_at, lang)}</span>
-                        </div>
-                      )}
-                      {r.cancelled_at && (
-                        <div className="flex flex-col gap-0.5">
-                          <span className="text-xs text-muted-foreground flex items-center gap-1"><Ban className="w-3 h-3 text-red-500" />{t("bk.cancel")}</span>
-                          <span className="text-xs font-medium tabular-nums">{formatDateTime(r.cancelled_at, lang)}</span>
-                        </div>
-                      )}
-                    </div>
-                    {r.cancellation_reason && (
-                      <div className="mt-3 rounded-lg bg-destructive/5 border border-destructive/20 p-3">
-                        <p className="text-xs font-medium text-destructive mb-0.5">{t("bk.cancel_reason")}</p>
-                        <p className="text-sm text-foreground">{r.cancellation_reason}</p>
-                      </div>
-                    )}
-                  </DetailSection>
-                )}
-
-                {/* Notes */}
-                {(r.special_requests || r.notes) && (
-                  <DetailSection icon={FileText} title={ar("الطلبات والملاحظات", "Requests & Notes")}>
-                    <div className="grid md:grid-cols-2 gap-4">
-                      {r.special_requests && (
-                        <div>
-                          <p className="text-xs font-medium text-muted-foreground mb-1.5">{t("bk.special_requests")}</p>
-                          <p className="text-sm bg-muted/40 rounded-lg p-3">{r.special_requests}</p>
-                        </div>
-                      )}
-                      {r.notes && (
-                        <div>
-                          <p className="text-xs font-medium text-muted-foreground mb-1.5">{t("label.notes")}</p>
-                          <p className="text-sm bg-muted/40 rounded-lg p-3">{r.notes}</p>
-                        </div>
-                      )}
-                    </div>
-                  </DetailSection>
-                )}
-              </div>
+              </DetailSection>
             )}
-          </TabsContent>
 
-          {/* ── Rooms Tab ── */}
-          <TabsContent value="rooms">
-            <RoomsTab
-              bookingId={id}
-              currency={r.currency}
-              editable={editableRooms}
-              confirmable={confirmableRooms}
-            />
-          </TabsContent>
-
-          {/* ── Guests Tab ── */}
-          <TabsContent value="guests">
-            <GuestsTab bookingId={id} editable={editableGuests} />
-          </TabsContent>
-
-          <TabsContent value="attachments">
-            <EntityAttachments entityType="booking" entityId={id} />
-          </TabsContent>
-
-          {/* ── Timeline Tab ── */}
-          <TabsContent value="timeline">
-            <Card>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{t("bk.history.from")}</TableHead>
-                      <TableHead>{t("bk.history.to")}</TableHead>
-                      <TableHead>{t("history.time")}</TableHead>
-                      <TableHead>{t("label.notes")}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {(history.data?.length ?? 0) === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={4} className="py-8 text-center text-muted-foreground">
-                          {t("bk.history.empty")}
-                        </TableCell>
-                      </TableRow>
+            {/* Payment Section */}
+            {(total > 0 || paid > 0) && (
+              <DetailSection icon={Wallet} title={ar("الدفع والمالية", "Payment & Finance")}>
+                <PaymentProgress total={total} paid={paid} currency={currencyCode} lang={lang} />
+                <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4 border-border/40">
+                  <div className="space-y-2">
+                    {(r.payment_method || r.payment_mode) && (
+                      <div className="flex justify-between text-sm py-1 border-b border-border/20">
+                        <span className="text-muted-foreground">{ar("طريقة الدفع", "Payment Method")}</span>
+                        <span className="font-semibold text-foreground">
+                          {r.payment_method_text || (r.payment_mode === "full" ? ar("دفع كامل", "Full Payment") : r.payment_mode === "partial" ? ar("دفع جزئي", "Partial") : ar("مؤجل", "Deferred"))}
+                        </span>
+                      </div>
                     )}
-                    {history.data?.map((h: any) => (
-                      <TableRow key={h.id}>
-                        <TableCell>
-                          {h.from_status ? <Badge variant="outline">{t(`bkstatus.${h.from_status}`)}</Badge> : "—"}
-                        </TableCell>
-                        <TableCell>
-                          <BkStatusBadge status={h.to_status} t={t} />
-                        </TableCell>
-                        <TableCell dir="ltr" className="text-xs whitespace-nowrap">
-                          {formatDateTime(h.created_at, lang)}
-                        </TableCell>
-                        <TableCell className="text-xs">{h.reason ?? "—"}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                    {r.exchange_rate && (
+                      <div className="flex justify-between text-sm py-1 border-b border-border/20">
+                        <span className="text-muted-foreground">{ar("سعر الصرف (ريال)", "Exchange Rate (SAR)")}</span>
+                        <span className="font-medium tabular-nums">{r.exchange_rate}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    {r.total_amount_sar !== undefined && (
+                      <div className="flex justify-between text-sm py-1 border-b border-border/20">
+                        <span className="text-muted-foreground">{ar("الإجمالي بالريال", "Total in SAR")}</span>
+                        <span className="font-bold tabular-nums text-foreground">{Number(r.total_amount_sar).toLocaleString(undefined, { minimumFractionDigits: 2 })} SAR</span>
+                      </div>
+                    )}
+                    {r.remaining_amount !== undefined && (
+                      <div className="flex justify-between text-sm py-1 border-b border-border/20">
+                        <span className="text-muted-foreground">{ar("المبلغ المتبقي", "Remaining Amount")}</span>
+                        <span className="font-bold tabular-nums text-red-600 dark:text-red-400">{Number(r.remaining_amount).toLocaleString(undefined, { minimumFractionDigits: 2 })} {currencyCode}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </DetailSection>
+            )}
 
-          <TabsContent value="history">
-            <EntityHistory entityType="bookings" entityId={id} />
-          </TabsContent>
-        </Tabs>
+            {/* Invoice Image Preview */}
+            {r.invoice_image && (
+              <DetailSection icon={Receipt} title={ar("صورة الفاتورة", "Invoice Image")}>
+                <div className="flex flex-col items-center justify-center p-4 border border-dashed rounded-lg bg-muted/10">
+                  <a href={r.invoice_image} target="_blank" rel="noopener noreferrer" className="relative block group overflow-hidden rounded-lg border max-w-sm">
+                    <img src={r.invoice_image} alt="Invoice" className="w-full object-contain max-h-64 group-hover:scale-105 transition-transform duration-200" />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-xs font-semibold transition-opacity duration-200">
+                      {ar("عرض الفاتورة بالحجم الكامل", "View Full Size")}
+                    </div>
+                  </a>
+                </div>
+              </DetailSection>
+            )}
+
+            {/* Workflow Timestamps */}
+            {(r.confirmed_at || r.checked_in_at || r.checked_out_at || r.cancelled_at) && (
+              <DetailSection icon={Clock} title={ar("سجل الإجراءات", "Action Log")}>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {r.confirmed_at && (
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-xs text-muted-foreground flex items-center gap-1"><CheckCircle2 className="w-3 h-3 text-emerald-500" />{t("bk.confirm")}</span>
+                      <span className="text-xs font-medium tabular-nums">{formatDateTime(r.confirmed_at, lang)}</span>
+                    </div>
+                  )}
+                  {r.checked_in_at && (
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-xs text-muted-foreground flex items-center gap-1"><LogIn className="w-3 h-3 text-blue-500" />{t("bk.check_in")}</span>
+                      <span className="text-xs font-medium tabular-nums">{formatDateTime(r.checked_in_at, lang)}</span>
+                    </div>
+                  )}
+                  {r.checked_out_at && (
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-xs text-muted-foreground flex items-center gap-1"><LogOut className="w-3 h-3 text-purple-500" />{t("bk.check_out")}</span>
+                      <span className="text-xs font-medium tabular-nums">{formatDateTime(r.checked_out_at, lang)}</span>
+                    </div>
+                  )}
+                  {r.cancelled_at && (
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-xs text-muted-foreground flex items-center gap-1"><Ban className="w-3 h-3 text-red-500" />{t("bk.cancel")}</span>
+                      <span className="text-xs font-medium tabular-nums">{formatDateTime(r.cancelled_at, lang)}</span>
+                    </div>
+                  )}
+                </div>
+                {r.cancellation_reason && (
+                  <div className="mt-3 rounded-lg bg-destructive/5 border border-destructive/20 p-3">
+                    <p className="text-xs font-medium text-destructive mb-0.5">{t("bk.cancel_reason")}</p>
+                    <p className="text-sm text-foreground">{r.cancellation_reason}</p>
+                  </div>
+                )}
+              </DetailSection>
+            )}
+
+            {/* Notes */}
+            {(r.special_requests || r.notes) && (
+              <DetailSection icon={FileText} title={ar("الطلبات والملاحظات", "Requests & Notes")}>
+                <div className="grid md:grid-cols-2 gap-4">
+                  {r.special_requests && (
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground mb-1.5">{t("bk.special_requests")}</p>
+                      <p className="text-sm bg-muted/40 rounded-lg p-3">{r.special_requests}</p>
+                    </div>
+                  )}
+                  {r.notes && (
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground mb-1.5">{t("label.notes")}</p>
+                      <p className="text-sm bg-muted/40 rounded-lg p-3">{r.notes}</p>
+                    </div>
+                  )}
+                </div>
+              </DetailSection>
+            )}
+          </div>
+        )}
       </div>
 
       {/* ── Invoice Dialog ── */}

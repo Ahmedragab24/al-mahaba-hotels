@@ -1,9 +1,12 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useNavigate, useParams } from "react-router-dom";
+import { db } from "@/lib/api/db";
+import { apiClient } from "@/lib/api/api-client";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
-import { useAuth } from "@/hooks/use-auth";
+import { useSelector } from "react-redux";
+import { selectAuth } from "@/store/features/authSlice";
+import { hasRole, hasAnyRole, isAdmin, canAccessModule } from "@/lib/auth-utils";
 import { PageHeader } from "@/components/page-header";
 import { EntityHistory } from "@/components/entity-history";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,10 +18,6 @@ import { TaxDialog } from "./-dialog";
 import { ArrowLeft, Pencil } from "lucide-react";
 import { formatDate, formatDateTime } from "@/lib/format";
 
-export const Route = createFileRoute("/_authenticated/taxes/$id")({
-  component: TaxDetail,
-});
-
 function KV({ label, value, mono }: { label: string; value: any; mono?: boolean }) {
   return (
     <div className="space-y-0.5">
@@ -28,19 +27,19 @@ function KV({ label, value, mono }: { label: string; value: any; mono?: boolean 
   );
 }
 
-function TaxDetail() {
-  const { id } = Route.useParams();
+export default function TaxDetail() {
+  const { id } = useParams();
   const { t, lang } = useI18n();
-  const auth = useAuth();
+  const auth = useSelector(selectAuth);
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const canWrite = auth.hasAnyRole(["super_admin", "admin", "operations_manager", "operations_agent", "finance_manager", "finance_agent"]);
+  const canWrite = hasAnyRole(auth, ["super_admin", "admin", "operations_manager", "operations_agent", "finance_manager", "finance_agent"]);
   const [editing, setEditing] = useState(false);
 
   const q = useQuery({
     queryKey: ["tax", id],
     queryFn: async () => {
-      const { data, error } = await supabase.from("hotel_taxes")
+      const { data, error } = await db.from("hotel_taxes")
         .select("*, hotel:hotels(id,name_en,name_ar)").eq("id", id).maybeSingle();
       if (error) throw error;
       return data as any;
@@ -59,7 +58,7 @@ function TaxDetail() {
         subtitle={`${x.code} · ${t(`taxtype.${x.tax_type}`)}`}
         children={
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => navigate({ to: "/taxes" })}>
+            <Button variant="outline" size="sm" onClick={() => navigate("/taxes")}>
               <ArrowLeft className="h-4 w-4 rtl:rotate-180" />{t("actions.back")}
             </Button>
             {canWrite && !x.deleted_at && (
@@ -102,7 +101,7 @@ function TaxDetail() {
           </TabsContent>
 
           <TabsContent value="history">
-            <EntityHistory entityType="hotel_taxes" entityId={id} />
+            <EntityHistory entityType="hotel_taxes" entityId={id || ""} />
           </TabsContent>
         </Tabs>
       </div>

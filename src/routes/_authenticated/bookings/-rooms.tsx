@@ -153,7 +153,7 @@ export function RoomsTab({ bookingId, currency, editable, confirmable }: { booki
 
   const rows = rooms.data ?? [];
   const sums = rows.reduce(
-    (a, i: any) => ({ cost: a.cost + Number(i.total_cost), margin: a.margin + Number(i.margin), total: a.total + Number(i.total_selling) }),
+    (a: { cost: number; margin: number; total: number }, i: any) => ({ cost: a.cost + Number(i.total_cost), margin: a.margin + Number(i.margin), total: a.total + Number(i.total_selling) }),
     { cost: 0, margin: 0, total: 0 },
   );
 

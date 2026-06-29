@@ -1,11 +1,15 @@
 // Invoice list — Section 15 (BR-INV). KPIs, filters, create from booking or manual.
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "react-router-dom";
+import { db } from "@/lib/api/db";
+import { apiClient } from "@/lib/api/api-client";
+import { getCurrentUserId } from "@/lib/api/base";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/page-header";
 import { useI18n } from "@/lib/i18n";
-import { useAuth } from "@/hooks/use-auth";
+import { useSelector } from "react-redux";
+import { selectAuth } from "@/store/features/authSlice";
+import { hasRole, hasAnyRole, isAdmin, canAccessModule } from "@/lib/auth-utils";
 import { useDebounce } from "@/lib/use-debounce";
 import { dbErrorMessage } from "@/lib/db-errors";
 import { Card, CardContent } from "@/components/ui/card";
@@ -22,10 +26,6 @@ import { Plus, Search, Eye, FileText, AlertTriangle, CheckCircle2, FileEdit, Wal
 import { formatDate } from "@/lib/format";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/_authenticated/invoices/")({
-  component: InvoicesList,
-});
-
 const PAGE_SIZE = 20;
 const STATUSES = ["draft", "issued", "sent", "partially_paid", "paid", "cancelled"] as const;
 export const FINANCE_WRITE = ["super_admin", "admin", "finance_manager", "finance_agent"] as const;
@@ -37,11 +37,11 @@ export function InvStatusBadge({ status, t }: { status: string; t: (k: string, f
   return <Badge variant={variant as any} className={cls}>{t(`invstatus.${status}`)}</Badge>;
 }
 
-function InvoicesList() {
+export default function InvoicesList() {
   const { t, lang, dir } = useI18n();
-  const auth = useAuth();
+  const auth = useSelector(selectAuth);
   const navigate = useNavigate();
-  const canWrite = auth.hasAnyRole([...FINANCE_WRITE]);
+  const canWrite = hasAnyRole(auth, [...FINANCE_WRITE]);
 
   const [search, setSearch] = useState("");
   const [customer, setCustomer] = useState("all");
@@ -62,17 +62,17 @@ function InvoicesList() {
 
   const customers = useQuery({
     queryKey: ["lookup-customers"],
-    queryFn: async () => (await supabase.from("customers").select("id,name_en,name_ar").is("deleted_at", null).order("name_en")).data ?? [],
+    queryFn: async () => (await apiClient.customers.getAll()) ?? [],
   });
   const currencies = useQuery({
     queryKey: ["lookup-currencies"],
-    queryFn: async () => (await supabase.from("currencies").select("code").order("code")).data ?? [],
+    queryFn: async () => (await apiClient.currencies.getAll()) ?? [],
   });
   const bookings = useQuery({
     queryKey: ["lookup-confirmed-bookings"],
     enabled: openNew,
     queryFn: async () =>
-      (await supabase.from("bookings")
+      (await db.from("bookings")
         .select("id,booking_no,status,currency,customer:customers(name_en,name_ar)")
         .in("status", ["confirmed", "checked_in", "checked_out"])
         .is("deleted_at", null).order("created_at", { ascending: false })).data ?? [],
@@ -81,16 +81,16 @@ function InvoicesList() {
   const metrics = useQuery({
     queryKey: ["inv-metrics"],
     queryFn: async () => {
-      const { data } = await supabase.from("invoices").select("status,total_amount,paid_amount,due_date").is("deleted_at", null);
-      const rows = data ?? [];
+      const { data } = await db.from("invoices").select("status,total_amount,paid_amount,due_date").is("deleted_at", null);
+      const rows = (data as any) ?? [];
       const today = new Date().toISOString().slice(0, 10);
-      const open = rows.filter((r) => ["issued", "sent", "partially_paid"].includes(r.status));
+      const open = rows.filter((r: any) => ["issued", "sent", "partially_paid"].includes(r.status));
       return {
         total: rows.length,
-        outstanding: open.reduce((a, r) => a + Number(r.total_amount) - Number(r.paid_amount), 0),
-        overdue: open.filter((r) => r.due_date < today).length,
-        paid: rows.filter((r) => r.status === "paid").length,
-        draft: rows.filter((r) => r.status === "draft").length,
+        outstanding: open.reduce((a: number, r: any) => a + Number(r.total_amount) - Number(r.paid_amount), 0),
+        overdue: open.filter((r: any) => r.due_date < today).length,
+        paid: rows.filter((r: any) => r.status === "paid").length,
+        draft: rows.filter((r: any) => r.status === "draft").length,
       };
     },
   });
@@ -98,7 +98,7 @@ function InvoicesList() {
   const list = useQuery({
     queryKey: ["invoices", { dSearch, customer, status, from, to, page }],
     queryFn: async () => {
-      let q = supabase.from("invoices").select(
+      let q = db.from("invoices").select(
         "id,invoice_no,status,invoice_date,due_date,currency,total_amount,paid_amount,customer:customers(name_en,name_ar)",
         { count: "exact" },
       ).is("deleted_at", null);
@@ -119,24 +119,23 @@ function InvoicesList() {
     try {
       if (mode === "booking") {
         if (!bookingId) return;
-        const { data, error } = await supabase.rpc("create_invoice_from_booking", { _booking_id: bookingId });
+        const data = await apiClient.invoices.createFromBooking({ booking_id: bookingId }); const error = null;
         if (error) throw error;
         toast.success(t("label.saved", "Saved"));
-        navigate({ to: "/invoices/$id", params: { id: data as string } });
+        navigate(`/invoices/${data as string}`);
       } else {
         if (!mCustomer) return;
-        const { data: userData } = await supabase.auth.getUser();
-        const { data, error } = await supabase.from("invoices").insert({
+        const userData = { user: { id: getCurrentUserId() } };
+        const data = await apiClient.invoices.create({
           customer_id: mCustomer, currency: mCurrency, invoice_date: mDate, due_date: mDue,
           created_by: userData.user?.id ?? null,
-        }).select("id").single();
-        if (error) throw error;
+        });
         toast.success(t("label.saved", "Saved"));
-        navigate({ to: "/invoices/$id", params: { id: data.id } });
+        navigate(`/invoices/${data.id}`);
       }
       setOpenNew(false);
     } catch (e) {
-      toast.error(dbErrorMessage(e, t));
+      toast.error(dbErrorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -188,7 +187,7 @@ function InvoicesList() {
                 <SelectTrigger className="w-full"><SelectValue placeholder={t("inv.customer")} /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t("filter.all")}</SelectItem>
-                  {customers.data?.map((c: any) => <SelectItem key={c.id} value={c.id}>{name(c)}</SelectItem>)}
+                  {(Array.isArray(customers.data) ? customers.data : Array.isArray(customers.data?.data) ? customers.data.data : []).map((c: any) => <SelectItem key={c.id} value={c.id}>{name(c)}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -238,7 +237,7 @@ function InvoicesList() {
                 {list.data?.rows.map((r: any) => (
                   <TableRow key={r.id} className="whitespace-nowrap">
                     <TableCell className="font-mono text-xs">
-                      <Link to="/invoices/$id" params={{ id: r.id }} className="hover:underline">{r.invoice_no}</Link>
+                      <Link to={`/invoices/${r.id}`} className="hover:underline">{r.invoice_no}</Link>
                     </TableCell>
                     <TableCell className="text-sm">{name(r.customer)}</TableCell>
                     <TableCell dir="ltr" className="text-xs">{formatDate(r.invoice_date, lang)}</TableCell>
@@ -249,7 +248,7 @@ function InvoicesList() {
                     <TableCell><InvStatusBadge status={r.status} t={t} /></TableCell>
                     <TableCell className="text-end">
                       <Button asChild variant="ghost" size="icon" title={t("actions.view")}>
-                        <Link to="/invoices/$id" params={{ id: r.id }}><Eye className="h-4 w-4" /></Link>
+                        <Link to={`/invoices/${r.id}`}><Eye className="h-4 w-4" /></Link>
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -275,7 +274,7 @@ function InvoicesList() {
                 <Select value={bookingId} onValueChange={setBookingId}>
                   <SelectTrigger dir={dir}><SelectValue placeholder={t("inv.select_booking")} /></SelectTrigger>
                   <SelectContent>
-                    {bookings.data?.map((b: any) => (
+                    {(Array.isArray(bookings.data) ? bookings.data : Array.isArray(bookings.data?.data) ? bookings.data.data : [])?.map((b: any) => (
                       <SelectItem key={b.id} value={b.id}>{b.booking_no} · {name(b.customer)} · {b.currency}</SelectItem>
                     ))}
                   </SelectContent>
@@ -288,7 +287,7 @@ function InvoicesList() {
                   <Select value={mCustomer} onValueChange={setMCustomer}>
                     <SelectTrigger dir={dir}><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {customers.data?.map((c: any) => <SelectItem key={c.id} value={c.id}>{name(c)}</SelectItem>)}
+                      {(Array.isArray(customers.data) ? customers.data : Array.isArray(customers.data?.data) ? customers.data.data : []).map((c: any) => <SelectItem key={c.id} value={c.id}>{name(c)}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -297,7 +296,7 @@ function InvoicesList() {
                   <Select value={mCurrency} onValueChange={setMCurrency}>
                     <SelectTrigger dir={dir}><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {currencies.data?.map((c: any) => <SelectItem key={c.code} value={c.code}>{c.code}</SelectItem>)}
+                      {(Array.isArray(currencies.data) ? currencies.data : Array.isArray(currencies.data?.data) ? currencies.data.data : [])?.map((c: any) => <SelectItem key={c.code} value={c.code}>{c.code}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>

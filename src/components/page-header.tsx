@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { useRouterState } from "@tanstack/react-router";
+import { useLocation } from "react-router-dom";
 import { useI18n } from "@/lib/i18n";
 
 // Map pathnames to i18n description keys. Longest prefix wins.
@@ -53,7 +53,7 @@ export function PageHeader({
   children?: ReactNode;
 }) {
   const { t } = useI18n();
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { pathname } = useLocation();
   const autoKey = lookupKey(pathname);
   const autoDesc = autoKey ? t(autoKey, "") : "";
   const desc = description ?? (autoDesc && autoDesc !== autoKey ? autoDesc : undefined);

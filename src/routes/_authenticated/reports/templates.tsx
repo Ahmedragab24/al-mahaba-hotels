@@ -1,10 +1,13 @@
 // Saved report templates & scheduling (Section 17).
 import { useState } from "react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { db } from "@/lib/api/db";
+import { apiClient } from "@/lib/api/api-client";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
-import { useAuth } from "@/hooks/use-auth";
+import { useSelector } from "react-redux";
+import { selectAuth } from "@/store/features/authSlice";
+import { hasRole, hasAnyRole, isAdmin, canAccessModule } from "@/lib/auth-utils";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,10 +22,6 @@ import { CalendarClock, ExternalLink, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDateTime } from "@/lib/format";
 
-export const Route = createFileRoute("/_authenticated/reports/templates")({
-  component: TemplatesPage,
-});
-
 function nextRun(frequency: string): string {
   const d = new Date();
   if (frequency === "daily") d.setDate(d.getDate() + 1);
@@ -32,9 +31,9 @@ function nextRun(frequency: string): string {
   return d.toISOString();
 }
 
-function TemplatesPage() {
+export default function TemplatesPage() {
   const { t, lang, dir } = useI18n();
-  const auth = useAuth();
+  const auth = useSelector(selectAuth);
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [schedFor, setSchedFor] = useState<string | null>(null);
@@ -45,7 +44,7 @@ function TemplatesPage() {
   const templates = useQuery({
     queryKey: ["rpt-templates"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from("report_templates")
         .select("*")
         .is("deleted_at", null)
@@ -58,7 +57,7 @@ function TemplatesPage() {
   const schedules = useQuery({
     queryKey: ["rpt-schedules"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from("report_schedules")
         .select("*, template:report_templates(name_ar, name_en, report_key)")
         .order("created_at", { ascending: false });
@@ -71,21 +70,27 @@ function TemplatesPage() {
 
   const openTemplate = (tpl: { report_key: string; config: unknown }) => {
     const cfg = (tpl.config ?? {}) as { from?: string; to?: string; status?: string };
-    if (tpl.report_key === "operational") navigate({ to: "/reports/operational", search: cfg });
-    else if (tpl.report_key === "financial") navigate({ to: "/reports/financial", search: { from: cfg.from, to: cfg.to } });
-    else if (tpl.report_key === "tax") navigate({ to: "/reports/tax", search: { from: cfg.from, to: cfg.to } });
-    else navigate({ to: "/reports" });
+    const searchParams = new URLSearchParams();
+    if (cfg.from) searchParams.set("from", cfg.from);
+    if (cfg.to) searchParams.set("to", cfg.to);
+    if (cfg.status) searchParams.set("status", cfg.status);
+    const qs = searchParams.toString() ? `?${searchParams.toString()}` : "";
+
+    if (tpl.report_key === "operational") navigate(`/reports/operational${qs}`);
+    else if (tpl.report_key === "financial") navigate(`/reports/financial${qs}`);
+    else if (tpl.report_key === "tax") navigate(`/reports/tax${qs}`);
+    else navigate("/reports");
   };
 
   const deleteTemplate = async (id: string) => {
-    const { error } = await supabase.from("report_templates").update({ deleted_at: new Date().toISOString() }).eq("id", id);
+    const { error } = await db.from("report_templates").update({ deleted_at: new Date().toISOString() }).eq("id", id);
     if (error) toast.error(error.message);
     else { toast.success(t("rpt.deleted")); qc.invalidateQueries({ queryKey: ["rpt-templates"] }); }
   };
 
   const addSchedule = async () => {
     if (!schedFor) return;
-    const { error } = await supabase.from("report_schedules").insert({
+    const { error } = await db.from("report_schedules").insert({
       template_id: schedFor,
       frequency,
       export_format: format,
@@ -101,13 +106,13 @@ function TemplatesPage() {
   };
 
   const toggleSchedule = async (id: string, active: boolean) => {
-    const { error } = await supabase.from("report_schedules").update({ active }).eq("id", id);
+    const { error } = await db.from("report_schedules").update({ active }).eq("id", id);
     if (error) toast.error(error.message);
     else qc.invalidateQueries({ queryKey: ["rpt-schedules"] });
   };
 
   const deleteSchedule = async (id: string) => {
-    const { error } = await supabase.from("report_schedules").delete().eq("id", id);
+    const { error } = await db.from("report_schedules").delete().eq("id", id);
     if (error) toast.error(error.message);
     else { toast.success(t("rpt.deleted")); qc.invalidateQueries({ queryKey: ["rpt-schedules"] }); }
   };
@@ -135,7 +140,7 @@ function TemplatesPage() {
                 ) : (templates.data?.length ?? 0) === 0 ? (
                   <TableRow><TableCell colSpan={5} className="py-8 text-center text-muted-foreground">{t("rpt.no_templates")}</TableCell></TableRow>
                 ) : (
-                  templates.data!.map((tpl) => (
+                  templates.data!.map((tpl: any) => (
                     <TableRow key={tpl.id}>
                       <TableCell className="font-medium">{name(tpl)}</TableCell>
                       <TableCell><Badge variant="outline">{t(`nav.rpt_${tpl.report_key}`, tpl.report_key)}</Badge></TableCell>
@@ -183,7 +188,7 @@ function TemplatesPage() {
                 ) : (schedules.data?.length ?? 0) === 0 ? (
                   <TableRow><TableCell colSpan={7} className="py-8 text-center text-muted-foreground">{t("rpt.no_schedules")}</TableCell></TableRow>
                 ) : (
-                  schedules.data!.map((s) => (
+                  schedules.data!.map((s: any) => (
                     <TableRow key={s.id}>
                       <TableCell className="font-medium">{s.template ? name(s.template as { name_ar: string; name_en: string }) : "—"}</TableCell>
                       <TableCell>{t(`rpt.freq_${s.frequency}`, s.frequency)}</TableCell>

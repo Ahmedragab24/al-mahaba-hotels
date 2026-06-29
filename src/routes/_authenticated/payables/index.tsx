@@ -1,11 +1,13 @@
 // Supplier payables, payment orders, payments, statements & aging — Section 16 (BR-PAY)
-import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
+import { db } from "@/lib/api/db";
+import { apiClient } from "@/lib/api/api-client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/page-header";
 import { useI18n } from "@/lib/i18n";
-import { useAuth } from "@/hooks/use-auth";
+import { useSelector } from "react-redux";
+import { selectAuth } from "@/store/features/authSlice";
+import { hasRole, hasAnyRole, isAdmin, canAccessModule } from "@/lib/auth-utils";
 import { dbErrorMessage } from "@/lib/db-errors";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -22,10 +24,6 @@ import { Plus, Settings2, XCircle, Trash2 } from "lucide-react";
 import { formatDate } from "@/lib/format";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/_authenticated/payables/")({
-  component: PayablesPage,
-});
-
 const PAGE_SIZE = 20;
 const FINANCE_WRITE = ["super_admin", "admin", "finance_manager", "finance_agent"] as const;
 const APPROVERS = ["super_admin", "admin", "finance_manager"] as const;
@@ -39,12 +37,12 @@ function PoStatusBadge({ status, t }: { status: string; t: (k: string, f?: strin
   return <Badge variant={variant as any} className={cls}>{t(`postatus.${status}`)}</Badge>;
 }
 
-function PayablesPage() {
+export default function PayablesPage() {
   const { t, lang, dir } = useI18n();
-  const auth = useAuth();
+  const auth = useSelector(selectAuth);
   const qc = useQueryClient();
-  const canWrite = auth.hasAnyRole([...FINANCE_WRITE]);
-  const canApprove = auth.hasAnyRole([...APPROVERS]);
+  const canWrite = hasAnyRole(auth, [...FINANCE_WRITE]);
+  const canApprove = hasAnyRole(auth, [...APPROVERS]);
 
   const fmt = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 2 });
   const name = (s: any) => (s ? (lang === "ar" ? s.name_ar || s.name_en : s.name_en || s.name_ar) : "—");
@@ -52,11 +50,11 @@ function PayablesPage() {
 
   const suppliers = useQuery({
     queryKey: ["lookup-suppliers"],
-    queryFn: async () => (await supabase.from("suppliers").select("id,name_en,name_ar").is("deleted_at", null).order("name_en")).data ?? [],
+    queryFn: async () => (await apiClient.suppliers.getAll()) ?? [],
   });
   const currencies = useQuery({
     queryKey: ["lookup-currencies"],
-    queryFn: async () => (await supabase.from("currencies").select("code").order("code")).data ?? [],
+    queryFn: async () => (await apiClient.currencies.getAll()) ?? [],
   });
 
   const refresh = () => {
@@ -76,7 +74,7 @@ function PayablesPage() {
   const payables = useQuery({
     queryKey: ["payables", { fSupplier, fStatus, page }],
     queryFn: async () => {
-      let q = supabase.from("supplier_payables").select(
+      let q = db.from("supplier_payables").select(
         "id,payable_no,status,currency,amount,paid_amount,due_date,booking_id,supplier:suppliers(name_en,name_ar),booking:bookings(booking_no)",
         { count: "exact" },
       ).is("deleted_at", null);
@@ -92,7 +90,7 @@ function PayablesPage() {
   const aging = useQuery({
     queryKey: ["payables-aging"],
     queryFn: async () => {
-      const { data } = await supabase.from("supplier_payables")
+      const { data } = await db.from("supplier_payables")
         .select("amount,paid_amount,exchange_rate,due_date,status").is("deleted_at", null)
         .in("status", ["pending", "partially_paid"]);
       const buckets = { current: 0, d30: 0, d60: 0, d90: 0, over: 0 };
@@ -118,7 +116,7 @@ function PayablesPage() {
     queryKey: ["lookup-confirmed-bookings"],
     enabled: openGen,
     queryFn: async () =>
-      (await supabase.from("bookings")
+      (await db.from("bookings")
         .select("id,booking_no,status,currency,customer:customers(name_en,name_ar)")
         .in("status", ["confirmed", "checked_in", "checked_out"])
         .is("deleted_at", null).order("created_at", { ascending: false })).data ?? [],
@@ -126,19 +124,19 @@ function PayablesPage() {
   const generatePayables = async () => {
     setBusy(true);
     try {
-      const { error } = await supabase.rpc("create_payables_from_booking", { _booking_id: genBooking });
+      const { error } = await apiClient.rpc("create_payables_from_booking", { booking_id: genBooking });
       if (error) throw error;
       toast.success(t("pyb.generated"));
       setOpenGen(false); setGenBooking("");
       refresh();
-    } catch (e) { toast.error(dbErrorMessage(e, t)); } finally { setBusy(false); }
+    } catch (e) { toast.error(dbErrorMessage(e)); } finally { setBusy(false); }
   };
 
   // ================= PAYMENT ORDERS =================
   const orders = useQuery({
     queryKey: ["porders"],
     queryFn: async () =>
-      (await supabase.from("payment_orders")
+      (await db.from("payment_orders")
         .select("id,order_no,status,currency,total_amount,rejection_reason,supplier_id,supplier:suppliers(name_en,name_ar),created_at")
         .is("deleted_at", null).order("created_at", { ascending: false }).limit(100)).data ?? [],
   });
@@ -149,12 +147,11 @@ function PayablesPage() {
   const createOrder = async () => {
     setBusy(true);
     try {
-      const { error } = await supabase.from("payment_orders").insert({ supplier_id: oSupplier, currency: oCurrency });
-      if (error) throw error;
+      await apiClient.paymentOrders.create({ supplier_id: oSupplier, currency: oCurrency });
       toast.success(t("label.saved", "Saved"));
       setOpenNewOrder(false); setOSupplier("");
       refresh();
-    } catch (e) { toast.error(dbErrorMessage(e, t)); } finally { setBusy(false); }
+    } catch (e) { toast.error(dbErrorMessage(e)); } finally { setBusy(false); }
   };
 
   // manage order
@@ -163,7 +160,7 @@ function PayablesPage() {
     queryKey: ["porder-items", manageOrder?.id],
     enabled: !!manageOrder,
     queryFn: async () =>
-      (await supabase.from("payment_order_items")
+      (await db.from("payment_order_items")
         .select("id,amount,payable:supplier_payables(id,payable_no,amount,paid_amount)")
         .eq("order_id", manageOrder.id).order("created_at")).data ?? [],
   });
@@ -171,7 +168,7 @@ function PayablesPage() {
     queryKey: ["porder-open-payables", manageOrder?.supplier_id, manageOrder?.currency],
     enabled: !!manageOrder,
     queryFn: async () =>
-      (await supabase.from("supplier_payables")
+      (await db.from("supplier_payables")
         .select("id,payable_no,amount,paid_amount")
         .eq("supplier_id", manageOrder.supplier_id).eq("currency", manageOrder.currency)
         .in("status", ["pending", "partially_paid"]).is("deleted_at", null)
@@ -182,30 +179,28 @@ function PayablesPage() {
   const addItem = async () => {
     setBusy(true);
     try {
-      const { error } = await supabase.from("payment_order_items").insert({
+      const { error } = await db.from("payment_order_items").insert({
         order_id: manageOrder.id, payable_id: itemPayable, amount: Number(itemAmount),
       });
       if (error) throw error;
       setItemPayable(""); setItemAmount("");
       refresh();
-    } catch (e) { toast.error(dbErrorMessage(e, t)); } finally { setBusy(false); }
+    } catch (e) { toast.error(dbErrorMessage(e)); } finally { setBusy(false); }
   };
   const removeItem = async (id: string) => {
     try {
-      const { error } = await supabase.from("payment_order_items").delete().eq("id", id);
-      if (error) throw error;
+      await apiClient.paymentOrderItems.delete(id);
       refresh();
-    } catch (e) { toast.error(dbErrorMessage(e, t)); }
+    } catch (e) { toast.error(dbErrorMessage(e)); }
   };
   const setOrderStatus = async (status: string, extra: Record<string, unknown> = {}) => {
     setBusy(true);
     try {
-      const { error } = await supabase.from("payment_orders").update({ status, ...extra }).eq("id", manageOrder.id);
-      if (error) throw error;
+      await apiClient.paymentOrders.update(manageOrder.id, { status, ...extra });
       toast.success(t("label.saved", "Saved"));
       setManageOrder({ ...manageOrder, status });
       refresh();
-    } catch (e) { toast.error(dbErrorMessage(e, t)); } finally { setBusy(false); }
+    } catch (e) { toast.error(dbErrorMessage(e)); } finally { setBusy(false); }
   };
   const [rejectReason, setRejectReason] = useState("");
   const [openReject, setOpenReject] = useState(false);
@@ -220,12 +215,11 @@ function PayablesPage() {
     setBusy(true);
     try {
       const amount = Number(pAmount);
-      const { data: pay, error } = await supabase.from("supplier_payments").insert({
+      const data = await apiClient.supplierPayments.create({
         payment_order_id: manageOrder.id, supplier_id: manageOrder.supplier_id,
         payment_date: pDate, payment_method: pMethod, reference_no: pRef || null,
         currency: manageOrder.currency, amount,
-      }).select("id").single();
-      if (error) throw error;
+      });
       // allocate across order items (in order) up to the payment amount
       let remaining = amount;
       const items = orderItems.data ?? [];
@@ -235,8 +229,8 @@ function PayablesPage() {
         const balance = Number(it.payable.amount) - Number(it.payable.paid_amount);
         const alloc = Math.min(remaining, Number(it.amount), balance);
         if (alloc <= 0) continue;
-        const { error: ae } = await supabase.from("payment_allocations").insert({
-          payment_id: pay.id, payable_id: it.payable.id, amount: alloc,
+        const { error: ae } = await apiClient.paymentAllocations.create({
+          payment_id: data.id, payable_id: it.payable.id, amount: alloc,
         });
         if (ae) throw ae;
         remaining -= alloc;
@@ -244,14 +238,14 @@ function PayablesPage() {
       toast.success(t("label.saved", "Saved"));
       setOpenPay(false); setPAmount(""); setPRef("");
       refresh();
-    } catch (e) { toast.error(dbErrorMessage(e, t)); } finally { setBusy(false); }
+    } catch (e) { toast.error(dbErrorMessage(e)); } finally { setBusy(false); }
   };
 
   // ================= PAYMENTS =================
   const payments = useQuery({
     queryKey: ["spayments"],
     queryFn: async () =>
-      (await supabase.from("supplier_payments")
+      (await db.from("supplier_payments")
         .select("id,payment_no,status,payment_date,payment_method,reference_no,currency,amount,supplier:suppliers(name_en,name_ar),order:payment_orders(order_no)")
         .order("created_at", { ascending: false }).limit(100)).data ?? [],
   });
@@ -260,15 +254,15 @@ function PayablesPage() {
   const doCancelPayment = async () => {
     setBusy(true);
     try {
-      const { error: de } = await supabase.from("payment_allocations").delete().eq("payment_id", cancelPay.id);
+      const { error: de } = await db.from("payment_allocations").delete().eq("payment_id", cancelPay.id);
       if (de) throw de;
-      const { error } = await supabase.from("supplier_payments")
+      const { error } = await db.from("supplier_payments")
         .update({ status: "cancelled", cancellation_reason: cancelPayReason }).eq("id", cancelPay.id);
       if (error) throw error;
       toast.success(t("label.saved", "Saved"));
       setCancelPay(null); setCancelPayReason("");
       refresh();
-    } catch (e) { toast.error(dbErrorMessage(e, t)); } finally { setBusy(false); }
+    } catch (e) { toast.error(dbErrorMessage(e)); } finally { setBusy(false); }
   };
 
   // ================= STATEMENT =================
@@ -278,10 +272,10 @@ function PayablesPage() {
     enabled: !!stSupplier,
     queryFn: async () => {
       const [pyb, pays] = await Promise.all([
-        supabase.from("supplier_payables")
+        db.from("supplier_payables")
           .select("payable_no,amount,exchange_rate,currency,created_at,status")
           .eq("supplier_id", stSupplier).is("deleted_at", null).neq("status", "cancelled"),
-        supabase.from("supplier_payments")
+        db.from("supplier_payments")
           .select("payment_no,amount,exchange_rate,currency,payment_date,created_at,status")
           .eq("supplier_id", stSupplier).eq("status", "confirmed"),
       ]);
@@ -336,7 +330,7 @@ function PayablesPage() {
                   <SelectTrigger className="w-full"><SelectValue placeholder={t("pyb.supplier")} /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">{t("filter.all")}</SelectItem>
-                    {suppliers.data?.map((s: any) => <SelectItem key={s.id} value={s.id}>{name(s)}</SelectItem>)}
+                    {(Array.isArray(suppliers.data) ? suppliers.data : Array.isArray(suppliers.data?.data) ? suppliers.data.data : [])?.map((s: any) => <SelectItem key={s.id} value={s.id}>{name(s)}</SelectItem>)}
                   </SelectContent>
                 </Select>
                 <Select value={fStatus} onValueChange={(v) => { setFStatus(v); setPage(1); }}>
@@ -407,7 +401,7 @@ function PayablesPage() {
                   </TableHeader>
                   <TableBody>
                     {!orders.isLoading && (orders.data?.length ?? 0) === 0 && <TableRow><TableCell colSpan={5} className="py-10 text-center text-muted-foreground">{t("label.no_results")}</TableCell></TableRow>}
-                    {orders.data?.map((r: any) => (
+                    {(Array.isArray(orders.data) ? orders.data : Array.isArray(orders.data?.data) ? orders.data.data : [])?.map((r: any) => (
                       <TableRow key={r.id} className="whitespace-nowrap">
                         <TableCell className="font-mono text-xs">{r.order_no}</TableCell>
                         <TableCell className="text-sm">{name(r.supplier)}</TableCell>
@@ -447,7 +441,7 @@ function PayablesPage() {
                   </TableHeader>
                   <TableBody>
                     {!payments.isLoading && (payments.data?.length ?? 0) === 0 && <TableRow><TableCell colSpan={8} className="py-10 text-center text-muted-foreground">{t("label.no_results")}</TableCell></TableRow>}
-                    {payments.data?.map((r: any) => (
+                    {(Array.isArray(payments.data) ? payments.data : Array.isArray(payments.data?.data) ? payments.data.data : [])?.map((r: any) => (
                       <TableRow key={r.id} className="whitespace-nowrap">
                         <TableCell className="font-mono text-xs">{r.payment_no}</TableCell>
                         <TableCell className="font-mono text-xs">{r.order?.order_no ?? "—"}</TableCell>
@@ -479,7 +473,7 @@ function PayablesPage() {
                   <Label>{t("pyb.supplier")}</Label>
                   <Select value={stSupplier} onValueChange={setStSupplier}>
                     <SelectTrigger dir={dir}><SelectValue placeholder={t("pyb.supplier")} /></SelectTrigger>
-                    <SelectContent>{suppliers.data?.map((s: any) => <SelectItem key={s.id} value={s.id}>{name(s)}</SelectItem>)}</SelectContent>
+                    <SelectContent>{(Array.isArray(suppliers.data) ? suppliers.data : Array.isArray(suppliers.data?.data) ? suppliers.data.data : [])?.map((s: any) => <SelectItem key={s.id} value={s.id}>{name(s)}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
               </CardContent>
@@ -499,7 +493,7 @@ function PayablesPage() {
                     </TableHeader>
                     <TableBody>
                       {(statement.data?.length ?? 0) === 0 && <TableRow><TableCell colSpan={5} className="py-10 text-center text-muted-foreground">{t("label.no_results")}</TableCell></TableRow>}
-                      {statement.data?.map((r, i) => (
+                      {(Array.isArray(statement.data) ? statement.data : Array.isArray(statement.data?.data) ? statement.data.data : [])?.map((r: any, i: number) => (
                         <TableRow key={i} className="whitespace-nowrap">
                           <TableCell dir="ltr" className="text-xs">{formatDate(r.date, lang)}</TableCell>
                           <TableCell className="font-mono text-xs">{r.ref}</TableCell>
@@ -526,7 +520,7 @@ function PayablesPage() {
             <Select value={genBooking} onValueChange={setGenBooking}>
               <SelectTrigger dir={dir}><SelectValue placeholder={t("inv.select_booking")} /></SelectTrigger>
               <SelectContent>
-                {bookings.data?.map((b: any) => (
+                {(Array.isArray(bookings.data) ? bookings.data : Array.isArray(bookings.data?.data) ? bookings.data.data : [])?.map((b: any) => (
                   <SelectItem key={b.id} value={b.id}>{b.booking_no} · {name(b.customer)} · {b.currency}</SelectItem>
                 ))}
               </SelectContent>
@@ -548,14 +542,14 @@ function PayablesPage() {
               <Label>{t("pyb.supplier")}</Label>
               <Select value={oSupplier} onValueChange={setOSupplier}>
                 <SelectTrigger dir={dir}><SelectValue /></SelectTrigger>
-                <SelectContent>{suppliers.data?.map((s: any) => <SelectItem key={s.id} value={s.id}>{name(s)}</SelectItem>)}</SelectContent>
+                <SelectContent>{(Array.isArray(suppliers.data) ? suppliers.data : Array.isArray(suppliers.data?.data) ? suppliers.data.data : [])?.map((s: any) => <SelectItem key={s.id} value={s.id}>{name(s)}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
               <Label>{t("inv.currency")}</Label>
               <Select value={oCurrency} onValueChange={setOCurrency}>
                 <SelectTrigger dir={dir}><SelectValue /></SelectTrigger>
-                <SelectContent>{currencies.data?.map((c: any) => <SelectItem key={c.code} value={c.code}>{c.code}</SelectItem>)}</SelectContent>
+                <SelectContent>{(Array.isArray(currencies.data) ? currencies.data : Array.isArray(currencies.data?.data) ? currencies.data.data : [])?.map((c: any) => <SelectItem key={c.code} value={c.code}>{c.code}</SelectItem>)}</SelectContent>
               </Select>
             </div>
           </div>
@@ -581,7 +575,7 @@ function PayablesPage() {
             <div className="space-y-1">
               <Label>{t("po.items")}</Label>
               {(orderItems.data?.length ?? 0) === 0 && <div className="rounded border px-3 py-2 text-xs text-muted-foreground">{t("label.no_results")}</div>}
-              {orderItems.data?.map((it: any) => (
+              {(Array.isArray(orderItems.data) ? orderItems.data : Array.isArray(orderItems.data?.data) ? orderItems.data.data : [])?.map((it: any) => (
                 <div key={it.id} className="flex items-center justify-between rounded border px-3 py-1.5 text-xs">
                   <span className="font-mono">{it.payable?.payable_no}</span>
                   <span className="flex items-center gap-2">
@@ -600,7 +594,7 @@ function PayablesPage() {
                   <Select value={itemPayable} onValueChange={setItemPayable}>
                     <SelectTrigger dir={dir}><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {openPayables.data?.map((p: any) => (
+                      {(Array.isArray(openPayables.data) ? openPayables.data : Array.isArray(openPayables.data?.data) ? openPayables.data.data : [])?.map((p: any) => (
                         <SelectItem key={p.id} value={p.id}>{p.payable_no} · {fmt(Number(p.amount) - Number(p.paid_amount))}</SelectItem>
                       ))}
                     </SelectContent>
@@ -698,3 +692,5 @@ function PayablesPage() {
     </>
   );
 }
+
+

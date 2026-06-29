@@ -1,8 +1,9 @@
 import { useForm } from "react-hook-form";
+import { apiClient } from "@/lib/api/api-client";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useDispatch } from "react-redux";
+import { useCreateCustomerMutation, useUpdateCustomerMutation, customersApi } from "@/store/services/customers/customersService";
 import { useI18n } from "@/lib/i18n";
 import { useCountries, useCurrencies } from "@/lib/lookups";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,113 +14,126 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Building2, User, Landmark, Briefcase } from "lucide-react";
+import type { Customer } from "@/types/api";
 
 const schema = z.object({
-  customer_type: z.enum(["corporate", "individual", "agency", "government"]),
+  type: z.enum(["company", "individual", "agency", "government"]),
   name_en: z.string().trim().max(200).optional().or(z.literal("")),
   name_ar: z.string().trim().min(1).max(200),
-  legal_name: z.string().trim().max(200).optional().or(z.literal("")),
-  tax_number: z.string().trim().max(50).optional().or(z.literal("")),
-  commercial_registration: z.string().trim().max(50).optional().or(z.literal("")),
-  country_code: z.string().length(2).optional().or(z.literal("")),
-  city_id: z.string().uuid().optional().or(z.literal("")),
-  address_line1: z.string().trim().max(200).optional().or(z.literal("")),
-  address_line2: z.string().trim().max(200).optional().or(z.literal("")),
-  postal_code: z.string().trim().max(20).optional().or(z.literal("")),
   email: z.string().trim().email().max(255).optional().or(z.literal("")),
   phone: z.string().trim().max(40).optional().or(z.literal("")),
-  mobile: z.string().trim().max(40).optional().or(z.literal("")),
-  website: z.string().trim().max(200).optional().or(z.literal("")),
-  preferred_language: z.enum(["ar", "en", "id", "ur"]),
-  preferred_currency: z.string().length(3).optional().or(z.literal("")),
+  country_id: z.coerce.number().int().min(1, "مطلوب").or(z.literal("")),
+  legal_name: z.string().trim().max(200).optional().or(z.literal("")),
+  tax_number: z.string().trim().max(50).optional().or(z.literal("")),
+  commercial_register: z.string().trim().max(50).optional().or(z.literal("")),
   credit_limit: z.coerce.number().min(0).default(0),
   credit_days: z.coerce.number().int().min(0).default(0),
-  payment_terms: z.string().trim().max(200).optional().or(z.literal("")),
-  rating: z.coerce.number().int().min(1).max(5).optional().nullable(),
-  status: z.enum(["active", "inactive", "archived"]),
+  currency_id: z.coerce.number().int().min(1, "مطلوب").or(z.literal("")),
+  status: z.enum(["active", "inactive"]),
   notes: z.string().trim().max(2000).optional().or(z.literal("")),
 });
 
 type FormVals = z.input<typeof schema>;
 
-export function CustomerForm({ initial, onSaved }: { initial?: any; onSaved: (id: string) => void }) {
+interface bodyRequest {
+  type: "individual" | "company" | "agency" | "government";
+  name_ar: string,
+  name_en: string,
+  email: string,
+  phone: string,
+  country_id: number,
+  legal_name?: string,
+  tax_number?: string,
+  commercial_register?: string,
+  credit_limit: number,
+  credit_days: number,
+  currency_id: number,
+  status: boolean,
+  notes: string
+}
+
+export function CustomerForm({ initial, onSaved }: { initial?: Partial<Customer> & { id?: string | number }; onSaved: (id: string) => void }) {
   const { t, lang } = useI18n();
-  const qc = useQueryClient();
+  const dispatch = useDispatch();
   const countries = useCountries();
   const currencies = useCurrencies();
 
   const form = useForm<FormVals>({
     resolver: zodResolver(schema),
     defaultValues: {
-      customer_type: initial?.customer_type ?? "individual",
+      type: initial?.type ?? "individual",
       name_en: initial?.name_en ?? "",
       name_ar: initial?.name_ar ?? "",
-      legal_name: initial?.legal_name ?? "",
-      tax_number: initial?.tax_number ?? "",
-      commercial_registration: initial?.commercial_registration ?? "",
-      country_code: initial?.country_code ?? "",
-      city_id: initial?.city_id ?? "",
-      address_line1: initial?.address_line1 ?? "",
-      address_line2: initial?.address_line2 ?? "",
-      postal_code: initial?.postal_code ?? "",
       email: initial?.email ?? "",
       phone: initial?.phone ?? "",
-      mobile: initial?.mobile ?? "",
-      website: initial?.website ?? "",
-      preferred_language: initial?.preferred_language ?? "ar",
-      preferred_currency: initial?.preferred_currency ?? "SAR",
-      credit_limit: initial?.credit_limit ?? 0,
-      credit_days: initial?.credit_days ?? 0,
-      payment_terms: initial?.payment_terms ?? "",
-      rating: initial?.rating ?? null,
-      status: initial?.status ?? "active",
+      country_id: initial?.country_id ? Number(initial?.country_id) : 0,
+      legal_name: initial?.legal_name ?? "",
+      tax_number: initial?.tax_number ?? "",
+      commercial_register: initial?.commercial_register ?? "",
+      credit_limit: initial?.credit_limit ? Number(initial?.credit_limit) : 0,
+      credit_days: initial?.credit_days ? Number(initial?.credit_days) : 0,
+      currency_id: initial?.currency_id ? Number(initial?.currency_id) : 0,
+      status: (initial?.status === false) ? "inactive" : "active",
       notes: initial?.notes ?? "",
     },
   });
 
-  const mut = useMutation({
-    mutationFn: async (vals: FormVals) => {
-      const clean: any = { ...vals };
-      Object.keys(clean).forEach(k => { if (clean[k] === "") clean[k] = null; });
-      if (!clean.name_en) {
-        clean.name_en = clean.name_ar;
-      }
-      
-      // If individual, nullify B2B fields
-      if (clean.customer_type === "individual") {
-        clean.legal_name = null;
-        clean.tax_number = null;
-        clean.commercial_registration = null;
-        clean.credit_limit = 0;
-        clean.credit_days = 0;
+  const [createCustomer, { isLoading: isCreating }] = useCreateCustomerMutation();
+  const [updateCustomer, { isLoading: isUpdating }] = useUpdateCustomerMutation();
+  const isPending = isCreating || isUpdating;
+
+  const onSubmit = async (vals: FormVals) => {
+    try {
+      const payload: bodyRequest = {
+        type: vals.type as any,
+        name_ar: vals.name_ar,
+        name_en: vals.name_en || vals.name_ar,
+        email: vals.email || "",
+        phone: vals.phone || "",
+        country_id: Number(vals.country_id) || 1,
+        legal_name: vals.legal_name || "",
+        tax_number: vals.tax_number || "",
+        commercial_register: vals.commercial_register || "",
+        credit_limit: Number(vals.credit_limit) || 0,
+        credit_days: Number(vals.credit_days) || 0,
+        currency_id: Number(vals.currency_id) || 1,
+        status: vals.status === "active",
+        notes: vals.notes || "",
+      };
+
+      if (payload.type === "individual") {
+        payload.legal_name = "";
+        payload.tax_number = "";
+        payload.commercial_register = "";
+        payload.credit_limit = 0;
+        payload.credit_days = 0;
       }
 
-      if (initial?.id) {
-        const { error } = await supabase.from("customers").update(clean).eq("id", initial.id);
-        if (error) throw error;
-        return initial.id as string;
+      const id = initial?.id;
+      if (id) {
+        await updateCustomer({ id: id.toString(), body: payload }).unwrap();
+        toast.success(t("toast.saved"));
+        dispatch(customersApi.util.invalidateTags(["Customers"]));
+        onSaved(id.toString());
+      } else {
+        const data = await createCustomer(payload).unwrap();
+        toast.success(t("toast.saved"));
+        dispatch(customersApi.util.invalidateTags(["Customers"]));
+        onSaved(String(data.id));
       }
-      const { data, error } = await supabase.from("customers").insert(clean).select("id").single();
-      if (error) throw error;
-      return (data as any).id as string;
-    },
-    onSuccess: (id) => {
-      toast.success(t("toast.saved"));
-      qc.invalidateQueries({ queryKey: ["customers"] });
-      qc.invalidateQueries({ queryKey: ["customer", id] });
-      onSaved(id);
-    },
-    onError: (e: any) => toast.error(e.message ?? t("toast.error")),
-  });
+    } catch (e: any) {
+      toast.error(e?.data?.message || e?.message || t("toast.error"));
+    }
+  };
 
   const ar = (a: string, e: string) => (lang === "ar" ? a : e);
-  const typeWatch = form.watch("customer_type");
+  const typeWatch = form.watch("type");
   const isCorporate = typeWatch !== "individual";
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit((v) => mut.mutate(v))} className="space-y-6" dir={lang === "ar" ? "rtl" : "ltr"}>
-        
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6" dir={lang === "ar" ? "rtl" : "ltr"}>
+
         {/* 1. Customer Type & Basic Info */}
         <Card className="shadow-sm border-border/60">
           <CardHeader className="pb-3 border-b border-border/40 bg-muted/20">
@@ -129,24 +143,23 @@ export function CustomerForm({ initial, onSaved }: { initial?: any; onSaved: (id
             </CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-1 gap-6 p-6 sm:grid-cols-2 lg:grid-cols-3">
-            <FormField control={form.control} name="customer_type" render={({ field }) => (
+            <FormField control={form.control} name="type" render={({ field }) => (
               <FormItem className="sm:col-span-2 lg:col-span-3 mb-2">
                 <FormLabel>{ar("نوع العميل", "Customer Type")} *</FormLabel>
                 <div className="flex flex-wrap gap-3">
                   {[
                     { id: "individual", label: ar("فرد (مباشر)", "Individual"), icon: User },
-                    { id: "corporate", label: ar("شركة", "Corporate"), icon: Building2 },
+                    { id: "company", label: ar("شركة", "Company"), icon: Building2 },
                     { id: "agency", label: ar("وكالة (B2B)", "Agency"), icon: Briefcase },
                     { id: "government", label: ar("جهة حكومية", "Government"), icon: Landmark },
                   ].map((t) => (
                     <div
                       key={t.id}
                       onClick={() => field.onChange(t.id)}
-                      className={`flex flex-1 min-w-[140px] items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
-                        field.value === t.id
-                          ? "border-primary bg-primary/5 text-primary shadow-sm"
-                          : "border-border/50 hover:border-border hover:bg-muted/30 text-muted-foreground"
-                      }`}
+                      className={`flex flex-1 min-w-[140px] items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${field.value === t.id
+                        ? "border-primary bg-primary/5 text-primary shadow-sm"
+                        : "border-border/50 hover:border-border hover:bg-muted/30 text-muted-foreground"
+                        }`}
                     >
                       <t.icon className={`w-5 h-5 ${field.value === t.id ? "text-primary" : "opacity-60"}`} />
                       <span className="font-medium text-sm">{t.label}</span>
@@ -181,22 +194,22 @@ export function CustomerForm({ initial, onSaved }: { initial?: any; onSaved: (id
               </FormItem>
             )} />
 
-            <FormField control={form.control} name="mobile" render={({ field }) => (
+            <FormField control={form.control} name="phone" render={({ field }) => (
               <FormItem>
-                <FormLabel>{t("label.mobile")}</FormLabel>
+                <FormLabel>{t("label.mobile")} / {t("label.phone")}</FormLabel>
                 <FormControl><Input dir="ltr" {...field} /></FormControl>
                 <FormMessage />
               </FormItem>
             )} />
 
-            <FormField control={form.control} name="country_code" render={({ field }) => (
+            <FormField control={form.control} name="country_id" render={({ field }) => (
               <FormItem>
                 <FormLabel>{t("label.country")}</FormLabel>
-                <Select value={field.value || ""} onValueChange={field.onChange}>
+                <Select value={field.value ? field.value.toString() : ""} onValueChange={(val) => field.onChange(val)}>
                   <FormControl><SelectTrigger><SelectValue placeholder="—" /></SelectTrigger></FormControl>
                   <SelectContent>
-                    {countries.data?.map(c => (
-                      <SelectItem key={c.code} value={c.code}>
+                    {(Array.isArray(countries.data) ? countries.data : Array.isArray(countries.data?.data) ? countries.data.data : [])?.map((c: any) => (
+                      <SelectItem key={c.id} value={c.id?.toString()}>
                         {lang === "ar" ? c.name_ar : c.name_en}
                       </SelectItem>
                     ))}
@@ -235,7 +248,7 @@ export function CustomerForm({ initial, onSaved }: { initial?: any; onSaved: (id
                 </FormItem>
               )} />
 
-              <FormField control={form.control} name="commercial_registration" render={({ field }) => (
+              <FormField control={form.control} name="commercial_register" render={({ field }) => (
                 <FormItem>
                   <FormLabel>{ar("رقم السجل التجاري", "Commercial Registration")}</FormLabel>
                   <FormControl><Input dir="ltr" {...field} /></FormControl>
@@ -243,21 +256,6 @@ export function CustomerForm({ initial, onSaved }: { initial?: any; onSaved: (id
                 </FormItem>
               )} />
 
-              <FormField control={form.control} name="credit_limit" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{ar("الحد الائتماني", "Credit Limit")}</FormLabel>
-                  <FormControl><Input type="number" dir="ltr" {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-
-              <FormField control={form.control} name="credit_days" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{ar("أيام الائتمان", "Credit Days")}</FormLabel>
-                  <FormControl><Input type="number" dir="ltr" {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
             </CardContent>
           </Card>
         )}
@@ -271,15 +269,15 @@ export function CustomerForm({ initial, onSaved }: { initial?: any; onSaved: (id
             </CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-1 gap-6 p-6 sm:grid-cols-2">
-            
-            <FormField control={form.control} name="preferred_currency" render={({ field }) => (
+
+            <FormField control={form.control} name="currency_id" render={({ field }) => (
               <FormItem>
-                <FormLabel>{ar("العملة المفضلة", "Preferred Currency")}</FormLabel>
-                <Select value={field.value || ""} onValueChange={field.onChange}>
+                <FormLabel>{ar("العملة المرجعية", "Base Currency")}</FormLabel>
+                <Select value={field.value ? field.value.toString() : ""} onValueChange={(val) => field.onChange(val)}>
                   <FormControl><SelectTrigger><SelectValue placeholder="—" /></SelectTrigger></FormControl>
                   <SelectContent>
-                    {currencies.data?.map(c => (
-                      <SelectItem key={c.code} value={c.code}>
+                    {(Array.isArray(currencies.data) ? currencies.data : Array.isArray(currencies.data?.data) ? currencies.data.data : [])?.map((c: any) => (
+                      <SelectItem key={c.id} value={c.id?.toString()}>
                         {c.code} — {lang === "ar" ? c.name_ar : c.name_en}
                       </SelectItem>
                     ))}
@@ -318,8 +316,8 @@ export function CustomerForm({ initial, onSaved }: { initial?: any; onSaved: (id
           <Button type="button" variant="outline" className="w-[120px]" onClick={() => window.history.back()}>
             {t("actions.cancel")}
           </Button>
-          <Button className="w-[150px]" type="submit" disabled={mut.isPending}>
-            {mut.isPending ? t("actions.saving") : t("actions.save")}
+          <Button className="w-[150px]" type="submit" disabled={isPending}>
+            {isPending ? t("actions.saving") : t("actions.save")}
           </Button>
         </div>
       </form>

@@ -1,9 +1,11 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useNavigate, useParams } from "react-router-dom";
+import { apiClient } from "@/lib/api/api-client";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
-import { useAuth } from "@/hooks/use-auth";
+import { useSelector } from "react-redux";
+import { selectAuth } from "@/store/features/authSlice";
+import { hasRole, hasAnyRole, isAdmin, canAccessModule } from "@/lib/auth-utils";
 import { PageHeader } from "@/components/page-header";
 import { EntityHistory } from "@/components/entity-history";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,10 +17,6 @@ import { SeasonDialog } from "./-dialog";
 import { ArrowLeft, Pencil } from "lucide-react";
 import { formatDate, formatDateTime } from "@/lib/format";
 
-export const Route = createFileRoute("/_authenticated/seasons/$id")({
-  component: SeasonDetail,
-});
-
 function KV({ label, value, mono }: { label: string; value: any; mono?: boolean }) {
   return (
     <div className="space-y-0.5">
@@ -28,21 +26,19 @@ function KV({ label, value, mono }: { label: string; value: any; mono?: boolean 
   );
 }
 
-function SeasonDetail() {
-  const { id } = Route.useParams();
+export default function SeasonDetail() {
+  const { id } = useParams() as { id: string };
   const { t, lang } = useI18n();
-  const auth = useAuth();
+  const auth = useSelector(selectAuth);
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const canWrite = auth.hasAnyRole(["super_admin", "admin", "operations_manager", "operations_agent"]);
+  const canWrite = hasAnyRole(auth, ["super_admin", "admin", "operations_manager", "operations_agent"]);
   const [editing, setEditing] = useState(false);
 
   const q = useQuery({
     queryKey: ["season", id],
     queryFn: async () => {
-      const { data, error } = await supabase.from("seasons").select("*").eq("id", id).maybeSingle();
-      if (error) throw error;
-      return data as any;
+      return await apiClient.seasons.getById(id) as any;
     },
   });
 
@@ -58,7 +54,7 @@ function SeasonDetail() {
         subtitle={`${s.code} · ${t(`season_type.${s.season_type}`)}`}
         actions={
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => navigate({ to: "/seasons" })}>
+            <Button variant="outline" size="sm" onClick={() => navigate("/seasons")}>
               <ArrowLeft className="h-4 w-4 rtl:rotate-180" />{t("actions.back")}
             </Button>
             {canWrite && !s.deleted_at && (
@@ -82,7 +78,6 @@ function SeasonDetail() {
               <KV label={t("label.code")} value={s.code} mono />
               <KV label={t("label.name_en")} value={s.name_en} />
               <KV label={t("label.name_ar")} value={s.name_ar} />
-              <KV label={t("seasons.type")} value={t(`season_type.${s.season_type}`)} />
               <KV label={t("label.start_date")} value={formatDate(s.start_date, lang)} />
               <KV label={t("label.end_date")} value={formatDate(s.end_date, lang)} />
               <KV label={t("label.created_at")} value={formatDateTime(s.created_at, lang)} />

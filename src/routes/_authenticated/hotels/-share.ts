@@ -3,6 +3,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import logoUrl from "@/assets/daleel-logo-transparent.png";
 import { DOC_LANGS, HOTEL_RES, missingDocKeys, type DocLang } from "@/lib/doc-lang";
+import { apiClient } from "@/lib/api/api-client";
 
 function esc(s: unknown): string {
   return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -20,7 +21,8 @@ export type HotelShareData = {
 
 /** Fetch everything required for the hotel information document. */
 export async function fetchHotelShareData(hotelId: string): Promise<HotelShareData> {
-  const [hotel, rooms, views, meals, facilities, images, contacts] = await Promise.all([
+  const [hotelApi, hotelSupa, rooms, views, meals, facilities, images, contacts] = await Promise.all([
+    apiClient.hotels.getById(Number(hotelId)).catch(() => null),
     supabase.from("hotels").select("*, country:countries(name_en,name_ar), city:cities(name_en,name_ar)").eq("id", hotelId).maybeSingle(),
     supabase.from("hotel_room_types").select("*").eq("hotel_id", hotelId).eq("is_active", true).order("sort_order"),
     supabase.from("hotel_views").select("*").eq("hotel_id", hotelId).eq("is_active", true),
@@ -30,7 +32,7 @@ export async function fetchHotelShareData(hotelId: string): Promise<HotelShareDa
     supabase.from("hotel_contacts").select("*").eq("hotel_id", hotelId).order("is_primary", { ascending: false }),
   ]);
   return {
-    hotel: hotel.data,
+    hotel: hotelApi || hotelSupa.data,
     rooms: rooms.data ?? [],
     views: views.data ?? [],
     meals: meals.data ?? [],
@@ -159,24 +161,24 @@ export function buildHotelInfoHtml(lang: DocLang, data: HotelShareData): string 
     </div>
     <div class="t">
       <h1>${esc(s.title)}</h1>
-      <div class="no">${esc(nm(h))} <span class="stars">${h.star_rating ? "★".repeat(h.star_rating) : ""}</span></div>
+      <div class="no">${esc(nm(h))} <span class="stars">${(h.stars ?? h.star_rating) ? "★".repeat(h.stars ?? h.star_rating) : ""}</span></div>
     </div>
   </div>
 
   <div class="meta">
     ${meta(s.code, h.code, true)}
-    ${meta(s.rating, h.star_rating ? "★".repeat(h.star_rating) : "—")}
+    ${meta(s.rating, (h.stars ?? h.star_rating) ? "★".repeat(h.stars ?? h.star_rating) : "—")}
     ${meta(s.country, nm(h.country))}
     ${meta(s.city, nm(h.city))}
     ${meta(s.district, h.district)}
-    ${meta(s.address, [h.address_line1, h.address_line2, h.postal_code].filter(Boolean).join(", "))}
+    ${meta(s.address, [h.address_1 ?? h.address_line1, h.postal_code].filter(Boolean).join(", "))}
     ${meta(s.near_haram, haram.meters == null ? "—" : haram.near ? s.yes : s.no)}
     ${meta(s.distance, haram.meters == null ? "—" : haram.meters.toLocaleString("en-US"), true)}
-    ${h.location_url ? `<div class="box"><div class="k">${esc(s.maps)}</div><div class="v"><a href="${esc(h.location_url)}" target="_blank" style="color:#14532d;text-decoration:underline">${esc(s.maps)}</a></div></div>` : ""}
+    ${(h.map_link ?? h.location_url) ? `<div class="box"><div class="k">${esc(s.maps)}</div><div class="v"><a href="${esc(h.map_link ?? h.location_url)}" target="_blank" style="color:#14532d;text-decoration:underline">${esc(s.maps)}</a></div></div>` : ""}
     ${meta(s.phone, h.phone, true)}
     ${meta(s.email, h.email, true)}
     ${meta(s.website, h.website, true)}
-    ${meta(s.check_in_time + " / " + s.check_out_time, [h.check_in_time?.slice(0, 5), h.check_out_time?.slice(0, 5)].filter(Boolean).join(" / "), true)}
+    ${meta(s.check_in_time + " / " + s.check_out_time, [(h.check_in ?? h.check_in_time)?.slice(0, 5), (h.check_out ?? h.check_out_time)?.slice(0, 5)].filter(Boolean).join(" / "), true)}
   </div>
 
   ${desc ? `<h2>${esc(s.description)}</h2><div class="desc">${esc(desc)}</div>` : ""}

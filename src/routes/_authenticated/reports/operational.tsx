@@ -1,15 +1,28 @@
 // Operational report — bookings activity with filters and full export (Section 17).
 import { useMemo, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/lib/api/db";
 import { useI18n } from "@/lib/i18n";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { formatDate, formatMoney } from "@/lib/format";
 import { BASE_CURRENCY, fetchFxRates, round2, toBase } from "@/lib/kpi";
@@ -18,29 +31,22 @@ import type { ReportColumn, ReportRow } from "@/lib/report-export";
 
 type OpSearch = { from?: string; to?: string; status?: string };
 
-export const Route = createFileRoute("/_authenticated/reports/operational")({
-  validateSearch: (s: Record<string, unknown>): OpSearch => ({
-    from: typeof s.from === "string" ? s.from : undefined,
-    to: typeof s.to === "string" ? s.to : undefined,
-    status: typeof s.status === "string" ? s.status : undefined,
-  }),
-  component: OperationalReport,
-});
-
-function OperationalReport() {
+export default function OperationalReport() {
   const { t, lang, dir } = useI18n();
-  const search = Route.useSearch();
-  const [from, setFrom] = useState(search.from ?? "");
-  const [to, setTo] = useState(search.to ?? "");
-  const [status, setStatus] = useState(search.status ?? "all");
+  const [searchParams] = useSearchParams();
+  const [from, setFrom] = useState(searchParams.get("from") ?? "");
+  const [to, setTo] = useState(searchParams.get("to") ?? "");
+  const [status, setStatus] = useState(searchParams.get("status") ?? "all");
 
   const q = useQuery({
     queryKey: ["rpt-operational", from, to],
     queryFn: async () => {
       const fx = await fetchFxRates();
-      let query = supabase
+      let query = db
         .from("bookings")
-        .select("id, booking_no, status, booking_date, currency, customer:customers(name_ar, name_en), rooms:booking_rooms(rooms, nights, total_selling, total_cost)")
+        .select(
+          "id, booking_no, status, booking_date, currency, customer:customers(name_ar, name_en), rooms:booking_rooms(rooms, nights, total_selling, total_cost)",
+        )
         .is("deleted_at", null)
         .order("booking_date", { ascending: false });
       if (from) query = query.gte("booking_date", from);
@@ -51,25 +57,41 @@ function OperationalReport() {
     },
   });
 
-  const statuses = useMemo(() => Array.from(new Set((q.data?.rows ?? []).map((r) => r.status))).sort(), [q.data]);
+  const statuses = useMemo(
+    () => Array.from(new Set((q.data?.rows ?? []).map((r: any) => r.status))).sort(),
+    [q.data],
+  );
 
   const filtered = useMemo(
-    () => (q.data?.rows ?? []).filter((r) => status === "all" || r.status === status),
+    () => (q.data?.rows ?? []).filter((r: any) => status === "all" || r.status === status),
     [q.data, status],
   );
 
   const exportRows: ReportRow[] = useMemo(() => {
     const fx = q.data?.fx ?? {};
-    return filtered.map((b) => {
+    return filtered.map((b: any) => {
       const cust = b.customer as { name_ar: string; name_en: string } | null;
-      const rooms = (b.rooms as { rooms: number; nights: number; total_selling: number | null; total_cost: number | null }[]) ?? [];
-      const roomsCount = rooms.reduce((a, r) => a + Number(r.rooms ?? 0), 0);
-      const nights = rooms.reduce((a, r) => a + Number(r.nights ?? 0) * Number(r.rooms ?? 0), 0);
-      const selling = rooms.reduce((a, r) => a + Number(r.total_selling ?? 0), 0);
+      const rooms =
+        (b.rooms as {
+          rooms: number;
+          nights: number;
+          total_selling: number | null;
+          total_cost: number | null;
+        }[]) ?? [];
+      const roomsCount = rooms.reduce((a: number, r: any) => a + Number(r.rooms ?? 0), 0);
+      const nights = rooms.reduce(
+        (a: number, r: any) => a + Number(r.nights ?? 0) * Number(r.rooms ?? 0),
+        0,
+      );
+      const selling = rooms.reduce((a: number, r: any) => a + Number(r.total_selling ?? 0), 0);
       const sellingBase = round2(toBase(selling, b.currency, fx));
       return {
         booking_no: b.booking_no,
-        customer: cust ? (lang === "ar" ? cust.name_ar || cust.name_en : cust.name_en || cust.name_ar) : "—",
+        customer: cust
+          ? lang === "ar"
+            ? cust.name_ar || cust.name_en
+            : cust.name_en || cust.name_ar
+          : "—",
         status: t(`status.${b.status}`, b.status),
         booking_date: formatDate(b.booking_date, lang),
         rooms: roomsCount,
@@ -108,7 +130,11 @@ function OperationalReport() {
             subtitle={`${from || "…"} → ${to || "…"}`}
             columns={columns}
             rows={exportRows}
-            config={{ from: from || undefined, to: to || undefined, status: status !== "all" ? status : undefined }}
+            config={{
+              from: from || undefined,
+              to: to || undefined,
+              status: status !== "all" ? status : undefined,
+            }}
           />
         }
       />
@@ -126,11 +152,15 @@ function OperationalReport() {
             <div className="space-y-2">
               <Label>{t("label.status")}</Label>
               <Select value={status} onValueChange={setStatus}>
-                <SelectTrigger dir={dir}><SelectValue /></SelectTrigger>
+                <SelectTrigger dir={dir}>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t("label.total")}</SelectItem>
-                  {statuses.map((s) => (
-                    <SelectItem key={s} value={s}>{t(`status.${s}`, s)}</SelectItem>
+                  {statuses.map((s: any) => (
+                    <SelectItem key={s} value={s}>
+                      {t(`status.${s}`, s)}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -143,27 +173,49 @@ function OperationalReport() {
               <TableHeader>
                 <TableRow>
                   {columns.map((c) => (
-                    <TableHead key={c.key} className={c.numeric ? "text-end" : ""}>{c.label}</TableHead>
+                    <TableHead key={c.key} className={c.numeric ? "text-end" : ""}>
+                      {c.label}
+                    </TableHead>
                   ))}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {q.isLoading ? (
-                  <TableRow><TableCell colSpan={columns.length} className="py-8 text-center text-muted-foreground">{t("label.loading")}</TableCell></TableRow>
+                  <TableRow>
+                    <TableCell
+                      colSpan={columns.length}
+                      className="py-8 text-center text-muted-foreground"
+                    >
+                      {t("label.loading")}
+                    </TableCell>
+                  </TableRow>
                 ) : exportRows.length === 0 ? (
-                  <TableRow><TableCell colSpan={columns.length} className="py-8 text-center text-muted-foreground">{t("label.no_results")}</TableCell></TableRow>
+                  <TableRow>
+                    <TableCell
+                      colSpan={columns.length}
+                      className="py-8 text-center text-muted-foreground"
+                    >
+                      {t("label.no_results")}
+                    </TableCell>
+                  </TableRow>
                 ) : (
                   exportRows.map((r, i) => (
                     <TableRow key={i}>
                       <TableCell className="font-medium">{r.booking_no}</TableCell>
                       <TableCell>{r.customer}</TableCell>
-                      <TableCell><Badge variant="outline">{r.status}</Badge></TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{r.status}</Badge>
+                      </TableCell>
                       <TableCell>{r.booking_date}</TableCell>
                       <TableCell className="text-end tabular-nums">{r.rooms}</TableCell>
                       <TableCell className="text-end tabular-nums">{r.nights}</TableCell>
-                      <TableCell className="text-end tabular-nums">{Number(r.selling).toLocaleString()}</TableCell>
+                      <TableCell className="text-end tabular-nums">
+                        {Number(r.selling).toLocaleString()}
+                      </TableCell>
                       <TableCell>{r.currency}</TableCell>
-                      <TableCell className="text-end tabular-nums">{Number(r.selling_base).toLocaleString()}</TableCell>
+                      <TableCell className="text-end tabular-nums">
+                        {Number(r.selling_base).toLocaleString()}
+                      </TableCell>
                     </TableRow>
                   ))
                 )}
@@ -172,7 +224,8 @@ function OperationalReport() {
           </CardContent>
         </Card>
         <p className="text-sm font-medium">
-          {t("label.total")}: {formatMoney(round2(totalBase), BASE_CURRENCY, lang)} · {exportRows.length} {t("rpt.records")}
+          {t("label.total")}: {formatMoney(round2(totalBase), BASE_CURRENCY, lang)} ·{" "}
+          {exportRows.length} {t("rpt.records")}
         </p>
       </div>
     </>

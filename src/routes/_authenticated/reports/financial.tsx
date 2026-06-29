@@ -1,10 +1,13 @@
 // Financial report — monthly summary + customer balances. Finance roles only (Section 17).
 import { useMemo, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { db } from "@/lib/api/db";
+import { apiClient } from "@/lib/api/api-client";
+import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
-import { useAuth } from "@/hooks/use-auth";
+import { useSelector } from "react-redux";
+import { selectAuth } from "@/store/features/authSlice";
+import { hasRole, hasAnyRole, isAdmin, canAccessModule } from "@/lib/auth-utils";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,31 +18,23 @@ import { BASE_CURRENCY, FINANCE_ROLES, fetchFxRates, monthKey, round2, toBase } 
 import { ReportToolbar } from "./-report-toolbar";
 import type { ReportColumn } from "@/lib/report-export";
 
-export const Route = createFileRoute("/_authenticated/reports/financial")({
-  validateSearch: (s: Record<string, unknown>) => ({
-    from: typeof s.from === "string" ? s.from : undefined,
-    to: typeof s.to === "string" ? s.to : undefined,
-  }),
-  component: FinancialReport,
-});
-
-function FinancialReport() {
+export default function FinancialReport() {
   const { t, lang } = useI18n();
-  const auth = useAuth();
-  const search = Route.useSearch();
-  const [from, setFrom] = useState(search.from ?? "");
-  const [to, setTo] = useState(search.to ?? "");
+  const auth = useSelector(selectAuth);
+  const [searchParams] = useSearchParams();
+  const [from, setFrom] = useState(searchParams.get("from") ?? "");
+  const [to, setTo] = useState(searchParams.get("to") ?? "");
 
-  const allowed = auth.hasAnyRole(FINANCE_ROLES);
+  const allowed = hasAnyRole(auth, FINANCE_ROLES);
 
   const q = useQuery({
     enabled: allowed,
     queryKey: ["rpt-financial", from, to],
     queryFn: async () => {
       const fx = await fetchFxRates();
-      let inv = supabase.from("invoices").select("invoice_date, total_amount, paid_amount, currency, exchange_rate, status, customer:customers(name_ar, name_en)").is("deleted_at", null);
-      let rec = supabase.from("receipts").select("receipt_date, amount, currency, exchange_rate, status").is("deleted_at", null);
-      let pay = supabase.from("supplier_payables").select("due_date, amount, paid_amount, currency, exchange_rate, status").is("deleted_at", null);
+      let inv = db.from("invoices").select("invoice_date, total_amount, paid_amount, currency, exchange_rate, status, customer:customers(name_ar, name_en)").is("deleted_at", null);
+      let rec = db.from("receipts").select("receipt_date, amount, currency, exchange_rate, status").is("deleted_at", null);
+      let pay = db.from("supplier_payables").select("due_date, amount, paid_amount, currency, exchange_rate, status").is("deleted_at", null);
       if (from) { inv = inv.gte("invoice_date", from); rec = rec.gte("receipt_date", from); }
       if (to) { inv = inv.lte("invoice_date", to); rec = rec.lte("receipt_date", to); }
       const [i, r, p] = await Promise.all([inv, rec, pay]);
@@ -48,9 +43,9 @@ function FinancialReport() {
       if (p.error) throw p.error;
       return {
         fx,
-        invoices: (i.data ?? []).filter((x) => x.status !== "cancelled"),
-        receipts: (r.data ?? []).filter((x) => x.status !== "cancelled"),
-        payables: (p.data ?? []).filter((x) => x.status !== "cancelled"),
+        invoices: (i.data ?? []).filter((x: any) => x.status !== "cancelled"),
+        receipts: (r.data ?? []).filter((x: any) => x.status !== "cancelled"),
+        payables: (p.data ?? []).filter((x: any) => x.status !== "cancelled"),
       };
     },
   });

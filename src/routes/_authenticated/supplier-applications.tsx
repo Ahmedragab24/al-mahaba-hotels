@@ -1,6 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiClient } from "@/lib/api/api-client";
 import { useI18n } from "@/lib/i18n";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent } from "@/components/ui/card";
@@ -12,7 +12,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
-import { Loader2, Check, X, Copy, Mail, Phone, Building2, FileText } from "lucide-react";
+import { Loader2, Check, X, Mail, Phone, Building2, FileText } from "lucide-react";
 import {
   listSupplierApplications,
   approveSupplierApplication,
@@ -20,68 +20,128 @@ import {
 } from "@/lib/supplier-applications.functions";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/_authenticated/supplier-applications")({
-  ssr: false,
-  component: SupplierApplicationsPage,
-});
-
 type App = {
-  id: string; name_ar: string; name_en: string; supplier_type: string;
-  contact_name: string; contact_email: string; contact_phone: string;
-  country_code: string | null; status: string; submitted_at: string;
+  id: string;
+  company_name_ar: string;
+  company_name_en: string;
+  supplier_type_id: number;
+  tax_number: string;
+  commercial_register: string;
+  country_id: number;
+  city_id: number;
+  address: string;
+  website: string;
+  contact_name: string;
+  contact_position: string;
+  contact_email: string;
+  contact_phone: string;
+  status: string;
+  submitted_at: string;
   rejection_reason: string | null;
+  country_name?: string;
+  city_name?: string;
+  supplier_type_name?: string;
 };
 
-function SupplierApplicationsPage() {
-  const { t, lang } = useI18n();
+export default function SupplierApplicationsPage() {
+  const { t, lang } = useI18n(); 
   const qc = useQueryClient();
-  const [tab, setTab] = useState("pending");
+  const [tab, setTab] = useState<"all" | "pending" | "accepted" | "rejected">("pending");
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<App | null>(null);
   const [rejecting, setRejecting] = useState<App | null>(null);
   const [reason, setReason] = useState("");
-  const [credentials, setCredentials] = useState<{ email: string; password: string } | null>(null);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["supplier-applications"],
-    queryFn: () => listSupplierApplications(),
+    queryKey: ["supplier-applications", tab, search, lang],
+    queryFn: async () => {
+      try {
+        const params: any = { lang };
+        if (tab !== "all") params.status = tab;
+        if (search) params.search = search;
+        const apps = await apiClient.supplierRequests.getAll(params);
+        // Format to match standard App structure
+        return {
+          rows: apps.map((a: any) => ({
+            id: a.id,
+            company_name_ar: a.company_name_ar || a.name_ar || "",
+            company_name_en: a.company_name_en || a.name_en || "",
+            supplier_type_id: a.supplier_type_id || 1,
+            tax_number: a.tax_number || "",
+            commercial_register: a.commercial_register || "",
+            country_id: a.country_id || 0,
+            city_id: a.city_id || 0,
+            address: a.address || "",
+            website: a.website || "",
+            contact_name: a.contact_name || "",
+            contact_position: a.contact_position || "",
+            contact_email: a.contact_email || "",
+            contact_phone: a.contact_phone || "",
+            status: a.status || "pending",
+            submitted_at: a.created_at || new Date().toISOString(),
+            rejection_reason: a.rejection_reason || null,
+            country_name: a.country?.name || "",
+            city_name: a.city?.name || "",
+            supplier_type_name: a.supplier_type?.name || "",
+          }))
+        };
+      } catch (err) {
+        console.warn("apiClient listSupplierApplications failed, falling back to server fn", err);
+        return await listSupplierApplications();
+      }
+    },
   });
 
   const approve = useMutation({
-    mutationFn: (id: string) => approveSupplierApplication({ data: { id } }),
-    onSuccess: (res) => {
-      qc.invalidateQueries({ queryKey: ["supplier-applications"] });
+    mutationFn: async (id: string) => {
+      try {
+        await apiClient.supplierRequests.updateStatus(id, { status: "accepted" });
+      } catch (err) {
+        console.warn("apiClient approve failed, falling back to server fn", err);
+        await approveSupplierApplication({ data: { id } });
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["supplier-applications", tab, search, lang] });
       setSelected(null);
-      setCredentials({ email: res.email, password: res.password });
       toast.success(t("supplier.applications.approved"));
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : String(e)),
   });
 
   const reject = useMutation({
-    mutationFn: () => rejectSupplierApplication({ data: { id: rejecting!.id, reason } }),
+    mutationFn: async () => {
+      try {
+        await apiClient.supplierRequests.updateStatus(rejecting!.id, { status: "rejected", rejection_reason: reason });
+      } catch (err) {
+        console.warn("apiClient reject failed, falling back to server fn", err);
+        await rejectSupplierApplication({ data: { id: rejecting!.id, reason } });
+      }
+    },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["supplier-applications"] });
+      qc.invalidateQueries({ queryKey: ["supplier-applications", tab, search, lang] });
       setRejecting(null); setReason("");
       toast.success(t("supplier.applications.rejected"));
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : String(e)),
   });
 
-  const rows = (data?.rows ?? []) as App[];
-  const filtered = rows.filter((r) => {
-    if (tab !== "all" && r.status !== tab) return false;
-    if (!search) return true;
-    const s = search.toLowerCase();
-    return r.name_ar.toLowerCase().includes(s) || r.name_en.toLowerCase().includes(s)
-      || r.contact_email.toLowerCase().includes(s) || r.contact_name.toLowerCase().includes(s);
-  });
+  const allRows = (data?.rows ?? []) as App[];
+
+  const filteredRows = tab === "all" 
+    ? allRows 
+    : allRows.filter((r) => {
+        if (tab === "pending") return r.status === "pending" || r.status === "under_review";
+        if (tab === "accepted") return r.status === "accepted";
+        if (tab === "rejected") return r.status === "rejected";
+        return true;
+      });
 
   const counts = {
-    pending: rows.filter((r) => r.status === "pending" || r.status === "under_review").length,
-    approved: rows.filter((r) => r.status === "approved").length,
-    rejected: rows.filter((r) => r.status === "rejected").length,
-    all: rows.length,
+    pending: allRows.filter((r) => r.status === "pending" || r.status === "under_review").length,
+    accepted: allRows.filter((r) => r.status === "accepted").length,
+    rejected: allRows.filter((r) => r.status === "rejected").length,
+    all: allRows.length,
   };
 
   return (
@@ -92,27 +152,27 @@ function SupplierApplicationsPage() {
 
 
 
-      <Tabs value={tab} onValueChange={setTab}>
-        <TabsList>
-          <TabsTrigger value="pending">{t("supplier.applications.tab_pending")} ({counts.pending})</TabsTrigger>
-          <TabsTrigger value="approved">{t("supplier.applications.tab_approved")} ({counts.approved})</TabsTrigger>
-          <TabsTrigger value="rejected">{t("supplier.applications.tab_rejected")} ({counts.rejected})</TabsTrigger>
+      <Tabs value={tab} onValueChange={(value) => setTab(value as "all" | "pending" | "accepted" | "rejected")} dir={lang === "ar" ? "rtl" : "ltr"}>
+        <TabsList dir={lang === "ar" ? "rtl" : "ltr"}>
           <TabsTrigger value="all">{t("supplier.applications.tab_all")} ({counts.all})</TabsTrigger>
+          <TabsTrigger value="pending">{t("supplier.applications.tab_pending")} ({counts.pending})</TabsTrigger>
+          <TabsTrigger value="accepted">{t("supplier.applications.tab_approved")} ({counts.accepted})</TabsTrigger>
+          <TabsTrigger value="rejected">{t("supplier.applications.tab_rejected")} ({counts.rejected})</TabsTrigger>
         </TabsList>
         <TabsContent value={tab} className="mt-4">
           {isLoading ? (
             <div className="flex items-center justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
-          ) : filtered.length === 0 ? (
+          ) : filteredRows.length === 0 ? (
             <Card><CardContent className="py-16 text-center text-muted-foreground">{t("supplier.applications.empty")}</CardContent></Card>
           ) : (
             <div className="grid gap-3">
-              {filtered.map((app) => (
+              {filteredRows.map((app) => (
                 <Card key={app.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => setSelected(app)}>
                   <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center gap-3">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="font-semibold truncate">{lang === "ar" ? app.name_ar : app.name_en}</h3>
-                        <Badge variant="outline">{t(`supplier.type.${app.supplier_type}`)}</Badge>
+                        <h3 className="font-semibold truncate">{lang === "ar" ? app.company_name_ar : app.company_name_en}</h3>
+                        <Badge variant="outline">{app.supplier_type_name || app.supplier_type_id}</Badge>
                         <StatusBadge status={app.status} />
                       </div>
                       <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-x-4 gap-y-1">
@@ -145,13 +205,20 @@ function SupplierApplicationsPage() {
           {selected && (
             <>
               <DialogHeader>
-                <DialogTitle>{lang === "ar" ? selected.name_ar : selected.name_en}</DialogTitle>
-                <DialogDescription>{t(`supplier.type.${selected.supplier_type}`)} · <StatusBadge status={selected.status} /></DialogDescription>
+                <DialogTitle>{lang === "ar" ? selected.company_name_ar : selected.company_name_en}</DialogTitle>
+                <DialogDescription>{selected.supplier_type_name || selected.supplier_type_id} · <StatusBadge status={selected.status} /></DialogDescription>
               </DialogHeader>
               <div className="space-y-3 text-sm">
-                <Field icon={<Building2 className="h-4 w-4" />} label={t("label.name_en")} value={selected.name_en} />
-                <Field icon={<Building2 className="h-4 w-4" />} label={t("label.name_ar")} value={selected.name_ar} />
+                <Field icon={<Building2 className="h-4 w-4" />} label={t("label.name_en")} value={selected.company_name_en} />
+                <Field icon={<Building2 className="h-4 w-4" />} label={t("label.name_ar")} value={selected.company_name_ar} />
+                {selected.tax_number && <Field icon={<FileText className="h-4 w-4" />} label={t("label.tax_number")} value={selected.tax_number} />}
+                {selected.commercial_register && <Field icon={<FileText className="h-4 w-4" />} label={t("label.cr")} value={selected.commercial_register} />}
+                {selected.country_name && <Field icon={<Building2 className="h-4 w-4" />} label={t("label.country")} value={selected.country_name} />}
+                {selected.city_name && <Field icon={<Building2 className="h-4 w-4" />} label={t("label.city")} value={selected.city_name} />}
+                {selected.address && <Field icon={<FileText className="h-4 w-4" />} label={t("label.address")} value={selected.address} />}
+                {selected.website && <Field icon={<FileText className="h-4 w-4" />} label={t("label.website")} value={selected.website} />}
                 <Field icon={<Mail className="h-4 w-4" />} label={t("supplier.apply.contact_name")} value={selected.contact_name} />
+                {selected.contact_position && <Field icon={<Mail className="h-4 w-4" />} label={t("supplier.apply.contact_position")} value={selected.contact_position} />}
                 <Field icon={<Mail className="h-4 w-4" />} label={t("label.email")} value={selected.contact_email} />
                 <Field icon={<Phone className="h-4 w-4" />} label={t("label.phone")} value={selected.contact_phone} />
                 {selected.rejection_reason && (
@@ -191,25 +258,6 @@ function SupplierApplicationsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Credentials dialog */}
-      <Dialog open={!!credentials} onOpenChange={(o) => !o && setCredentials(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t("supplier.applications.creds_title")}</DialogTitle>
-            <DialogDescription>{t("supplier.applications.creds_desc")}</DialogDescription>
-          </DialogHeader>
-          {credentials && (
-            <div className="space-y-3">
-              <CredRow label={t("label.email")} value={credentials.email} />
-              <CredRow label={t("auth.password")} value={credentials.password} />
-            </div>
-          )}
-          <DialogFooter>
-            <Button onClick={() => setCredentials(null)}>{t("actions.close") || "OK"}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
@@ -217,9 +265,11 @@ function SupplierApplicationsPage() {
 function StatusBadge({ status }: { status: string }) {
   const { t } = useI18n();
   const variant: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-    pending: "secondary", under_review: "secondary", approved: "default", rejected: "destructive",
+    pending: "secondary", under_review: "secondary", approved: "default", rejected: "destructive", accepted: "default",
   };
-  return <Badge variant={variant[status] ?? "outline"}>{t(`supplier.applications.status_${status}`)}</Badge>;
+  const translationKey = `supplier.applications.status_${status}`;
+  const label = t(translationKey);
+  return <Badge variant={variant[status] ?? "outline"}>{label === translationKey ? status : label}</Badge>;
 }
 
 function Field({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
@@ -231,16 +281,4 @@ function Field({ icon, label, value }: { icon: React.ReactNode; label: string; v
   );
 }
 
-function CredRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-md border p-3 flex items-center gap-2">
-      <div className="flex-1 min-w-0">
-        <div className="text-xs text-muted-foreground">{label}</div>
-        <div className="font-mono text-sm truncate">{value}</div>
-      </div>
-      <Button size="sm" variant="ghost" onClick={() => { navigator.clipboard.writeText(value); toast.success("Copied"); }}>
-        <Copy className="h-4 w-4" />
-      </Button>
-    </div>
-  );
-}
+export { SupplierApplicationsPage as Component };

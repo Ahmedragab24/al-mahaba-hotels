@@ -1,25 +1,36 @@
 import { useState, useMemo } from "react";
+import { db } from "@/lib/api/db";
+import { apiClient } from "@/lib/api/api-client";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
-import { useAuth } from "@/hooks/use-auth";
+import { useSelector } from "react-redux";
+import { selectAuth } from "@/store/features/authSlice";
+import { hasRole, hasAnyRole, isAdmin, canAccessModule } from "@/lib/auth-utils";
 import {
-  useCountries,
-  useCities,
   useCurrencies,
-  useHotelRoomTypes,
-  useHotelViews,
 } from "@/lib/lookups";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { dbErrorMessage } from "@/lib/db-errors";
 import { toast } from "sonner";
 import { Label } from "@/components/ui/label";
-import { User, Globe, Building2, BedDouble, CalendarDays, FileText, Star, Trash2, MapPin } from "lucide-react";
+import {
+  User,
+  Building2,
+  CalendarDays,
+  FileText,
+  Star,
+} from "lucide-react";
 import { SelectedRate } from "@/components/quotation-rates-dialog";
 import { HotelRatesSelector } from "@/components/hotel-rates-selector";
 
@@ -61,12 +72,14 @@ function SectionHeader({
 }
 
 // ─── Field Group Component ───────────────────────────────────────────────────
-function FieldGroup({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return (
-    <div className={`grid gap-4 ${className}`}>
-      {children}
-    </div>
-  );
+function FieldGroup({
+  children,
+  className = "",
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return <div className={`grid gap-4 ${className}`}>{children}</div>;
 }
 
 // ─── Form Field Wrapper ──────────────────────────────────────────────────────
@@ -111,15 +124,22 @@ function ToggleField({
   return (
     <label
       htmlFor={id}
-      className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all duration-200 select-none ${checked
-        ? "border-primary/50 bg-primary/5"
-        : "border-border hover:border-border/80 hover:bg-muted/30"
-        }`}
+      className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all duration-200 select-none ${
+        checked
+          ? "border-primary/50 bg-primary/5"
+          : "border-border hover:border-border/80 hover:bg-muted/30"
+      }`}
     >
-      <div className={`relative shrink-0 w-10 h-6 rounded-full transition-colors duration-200 ${checked ? "bg-primary" : "bg-muted"
-        }`}>
-        <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-200 ${checked ? "start-5" : "start-1"
-          }`} />
+      <div
+        className={`relative shrink-0 w-10 h-6 rounded-full transition-colors duration-200 ${
+          checked ? "bg-primary" : "bg-muted"
+        }`}
+      >
+        <div
+          className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-200 ${
+            checked ? "start-5" : "start-1"
+          }`}
+        />
         <input
           type="checkbox"
           id={id}
@@ -130,17 +150,20 @@ function ToggleField({
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          {Icon && <Icon className={`w-3.5 h-3.5 ${checked ? "text-primary" : "text-muted-foreground"}`} />}
+          {Icon && (
+            <Icon className={`w-3.5 h-3.5 ${checked ? "text-primary" : "text-muted-foreground"}`} />
+          )}
           <span className={`text-sm font-medium ${checked ? "text-primary" : "text-foreground"}`}>
             {label}
           </span>
         </div>
-        {description && (
-          <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
-        )}
+        {description && <p className="text-xs text-muted-foreground mt-0.5">{description}</p>}
       </div>
       {checked && (
-        <Badge variant="secondary" className="text-[10px] shrink-0 bg-primary/10 text-primary border-primary/20">
+        <Badge
+          variant="secondary"
+          className="text-[10px] shrink-0 bg-primary/10 text-primary border-primary/20"
+        >
           ✓
         </Badge>
       )}
@@ -154,66 +177,71 @@ function ToggleField({
 
 export function QuotationForm({ initial, onSaved }: Props) {
   const { t, lang } = useI18n();
-  const auth = useAuth();
+  const auth = useSelector(selectAuth);
   const [form, setForm] = useState({
-    customer_id: initial?.customer_id ?? "",
-    currency: initial?.currency ?? "SAR",
-    quotation_date: initial?.quotation_date
-      ? new Date(initial.quotation_date).toISOString().slice(0, 16)
-      : new Date().toISOString().slice(0, 16),
-    travel_date: initial?.travel_date ?? "",
-    expiry_date: initial?.expiry_date
-      ? new Date(initial.expiry_date).toISOString().slice(0, 16)
+    customer_id: String(initial?.customer_id ?? ""),
+    group_size: String(initial?.group_size ?? ""),
+    currency_id: String(initial?.currency_id ?? ""),
+    language_id: String(initial?.language_id ?? "1"),
+    start_date: initial?.start_date
+      ? new Date(initial.start_date).toISOString().slice(0, 16).replace('T', ' ')
+      : new Date().toISOString().slice(0, 16).replace('T', ' '),
+    end_date: initial?.end_date
+      ? new Date(initial.end_date).toISOString().slice(0, 16).replace('T', ' ')
       : "",
-    notes: initial?.notes ?? "",
-    country_code: initial?.country_code ?? "",
-    city_id: initial?.city_id ?? "",
-    language: initial?.language ?? "ar",
-    hotel_id: initial?.hotel_id ?? "",
-    group_name: initial?.group_name ?? "",
+    hotel_id: String(initial?.hotel_id ?? ""),
     is_recommended: initial?.is_recommended ?? false,
+    notes: initial?.notes ?? "",
+    status: initial?.status ?? "draft",
   });
 
-  const [selectedItems, setSelectedItems] = useState<SelectedRate[]>([]);
+  const [selectedItems, setSelectedItems] = useState<SelectedRate[]>(() => {
+    // Convert existing items to SelectedRate format when editing
+    if (initial?.items && Array.isArray(initial.items)) {
+      return initial.items.map((item: any) => ({
+        rate_id: String(item.price_id),
+        room_type_id: String(item.price_details?.room?.room_type_id || item.price_details?.room_id),
+        view_id: String(item.price_details?.hotel_view_id || null),
+        meal_plan: item.price_details?.meal_plan_type || "exclusive",
+        selling_price: item.night_price,
+        rooms: item.room_count,
+        supplier_id: String(item.price_details?.supplier_id || null),
+        is_direct: item.price_details?.is_direct || false,
+        // UI Display info
+        room_name_en: item.price_details?.room?.name_en,
+        room_name_ar: item.price_details?.room?.name_ar,
+        view_name_en: item.price_details?.hotel_view?.name_en,
+        view_name_ar: item.price_details?.hotel_view?.name_ar,
+        supplier_name_en: item.price_details?.supplier?.name_en,
+        supplier_name_ar: item.price_details?.supplier?.name_ar,
+      }));
+    }
+    return [];
+  });
 
-  const countries = useCountries();
-  const cities = useCities(form.country_code || null);
-  const currencies = useCurrencies();
+  const currencies = useCurrencies({ lang, per_page: 500 });
 
-
+  const currencyCode = useMemo(() => {
+    if (!form.currency_id) return "";
+    const currencyList = Array.isArray(currencies.data) ? currencies.data : (currencies.data?.data ? Array.isArray(currencies.data.data) ? currencies.data.data : [currencies.data.data] : []);
+    const currency = currencyList.find((c: any) => String(c.id) === form.currency_id);
+    return currency?.code || "";
+  }, [form.currency_id, currencies.data]);
 
   const customers = useQuery({
     queryKey: ["lookup-customers"],
-    queryFn: async () =>
-      (await supabase.from("customers").select("id,name_en,name_ar,customer_type").is("deleted_at", null).order("name_en")).data ?? [],
+    queryFn: async () => (await apiClient.customers.getAll()) ?? [],
   });
 
   const hotelsQuery = useQuery({
-    queryKey: ["lookup-hotels-with-loc"],
+    queryKey: ["lookup-hotels"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("hotels")
-        .select("id,name_en,name_ar,city_id,country_code")
-        .is("deleted_at", null)
-        .order("name_en");
-      if (error) throw error;
-      return data ?? [];
+      const response = await apiClient.hotels.getAll();
+      const data = Array.isArray(response) ? response : (response?.data?.data || response?.data || []);
+      return data;
     },
   });
 
-  const filteredHotels = useMemo(() => {
-    let list = hotelsQuery.data ?? [];
-    if (form.country_code) list = list.filter((h) => h.country_code === form.country_code);
-    if (form.city_id) list = list.filter((h) => h.city_id === form.city_id);
-    return list;
-  }, [hotelsQuery.data, form.country_code, form.city_id]);
-
-  const handleCountryChange = (val: string) => {
-    setForm((f) => ({ ...f, country_code: val, city_id: "", hotel_id: "", room_type_id: "", view_id: "" }));
-  };
-  const handleCityChange = (val: string) => {
-    setForm((f) => ({ ...f, city_id: val, hotel_id: "", room_type_id: "", view_id: "" }));
-  };
   const handleHotelChange = (val: string) => {
     setForm((f) => ({ ...f, hotel_id: val }));
     setSelectedItems([]);
@@ -222,72 +250,63 @@ export function QuotationForm({ initial, onSaved }: Props) {
   const save = useMutation({
     mutationFn: async () => {
       if (!form.customer_id) throw new Error(t("quotes.customer") + " *");
-      if (!form.expiry_date) throw new Error(t("quotes.expiry_date") + " *");
+      if (!form.currency_id) throw new Error(t("label.currency") + " *");
+      if (!form.language_id) throw new Error(t("label.language") + " *");
+      if (!form.start_date) throw new Error(t("quotes.start_date") + " *");
+      if (!form.end_date) throw new Error(t("quotes.end_date") + " *");
+      if (!form.hotel_id) throw new Error(t("quotes.hotel") + " *");
+      if (selectedItems.length === 0) throw new Error(t("quotes.items_required"));
+
       const payload: any = {
-        customer_id: form.customer_id,
-        currency: form.currency || "SAR",
-        quotation_date: form.quotation_date,
-        travel_date: form.travel_date || null,
-        expiry_date: form.expiry_date,
-        notes: form.notes || null,
-        country_code: form.country_code || null,
-        city_id: form.city_id || null,
-        language: form.language || null,
-        hotel_id: form.hotel_id || null,
-        group_name: form.group_name || null,
+        customer_id: Number(form.customer_id),
+        group_size: form.group_size ? Number(form.group_size) : null,
+        currency_id: Number(form.currency_id),
+        language_id: Number(form.language_id),
+        start_date: form.start_date.replace('T', ' '),
+        end_date: form.end_date.replace('T', ' '),
+        hotel_id: Number(form.hotel_id),
         is_recommended: !!form.is_recommended,
+        notes: form.notes || null,
+        status: form.status || "draft",
+        items: selectedItems.map((item) => ({
+          price_id: item.rate_id,
+          room_count: item.rooms,
+        })),
       };
 
       let qid = "";
       if (initial?.id) {
-        const { error } = await supabase.from("quotations").update(payload).eq("id", initial.id);
-        if (error) throw error;
+        await apiClient.quotations.update(initial.id, payload);
         qid = initial.id;
       } else {
-        payload.created_by = auth.user?.id ?? null;
-        const { data, error } = await supabase.from("quotations").insert(payload).select("id").single();
-        if (error) throw error;
+        const data = await apiClient.quotations.create(payload);
         qid = data.id as string;
-      }
-
-      // Save Quotation Items
-      if (qid && selectedItems.length > 0) {
-        const itemsPayload = selectedItems.map(item => ({
-          quotation_id: qid,
-          hotel_id: form.hotel_id,
-          room_type_id: item.room_type_id,
-          rooms: item.rooms,
-          rate_id: item.rate_id,
-          selling_price: item.selling_price,
-          total_selling: item.selling_price * item.rooms * 1, // default 1 night
-          nights: 1,
-          check_in: form.travel_date || new Date().toISOString().slice(0, 10),
-          check_out: form.travel_date || new Date().toISOString().slice(0, 10),
-          occupancy_type: "double", // default
-        }));
-        const { error: itemsError } = await supabase.from("quotation_items").insert(itemsPayload);
-        if (itemsError) throw itemsError;
       }
       return qid;
     },
-    onSuccess: (id) => { toast.success(t("toast.saved")); onSaved(id); },
-    onError: (e: any) => toast.error(dbErrorMessage(e, t)),
+    onSuccess: (id) => {
+      toast.success(t("toast.saved"));
+      onSaved(id);
+    },
+    onError: (e: any) => toast.error(dbErrorMessage(e)),
   });
 
   const set = (k: string, v: any) => setForm((f) => ({ ...f, [k]: v }));
 
-  const arLabel = (ar: string, en: string) => lang === "ar" ? ar : en;
+  const arLabel = (ar: string, en: string) => (lang === "ar" ? ar : en);
 
   return (
     <div className="space-y-5">
-
       {/* ── Section 1: Customer & Quotation Info ── */}
       <Card className="shadow-sm border-border/60">
         <CardContent className="p-5">
           <SectionHeader
             icon={User}
             title={arLabel("بيانات العميل والعرض", "Customer & Quotation Info")}
-            subtitle={arLabel("المعلومات الأساسية للعرض والعميل", "Basic quotation and client details")}
+            subtitle={arLabel(
+              "المعلومات الأساسية للعرض والعميل",
+              "Basic quotation and client details",
+            )}
           />
           <FieldGroup className="grid-cols-1 md:grid-cols-2 mt-4">
             <FormField label={t("quotes.customer")} required>
@@ -296,9 +315,10 @@ export function QuotationForm({ initial, onSaved }: Props) {
                   <SelectValue placeholder={arLabel("اختر العميل", "Select customer")} />
                 </SelectTrigger>
                 <SelectContent>
-                  {customers.data?.map((c: any) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {lang === "ar" ? (c.name_ar || c.name_en) : (c.name_en || c.name_ar)} — {t(`ctype.${c.customer_type}`)}
+                  {(Array.isArray(customers.data) ? customers.data : Array.isArray(customers.data?.data) ? customers.data.data : [])?.map((c: any) => (
+                    <SelectItem key={c.id} value={String(c.id)}>
+                      {lang === "ar" ? c.name_ar || c.name_en : c.name_en || c.name_ar} —{" "}
+                      {t(`ctype.${c.type}`, c.type)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -311,19 +331,19 @@ export function QuotationForm({ initial, onSaved }: Props) {
                 type="number"
                 min={1}
                 placeholder="1"
-                value={form.group_name}
-                onChange={(e) => set("group_name", e.target.value)}
+                value={form.group_size}
+                onChange={(e) => set("group_size", e.target.value)}
               />
             </FormField>
 
             <FormField label={t("label.currency")} required>
-              <Select value={form.currency} onValueChange={(v) => set("currency", v)}>
+              <Select value={form.currency_id} onValueChange={(v) => set("currency_id", v)}>
                 <SelectTrigger className="h-9">
                   <SelectValue placeholder={t("label.currency")} />
                 </SelectTrigger>
                 <SelectContent>
-                  {currencies.data?.map((c: any) => (
-                    <SelectItem key={c.code} value={c.code}>
+                  {(Array.isArray(currencies.data) ? currencies.data : Array.isArray(currencies.data?.data) ? currencies.data.data : [])?.map((c: any) => (
+                    <SelectItem key={c.id} value={String(c.id)}>
                       {c.code} — {lang === "ar" ? c.name_ar : c.name_en}
                     </SelectItem>
                   ))}
@@ -331,16 +351,16 @@ export function QuotationForm({ initial, onSaved }: Props) {
               </Select>
             </FormField>
 
-            <FormField label={t("label.language", "لغة العرض")}>
-              <Select value={form.language} onValueChange={(v) => set("language", v)}>
+            <FormField label={t("label.language", "لغة العرض")} required>
+              <Select value={form.language_id} onValueChange={(v) => set("language_id", v)}>
                 <SelectTrigger className="h-9">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ar">🇸🇦 عربي</SelectItem>
-                  <SelectItem value="en">🇬🇧 English</SelectItem>
-                  <SelectItem value="ur">🇵🇰 اردو</SelectItem>
-                  <SelectItem value="id">🇮🇩 Indonesia</SelectItem>
+                  <SelectItem value="1">🇸🇦 عربي</SelectItem>
+                  <SelectItem value="2">🇬🇧 English</SelectItem>
+                  <SelectItem value="3">🇵🇰 اردو</SelectItem>
+                  <SelectItem value="4">🇮🇩 Indonesia</SelectItem>
                 </SelectContent>
               </Select>
             </FormField>
@@ -357,65 +377,51 @@ export function QuotationForm({ initial, onSaved }: Props) {
             subtitle={arLabel("تواريخ العرض والسفر", "Quotation and travel dates")}
           />
           <FieldGroup className="grid-cols-1 md:grid-cols-2 mt-4">
-            <FormField label={t("quotes.quotation_date")} required>
-              <Input className="h-9" type="datetime-local" value={form.quotation_date} onChange={(e) => set("quotation_date", e.target.value)} />
+            <FormField label={arLabel("تاريخ البداية", "Start Date")} required>
+              <Input
+                className="h-9"
+                type="datetime-local"
+                value={form.start_date}
+                onChange={(e) => set("start_date", e.target.value)}
+              />
             </FormField>
 
-            <FormField label={t("quotes.expiry_date")} required>
-              <Input className="h-9" type="datetime-local" value={form.expiry_date} onChange={(e) => set("expiry_date", e.target.value)} />
+            <FormField label={arLabel("تاريخ النهاية", "End Date")} required>
+              <Input
+                className="h-9"
+                type="datetime-local"
+                value={form.end_date}
+                onChange={(e) => set("end_date", e.target.value)}
+              />
             </FormField>
           </FieldGroup>
         </CardContent>
       </Card>
 
-      {/* ── Section 3: Location ── */}
+      {/* ── Section 3: Hotel Selection ── */}
       <Card className="shadow-sm border-border/60">
         <CardContent className="p-5">
           <SectionHeader
             icon={Building2}
-            title={arLabel("واجهة الفندق", "Hotel Interface")}
-            subtitle={arLabel("حدد الدولة والمدينة لتصفية الفنادق", "Select country and city to filter hotels")}
+            title={arLabel("اختيار الفندق", "Hotel Selection")}
+            subtitle={arLabel(
+              "اختر الفندق لعرض الأسعار المتاحة",
+              "Select hotel to view available rates",
+            )}
           />
-          <FieldGroup className="grid-cols-1 md:grid-cols-3 mt-4">
-            <FormField label={t("label.country", "الدولة")}>
-              <Select value={form.country_code} onValueChange={handleCountryChange}>
-                <SelectTrigger className="h-9">
-                  <SelectValue placeholder={arLabel("اختر الدولة", "Select country")} />
-                </SelectTrigger>
-                <SelectContent>
-                  {countries.data?.map((c: any) => (
-                    <SelectItem key={c.code} value={c.code}>
-                      {lang === "ar" ? c.name_ar : c.name_en}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </FormField>
-
-            <FormField label={t("label.city", "المدينة")}>
-              <Select value={form.city_id} onValueChange={handleCityChange} disabled={!form.country_code}>
-                <SelectTrigger className="h-9">
-                  <SelectValue placeholder={arLabel("اختر المدينة", "Select city")} />
-                </SelectTrigger>
-                <SelectContent>
-                  {cities.data?.map((c: any) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {lang === "ar" ? c.name_ar : c.name_en}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </FormField>
-
-            <FormField label={t("rates.hotel", "الفندق")}>
-              <Select value={form.hotel_id} onValueChange={handleHotelChange} disabled={!form.city_id}>
+          <FieldGroup className="grid-cols-1 mt-4">
+            <FormField label={t("rates.hotel", "الفندق")} required>
+              <Select
+                value={form.hotel_id}
+                onValueChange={handleHotelChange}
+              >
                 <SelectTrigger className="h-9">
                   <SelectValue placeholder={arLabel("اختر الفندق", "Select hotel")} />
                 </SelectTrigger>
                 <SelectContent>
-                  {filteredHotels.map((h: any) => (
-                    <SelectItem key={h.id} value={h.id}>
-                      {lang === "ar" ? (h.name_ar || h.name_en) : (h.name_en || h.name_ar)}
+                  {(hotelsQuery.data ?? []).map((h: any) => (
+                    <SelectItem key={h.id} value={String(h.id)}>
+                      {lang === "ar" ? h.name_ar || h.name_en : h.name_en || h.name_ar}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -425,14 +431,13 @@ export function QuotationForm({ initial, onSaved }: Props) {
 
           <HotelRatesSelector
             hotelId={form.hotel_id}
-            currency={form.currency}
+            currencyId={form.currency_id}
+            currencyCode={currencyCode}
             selectedItems={selectedItems}
             onChange={(items) => setSelectedItems(items)}
           />
         </CardContent>
       </Card>
-
-
 
       {/* ── Section 5: Status & Recommendation ── */}
       <Card className="shadow-sm border-border/60">
@@ -440,7 +445,10 @@ export function QuotationForm({ initial, onSaved }: Props) {
           <SectionHeader
             icon={Star}
             title={arLabel("التصنيف والتوصية", "Status & Recommendation")}
-            subtitle={arLabel("تحديد ما إذا كان هذا العرض موصى به للعميل", "Mark if this offer is recommended to the customer")}
+            subtitle={arLabel(
+              "تحديد ما إذا كان هذا العرض موصى به للعميل",
+              "Mark if this offer is recommended to the customer",
+            )}
           />
           <div className="mt-4">
             <ToggleField
@@ -448,7 +456,7 @@ export function QuotationForm({ initial, onSaved }: Props) {
               label={arLabel("عرض موصى به (مميز)", "Recommended Offer (Featured)")}
               description={arLabel(
                 "ستظهر شارة 'موصى به' على هذا العرض في قائمة العروض وبطاقة التفاصيل",
-                "A 'Recommended' badge will appear on this offer in the list and detail view"
+                "A 'Recommended' badge will appear on this offer in the list and detail view",
               )}
               checked={form.is_recommended}
               onChange={(v) => set("is_recommended", v)}
@@ -464,7 +472,10 @@ export function QuotationForm({ initial, onSaved }: Props) {
           <SectionHeader
             icon={FileText}
             title={t("label.notes")}
-            subtitle={arLabel("أي ملاحظات أو تعليمات إضافية للعرض", "Any additional notes or instructions for the offer")}
+            subtitle={arLabel(
+              "أي ملاحظات أو تعليمات إضافية للعرض",
+              "Any additional notes or instructions for the offer",
+            )}
           />
           <div className="mt-4">
             <Textarea
@@ -485,13 +496,9 @@ export function QuotationForm({ initial, onSaved }: Props) {
           disabled={save.isPending}
           onClick={() => save.mutate()}
         >
-          {save.isPending
-            ? arLabel("جاري الحفظ...", "Saving...")
-            : t("actions.save")}
+          {save.isPending ? arLabel("جاري الحفظ...", "Saving...") : t("actions.save")}
         </Button>
       </div>
-
-
     </div>
   );
 }

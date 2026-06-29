@@ -1,15 +1,15 @@
-import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
-import { supabase } from "@/integrations/supabase/client";
+import { Outlet, useNavigate, useLocation, Navigate } from "react-router-dom";
+import { useSelector, useDispatch } from "react-redux";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { LangSwitcher } from "@/components/lang-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/hooks/use-auth";
+import { selectAuth } from "@/store/features/authSlice";
+import { useGetProfileQuery, useLogoutMutation } from "@/store/api";
+import { canAccessModule, hasAnyRole } from "@/lib/auth-utils";
 import { useI18n } from "@/lib/i18n";
-import { useNavigate } from "@tanstack/react-router";
-import { useRouterState } from "@tanstack/react-router";
-import { LogOut, ShieldOff } from "lucide-react";
+import { LogOut, ShieldOff, Loader2 } from "lucide-react";
 import { pathToModule, moduleRoles } from "@/lib/modules";
 import {
   DropdownMenu,
@@ -21,41 +21,85 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
-export const Route = createFileRoute("/_authenticated")({
-  ssr: false,
-  beforeLoad: async () => {
-    // Demo mode removed: a real authenticated session is always required.
-    if (typeof window !== "undefined") window.localStorage.removeItem("demo_role");
-    const { data, error } = await supabase.auth.getUser();
-    if (error || !data.user) throw redirect({ to: "/auth" });
-    return { user: data.user };
-  },
-  component: AuthenticatedLayout,
-});
-
-function AuthenticatedLayout() {
+export default function AuthenticatedLayout() {
   const { lang, t, dir } = useI18n();
-  const auth = useAuth();
+  const auth = useSelector(selectAuth);
   const navigate = useNavigate();
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const currentModule = pathToModule(pathname);
-  const requiredRoles = moduleRoles(currentModule);
-  const blocked = !auth.loading && auth.roles.length > 0 && (
-    !auth.canAccessModule(currentModule) ||
-    (requiredRoles !== null && !auth.hasAnyRole(requiredRoles))
-  );
+  const dispatch = useDispatch();
+  const { pathname } = useLocation();
 
-  async function handleSignOut() {
-    await auth.signOut();
-    navigate({ to: "/auth", replace: true });
+  // Auth guard: redirect to /auth if no token
+  const cookieMatch = typeof window !== "undefined" ? document.cookie.match(new RegExp("(^| )auth_token=([^;]+)")) : null;
+  const cookieToken = cookieMatch ? decodeURIComponent(cookieMatch[2]) : null;
+
+  // Rehydrate Redux if cookie exists but Redux is empty (e.g. on page refresh)
+  const { isLoading: isProfileLoading } = useGetProfileQuery(undefined, {
+    skip: !cookieToken || auth.isAuthenticated,
+  });
+
+  const [logoutMutation] = useLogoutMutation();
+
+  if (!cookieToken) {
+    return <Navigate to="/auth" replace />;
   }
 
-  const customDisplayEmail = typeof window !== "undefined" ? window.localStorage.getItem("custom_display_email") : null;
+  if (isProfileLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin" style={{ color: "var(--brand-gold)" }} />
+      </div>
+    );
+  }
+
+  if (!auth.isAuthenticated) {
+    // If not authenticated and we finished loading profile, it means the token is invalid or expired
+    return <Navigate to="/auth" replace />;
+  }
+
+  const currentModule = pathToModule(pathname);
+  const requiredRoles = moduleRoles(currentModule);
+  const blocked =
+    auth.roles.length > 0 &&
+    (!canAccessModule(auth, currentModule) ||
+      (requiredRoles !== null && !hasAnyRole(auth, requiredRoles)));
+
+  async function handleSignOut() {
+    try {
+      await logoutMutation().unwrap();
+    } catch (e) {
+      console.warn("Logout failed", e);
+    }
+    if (typeof window !== "undefined") {
+      document.cookie = "auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC";
+      document.cookie = "auth_user_id=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC";
+      localStorage.removeItem("user_profile");
+      localStorage.removeItem("user_roles");
+    }
+    navigate("/auth", { replace: true });
+  }
+
+  const customDisplayEmail =
+    typeof window !== "undefined" ? window.localStorage.getItem("custom_display_email") : null;
   const primaryRole = auth.roles[0];
-  const displayName = customDisplayEmail || (lang === "ar"
-    ? (auth.profile?.full_name_ar || auth.profile?.full_name_en || auth.user?.email || (primaryRole ? t(`role.${primaryRole}`) : "—"))
-    : (auth.profile?.full_name_en || auth.profile?.full_name_ar || auth.user?.email || (primaryRole ? t(`role.${primaryRole}`) : "—")));
-  const initials = (displayName || "?").toString().split(" ").map(s => s[0]).join("").slice(0,2).toUpperCase();
+  const displayName = String(
+    customDisplayEmail ||
+      (lang === "ar"
+        ? auth.profile?.full_name_ar ||
+          auth.profile?.full_name_en ||
+          auth.user?.email ||
+          (primaryRole ? (t(`role.${primaryRole}`) as string) : "—")
+        : auth.profile?.full_name_en ||
+          auth.profile?.full_name_ar ||
+          auth.user?.email ||
+          (primaryRole ? (t(`role.${primaryRole}`) as string) : "—"))
+  );
+  const initials = (displayName || "?")
+    .toString()
+    .split(" ")
+    .map((s) => s[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 
   return (
     <SidebarProvider defaultOpen>
@@ -76,7 +120,9 @@ function AuthenticatedLayout() {
                   <div className="hidden text-start sm:flex sm:flex-col sm:leading-tight">
                     <span className="text-xs font-medium">{displayName}</span>
                     {primaryRole && (
-                      <span className="text-[10px] text-muted-foreground">{t(`role.${primaryRole}`)}</span>
+                      <span className="text-[10px] text-muted-foreground">
+                        {t(`role.${primaryRole}`)}
+                      </span>
                     )}
                   </div>
                 </Button>
@@ -89,7 +135,10 @@ function AuthenticatedLayout() {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer text-destructive">
+                <DropdownMenuItem
+                  onClick={handleSignOut}
+                  className="cursor-pointer text-destructive"
+                >
                   <LogOut className="me-2 h-4 w-4" />
                   {t("auth.signout")}
                 </DropdownMenuItem>
@@ -102,7 +151,9 @@ function AuthenticatedLayout() {
                 <ShieldOff className="h-10 w-10 text-muted-foreground" />
                 <h2 className="text-lg font-semibold">{t("perm.denied_title")}</h2>
                 <p className="max-w-sm text-sm text-muted-foreground">{t("perm.denied_desc")}</p>
-                <Button variant="outline" size="sm" onClick={() => navigate({ to: "/" })}>{t("actions.back")}</Button>
+                <Button variant="outline" size="sm" onClick={() => navigate("/")}>
+                  {t("actions.back")}
+                </Button>
               </div>
             ) : (
               <Outlet />

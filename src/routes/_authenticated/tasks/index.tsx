@@ -1,7 +1,16 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { PageHeader } from "@/components/page-header";
 import { useI18n } from "@/lib/i18n";
+import {
+  useGetTasksQuery,
+  useCreateTaskMutation,
+  useUpdateTaskMutation,
+  useDeleteTaskMutation,
+  useGetTaskCommentsQuery,
+  useAddTaskCommentMutation,
+  useDeleteTaskCommentMutation
+} from "@/store/services/tasks/tasksService";
+import { useGetUsersQuery } from "@/store/services/users/usersService";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
@@ -31,13 +40,12 @@ import {
   X,
   FileText,
   User,
-  Users
+  Users,
+  Edit,
+  Trash2,
+  Trash
 } from "lucide-react";
 import { toast } from "sonner";
-
-export const Route = createFileRoute("/_authenticated/tasks/")({
-  component: TasksPage,
-});
 
 // Translation dictionary
 const T = {
@@ -69,14 +77,18 @@ const T = {
     statusInProgress: "قيد التنفيذ",
     statusAwaitingReply: "بانتظار الرد",
     statusCompleted: "مكتمل",
+    statusClosed: "مغلق",
 
     // New Task Form
     createTitle: "إنشاء مهمة جديدة",
     createSubtitle: "اكتب تفاصيل طلبك أو مشكلتك ليقوم الفريق المختص بمساعدتك.",
     labelTitle: "عنوان المهمة / المشكلة",
     labelEmployee: "الموظف",
+    labelAssignedTo: "تعيين إلى (الرقم التعريفي)",
     labelDept: "القسم",
     labelDetails: "تفاصيل المهمة / الطلب",
+    labelDeadline: "الموعد النهائي",
+    labelAttachments: "المرفقات",
     placeholderTitle: "مثال: تعطل الطابعة في الدور الثاني، أو استفسار عن الإجازات",
     placeholderDetails: "يرجى كتابة رسالة الخطأ أو تفاصيل المشكلة التقنية...",
     btnSendTask: "إرسال المهمة",
@@ -95,6 +107,15 @@ const T = {
     logStatusChanged: "تم تغيير الحالة إلى قيد التنفيذ",
     logCompleted: "تم إكمال المهمة وإغلاق الطلب",
     system: "النظام",
+
+    // Actions
+    editTask: "تعديل المهمة",
+    deleteTask: "حذف المهمة",
+    confirmDelete: "هل أنت متأكد من الحذف؟",
+    deleteComment: "حذف التعليق",
+    saveChanges: "حفظ التغييرات",
+    cancel: "إلغاء",
+    editSubtitle: "قم بتعديل بيانات المهمة أدناه",
   },
   en: {
     title: "Tasks",
@@ -124,14 +145,18 @@ const T = {
     statusInProgress: "In Progress",
     statusAwaitingReply: "Awaiting Reply",
     statusCompleted: "Completed",
+    statusClosed: "Closed",
 
     // New Task Form
     createTitle: "Create New Task",
     createSubtitle: "Write the details of your request or issue so the specialized team can assist you.",
     labelTitle: "Task Title / Issue",
     labelEmployee: "Employee",
+    labelAssignedTo: "Assigned To (ID)",
     labelDept: "Department",
     labelDetails: "Task Details / Request",
+    labelDeadline: "Deadline",
+    labelAttachments: "Attachments",
     placeholderTitle: "e.g. Printer broken on the second floor, or vacation query",
     placeholderDetails: "Please write the error message or details of the technical issue...",
     btnSendTask: "Send Task",
@@ -150,6 +175,15 @@ const T = {
     logStatusChanged: "Status changed to In Progress",
     logCompleted: "Task completed and ticket closed",
     system: "System",
+
+    // Actions
+    editTask: "Edit Task",
+    deleteTask: "Delete Task",
+    confirmDelete: "Are you sure you want to delete?",
+    deleteComment: "Delete Comment",
+    saveChanges: "Save Changes",
+    cancel: "Cancel",
+    editSubtitle: "Modify the task details below",
   }
 };
 
@@ -178,6 +212,14 @@ interface TaskLog {
   time: string;
 }
 
+interface TaskAttachment {
+  id: string;
+  file_name: string;
+  file_url: string;
+  file_type?: string;
+  file_size?: number;
+}
+
 interface Task {
   id: string;
   title: string;
@@ -186,166 +228,52 @@ interface Task {
   lastUpdate: string;
   assignedTeam: string;
   assignedAvatar?: string;
+  assignedTo?: string;
+  deadline?: string;
   priority: "urgent" | "medium" | "normal";
-  status: "in_progress" | "open" | "awaiting_reply" | "completed";
+  status: "in_progress" | "open" | "awaiting_reply" | "completed" | "closed";
   requestDate: string;
   messages: Message[];
+  attachments?: TaskAttachment[];
   logs: TaskLog[];
 }
 
-const INITIAL_TASKS: Task[] = [
-  {
-    id: "TSK-3091",
-    title: "طلب صلاحية وصول لنظام المحاسبة الجديد",
-    description: "أحتاج إلى صلاحية الدخول لنظام المحاسبة الجديد (ERP) الخاص بالشركة لإكمال تقارير نهاية الشهر. حاولت الدخول بحسابي الحالي وتظهر لي رسالة خطأ.",
-    department: "دعم تقني",
-    lastUpdate: "2023-11-10 1:15 PM",
-    assignedTeam: "فريق تقنية المعلومات",
-    assignedAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150",
-    priority: "urgent",
-    status: "in_progress",
-    requestDate: "2023-11-10 11:30 AM",
-    messages: [
-      {
-        id: "m1",
-        sender: "user",
-        senderName: "محمد أحمد",
-        content: "أحتاج إلى صلاحية الدخول لنظام المحاسبة الجديد (ERP) الخاص بالشركة لإكمال تقارير نهاية الشهر. حاولت الدخول بحسابي الحالي وتظهر لي رسالة خطأ.",
-        time: "11:30 AM",
-        read: true,
-      },
-      {
-        id: "m2",
-        sender: "support",
-        senderName: "سارة خالد (IT)",
-        avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150",
-        content: "مرحباً محمد، جاري العمل على إضافة حسابك للنظام الجديد. هل يمكنك تزويدي برقمك الوظيفي للتأكيد؟",
-        time: "12:05 PM",
-      },
-      {
-        id: "m3",
-        sender: "user",
-        senderName: "محمد أحمد",
-        content: "بالتأكيد، رقمي الوظيفي هو 4092. شكراً لتعاونكم.",
-        time: "1:15 PM",
-        read: true,
-      }
-    ],
-    logs: [
-      { id: "l1", action: "logCreated", user: "محمد أحمد", time: "2023-11-10 11:30 AM" },
-      { id: "l2", action: "logAssigned", user: "النظام", time: "2023-11-10 11:35 AM" },
-      { id: "l3", action: "logStatusChanged", user: "سارة خالد", time: "2023-11-10 12:05 PM" }
-    ]
-  },
-  {
-    id: "TSK-3092",
-    title: "استفسار عن رصيد الإجازات السنوية",
-    description: "أود الاستفسار عن رصيد إجازاتي السنوية المتبقية لعام 2023 وهل يمكن ترحيلها للعام القادم؟",
-    department: "طلب إداري",
-    lastUpdate: "2023-11-11 4:20 PM",
-    assignedTeam: "بانتظار التعيين",
-    priority: "normal",
-    status: "open",
-    requestDate: "2023-11-11 4:20 PM",
-    messages: [
-      {
-        id: "m4",
-        sender: "user",
-        senderName: "محمد أحمد",
-        content: "أود الاستفسار عن رصيد إجازاتي السنوية المتبقية لعام 2023 وهل يمكن ترحيلها للعام القادم؟",
-        time: "4:20 PM",
-        read: false,
-      }
-    ],
-    logs: [
-      { id: "l4", action: "logCreated", user: "محمد أحمد", time: "2023-11-11 4:20 PM" }
-    ]
-  },
-  {
-    id: "TSK-3085",
-    title: "صيانة جهاز التكييف في المكتب رقم 4",
-    description: "جهاز التكييف في المكتب رقم 4 يصدر ضوضاء عالية ولا يبرد بشكل جيد. يرجى إرسال فني صيانة.",
-    department: "صيانة",
-    lastUpdate: "2023-11-09 6:45 PM",
-    assignedTeam: "فريق الصيانة",
-    assignedAvatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150",
-    priority: "medium",
-    status: "awaiting_reply",
-    requestDate: "2023-11-09 6:00 PM",
-    messages: [
-      {
-        id: "m5",
-        sender: "user",
-        senderName: "محمد أحمد",
-        content: "جهاز التكييف في المكتب رقم 4 يصدر ضوضاء عالية ولا يبرد بشكل جيد. يرجى إرسال فني صيانة.",
-        time: "6:00 PM",
-        read: true,
-      },
-      {
-        id: "m6",
-        sender: "support",
-        senderName: "فريق الصيانة",
-        avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150",
-        content: "تم فحص التكييف وتبين وجود مشكلة في المروحة الداخلية. تم طلب قطع الغيار وسنقوم بالتركيب غداً. هل توافق على جدولة الصيانة غداً صباحاً؟",
-        time: "6:45 PM",
-      }
-    ],
-    logs: [
-      { id: "l5", action: "logCreated", user: "محمد أحمد", time: "2023-11-09 6:00 PM" },
-      { id: "l6", action: "logAssigned", user: "النظام", time: "2023-11-09 6:05 PM" }
-    ]
-  },
-  {
-    id: "TSK-3050",
-    title: "تحديث بيانات التأمين الطبي",
-    description: "أرجو تحديث بيانات التأمين الطبي الخاصة بي بعد إضافة المولود الجديد وإرسال بطاقة التأمين المحدثة.",
-    department: "طلب إداري",
-    lastUpdate: "2023-11-02 12:30 PM",
-    assignedTeam: "قسم الموارد البشرية",
-    assignedAvatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150",
-    priority: "urgent",
-    status: "completed",
-    requestDate: "2023-11-02 10:00 AM",
-    messages: [
-      {
-        id: "m7",
-        sender: "user",
-        senderName: "محمد أحمد",
-        content: "أرجو تحديث بيانات التأمين الطبي الخاصة بي بعد إضافة المولود الجديد وإرسال بطاقة التأمين المحدثة.",
-        time: "10:00 AM",
-        read: true,
-      },
-      {
-        id: "m8",
-        sender: "support",
-        senderName: "قسم الموارد البشرية",
-        avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150",
-        content: "أهلاً محمد، تم استلام المستندات وتحديث البيانات لدى شركة التأمين. البطاقة الجديدة ستكون جاهزة للاستلام يوم الأحد القادم.",
-        time: "11:45 AM",
-      },
-      {
-        id: "m9",
-        sender: "user",
-        senderName: "محمد أحمد",
-        content: "رائع جداً، شكراً جزيلاً لسرعة الاستجابة.",
-        time: "12:30 PM",
-        read: true,
-      }
-    ],
-    logs: [
-      { id: "l7", action: "logCreated", user: "محمد أحمد", time: "2023-11-02 10:00 AM" },
-      { id: "l8", action: "logAssigned", user: "النظام", time: "2023-11-02 10:10 AM" },
-      { id: "l9", action: "logCompleted", user: "قسم الموارد البشرية", time: "2023-11-02 12:30 PM" }
-    ]
-  }
-];
+function mapApiTaskToUi(apiTask: any): Task {
+  return {
+    id: String(apiTask.id),
+    title: apiTask.title,
+    description: apiTask.description,
+    department: apiTask.department || "دعم تقني",
+    lastUpdate: apiTask.updated_at ? new Date(apiTask.updated_at).toLocaleString() : "",
+    assignedTeam: apiTask.assigned_team || "بانتظار التعيين",
+    assignedAvatar: apiTask.assigned_avatar || undefined,
+    assignedTo: apiTask.assignee?.id ? String(apiTask.assignee.id) : (apiTask.assigned_to ? String(apiTask.assigned_to) : ""),
+    deadline: apiTask.deadline || "",
+    priority: apiTask.priority || "normal",
+    status: apiTask.status || "open",
+    requestDate: apiTask.created_at ? new Date(apiTask.created_at).toLocaleString() : "",
+    messages: [], // Populated dynamically when selected
+    attachments: (apiTask.attachments || []).map((att: any) => ({
+      id: String(att.id),
+      file_name: att.file_name,
+      file_url: att.file_url,
+      file_type: att.file_type,
+      file_size: att.file_size
+    })),
+    logs: (apiTask.logs || []).map((log: any) => ({
+      id: String(log.id),
+      action: log.action,
+      user: log.user || "النظام",
+      time: log.created_at ? new Date(log.created_at).toLocaleString() : ""
+    }))
+  };
+}
 
-function TasksPage() {
+export default function TasksPage() {
   const { lang, dir } = useI18n();
   const t = lang === "ar" ? T.ar : T.en;
 
   const [activeTab, setActiveTab] = useState<"track" | "send">("track");
-  const [tasks, setTasks] = useState<Task[]>([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
@@ -357,32 +285,80 @@ function TasksPage() {
   const chatEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Edit / Delete Task State
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+
   // Form State
   const [formTitle, setFormTitle] = useState("");
-  const [formEmployee, setFormEmployee] = useState("محمد أحمد");
-  const [formDept, setFormDept] = useState("دعم تقني");
+  const [formAssignedTo, setFormAssignedTo] = useState("");
+  const [formDept, setFormDept] = useState("فريق تقنية المعلومات");
+  const [formPriority, setFormPriority] = useState("urgent");
+  const [formDeadline, setFormDeadline] = useState("2026-07-10");
+  const [formStatus, setFormStatus] = useState("open");
   const [formDetails, setFormDetails] = useState("");
+  const [formAttachments, setFormAttachments] = useState<File[]>([]);
 
-  // Initialize data from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem("almahaba_tasks");
-    if (saved) {
-      try {
-        setTasks(JSON.parse(saved));
-      } catch (e) {
-        setTasks(INITIAL_TASKS);
-      }
-    } else {
-      setTasks(INITIAL_TASKS);
-      localStorage.setItem("almahaba_tasks", JSON.stringify(INITIAL_TASKS));
+  // RTK Query Hooks
+  const { data: apiTasks = [], isLoading: isLoadingTasks } = useGetTasksQuery();
+  const { data: apiUsersResponse, isLoading: isLoadingUsers } = useGetUsersQuery();
+
+  const usersArray = useMemo(() => {
+    let rawData = apiUsersResponse;
+    if (!Array.isArray(rawData)) {
+      rawData = (rawData as any)?.data?.data || (rawData as any)?.data || [];
     }
-  }, []);
+    return Array.isArray(rawData) ? rawData : [];
+  }, [apiUsersResponse]);
 
-  // Sync to localStorage
-  const saveTasks = (newTasks: Task[]) => {
-    setTasks(newTasks);
-    localStorage.setItem("almahaba_tasks", JSON.stringify(newTasks));
-  };
+  const [createTask, { isLoading: isCreating }] = useCreateTaskMutation();
+  const [updateTask, { isLoading: isUpdating }] = useUpdateTaskMutation();
+  const [deleteTask, { isLoading: isDeleting }] = useDeleteTaskMutation();
+
+  const { data: rawApiComments, isLoading: isLoadingComments } = useGetTaskCommentsQuery(selectedTask?.id || "", {
+    skip: !selectedTask?.id
+  });
+
+  const apiComments = useMemo(() => {
+    let arr = rawApiComments;
+    if (!Array.isArray(arr)) {
+      arr = (arr as any)?.data?.data || (arr as any)?.data || [];
+    }
+    return Array.isArray(arr) ? arr : [];
+  }, [rawApiComments]);
+
+  const [addComment, { isLoading: isAddingComment }] = useAddTaskCommentMutation();
+  const [deleteTaskComment, { isLoading: isDeletingComment }] = useDeleteTaskCommentMutation();
+
+  const tasks = useMemo(() => {
+    let tasksArray = apiTasks;
+    if (!Array.isArray(tasksArray)) {
+      tasksArray = (tasksArray as any)?.data?.data || (tasksArray as any)?.data || [];
+    }
+    return Array.isArray(tasksArray) ? tasksArray.map(mapApiTaskToUi) : [];
+  }, [apiTasks]);
+
+  // Sync comments for opened task
+  useEffect(() => {
+    if (selectedTask && apiComments) {
+      const mappedComments = apiComments.map((c: any) => ({
+        id: String(c.id),
+        sender: c.sender || (c.user_id === 1 ? "user" : "support"),
+        senderName: c.sender_name || c.senderName || "مستخدم",
+        content: c.body || c.content || "",
+        time: c.created_at ? new Date(c.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "",
+        read: c.read ?? true,
+        attachment: c.attachments?.[0] ? {
+          name: c.attachments[0].name,
+          url: c.attachments[0].url,
+          type: c.attachments[0].type || "file",
+        } : undefined
+      }));
+      setSelectedTask(prev => prev ? { ...prev, messages: mappedComments } : null);
+    }
+  }, [apiComments]);
 
   // Scroll to chat bottom when selectedTask or messages change
   useEffect(() => {
@@ -418,153 +394,60 @@ function TasksPage() {
   };
 
   // Form submission
-  const handleCreateTask = (e: React.FormEvent) => {
+  const handleCreateTask = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formTitle.trim() || !formDetails.trim()) {
       toast.error(lang === "ar" ? "يرجى تعبئة جميع الحقول المطلوبة" : "Please fill in all required fields");
       return;
     }
 
-    const nextId = `TSK-${3000 + tasks.length + 50}`;
-    const now = new Date();
-    const formattedDate = now.toISOString().split("T")[0];
-    const formattedTime = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    try {
+      const formData = new FormData();
+      formData.append("title", formTitle);
+      formData.append("description", formDetails);
+      formData.append("assigned_to", formAssignedTo);
+      formData.append("department", formDept);
+      formData.append("priority", formPriority);
+      if (formDeadline) formData.append("deadline", formDeadline);
+      formData.append("status", formStatus);
 
-    const newTask: Task = {
-      id: nextId,
-      title: formTitle,
-      description: formDetails,
-      department: formDept,
-      lastUpdate: `${formattedDate} ${formattedTime}`,
-      assignedTeam: formDept === "دعم تقني" ? "فريق تقنية المعلومات" : formDept === "صيانة" ? "فريق الصيانة" : "بانتظار التعيين",
-      priority: "normal",
-      status: "open",
-      requestDate: `${formattedDate} ${formattedTime}`,
-      messages: [
-        {
-          id: "m_init",
-          sender: "user",
-          senderName: formEmployee,
-          content: formDetails,
-          time: formattedTime,
-          read: false,
-        }
-      ],
-      logs: [
-        {
-          id: "l_init",
-          action: "logCreated",
-          user: formEmployee,
-          time: `${formattedDate} ${formattedTime}`
-        }
-      ]
-    };
+      formAttachments.forEach((file) => {
+        formData.append("attachments[]", file);
+      });
 
-    const updatedTasks = [newTask, ...tasks];
-    saveTasks(updatedTasks);
+      await createTask(formData).unwrap();
 
-    toast.success(t.toastSuccess);
-
-    // Clear form
-    setFormTitle("");
-    setFormDetails("");
-    setActiveTab("track"); // Switch back to list
+      toast.success(t.toastSuccess);
+      setFormTitle("");
+      setFormDetails("");
+      setFormAssignedTo("");
+      setFormDept("فريق تقنية المعلومات");
+      setFormPriority("urgent");
+      setFormDeadline("2026-07-10");
+      setFormStatus("open");
+      setFormAttachments([]);
+      setActiveTab("track"); // Switch back to list
+    } catch (error) {
+      toast.error(lang === "ar" ? "فشل إنشاء المهمة" : "Failed to create task");
+    }
   };
 
   // Send message in details chat
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!replyText.trim() || !selectedTask) return;
 
-    const now = new Date();
-    const formattedDate = now.toISOString().split("T")[0];
-    const formattedTime = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    const formData = new FormData();
+    formData.append("body", replyText);
 
-    const newMessage: Message = {
-      id: `msg_${Date.now()}`,
-      sender: "user",
-      senderName: "محمد أحمد",
-      content: replyText,
-      time: formattedTime,
-      read: true
-    };
-
-    const newLog: TaskLog = {
-      id: `log_${Date.now()}`,
-      action: "أضاف رداً جديداً",
-      user: "محمد أحمد",
-      time: `${formattedDate} ${formattedTime}`
-    };
-
-    // Transition status to in_progress if user replies when it was awaiting_reply
-    let newStatus = selectedTask.status;
-    if (selectedTask.status === "awaiting_reply") {
-      newStatus = "in_progress";
+    try {
+      await addComment({ taskId: selectedTask.id, body: formData }).unwrap();
+      setReplyText("");
+    } catch (error) {
+      toast.error(lang === "ar" ? "فشل إرسال التعليق" : "Failed to send comment");
     }
-
-    const updatedTask: Task = {
-      ...selectedTask,
-      status: newStatus,
-      lastUpdate: `${formattedDate} ${formattedTime}`,
-      messages: [...selectedTask.messages, newMessage],
-      logs: [...selectedTask.logs, newLog]
-    };
-
-    // Update global state
-    const updatedTasks = tasks.map((tk) => (tk.id === selectedTask.id ? updatedTask : tk));
-    saveTasks(updatedTasks);
-    setSelectedTask(updatedTask);
-    setReplyText("");
-
-    // Setup simulated support response after 2.5 seconds
-    setIsTyping(true);
-    setTimeout(() => {
-      setIsTyping(false);
-
-      const responseTime = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-      const supportMsg: Message = {
-        id: `msg_support_${Date.now()}`,
-        sender: "support",
-        senderName: updatedTask.assignedTeam === "بانتظار التعيين" ? "الدعم الفني" : updatedTask.assignedTeam + " - فني",
-        avatar: updatedTask.assignedAvatar || "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150",
-        content:
-          updatedTask.id === "TSK-3091"
-            ? (lang === "ar"
-              ? "شكراً لك محمد على تزويدي بالرقم الوظيفي. تم تفعيل صلاحية الحساب الآن بنجاح على نظام ERP الجديد. يرجى محاولة تسجيل الدخول مرة أخرى وإعلامنا بالنتيجة."
-              : "Thank you Muhammad for providing the employee ID. Your account permission has been successfully activated on the new ERP system. Please try logging in again and let us know.")
-            : (lang === "ar"
-              ? "أهلاً محمد، تم استلام ردك وجاري مراجعته ومتابعته من قبل فريق العمل المختص وسنفيدك بأي تحديث قريباً."
-              : "Hello Muhammad, your reply has been received and is being reviewed by the team. We will update you shortly."),
-        time: responseTime
-      };
-
-      const supportLog: TaskLog = {
-        id: `log_support_${Date.now()}`,
-        action: updatedTask.id === "TSK-3091" ? "logCompleted" : "أضاف الدعم رداً جديداً",
-        user: supportMsg.senderName,
-        time: `${formattedDate} ${responseTime}`
-      };
-
-      const finalStatus = updatedTask.id === "TSK-3091" ? "completed" : updatedTask.status;
-
-      const finalTask: Task = {
-        ...updatedTask,
-        status: finalStatus,
-        lastUpdate: `${formattedDate} ${responseTime}`,
-        messages: [...updatedTask.messages, supportMsg],
-        logs: [...updatedTask.logs, supportLog]
-      };
-
-      const finalTasks = updatedTasks.map((tk) => (tk.id === selectedTask.id ? finalTask : tk));
-      saveTasks(finalTasks);
-
-      // If modal is still open, update its state
-      if (selectedTask.id === finalTask.id) {
-        setSelectedTask(finalTask);
-      }
-    }, 2500);
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !selectedTask) return;
 
@@ -573,96 +456,65 @@ function TasksPage() {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64Url = reader.result as string;
-      const isImage = file.type.startsWith("image/");
+    const formData = new FormData();
+    formData.append("body", lang === "ar" ? `أرسل مرفقاً: ${file.name}` : `Sent attachment: ${file.name}`);
+    formData.append("attachments[]", file);
 
-      const now = new Date();
-      const formattedDate = now.toISOString().split("T")[0];
-      const formattedTime = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-
-      const newMessage: Message = {
-        id: `msg_${Date.now()}`,
-        sender: "user",
-        senderName: "محمد أحمد",
-        content: "",
-        time: formattedTime,
-        read: true,
-        attachment: {
-          name: file.name,
-          url: base64Url,
-          type: isImage ? "image" : "file",
-          size: `${(file.size / 1024).toFixed(1)} KB`
-        }
-      };
-
-      const newLog: TaskLog = {
-        id: `log_${Date.now()}`,
-        action: lang === "ar" ? `أرسل مرفقاً: ${file.name}` : `Sent attachment: ${file.name}`,
-        user: "محمد أحمد",
-        time: `${formattedDate} ${formattedTime}`
-      };
-
-      let newStatus = selectedTask.status;
-      if (selectedTask.status === "awaiting_reply") {
-        newStatus = "in_progress";
-      }
-
-      const updatedTask: Task = {
-        ...selectedTask,
-        status: newStatus,
-        lastUpdate: `${formattedDate} ${formattedTime}`,
-        messages: [...selectedTask.messages, newMessage],
-        logs: [...selectedTask.logs, newLog]
-      };
-
-      const updatedTasks = tasks.map((tk) => (tk.id === selectedTask.id ? updatedTask : tk));
-      saveTasks(updatedTasks);
-      setSelectedTask(updatedTask);
-
+    try {
+      await addComment({ taskId: selectedTask.id, body: formData }).unwrap();
       if (fileInputRef.current) fileInputRef.current.value = "";
+    } catch (error) {
+      toast.error(lang === "ar" ? "فشل إرسال الملف" : "Failed to send file");
+    }
+  };
 
-      setIsTyping(true);
-      setTimeout(() => {
-        setIsTyping(false);
-        const responseTime = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const handleEditTask = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingTask) return;
 
-        const supportMsg: Message = {
-          id: `msg_support_${Date.now()}`,
-          sender: "support",
-          senderName: updatedTask.assignedTeam === "بانتظار التعيين" ? "الدعم الفني" : updatedTask.assignedTeam + " - فني",
-          avatar: updatedTask.assignedAvatar || "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150",
-          content: lang === "ar"
-            ? `أهلاً محمد، تم استلام المرفق (${file.name}) بشكل سليم. جاري مراجعته والعمل على طلبك.`
-            : `Hello Muhammad, we have received your attachment (${file.name}) successfully. The team is currently reviewing it.`,
-          time: responseTime
-        };
-
-        const supportLog: TaskLog = {
-          id: `log_support_${Date.now()}`,
-          action: lang === "ar" ? "أضاف الدعم رداً جديداً" : "Support added a reply",
-          user: supportMsg.senderName,
-          time: `${formattedDate} ${responseTime}`
-        };
-
-        const finalTask: Task = {
-          ...updatedTask,
-          status: updatedTask.status,
-          lastUpdate: `${formattedDate} ${responseTime}`,
-          messages: [...updatedTask.messages, supportMsg],
-          logs: [...updatedTask.logs, supportLog]
-        };
-
-        const finalTasks = updatedTasks.map((tk) => (tk.id === selectedTask.id ? finalTask : tk));
-        saveTasks(finalTasks);
-
-        if (selectedTask.id === finalTask.id) {
-          setSelectedTask(finalTask);
+    try {
+      await updateTask({
+        id: editingTask.id,
+        body: {
+          title: editingTask.title,
+          description: editingTask.description,
+          department: editingTask.department,
+          priority: editingTask.priority,
+          status: editingTask.status,
+          assigned_to: editingTask.assignedTo,
+          deadline: editingTask.deadline,
         }
-      }, 3000);
-    };
-    reader.readAsDataURL(file);
+      }).unwrap();
+
+      toast.success(lang === "ar" ? "تم تعديل المهمة بنجاح" : "Task updated successfully");
+      setIsEditDialogOpen(false);
+      setEditingTask(null);
+    } catch (error) {
+      toast.error(lang === "ar" ? "فشل تعديل المهمة" : "Failed to update task");
+    }
+  };
+
+  const handleDeleteTask = async () => {
+    if (!taskToDelete) return;
+
+    try {
+      await deleteTask(taskToDelete.id).unwrap();
+      toast.success(lang === "ar" ? "تم حذف المهمة بنجاح" : "Task deleted successfully");
+      setIsDeleteDialogOpen(false);
+      setTaskToDelete(null);
+    } catch (error) {
+      toast.error(lang === "ar" ? "فشل حذف المهمة" : "Failed to delete task");
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    if (!selectedTask) return;
+    try {
+      await deleteTaskComment(commentId).unwrap();
+      toast.success(lang === "ar" ? "تم حذف التعليق بنجاح" : "Comment deleted successfully");
+    } catch (error) {
+      toast.error(lang === "ar" ? "فشل حذف التعليق" : "Failed to delete comment");
+    }
   };
 
   const getStatusColor = (status: Task["status"]) => {
@@ -837,7 +689,7 @@ function TasksPage() {
             </div>
 
             {/* Filter controls */}
-            <div className="flex items-center justify-between pt-2">
+            {/* <div className="flex items-center justify-between pt-2">
               <Button
                 variant="outline"
                 size="sm"
@@ -847,7 +699,7 @@ function TasksPage() {
                 <SlidersHorizontal className="h-4 w-4" />
                 {t.allTasks}
               </Button>
-            </div>
+            </div> */}
 
             {/* Tasks Table */}
             <Card className="border overflow-hidden">
@@ -919,14 +771,32 @@ function TasksPage() {
                             </Badge>
                           </TableCell>
                           <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                              onClick={() => { setSelectedTask(task); setDialogTab("replies"); }}
-                            >
-                              {dir === "rtl" ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                            </Button>
+                            <div className="flex items-center justify-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-blue-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                                onClick={() => { setEditingTask(task); setIsEditDialogOpen(true); }}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                onClick={() => { setTaskToDelete(task); setIsDeleteDialogOpen(true); }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                                onClick={() => { setSelectedTask(task); setDialogTab("replies"); }}
+                              >
+                                {dir === "rtl" ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))
@@ -966,35 +836,76 @@ function TasksPage() {
                     />
                   </div>
 
-                  {/* Employee & Dept Fields */}
+                  {/* Assigned To & Dept Fields */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Employee Select */}
+                    {/* Assigned To Select */}
                     <div className="flex flex-col gap-2">
-                      <Label className="text-muted-foreground font-semibold">{t.labelEmployee}</Label>
-                      <Select value={formEmployee} onValueChange={setFormEmployee}>
+                      <Label className="text-muted-foreground font-semibold">{t.labelAssignedTo}</Label>
+                      <Select value={formAssignedTo} onValueChange={setFormAssignedTo}>
                         <SelectTrigger className="w-full py-5 border">
-                          <SelectValue placeholder={t.labelEmployee} />
+                          <SelectValue placeholder={t.labelAssignedTo} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="محمد أحمد">محمد أحمد</SelectItem>
-                          <SelectItem value="أحمد علي">أحمد علي</SelectItem>
-                          <SelectItem value="خالد عمر">خالد عمر</SelectItem>
-                          <SelectItem value="سارة خالد">سارة خالد</SelectItem>
+                          {usersArray.map((user: any) => (
+                            <SelectItem key={user.id} value={String(user.id)}>
+                              {user.name || user.username || `User ${user.id}`}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
 
-                    {/* Department Select */}
+                    {/* Department Input */}
                     <div className="flex flex-col gap-2">
                       <Label className="text-muted-foreground font-semibold">{t.labelDept}</Label>
-                      <Select value={formDept} onValueChange={setFormDept}>
+                      <Input
+                        type="text"
+                        value={formDept}
+                        onChange={(e) => setFormDept(e.target.value)}
+                        className="py-5 text-base border"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  {/* Priority, Deadline & Status Fields */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="flex flex-col gap-2">
+                      <Label className="text-muted-foreground font-semibold">{lang === "ar" ? "الأولوية" : "Priority"}</Label>
+                      <Select value={formPriority} onValueChange={setFormPriority}>
                         <SelectTrigger className="w-full py-5 border">
-                          <SelectValue placeholder={t.labelDept} />
+                          <SelectValue placeholder="Priority" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="دعم تقني">{lang === "ar" ? "دعم تقني" : "Technical Support"}</SelectItem>
-                          <SelectItem value="طلب إداري">{lang === "ar" ? "طلب إداري" : "HR/Admin Request"}</SelectItem>
-                          <SelectItem value="صيانة">{lang === "ar" ? "صيانة" : "Maintenance"}</SelectItem>
+                          <SelectItem value="urgent">{lang === "ar" ? "عاجل" : "Urgent"}</SelectItem>
+                          <SelectItem value="medium">{lang === "ar" ? "متوسط" : "Medium"}</SelectItem>
+                          <SelectItem value="normal">{lang === "ar" ? "عادي" : "Normal"}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                      <Label className="text-muted-foreground font-semibold">{t.labelDeadline}</Label>
+                      <Input
+                        type="date"
+                        value={formDeadline}
+                        onChange={(e) => setFormDeadline(e.target.value)}
+                        className="py-5 text-base border"
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                      <Label className="text-muted-foreground font-semibold">{lang === "ar" ? "الحالة" : "Status"}</Label>
+                      <Select value={formStatus} onValueChange={setFormStatus}>
+                        <SelectTrigger className="w-full py-5 border">
+                          <SelectValue placeholder="Status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="open">{t.statusOpen}</SelectItem>
+                          <SelectItem value="in_progress">{t.statusInProgress}</SelectItem>
+                          <SelectItem value="awaiting_reply">{t.statusAwaitingReply}</SelectItem>
+                          <SelectItem value="completed">{t.statusCompleted}</SelectItem>
+                          <SelectItem value="closed">{t.statusClosed}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -1009,6 +920,21 @@ function TasksPage() {
                       onChange={(e) => setFormDetails(e.target.value)}
                       className="min-h-[150px] text-base border p-4"
                       required
+                    />
+                  </div>
+
+                  {/* Attachments */}
+                  <div className="flex flex-col gap-2">
+                    <Label className="text-muted-foreground font-semibold">{t.labelAttachments}</Label>
+                    <Input
+                      type="file"
+                      multiple
+                      onChange={(e) => {
+                        if (e.target.files) {
+                          setFormAttachments(Array.from(e.target.files));
+                        }
+                      }}
+                      className="py-3 text-base border"
                     />
                   </div>
 
@@ -1067,10 +993,36 @@ function TasksPage() {
               </div>
 
               {/* Task Initial Description Box */}
-              <div className="px-6 pt-4">
+              <div className="px-6 pt-4 flex flex-col gap-4">
                 <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border text-sm text-foreground leading-relaxed" dir="rtl">
                   {selectedTask.description}
                 </div>
+
+                {selectedTask.attachments && selectedTask.attachments.length > 0 && (
+                  <div className="flex flex-col gap-2" dir="rtl">
+                    <Label className="text-muted-foreground font-semibold">{t.labelAttachments || "المرفقات"}</Label>
+                    <div className="flex flex-wrap gap-3">
+                      {selectedTask.attachments.map((att) => (
+                        <a
+                          key={att.id}
+                          href={att.file_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-3 p-2.5 rounded-lg border bg-slate-50 hover:bg-slate-100 dark:bg-slate-900/50 dark:hover:bg-slate-800 transition-colors text-xs"
+                          dir="ltr"
+                        >
+                          <div className="p-2 rounded-lg shrink-0 bg-primary/10 text-primary">
+                            <FileText className="h-4 w-4" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold truncate max-w-[150px]">{att.file_name}</p>
+                            {att.file_size && <p className="opacity-70 text-[10px] mt-0.5">{Math.round(att.file_size / 1024)} KB</p>}
+                          </div>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Tabs Switcher (Replies vs Log) */}
@@ -1129,6 +1081,15 @@ function TasksPage() {
                             <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
                               {isCurrentUser ? (
                                 <>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-5 w-5 text-red-400 hover:text-red-500 hover:bg-red-50/50 dark:hover:bg-red-900/20 -mt-0.5"
+                                    onClick={() => handleDeleteComment(msg.id)}
+                                    title={t.deleteComment}
+                                  >
+                                    <Trash className="h-3 w-3" />
+                                  </Button>
                                   <span>{msg.time}</span>
                                   <span>•</span>
                                   <span className="font-semibold">{msg.senderName}</span>
@@ -1294,6 +1255,146 @@ function TasksPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Edit Task Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-[600px] p-6 max-h-[90vh] overflow-y-auto" dir={dir}>
+          <DialogHeader className={dir === "rtl" ? "text-right" : "text-left"}>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 rounded-lg">
+                <Edit className="h-5 w-5" />
+              </div>
+              <div>
+                <DialogTitle className="text-xl">{t.editTask}</DialogTitle>
+                <DialogDescription>{t.editSubtitle}</DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          {editingTask && (
+            <form onSubmit={handleEditTask} className="space-y-4 mt-4">
+              <div className="space-y-2">
+                <Label>{t.labelTitle}</Label>
+                <Input
+                  value={editingTask.title}
+                  onChange={(e) => setEditingTask({ ...editingTask, title: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>{t.department}</Label>
+                  <Input
+                    type="text"
+                    value={editingTask.department}
+                    onChange={(e) => setEditingTask({ ...editingTask, department: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>{t.priority}</Label>
+                  <Select
+                    value={editingTask.priority}
+                    onValueChange={(val: any) => setEditingTask({ ...editingTask, priority: val })}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="urgent">{t.urgent}</SelectItem>
+                      <SelectItem value="medium">{t.medium}</SelectItem>
+                      <SelectItem value="normal">{t.normal}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>{t.labelAssignedTo}</Label>
+                  <Select
+                    value={editingTask.assignedTo}
+                    onValueChange={(val) => setEditingTask({ ...editingTask, assignedTo: val })}
+                  >
+                    <SelectTrigger><SelectValue placeholder={t.labelAssignedTo} /></SelectTrigger>
+                    <SelectContent>
+                      {usersArray.map((user: any) => (
+                        <SelectItem key={user.id} value={String(user.id)}>
+                          {user.name || user.username || `User ${user.id}`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>{t.labelDeadline || "Deadline"}</Label>
+                  <Input
+                    type="date"
+                    value={editingTask.deadline || ""}
+                    onChange={(e) => setEditingTask({ ...editingTask, deadline: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>{t.status}</Label>
+                <Select
+                  value={editingTask.status}
+                  onValueChange={(val: any) => setEditingTask({ ...editingTask, status: val })}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="open">{t.statusOpen}</SelectItem>
+                    <SelectItem value="in_progress">{t.statusInProgress}</SelectItem>
+                    <SelectItem value="awaiting_reply">{t.statusAwaitingReply}</SelectItem>
+                    <SelectItem value="completed">{t.statusCompleted}</SelectItem>
+                    <SelectItem value="closed">{t.statusClosed}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>{t.labelDetails}</Label>
+                <Textarea
+                  value={editingTask.description}
+                  onChange={(e) => setEditingTask({ ...editingTask, description: e.target.value })}
+                  required
+                  rows={4}
+                />
+              </div>
+              <div className="flex items-center justify-end gap-3 pt-4 border-t">
+                <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                  {t.cancel}
+                </Button>
+                <Button type="submit" disabled={isUpdating} className="bg-primary hover:bg-primary/90 text-white">
+                  {isUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : t.saveChanges}
+                </Button>
+              </div>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Task Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-[400px] p-6 text-center" dir={dir}>
+          <div className="mx-auto w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center mb-4 text-red-600">
+            <Trash2 className="h-6 w-6" />
+          </div>
+          <DialogTitle className="text-xl mb-2">{t.deleteTask}</DialogTitle>
+          <DialogDescription className="mb-6">{t.confirmDelete}</DialogDescription>
+
+          <div className="flex items-center justify-center gap-3">
+            <Button variant="outline" className="w-full" onClick={() => setIsDeleteDialogOpen(false)}>
+              {t.cancel}
+            </Button>
+            <Button
+              variant="destructive"
+              className="w-full"
+              onClick={handleDeleteTask}
+              disabled={isDeleting}
+            >
+              {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : t.deleteTask}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
+
+export { TasksPage as Component };

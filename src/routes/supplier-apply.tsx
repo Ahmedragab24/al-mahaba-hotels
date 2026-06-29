@@ -1,6 +1,6 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useNavigate, Link } from "react-router-dom";
+import { useGetCitiesQuery, useGetCountriesQuery } from "@/store/api";
 import { useI18n } from "@/lib/i18n";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,28 +11,29 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { LangSwitcher } from "@/components/lang-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { CheckCircle2, Loader2, ArrowLeft } from "lucide-react";
-import {
-  submitSupplierApplication,
-  getApplyLookups,
-  type SupplierType,
-} from "@/lib/supplier-applications.functions";
+import { useSubmitJoinRequestMutation } from "@/store/services/supplier-requests/supplierRequestsService";
+import { toast } from "sonner";
 import logoUrl from "@/assets/daleel-logo-transparent.png";
 
-export const Route = createFileRoute("/supplier-apply")({
-  ssr: false,
-  component: ApplyPage,
-});
-
 type Form = {
-  name_ar: string; name_en: string; supplier_type: SupplierType;
-  legal_name: string; tax_number: string; commercial_registration: string;
-  country_code: string; city_id: string; address_line1: string; website: string;
-  contact_name: string; contact_email: string; contact_phone: string; contact_position: string;
+  company_name_ar: string;
+  company_name_en: string;
+  supplier_type_id: number;
+  tax_number: string;
+  commercial_register: string;
+  country_id: number;
+  city_id: number;
+  address: string;
+  website: string;
+  contact_name: string;
+  contact_position: string;
+  contact_email: string;
+  contact_phone: string;
 };
 
 const DRAFT_KEY = "supplier_apply_draft_v1";
 
-function ApplyPage() {
+export function Component() {
   const { t, dir, lang } = useI18n();
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
@@ -40,45 +41,79 @@ function ApplyPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState<Form>({
-    name_ar: "", name_en: "", supplier_type: "direct_hotel",
-    legal_name: "", tax_number: "", commercial_registration: "",
-    country_code: "", city_id: "", address_line1: "", website: "",
-    contact_name: "", contact_email: "", contact_phone: "", contact_position: "",
+    company_name_ar: "",
+    company_name_en: "",
+    supplier_type_id: 1,
+    tax_number: "",
+    commercial_register: "",
+    country_id: 0,
+    city_id: 0,
+    address: "",
+    website: "",
+    contact_name: "",
+    contact_position: "",
+    contact_email: "",
+    contact_phone: "",
   });
 
   useEffect(() => {
     try {
       const saved = localStorage.getItem(DRAFT_KEY);
-      if (saved) setForm({ ...form, ...JSON.parse(saved) });
+      if (saved) setForm((prev) => ({ ...prev, ...JSON.parse(saved) }));
     } catch { /* ignore */ }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useEffect(() => {
     try { localStorage.setItem(DRAFT_KEY, JSON.stringify(form)); } catch { /* ignore */ }
   }, [form]);
 
-  const { data: lookups } = useQuery({ queryKey: ["apply-lookups"], queryFn: () => getApplyLookups() });
-  const countries = lookups?.countries ?? [];
-  const cities = useMemo(
-    () => (lookups?.cities ?? []).filter((c) => !form.country_code || c.country_code === form.country_code),
-    [lookups, form.country_code],
+  const extractArray = (res: any): any[] => {
+    if (!res) return [];
+    if (Array.isArray(res)) return res;
+    if (res.data && Array.isArray(res.data)) return res.data;
+    if (res.data?.data && Array.isArray(res.data.data)) return res.data.data;
+    return [];
+  };
+
+  const countriesQuery = useGetCountriesQuery(undefined, {
+    refetchOnMountOrArgChange: false,
+    refetchOnReconnect: false,
+    refetchOnFocus: false,
+    pollingInterval: 0,
+  });
+  const citiesQuery = useGetCitiesQuery(
+    { country_id: form.country_id || undefined },
+    {
+      skip: !form.country_id,
+      refetchOnMountOrArgChange: false,
+      refetchOnReconnect: false,
+      refetchOnFocus: false,
+      pollingInterval: 0,
+    }
   );
+  const countries = extractArray(countriesQuery.data);
+  const cities = useMemo(
+    () => extractArray(citiesQuery.data),
+    [citiesQuery.data],
+  );
+
+  const [submitJoinRequest] = useSubmitJoinRequestMutation();
 
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setForm((f) => ({ ...f, [k]: v }));
 
-  const validStep0 = form.name_ar.trim() && form.name_en.trim() && form.supplier_type;
-  const validStep1 = true; // company details all optional
-  const validStep2 = form.contact_name.trim() && form.contact_email.trim() && form.contact_phone.trim();
+  const validStep0 = form.company_name_ar.trim() && form.company_name_en.trim() && form.supplier_type_id > 0;
+  const validStep1 = form.country_id > 0 && form.city_id > 0;
+  const validStep2 = form.contact_name.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.contact_email) && form.contact_phone.trim().length >= 8;
 
   async function handleSubmit() {
     setError(null);
     setBusy(true);
     try {
-      const res = await submitSupplierApplication({ data: form });
+      const res = await submitJoinRequest(form).unwrap();
       localStorage.removeItem(DRAFT_KEY);
-      setSubmitted({ id: res.id });
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
+      setSubmitted({ id: res.id || "" });
+      toast.success(t("supplier.apply.success_title"));
+    } catch (e: any) {
+      const msg = e?.data?.message || e?.message || String(e);
       if (msg.includes("DUPLICATE")) setError(t("supplier.apply.err_duplicate"));
       else if (msg.includes("INVALID_EMAIL")) setError(t("supplier.apply.err_email"));
       else if (msg.includes("MISSING_FIELD")) setError(t("supplier.apply.err_missing"));
@@ -89,16 +124,42 @@ function ApplyPage() {
   }
 
   if (submitted) {
+    const requestId = String(submitted.id);
     return (
       <div className="min-h-screen flex items-center justify-center p-6" dir={dir}
         style={{ background: "radial-gradient(1200px 600px at 50% -10%, color-mix(in oklab, var(--brand-gold) 18%, transparent), transparent 60%), var(--background)" }}>
-        <Card className="max-w-lg w-full">
-          <CardContent className="pt-10 pb-8 flex flex-col items-center text-center gap-4">
-            <CheckCircle2 className="h-16 w-16 text-emerald-500" />
-            <h2 className="text-2xl font-bold">{t("supplier.apply.success_title")}</h2>
-            <p className="text-muted-foreground">{t("supplier.apply.success_desc")}</p>
-            <p className="text-xs text-muted-foreground">#{submitted.id.slice(0, 8)}</p>
-            <Button onClick={() => navigate({ to: "/auth" })} className="mt-2">{t("supplier.apply.back_to_signin")}</Button>
+        <Card className="max-w-2xl w-full">
+          <CardHeader className="text-center">
+            <CheckCircle2 className="h-16 w-16 text-emerald-500 mx-auto mb-4" />
+            <CardTitle className="text-2xl">{t("supplier.apply.success_title")}</CardTitle>
+            <CardDescription>{t("supplier.apply.success_desc")}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="rounded-md border p-4 space-y-3">
+              <div className="flex justify-between items-center pb-2 border-b">
+                <span className="text-sm font-semibold">{t("supplier.apply.request_id")}</span>
+                <span className="text-sm font-mono bg-muted px-2 py-1 rounded">#{requestId.slice(0, 8)}</span>
+              </div>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-muted-foreground">{t("label.name_ar")}:</span>
+                  <p className="font-medium">{form.company_name_ar}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">{t("label.name_en")}:</span>
+                  <p className="font-medium">{form.company_name_en}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">{t("supplier.apply.contact_name")}:</span>
+                  <p className="font-medium">{form.contact_name}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">{t("label.email")}:</span>
+                  <p className="font-medium">{form.contact_email}</p>
+                </div>
+              </div>
+            </div>
+            <Button onClick={() => navigate("/auth")} className="w-full">{t("supplier.apply.back_to_signin")}</Button>
           </CardContent>
         </Card>
       </div>
@@ -124,9 +185,8 @@ function ApplyPage() {
         <div className="flex items-center gap-2 mb-6">
           {steps.map((label, i) => (
             <div key={i} className="flex-1 flex items-center gap-2">
-              <div className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold border-2 ${
-                i <= step ? "bg-primary text-primary-foreground border-primary" : "border-muted-foreground/30 text-muted-foreground"
-              }`}>{i + 1}</div>
+              <div className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold border-2 ${i <= step ? "bg-primary text-primary-foreground border-primary" : "border-muted-foreground/30 text-muted-foreground"
+                }`}>{i + 1}</div>
               <span className={`text-xs ${i === step ? "font-semibold" : "text-muted-foreground"} hidden sm:inline`}>{label}</span>
               {i < steps.length - 1 && <div className={`flex-1 h-0.5 ${i < step ? "bg-primary" : "bg-muted"}`} />}
             </div>
@@ -143,19 +203,19 @@ function ApplyPage() {
               <>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2"><Label>{t("label.name_ar")} *</Label>
-                    <Input value={form.name_ar} onChange={(e) => set("name_ar", e.target.value)} required /></div>
+                    <Input value={form.company_name_ar} onChange={(e) => set("company_name_ar", e.target.value)} required /></div>
                   <div className="space-y-2"><Label>{t("label.name_en")} *</Label>
-                    <Input value={form.name_en} onChange={(e) => set("name_en", e.target.value)} required /></div>
+                    <Input value={form.company_name_en} onChange={(e) => set("company_name_en", e.target.value)} required /></div>
                 </div>
                 <div className="space-y-2"><Label>{t("supplier.apply.type")} *</Label>
-                  <Select value={form.supplier_type} onValueChange={(v) => set("supplier_type", v as SupplierType)}>
+                  <Select value={form.supplier_type_id.toString()} onValueChange={(v) => set("supplier_type_id", Number(v))}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="direct_hotel">{t("supplier.type.direct_hotel")}</SelectItem>
-                      <SelectItem value="wholesaler">{t("supplier.type.wholesaler")}</SelectItem>
-                      <SelectItem value="dmc">{t("supplier.type.dmc")}</SelectItem>
-                      <SelectItem value="hotel_supplier">{t("supplier.type.hotel_supplier")}</SelectItem>
-                      <SelectItem value="other">{t("supplier.type.other")}</SelectItem>
+                      <SelectItem value="1">DMC</SelectItem>
+                      <SelectItem value="2">Hotel Supplier</SelectItem>
+                      <SelectItem value="3">Direct Hotel</SelectItem>
+                      <SelectItem value="4">Wholesaler</SelectItem>
+                      <SelectItem value="5">Other</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -167,23 +227,23 @@ function ApplyPage() {
                   <div className="space-y-2"><Label>{t("label.tax_number")}</Label>
                     <Input value={form.tax_number} onChange={(e) => set("tax_number", e.target.value)} /></div>
                   <div className="space-y-2"><Label>{t("label.cr")}</Label>
-                    <Input value={form.commercial_registration} onChange={(e) => set("commercial_registration", e.target.value)} /></div>
+                    <Input value={form.commercial_register} onChange={(e) => set("commercial_register", e.target.value)} /></div>
                   <div className="space-y-2"><Label>{t("label.country")}</Label>
-                    <Select value={form.country_code} onValueChange={(v) => { set("country_code", v); set("city_id", ""); }}>
+                    <Select value={form.country_id.toString()} onValueChange={(v) => { set("country_id", Number(v)); set("city_id", 0); }}>
                       <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
-                      <SelectContent>{countries.map((c) => (
-                        <SelectItem key={c.code} value={c.code}>{lang === "ar" ? c.name_ar : c.name_en}</SelectItem>
+                      <SelectContent>{countries.map((c: any) => (
+                        <SelectItem key={c.id} value={c.id.toString()}>{lang === "ar" ? c.name_ar : c.name_en}</SelectItem>
                       ))}</SelectContent>
                     </Select></div>
                   <div className="space-y-2"><Label>{t("label.city")}</Label>
-                    <Select value={form.city_id} onValueChange={(v) => set("city_id", v)} disabled={!form.country_code}>
+                    <Select value={form.city_id.toString()} onValueChange={(v) => set("city_id", Number(v))} disabled={!form.country_id}>
                       <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
-                      <SelectContent>{cities.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>{lang === "ar" ? c.name_ar : c.name_en}</SelectItem>
+                      <SelectContent>{cities.map((c: any) => (
+                        <SelectItem key={c.id} value={c.id.toString()}>{lang === "ar" ? c.name_ar : c.name_en}</SelectItem>
                       ))}</SelectContent>
                     </Select></div>
                   <div className="space-y-2 sm:col-span-2"><Label>{t("label.address")}</Label>
-                    <Textarea rows={2} value={form.address_line1} onChange={(e) => set("address_line1", e.target.value)} /></div>
+                    <Textarea rows={2} value={form.address} onChange={(e) => set("address", e.target.value)} /></div>
                   <div className="space-y-2 sm:col-span-2"><Label>{t("label.website")}</Label>
                     <Input value={form.website} onChange={(e) => set("website", e.target.value)} placeholder="https://" /></div>
                 </div>
@@ -206,9 +266,9 @@ function ApplyPage() {
                 <div className="rounded-md border p-3">
                   <div className="font-semibold mb-2">{t("supplier.apply.step_company")}</div>
                   <div className="grid grid-cols-2 gap-2 text-muted-foreground">
-                    <div>{t("label.name_ar")}:</div><div className="text-foreground">{form.name_ar}</div>
-                    <div>{t("label.name_en")}:</div><div className="text-foreground">{form.name_en}</div>
-                    <div>{t("supplier.apply.type")}:</div><div className="text-foreground">{t(`supplier.type.${form.supplier_type}`)}</div>
+                    <div>{t("label.name_ar")}:</div><div className="text-foreground">{form.company_name_ar}</div>
+                    <div>{t("label.name_en")}:</div><div className="text-foreground">{form.company_name_en}</div>
+                    <div>{t("supplier.apply.type")}:</div><div className="text-foreground">{form.supplier_type_id}</div>
                   </div>
                 </div>
                 <div className="rounded-md border p-3">
@@ -225,7 +285,7 @@ function ApplyPage() {
             {error && <div className="rounded-md bg-destructive/10 text-destructive px-3 py-2 text-sm">{error}</div>}
 
             <div className="flex justify-between pt-4 border-t">
-              <Button variant="ghost" onClick={() => (step === 0 ? navigate({ to: "/auth" }) : setStep(step - 1))} disabled={busy}>
+              <Button variant="ghost" onClick={() => (step === 0 ? navigate("/auth") : setStep(step - 1))} disabled={busy}>
                 <ArrowLeft className="h-4 w-4 me-1" />{step === 0 ? t("supplier.apply.back_to_signin") : t("actions.back")}
               </Button>
               {step < 3 ? (
@@ -248,3 +308,5 @@ function ApplyPage() {
     </div>
   );
 }
+
+export default Component;

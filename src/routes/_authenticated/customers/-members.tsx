@@ -1,14 +1,22 @@
+import { Link } from "react-router-dom";
+import { db } from "@/lib/api/db";
+import { apiClient } from "@/lib/api/api-client";
 // Individuals tab — Excel bulk import of individual customers under a company entity.
 import { useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
 import * as XLSX from "xlsx";
-import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { FileSpreadsheet, Upload, Download, CheckCircle2, XCircle, Users } from "lucide-react";
 import { formatDateTime } from "@/lib/format";
 import { toast } from "sonner";
@@ -32,12 +40,20 @@ function norm(s: unknown): string {
 
 function headerKey(h: string): string | null {
   const x = h.toLowerCase().replace(/[\s_-]+/g, "");
-  if (/(الاسمبالعربي|الاسمعربي|اسمعربي|namear|arabicname|الاسمالكامل|الاسم|^name$|fullname)/.test(x)) return "name_ar";
+  if (
+    /(الاسمبالعربي|الاسمعربي|اسمعربي|namear|arabicname|الاسمالكامل|الاسم|^name$|fullname)/.test(x)
+  )
+    return "name_ar";
   if (/(الاسمبالانجليزي|اسمانجليزي|nameen|englishname)/.test(x)) return "name_en";
   if (/(البريد|الايميل|الإيميل|email|mail)/.test(x)) return "email";
   if (/(الجوال|جوال|موبايل|mobile|cell)/.test(x)) return "mobile";
   if (/(الهاتف|هاتف|phone|tel)/.test(x)) return "phone";
-  if (/(الهوية|هوية|رقمالهوية|nationalid|iqama|اقامة|الإقامة|id(number)?$|passport|جوازالسفر|جواز)/.test(x)) return "national_id";
+  if (
+    /(الهوية|هوية|رقمالهوية|nationalid|iqama|اقامة|الإقامة|id(number)?$|passport|جوازالسفر|جواز)/.test(
+      x,
+    )
+  )
+    return "national_id";
   return null;
 }
 
@@ -51,7 +67,7 @@ export function MembersTab({ customerId, canWrite }: { customerId: string; canWr
   const members = useQuery({
     queryKey: ["customer-members", customerId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from("customers")
         .select("id, code, name_ar, name_en, email, mobile, phone, status, created_at")
         .eq("parent_customer_id", customerId)
@@ -77,28 +93,33 @@ export function MembersTab({ customerId, canWrite }: { customerId: string; canWr
         const k = headerKey(h);
         if (k && !Object.values(headerMap).includes(k)) headerMap[h] = k;
       }
-      if (!Object.values(headerMap).includes("name_ar") && !Object.values(headerMap).includes("name_en")) {
+      if (
+        !Object.values(headerMap).includes("name_ar") &&
+        !Object.values(headerMap).includes("name_en")
+      ) {
         toast.error(t("members.no_name_column"));
         return;
       }
-      const parsed: ParsedRow[] = raw.map((r) => {
-        const o: Record<string, string> = {};
-        for (const [h, k] of Object.entries(headerMap)) o[k] = norm(r[h]);
-        const nameAr = o.name_ar || o.name_en || "";
-        const nameEn = o.name_en || o.name_ar || "";
-        const email = o.email && EMAIL_RE.test(o.email) ? o.email.toLowerCase() : null;
-        const row: ParsedRow = {
-          name_ar: nameAr.slice(0, 200),
-          name_en: nameEn.slice(0, 200),
-          email,
-          mobile: o.mobile ? o.mobile.slice(0, 40) : null,
-          phone: o.phone ? o.phone.slice(0, 40) : null,
-          national_id: o.national_id ? o.national_id.slice(0, 50) : null,
-          valid: !!nameAr,
-        };
-        if (!row.valid) row.reason = t("members.missing_name");
-        return row;
-      }).filter((r) => r.name_ar || r.email || r.mobile);
+      const parsed: ParsedRow[] = raw
+        .map((r) => {
+          const o: Record<string, string> = {};
+          for (const [h, k] of Object.entries(headerMap)) o[k] = norm(r[h]);
+          const nameAr = o.name_ar || o.name_en || "";
+          const nameEn = o.name_en || o.name_ar || "";
+          const email = o.email && EMAIL_RE.test(o.email) ? o.email.toLowerCase() : null;
+          const row: ParsedRow = {
+            name_ar: nameAr.slice(0, 200),
+            name_en: nameEn.slice(0, 200),
+            email,
+            mobile: o.mobile ? o.mobile.slice(0, 40) : null,
+            phone: o.phone ? o.phone.slice(0, 40) : null,
+            national_id: o.national_id ? o.national_id.slice(0, 50) : null,
+            valid: !!nameAr,
+          };
+          if (!row.valid) row.reason = t("members.missing_name");
+          return row;
+        })
+        .filter((r) => r.name_ar || r.email || r.mobile);
       if (parsed.length === 0) {
         toast.error(t("members.empty_file"));
         return;
@@ -127,8 +148,7 @@ export function MembersTab({ customerId, canWrite }: { customerId: string; canWr
           preferred_language: "ar" as const,
         }));
         // code is auto-generated by a database trigger on insert
-        const { error } = await supabase.from("customers").insert(chunk as never);
-        if (error) throw error;
+        await apiClient.customers.create(chunk as never);
         inserted += chunk.length;
       }
       return inserted;
@@ -192,11 +212,13 @@ export function MembersTab({ customerId, canWrite }: { customerId: string; canWr
                 <div className="flex flex-wrap items-center gap-2 text-sm">
                   <span className="font-medium">{fileName}</span>
                   <Badge variant="secondary" className="gap-1">
-                    <CheckCircle2 className="h-3.5 w-3.5" /> {validRows.length} {t("members.valid_rows")}
+                    <CheckCircle2 className="h-3.5 w-3.5" /> {validRows.length}{" "}
+                    {t("members.valid_rows")}
                   </Badge>
                   {invalidRows.length > 0 && (
                     <Badge variant="destructive" className="gap-1">
-                      <XCircle className="h-3.5 w-3.5" /> {invalidRows.length} {t("members.invalid_rows")}
+                      <XCircle className="h-3.5 w-3.5" /> {invalidRows.length}{" "}
+                      {t("members.invalid_rows")}
                     </Badge>
                   )}
                 </div>
@@ -219,16 +241,20 @@ export function MembersTab({ customerId, canWrite }: { customerId: string; canWr
                           <TableCell dir="ltr">{r.email || "—"}</TableCell>
                           <TableCell dir="ltr">{r.mobile || "—"}</TableCell>
                           <TableCell>
-                            {r.valid
-                              ? <Badge variant="secondary">{t("members.ready")}</Badge>
-                              : <Badge variant="destructive">{r.reason}</Badge>}
+                            {r.valid ? (
+                              <Badge variant="secondary">{t("members.ready")}</Badge>
+                            ) : (
+                              <Badge variant="destructive">{r.reason}</Badge>
+                            )}
                           </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>
                   {rows.length > 50 && (
-                    <p className="p-2 text-center text-xs text-muted-foreground">+{rows.length - 50} {t("members.more_rows")}</p>
+                    <p className="p-2 text-center text-xs text-muted-foreground">
+                      +{rows.length - 50} {t("members.more_rows")}
+                    </p>
                   )}
                 </div>
                 <div className="flex gap-2">
@@ -237,9 +263,18 @@ export function MembersTab({ customerId, canWrite }: { customerId: string; canWr
                     disabled={validRows.length === 0 || importMut.isPending}
                     onClick={() => importMut.mutate(validRows)}
                   >
-                    {importMut.isPending ? t("actions.saving") : `${t("members.import_now")} (${validRows.length})`}
+                    {importMut.isPending
+                      ? t("actions.saving")
+                      : `${t("members.import_now")} (${validRows.length})`}
                   </Button>
-                  <Button size="sm" variant="outline" onClick={() => { setRows(null); setFileName(""); }}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setRows(null);
+                      setFileName("");
+                    }}
+                  >
                     {t("actions.cancel")}
                   </Button>
                 </div>
@@ -252,7 +287,8 @@ export function MembersTab({ customerId, canWrite }: { customerId: string; canWr
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-base">
-            <Users className="h-5 w-5 text-primary" /> {t("members.list_title")} ({members.data?.length ?? 0})
+            <Users className="h-5 w-5 text-primary" /> {t("members.list_title")} (
+            {members.data?.length ?? 0})
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -273,16 +309,27 @@ export function MembersTab({ customerId, canWrite }: { customerId: string; canWr
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {members.data!.map((m) => (
+                {members.data!.map((m: any) => (
                   <TableRow key={m.id}>
                     <TableCell className="font-mono text-xs">
-                      <Link to="/customers/$id" params={{ id: m.id }} className="text-primary hover:underline">{m.code}</Link>
+                      <Link
+                        to={`/customers/${m.id}`}
+                        className="text-primary hover:underline"
+                      >
+                        {m.code}
+                      </Link>
                     </TableCell>
-                    <TableCell>{lang === "ar" ? (m.name_ar || m.name_en) : (m.name_en || m.name_ar)}</TableCell>
+                    <TableCell>
+                      {lang === "ar" ? m.name_ar || m.name_en : m.name_en || m.name_ar}
+                    </TableCell>
                     <TableCell dir="ltr">{m.email || "—"}</TableCell>
                     <TableCell dir="ltr">{m.mobile || m.phone || "—"}</TableCell>
-                    <TableCell><Badge variant="outline">{t(`status.${m.status}`)}</Badge></TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{formatDateTime(m.created_at, lang)}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{t(`status.${m.status}`)}</Badge>
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {formatDateTime(m.created_at, lang)}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

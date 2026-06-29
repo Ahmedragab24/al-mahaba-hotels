@@ -1,12 +1,19 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "react-router-dom";
 import { useState, useMemo } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/page-header";
 import { useI18n } from "@/lib/i18n";
-import { useAuth } from "@/hooks/use-auth";
+import { useSelector } from "react-redux";
+import { selectAuth } from "@/store/features/authSlice";
+import { hasRole, hasAnyRole, isAdmin, canAccessModule } from "@/lib/auth-utils";
 import { useDebounce } from "@/lib/use-debounce";
 import { useCountries, useCities } from "@/lib/lookups";
+import { useGetHotelsQuery, useUpdateHotelMutation, useDeleteHotelMutation } from "@/store/services/hotels/hotelsService";
+import hotelImg1 from "@/assets/hotels/hotel-1.jpg";
+import hotelImg2 from "@/assets/hotels/hotel-2.jpg";
+import hotelImg3 from "@/assets/hotels/hotel-3.jpg";
+import hotelImg4 from "@/assets/hotels/hotel-4.jpg";
+import hotelImg5 from "@/assets/hotels/hotel-5.jpg";
+import hotelImg6 from "@/assets/hotels/hotel-6.jpg";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -21,16 +28,8 @@ import { DataPagination } from "@/components/data-pagination";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Plus, Search, Eye, Pencil, Archive, RotateCcw, Trash2, MapPin, Phone, Star, Hotel, CheckCircle2, Crown, Calendar } from "lucide-react";
 import { toast } from "sonner";
-import hotelImg1 from "@/assets/hotels/hotel-1.jpg";
-import hotelImg2 from "@/assets/hotels/hotel-2.jpg";
-import hotelImg3 from "@/assets/hotels/hotel-3.jpg";
-import hotelImg4 from "@/assets/hotels/hotel-4.jpg";
-import hotelImg5 from "@/assets/hotels/hotel-5.jpg";
-import hotelImg6 from "@/assets/hotels/hotel-6.jpg";
 
-export const Route = createFileRoute("/_authenticated/hotels/")({
-  component: HotelsList,
-});
+
 
 const PAGE_SIZE = 12;
 const STATUSES = ["active", "inactive", "archived"] as const;
@@ -44,12 +43,11 @@ function hotelImage(id: string) {
   return HOTEL_IMAGES[h % HOTEL_IMAGES.length];
 }
 
-function HotelsList() {
+export default function HotelsList() {
   const { t, lang } = useI18n();
-  const auth = useAuth();
-  const qc = useQueryClient();
+  const auth = useSelector(selectAuth);
   const navigate = useNavigate();
-  const canWrite = auth.hasAnyRole(["super_admin", "admin", "operations_manager", "operations_agent"]);
+  const canWrite = hasAnyRole(auth, ["super_admin", "financial_manager", "sales_manager", "employee", "viewer"]);
 
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<string>("all");
@@ -62,77 +60,86 @@ function HotelsList() {
   const dSearch = useDebounce(search, 300);
   const countries = useCountries();
   const cities = useCities();
+  const countriesList = Array.isArray(countries.data) ? countries.data : ((countries.data as any)?.data || []);
+  const citiesList = Array.isArray(cities.data) ? cities.data : ((cities.data as any)?.data || []);
   const cityMap = useMemo(() => {
     const m = new Map<string, { name_en: string; name_ar: string }>();
-    cities.data?.forEach((c: any) => m.set(c.id, c));
+    citiesList.forEach((c: any) => m.set(c.id, c));
     return m;
   }, [cities.data]);
 
-  const metrics = useQuery({
-    queryKey: ["hotels-metrics"],
-    queryFn: async () => {
-      const { data } = await supabase.from("hotels").select("status,star_rating,created_at,deleted_at");
-      const rows = data ?? [];
-      const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
-      return {
-        total: rows.filter(r => !r.deleted_at).length,
-        active: rows.filter(r => r.status === "active" && !r.deleted_at).length,
-        archived: rows.filter(r => r.deleted_at).length,
-        luxury: rows.filter(r => Number(r.star_rating) === 5 && !r.deleted_at).length,
-        thisMonth: rows.filter(r => new Date(r.created_at) >= monthStart && !r.deleted_at).length,
-      };
-    },
-  });
+  const { data: allHotels, isLoading: isLoadingHotels, isFetching: isFetchingHotels } = useGetHotelsQuery();
+  const [updateHotel] = useUpdateHotelMutation();
+  const [deleteHotel] = useDeleteHotelMutation();
 
-  const list = useQuery({
-    queryKey: ["hotels", { dSearch, status, country, stars, showArchived, page }],
-    queryFn: async () => {
-      let q = supabase.from("hotels").select(
-        "id,code,name_en,name_ar,brand,star_rating,country_code,city_id,district,phone,email,status,created_at,deleted_at",
-        { count: "exact" },
+  const hotelsList = useMemo(() => {
+    return Array.isArray(allHotels) ? allHotels : Array.isArray((allHotels as any)?.data) ? (allHotels as any).data : [];
+  }, [allHotels]);
+
+  const metrics = useMemo(() => {
+    const rows = hotelsList;
+    const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
+    return {
+      data: {
+        total: rows.filter((r: any) => !r.is_archived).length,
+        active: rows.filter((r: any) => r.status && !r.is_archived).length,
+        archived: rows.filter((r: any) => r.is_archived).length,
+        luxury: rows.filter((r: any) => Number(r.stars) === 5 && !r.is_archived).length,
+        thisMonth: rows.filter((r: any) => new Date(r.created_at) >= monthStart && !r.is_archived).length,
+      }
+    };
+  }, [hotelsList]);
+
+  const list = useMemo(() => {
+    let q = hotelsList;
+    if (!showArchived) q = q.filter((r: any) => !r.is_archived);
+    if (status !== "all") {
+      const activeBool = status === "active";
+      q = q.filter((r: any) => !!r.status === activeBool);
+    }
+    if (country !== "all") q = q.filter((r: any) => String(r.country_id) === String(country));
+    if (stars !== "all") q = q.filter((r: any) => Number(r.stars) === Number(stars));
+    if (dSearch.trim()) {
+      const s = dSearch.trim().toLowerCase();
+      q = q.filter((r: any) =>
+        (r.code || "").toLowerCase().includes(s) ||
+        (r.name_en || "").toLowerCase().includes(s) ||
+        (r.name_ar || "").toLowerCase().includes(s) ||
+        (r.brand || "").toLowerCase().includes(s) ||
+        (r.email || "").toLowerCase().includes(s) ||
+        (r.phone || "").toLowerCase().includes(s)
       );
-      if (!showArchived) q = q.is("deleted_at", null);
-      if (status !== "all") q = q.eq("status", status as any);
-      if (country !== "all") q = q.eq("country_code", country);
-      if (stars !== "all") q = q.eq("star_rating", Number(stars));
-      if (dSearch.trim()) {
-        const s = `%${dSearch.trim()}%`;
-        q = q.or(`code.ilike.${s},name_en.ilike.${s},name_ar.ilike.${s},brand.ilike.${s},email.ilike.${s},phone.ilike.${s}`);
-      }
-      const from = (page - 1) * PAGE_SIZE;
-      q = q.order("created_at", { ascending: false }).range(from, from + PAGE_SIZE - 1);
-      const { data, error, count } = await q;
-      if (error) throw error;
-      return { rows: data ?? [], count: count ?? 0 };
-    },
-  });
+    }
+    const count = q.length;
+    q = [...q].sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    const from = (page - 1) * PAGE_SIZE;
+    const rows = q.slice(from, from + PAGE_SIZE);
 
-  const archiveMut = useMutation({
-    mutationFn: async ({ id, action }: { id: string; action: "archive" | "restore" | "delete" }) => {
-      if (action === "delete") {
-        const { error } = await supabase.from("hotels").delete().eq("id", id);
-        if (error) throw error;
-      } else if (action === "archive") {
-        const { error } = await supabase.from("hotels").update({ deleted_at: new Date().toISOString(), status: "archived" }).eq("id", id);
-        if (error) throw error;
+    return {
+      isLoading: isLoadingHotels,
+      isFetching: isFetchingHotels,
+      data: { rows, count }
+    };
+  }, [hotelsList, showArchived, status, country, stars, dSearch, page, isLoadingHotels, isFetchingHotels]);
+
+  const handleArchive = async ({ id, action }: { id: string; action: "archive" | "restore" | "delete" }) => {
+    try {
+      if (action === "delete" || action === "archive") {
+        await deleteHotel(id).unwrap();
       } else {
-        const { error } = await supabase.from("hotels").update({ deleted_at: null, status: "active" }).eq("id", id);
-        if (error) throw error;
+        await updateHotel({ id, body: { status: "1" } as any }).unwrap();
       }
-    },
-    onSuccess: (_d, v) => {
-      toast.success(v.action === "restore" ? t("toast.restored") : t("toast.deleted"));
-      qc.invalidateQueries({ queryKey: ["hotels"] });
-      qc.invalidateQueries({ queryKey: ["lookup", "hotels-lite"] });
+      toast.success(action === "restore" ? t("toast.restored") : t("toast.deleted"));
       setConfirm(null);
-    },
-    onError: (e: any) => toast.error(e.message ?? t("toast.error")),
-  });
+    } catch (e: any) {
+      toast.error(e.data?.message || e.message || t("toast.error"));
+    }
+  };
 
   const total = list.data?.count ?? 0;
 
   const actions = useMemo(() => canWrite && (
-    <Button onClick={() => navigate({ to: "/hotels/new" })} size="sm">
+    <Button onClick={() => navigate("/hotels/new")} size="sm">
       <Plus className="h-4 w-4" /> {t("hotels.new")}
     </Button>
   ), [canWrite, navigate, t]);
@@ -151,13 +158,6 @@ function HotelsList() {
           <KpiCard icon={Archive} tone="muted" label={t("kpi.archived")} value={metrics.data?.archived ?? "—"}
             active={showArchived} onClick={() => { setShowArchived(true); setStatus("all"); setPage(1); }} />
           <KpiCard icon={Calendar} tone="info" label={t("kpi.this_month")} value={metrics.data?.thisMonth ?? "—"} />
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <StatusPill label={t("filter.all")} tone="primary" active={stars === "all"} onClick={() => { setStars("all"); setPage(1); }} />
-          {STARS.map(n => (
-            <StatusPill key={n} label={"★".repeat(n)} tone="warning" active={stars === String(n)} onClick={() => { setStars(String(n)); setPage(1); }} />
-          ))}
         </div>
 
         <Card>
@@ -188,8 +188,8 @@ function HotelsList() {
                 <SelectTrigger className="w-full"><SelectValue placeholder={t("filter.country")} /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t("filter.all")}</SelectItem>
-                  {countries.data?.map((c) => (
-                    <SelectItem key={c.code} value={c.code}>{lang === "ar" ? c.name_ar : c.name_en}</SelectItem>
+                  {countriesList.map((c: any) => (
+                    <SelectItem key={c.id} value={String(c.id)}>{lang === "ar" ? c.name_ar : c.name_en}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -235,19 +235,17 @@ function HotelsList() {
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
           {list.data?.rows.map((h: any) => {
             const name = lang === "ar" ? (h.name_ar || h.name_en) : (h.name_en || h.name_ar);
-            const city = h.city_id ? cityMap.get(h.city_id) : null;
-            const cityName = city ? (lang === "ar" ? city.name_ar : city.name_en) : null;
-            const countryName = countries.data?.find((c) => c.code === h.country_code);
-            const location = [cityName, countryName ? (lang === "ar" ? countryName.name_ar : countryName.name_en) : h.country_code]
-              .filter(Boolean).join("، ");
+            const cityName = h.city ? (lang === "ar" ? (h.city.name_ar || h.city.name_en) : (h.city.name_en || h.city.name_ar)) : null;
+            const countryName = h.country ? (lang === "ar" ? (h.country.name_ar || h.country.name_en) : (h.country.name_en || h.country.name_ar)) : null;
+            const location = [cityName, countryName].filter(Boolean).join("، ");
             return (
               <Card
                 key={h.id}
-                className={`group overflow-hidden border transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${h.deleted_at ? "opacity-60" : ""}`}
+                className={`group overflow-hidden border transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${h.is_archived ? "opacity-60" : ""}`}
               >
-                <Link to="/hotels/$id" params={{ id: h.id }} className="relative block aspect-[3/2] overflow-hidden bg-muted">
+                <Link to={`/hotels/${h.id}`} className="relative block aspect-[3/2] overflow-hidden bg-muted">
                   <img
-                    src={hotelImage(h.id)}
+                    src={h.cover_image || hotelImage(h.id)}
                     alt={name}
                     width={768}
                     height={512}
@@ -258,10 +256,10 @@ function HotelsList() {
                   <div className="absolute top-3 start-3 flex items-center gap-2">
                     <StatusBadge status={h.status} />
                   </div>
-                  {h.star_rating ? (
+                  {h.stars ? (
                     <Badge className="absolute top-3 end-3 gap-1 bg-card/90 text-amber-500 shadow backdrop-blur hover:bg-card/90">
                       <Star className="h-3 w-3 fill-current" />
-                      <span className="text-foreground">{h.star_rating}</span>
+                      <span className="text-foreground">{h.stars}</span>
                     </Badge>
                   ) : null}
                   <div className="absolute bottom-2 start-3 end-3">
@@ -270,7 +268,7 @@ function HotelsList() {
                 </Link>
                 <CardContent className="space-y-2 p-4">
                   <div className="flex items-start justify-between gap-2">
-                    <Link to="/hotels/$id" params={{ id: h.id }} className="line-clamp-1 text-base font-semibold hover:underline">
+                    <Link to={`/hotels/${h.id}`} className="line-clamp-1 text-base font-semibold hover:underline">
                       {name}
                     </Link>
                   </div>
@@ -286,21 +284,21 @@ function HotelsList() {
                     </div>
                   )}
                   <div className="flex items-center justify-between border-t pt-3">
-                    <div className="text-amber-500 text-sm">{h.star_rating ? "★".repeat(h.star_rating) : ""}</div>
+                    <div className="text-amber-500 text-sm">{h.stars ? "★".repeat(h.stars) : ""}</div>
                     <div className="flex gap-1">
                       <Button asChild variant="ghost" size="icon" className="h-8 w-8" title={t("actions.view")}>
-                        <Link to="/hotels/$id" params={{ id: h.id }}><Eye className="h-4 w-4" /></Link>
+                        <Link to={`/hotels/${h.id}`}><Eye className="h-4 w-4" /></Link>
                       </Button>
-                      {canWrite && !h.deleted_at && (
+                      {canWrite && !h.is_archived && (
                         <Button asChild variant="ghost" size="icon" className="h-8 w-8" title={t("actions.edit")}>
-                          <Link to="/hotels/$id" params={{ id: h.id }} search={{ edit: 1 } as any}><Pencil className="h-4 w-4" /></Link>
+                          <Link to={`/hotels/${h.id}?edit=1`}><Pencil className="h-4 w-4" /></Link>
                         </Button>
                       )}
-                      {auth.isAdmin && (h.deleted_at
+                      {isAdmin(auth) && (h.is_archived
                         ? <Button variant="ghost" size="icon" className="h-8 w-8" title={t("actions.restore")} onClick={() => setConfirm({ id: h.id, action: "restore" })}><RotateCcw className="h-4 w-4" /></Button>
                         : <Button variant="ghost" size="icon" className="h-8 w-8" title={t("actions.archive")} onClick={() => setConfirm({ id: h.id, action: "archive" })}><Archive className="h-4 w-4" /></Button>
                       )}
-                      {auth.isAdmin && h.deleted_at && (
+                      {isAdmin(auth) && h.is_archived && (
                         <Button variant="ghost" size="icon" className="h-8 w-8" title={t("actions.delete")} onClick={() => setConfirm({ id: h.id, action: "delete" })}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                       )}
                     </div>
@@ -324,7 +322,7 @@ function HotelsList() {
         title={confirm?.action === "restore" ? t("actions.restore") : confirm?.action === "delete" ? t("actions.delete") : t("actions.archive")}
         description={confirm?.action === "delete" ? t("toast.confirm_delete") : confirm?.action === "restore" ? "" : t("toast.confirm_archive")}
         destructive={confirm?.action !== "restore"}
-        onConfirm={() => confirm && archiveMut.mutate(confirm)}
+        onConfirm={() => confirm && handleArchive(confirm)}
       />
     </>
   );

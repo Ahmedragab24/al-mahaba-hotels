@@ -1,28 +1,28 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "react-router-dom";
+import { db } from "@/lib/api/db";
+import { apiClient } from "@/lib/api/api-client";
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/page-header";
 import { useI18n } from "@/lib/i18n";
-import { useAuth } from "@/hooks/use-auth";
+import { useSelector } from "react-redux";
+import { selectAuth } from "@/store/features/authSlice";
+import { hasRole, hasAnyRole, isAdmin, canAccessModule } from "@/lib/auth-utils";
 import { useDebounce } from "@/lib/use-debounce";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { DataPagination } from "@/components/data-pagination";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { DataPagination } from "@/components/data-pagination";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Plus, Search, Eye, X, Mailbox, Hourglass, PackageCheck, CheckCircle2, XCircle,
   Timer, MapPin, Users,
 } from "lucide-react";
 import { formatDate } from "@/lib/format";
 import { KpiCard, StatusPill, type KpiTone } from "@/components/list-toolkit";
-
-export const Route = createFileRoute("/_authenticated/rfqs/")({
-  component: RfqList,
-});
 
 const PAGE_SIZE = 20;
 
@@ -34,11 +34,11 @@ export function RStatusBadge({ status, t }: { status: string; t: (k: string, f?:
   return <Badge variant={variant as any} className={cls}>{t(`rstatus.${status}`)}</Badge>;
 }
 
-function RfqList() {
+export default function RfqList() {
   const { t, lang } = useI18n();
-  const auth = useAuth();
+  const auth = useSelector(selectAuth);
   const navigate = useNavigate();
-  const canWrite = auth.hasAnyRole(["super_admin", "admin", "sales_manager", "sales_agent", "operations_manager", "operations_agent"]);
+  const canWrite = hasAnyRole(auth, ["super_admin", "admin", "sales_manager", "sales_agent", "operations_manager", "operations_agent"]);
 
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
@@ -55,15 +55,15 @@ function RfqList() {
     queryKey: ["rfq-metrics"],
     queryFn: async () => {
       const [{ data: rows }, { data: resp }] = await Promise.all([
-        supabase.from("rfqs").select("status").is("deleted_at", null),
-        supabase.from("rfq_supplier_responses").select("responded_at, request:rfq_supplier_requests(sent_at)"),
+        db.from("rfqs").select("status").is("deleted_at", null),
+        db.from("rfq_supplier_responses").select("responded_at, request:rfq_supplier_requests(sent_at)"),
       ]);
       const all = rows ?? [];
       const by = (...s: string[]) => all.filter((r: any) => s.includes(r.status)).length;
       const times = (resp ?? [])
         .filter((r: any) => r.request?.sent_at)
         .map((r: any) => (new Date(r.responded_at).getTime() - new Date(r.request.sent_at).getTime()) / 86400000);
-      const avg = times.length ? (times.reduce((a, b) => a + b, 0) / times.length).toFixed(1) : "—";
+      const avg = times.length ? (times.reduce((a: number, b: number) => a + b, 0) / times.length).toFixed(1) : "—";
       return {
         total: all.length,
         draft: by("draft"),
@@ -82,7 +82,7 @@ function RfqList() {
   const list = useQuery({
     queryKey: ["rfqs", { dSearch, status, from, to, page }],
     queryFn: async () => {
-      let q = supabase.from("rfqs").select(
+      let q = db.from("rfqs").select(
         "id,rfq_no,status,currency,destination,travel_start,travel_end,created_at,customer:customers(name_en,name_ar),supplier_requests:rfq_supplier_requests(supplier:suppliers(name_en,name_ar))",
         { count: "exact" },
       ).is("deleted_at", null);
@@ -101,7 +101,7 @@ function RfqList() {
 
   const total = list.data?.count ?? 0;
   const actions = useMemo(() => canWrite && (
-    <Button size="sm" onClick={() => navigate({ to: "/rfqs/new" })}>
+    <Button size="sm" onClick={() => navigate("/rfqs/new")}>
       <Plus className="h-4 w-4" /> {t("rfq.new")}
     </Button>
   ), [canWrite, navigate, t]);
@@ -206,7 +206,7 @@ function RfqList() {
                             <X className="h-4 w-4" /> {t("actions.reset")}
                           </Button>
                         ) : canWrite && (
-                          <Button size="sm" onClick={() => navigate({ to: "/rfqs/new" })}>
+                          <Button size="sm" onClick={() => navigate("/rfqs/new")}>
                             <Plus className="h-4 w-4" /> {t("rfq.new")}
                           </Button>
                         )}
@@ -222,10 +222,10 @@ function RfqList() {
                     <TableRow
                       key={r.id}
                       className="whitespace-nowrap cursor-pointer hover:bg-muted/50"
-                      onClick={() => navigate({ to: "/rfqs/$id", params: { id: r.id } })}
+                      onClick={() => navigate(`/rfqs/${r.id}`)}
                     >
                       <TableCell className="font-mono text-xs">
-                        <Link to="/rfqs/$id" params={{ id: r.id }} className="text-primary hover:underline" onClick={(e) => e.stopPropagation()}>
+                        <Link to={`/rfqs/${r.id}`} className="text-primary hover:underline" onClick={(e: any) => e.stopPropagation()}>
                           {r.rfq_no}
                         </Link>
                       </TableCell>
@@ -261,7 +261,7 @@ function RfqList() {
                       <TableCell><RStatusBadge status={r.status} t={t} /></TableCell>
                       <TableCell className="text-end" onClick={(e) => e.stopPropagation()}>
                         <Button asChild variant="ghost" size="icon" title={t("actions.view")}>
-                          <Link to="/rfqs/$id" params={{ id: r.id }}><Eye className="h-4 w-4" /></Link>
+                          <Link to={`/rfqs/${r.id}`}><Eye className="h-4 w-4" /></Link>
                         </Button>
                       </TableCell>
                     </TableRow>

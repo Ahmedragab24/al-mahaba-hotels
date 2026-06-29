@@ -1,10 +1,13 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { Link } from "react-router-dom";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/page-header";
 import { useI18n } from "@/lib/i18n";
-import { useAuth } from "@/hooks/use-auth";
+import { useSelector } from "react-redux";
+import { selectAuth } from "@/store/features/authSlice";
+import { hasRole, hasAnyRole, isAdmin, canAccessModule } from "@/lib/auth-utils";
+import { useGetRoomsQuery, useUpdateRoomMutation, useDeleteRoomMutation } from "@/store/services/rooms/roomsService";
+import { useGetRoomTypesQuery } from "@/store/services/attributes/room-types";
 import { useDebounce } from "@/lib/use-debounce";
 import { useHotelsLite } from "@/lib/lookups";
 import { dbErrorMessage } from "@/lib/db-errors";
@@ -19,38 +22,24 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { DataPagination } from "@/components/data-pagination";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { RoomTypeDialog } from "./-dialog";
-import { Plus, Search, Eye, Pencil, Archive, RotateCcw, Trash2, Users, BedDouble, Ruler, CigaretteOff } from "lucide-react";
+import { Plus, Search, Eye, Pencil, Archive, RotateCcw, Trash2, BedDouble } from "lucide-react";
 import { toast } from "sonner";
-import hotelImg1 from "@/assets/hotels/hotel-1.jpg";
-import hotelImg2 from "@/assets/hotels/hotel-2.jpg";
-import hotelImg3 from "@/assets/hotels/hotel-3.jpg";
-import hotelImg4 from "@/assets/hotels/hotel-4.jpg";
-import hotelImg5 from "@/assets/hotels/hotel-5.jpg";
-import hotelImg6 from "@/assets/hotels/hotel-6.jpg";
 
-export const Route = createFileRoute("/_authenticated/room-types/")({
-  component: RoomTypesList,
-});
 
 const PAGE_SIZE = 12;
-const HOTEL_IMAGES = [hotelImg1, hotelImg2, hotelImg3, hotelImg4, hotelImg5, hotelImg6];
 
-function hotelImage(id: string) {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
-  return HOTEL_IMAGES[h % HOTEL_IMAGES.length];
-}
 
-function RoomTypesList() {
+
+export default function RoomTypesList() {
   const { t, lang } = useI18n();
-  const auth = useAuth();
+  const auth = useSelector(selectAuth);
   const qc = useQueryClient();
-  const canWrite = auth.hasAnyRole(["super_admin", "admin", "operations_manager", "operations_agent"]);
+  const canWrite = hasAnyRole(auth, ["super_admin", "financial_manager", "sales_manager", "employee", "viewer"]);
 
   const [search, setSearch] = useState("");
   const [hotel, setHotel] = useState("all");
+  const [roomType, setRoomType] = useState("all");
   const [active, setActive] = useState("all");
-  const [showArchived, setShowArchived] = useState(false);
   const [page, setPage] = useState(1);
   const [dialog, setDialog] = useState<{ open: boolean; initial?: any }>({ open: false });
   const [confirm, setConfirm] = useState<{ id: string; action: "archive" | "restore" | "delete" } | null>(null);
@@ -58,55 +47,49 @@ function RoomTypesList() {
   const dSearch = useDebounce(search, 300);
   const hotels = useHotelsLite();
 
-  const list = useQuery({
-    queryKey: ["room-types", { dSearch, hotel, active, showArchived, page }],
-    queryFn: async () => {
-      let q = supabase.from("hotel_room_types").select(
-        "id,code,name_en,name_ar,max_adults,max_children,max_occupancy,bed_type,size_sqm,smoking_allowed,is_active,deleted_at,created_at,hotel_id,hotel:hotels(name_en,name_ar)",
-        { count: "exact" },
-      );
-      if (!showArchived) q = q.is("deleted_at", null);
-      if (hotel !== "all") q = q.eq("hotel_id", hotel);
-      if (active !== "all") q = q.eq("is_active", active === "active");
-      if (dSearch.trim()) {
-        const s = `%${dSearch.trim()}%`;
-        q = q.or(`code.ilike.${s},name_en.ilike.${s},name_ar.ilike.${s},bed_type.ilike.${s}`);
-      }
-      const from = (page - 1) * PAGE_SIZE;
-      q = q.order("created_at", { ascending: false }).range(from, from + PAGE_SIZE - 1);
-      const { data, error, count } = await q;
-      if (error) throw error;
-      return { rows: data ?? [], count: count ?? 0 };
-    },
-  });
+  const { data: roomTypesData } = useGetRoomTypesQuery(
+    hotel !== "all" ? { hotel_id: hotel } : undefined
+  );
+  const roomTypes = Array.isArray(roomTypesData)
+    ? roomTypesData
+    : Array.isArray(roomTypesData?.data)
+      ? roomTypesData.data
+      : [];
+
+  const list = useGetRoomsQuery({
+    search: dSearch || undefined,
+    hotel_id: hotel !== "all" ? hotel : undefined,
+    room_type_id: roomType !== "all" ? roomType : undefined,
+    status: active === "active" ? "1" : active === "inactive" ? "0" : undefined,
+    page: page,
+    per_page: PAGE_SIZE,
+    lang: lang,
+  } as any);
+
+  const [deleteRoom] = useDeleteRoomMutation();
+  const [updateRoom] = useUpdateRoomMutation();
 
   const archiveMut = useMutation({
     mutationFn: async ({ id, action }: { id: string; action: "archive" | "restore" | "delete" }) => {
-      if (action !== "restore") {
-        const { count } = await supabase.from("rates").select("*", { count: "exact", head: true })
-          .eq("room_type_id", id).is("deleted_at", null).in("status", ["approved", "pending_approval"]);
-        if ((count ?? 0) > 0) throw new Error(t("room_types.err_linked_rates"));
-      }
-      if (action === "delete") {
-        const { error } = await supabase.from("hotel_room_types").delete().eq("id", id);
-        if (error) throw error;
-      } else if (action === "archive") {
-        const { error } = await supabase.from("hotel_room_types").update({ deleted_at: new Date().toISOString(), is_active: false }).eq("id", id);
-        if (error) throw error;
+      if (action === "delete" || action === "archive") {
+        await deleteRoom(id).unwrap();
       } else {
-        const { error } = await supabase.from("hotel_room_types").update({ deleted_at: null, is_active: true }).eq("id", id);
-        if (error) throw error;
+        await updateRoom({ id, body: { status: "1" } as any }).unwrap();
       }
     },
     onSuccess: (_d, v) => {
       toast.success(v.action === "restore" ? t("toast.restored") : t("toast.deleted"));
-      qc.invalidateQueries({ queryKey: ["room-types"] });
+      list.refetch();
+      qc.invalidateQueries({ queryKey: ["rooms"] });
+      qc.invalidateQueries({ queryKey: ["lookup", "room-types"] });
       setConfirm(null);
     },
-    onError: (e: any) => { toast.error(dbErrorMessage(e, t)); setConfirm(null); },
+    onError: (e: any) => { toast.error(dbErrorMessage(e)); setConfirm(null); },
   });
 
-  const total = list.data?.count ?? 0;
+  const listData = list.data as any;
+  const rows = Array.isArray(listData) ? listData : Array.isArray(listData?.data) ? listData.data : [];
+  const total = listData?.total ?? listData?.meta?.total ?? rows.length;
 
   return (
     <>
@@ -135,7 +118,7 @@ function RoomTypesList() {
                 <SelectTrigger className="w-full"><SelectValue placeholder={t("filter.hotel")} /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t("filter.all")}</SelectItem>
-                  {hotels.data?.map((h) => <SelectItem key={h.id} value={h.id}>{lang === "ar" ? (h.name_ar || h.name_en) : (h.name_en || h.name_ar)}</SelectItem>)}
+                  {(Array.isArray(hotels.data) ? hotels.data : Array.isArray(hotels.data?.data) ? hotels.data.data : [])?.map((h: any) => <SelectItem key={h.id} value={h.id}>{lang === "ar" ? (h.name_ar || h.name_en) : (h.name_en || h.name_ar)}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -150,10 +133,22 @@ function RoomTypesList() {
                 </SelectContent>
               </Select>
             </div>
-            <label className="flex items-center gap-2 text-sm self-end pb-2 cursor-pointer mt-auto">
-              <Checkbox checked={showArchived} onCheckedChange={(v) => { setShowArchived(!!v); setPage(1); }} />
-              {t("filter.show_archived")}
-            </label>
+
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-muted-foreground">{lang === "ar" ? "نوع الغرفة" : "Room Type"}</Label>
+              <Select value={roomType} onValueChange={(v) => { setRoomType(v); setPage(1); }}>
+                <SelectTrigger className="w-full"><SelectValue placeholder={lang === "ar" ? "اختر نوع الغرفة" : "Select Room Type"} /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t("filter.all")}</SelectItem>
+                  {roomTypes.map((rt: any) => (
+                    <SelectItem key={rt.id} value={rt.id.toString()}>
+                      {lang === "ar" ? (rt.name_ar || rt.name_en) : (rt.name_en || rt.name_ar)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
           </CardContent>
         </Card>
 
@@ -172,22 +167,23 @@ function RoomTypesList() {
           </div>
         )}
 
-        {!list.isLoading && (list.data?.rows.length ?? 0) === 0 && (
+        {!list.isLoading && rows.length === 0 && (
           <Card><CardContent className="py-16 text-center text-muted-foreground">{t("label.no_results")}</CardContent></Card>
         )}
 
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
-          {list.data?.rows.map((r: any) => {
+          {rows.map((r: any) => {
             const name = lang === "ar" ? (r.name_ar || r.name_en) : (r.name_en || r.name_ar);
             const hotelName = r.hotel ? (lang === "ar" ? (r.hotel.name_ar || r.hotel.name_en) : (r.hotel.name_en || r.hotel.name_ar)) : "—";
+            const roomTypeName = r.room_type ? (lang === "ar" ? (r.room_type.name_ar || r.room_type.name_en) : (r.room_type.name_en || r.room_type.name_ar)) : "";
             return (
               <Card
                 key={r.id}
-                className={`group overflow-hidden border transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${r.deleted_at ? "opacity-60" : ""}`}
+                className={`group overflow-hidden border transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${r.is_archived ? "opacity-60" : ""}`}
               >
-                <Link to="/room-types/$id" params={{ id: r.id }} className="relative block aspect-[3/2] overflow-hidden bg-muted">
+                <Link to={`/room-types/${r.id}`} className="relative block aspect-[3/2] overflow-hidden bg-muted">
                   <img
-                    src={hotelImage(r.id)}
+                    src={r.cover_image}
                     alt={name}
                     width={768}
                     height={512}
@@ -196,9 +192,9 @@ function RoomTypesList() {
                   />
                   <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-foreground/60 to-transparent" />
                   <div className="absolute top-3 start-3 flex items-center gap-2">
-                    {r.deleted_at
+                    {r.is_archived
                       ? <Badge variant="secondary">{t("status.archived")}</Badge>
-                      : r.is_active
+                      : r.status
                         ? <Badge className="bg-emerald-100 text-emerald-800 border-transparent">{t("status.active")}</Badge>
                         : <Badge variant="secondary">{t("status.inactive")}</Badge>
                     }
@@ -209,32 +205,32 @@ function RoomTypesList() {
                 </Link>
                 <CardContent className="space-y-2 p-4">
                   <div className="flex items-start justify-between gap-2">
-                    <Link to="/room-types/$id" params={{ id: r.id }} className="line-clamp-1 text-base font-semibold hover:underline">
+                    <Link to={`/room-types/${r.id}`} className="line-clamp-1 text-base font-semibold hover:underline">
                       {name}
                     </Link>
                   </div>
                   <div className="text-xs font-medium text-primary">{hotelName}</div>
-                  {r.bed_type && (
+                  {roomTypeName && (
                     <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                       <BedDouble className="h-3.5 w-3.5 shrink-0" />
-                      <span>{r.bed_type}</span>
+                      <span>{roomTypeName}</span>
                     </div>
                   )}
                   <div className="flex items-center justify-end border-t pt-3">
                     <div className="flex gap-1">
                       <Button asChild variant="ghost" size="icon" className="h-8 w-8" title={t("actions.view")}>
-                        <Link to="/room-types/$id" params={{ id: r.id }}><Eye className="h-4 w-4" /></Link>
+                        <Link to={`/room-types/${r.id}`}><Eye className="h-4 w-4" /></Link>
                       </Button>
-                      {canWrite && !r.deleted_at && (
+                      {canWrite && !r.is_archived && (
                         <Button variant="ghost" size="icon" className="h-8 w-8" title={t("actions.edit")} onClick={() => setDialog({ open: true, initial: r })}>
                           <Pencil className="h-4 w-4" />
                         </Button>
                       )}
-                      {auth.isAdmin && (r.deleted_at
+                      {isAdmin(auth) && (r.is_archived
                         ? <Button variant="ghost" size="icon" className="h-8 w-8" title={t("actions.restore")} onClick={() => setConfirm({ id: r.id, action: "restore" })}><RotateCcw className="h-4 w-4" /></Button>
                         : <Button variant="ghost" size="icon" className="h-8 w-8" title={t("actions.archive")} onClick={() => setConfirm({ id: r.id, action: "archive" })}><Archive className="h-4 w-4" /></Button>
                       )}
-                      {auth.isAdmin && r.deleted_at && (
+                      {isAdmin(auth) && r.is_archived && (
                         <Button variant="ghost" size="icon" className="h-8 w-8" title={t("actions.delete")} onClick={() => setConfirm({ id: r.id, action: "delete" })}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                       )}
                     </div>
@@ -245,15 +241,11 @@ function RoomTypesList() {
           })}
         </div>
 
-        <Card>
-          <CardContent className="p-0">
-            <DataPagination page={page} pageSize={PAGE_SIZE} total={total} onPage={setPage} />
-          </CardContent>
-        </Card>
+        <DataPagination page={page} pageSize={PAGE_SIZE} total={total} onPage={setPage} />
       </div>
 
       <RoomTypeDialog open={dialog.open} onOpenChange={(v) => setDialog({ open: v, initial: v ? dialog.initial : undefined })}
-        initial={dialog.initial} onSaved={() => qc.invalidateQueries({ queryKey: ["room-types"] })} />
+        initial={dialog.initial} onSaved={() => { list.refetch(); qc.invalidateQueries({ queryKey: ["rooms"] }); qc.invalidateQueries({ queryKey: ["lookup", "room-types"] }); }} />
       <ConfirmDialog
         open={!!confirm}
         onOpenChange={(v) => !v && setConfirm(null)}

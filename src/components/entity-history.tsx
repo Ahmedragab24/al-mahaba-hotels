@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/lib/api/db";
 import { useI18n } from "@/lib/i18n";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -32,7 +32,7 @@ export function EntityHistory({ entityType, entityId }: { entityType: string; en
   const q = useQuery({
     queryKey: ["entity-history", entityType, entityId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from("audit_logs")
         .select("id,action,user_email,created_at,old_values,new_values")
         .eq("entity_type", entityType)
@@ -63,7 +63,7 @@ export function EntityHistory({ entityType, entityId }: { entityType: string; en
             {!q.isLoading && (q.data?.length ?? 0) === 0 && (
               <TableRow><TableCell colSpan={4} className="py-8 text-center text-muted-foreground">{t("history.empty")}</TableCell></TableRow>
             )}
-            {q.data?.map((row: any) => {
+            {(Array.isArray(q.data) ? q.data : Array.isArray(q.data?.data) ? q.data.data : [])?.map((row: any) => {
               const changes = row.action === "update" ? changedFields(row.old_values, row.new_values) : [];
               return (
                 <TableRow key={row.id}>

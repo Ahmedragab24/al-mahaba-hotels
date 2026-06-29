@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/lib/api/db";
+import { apiClient } from "@/lib/api/api-client";
 import { toast } from "sonner";
 import { Upload, Image as ImageIcon, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -37,14 +38,7 @@ export function ImageUpload({
       return;
     }
     let active = true;
-    supabase.storage
-      .from(bucket)
-      .createSignedUrl(value, 3600)
-      .then(({ data, error }) => {
-        if (active && data?.signedUrl) {
-          setPreviewUrl(data.signedUrl);
-        }
-      });
+    setPreviewUrl(apiClient.attachments.getUrl(value));
     return () => {
       active = false;
     };
@@ -76,7 +70,7 @@ export function ImageUpload({
     try {
       const storageName = `${crypto.randomUUID()}.${ext}`;
       const path = `${pathPrefix}/${storageName}`;
-      const { error: upErr } = await supabase.storage
+      const { error: upErr } = await db.storage
         .from(bucket)
         .upload(path, file, {
           contentType: file.type || `image/${ext === "jpg" ? "jpeg" : ext}`,

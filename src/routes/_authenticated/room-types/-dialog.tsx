@@ -1,16 +1,16 @@
-import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useState, useEffect } from "react";
+import { apiClient } from "@/lib/api/api-client";
 import { useI18n } from "@/lib/i18n";
-import { useHotelsLite, useHotelViews } from "@/lib/lookups";
+import { useHotels, useHotelViews } from "@/lib/lookups";
 import { dbErrorMessage } from "@/lib/db-errors";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/use-auth";
+import { useCreateRoomMutation, useUpdateRoomMutation } from "@/store/services/rooms/roomsService";
+import { useGetRoomTypesQuery } from "@/store/services/attributes/room-types";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return <div className="space-y-1"><div className="text-xs text-muted-foreground">{label}</div>{children}</div>;
@@ -20,47 +20,79 @@ export function RoomTypeDialog({ open, onOpenChange, initial, onSaved, fixedHote
   open: boolean; onOpenChange: (v: boolean) => void; initial?: any; onSaved: () => void; fixedHotelId?: string;
 }) {
   const { t, lang } = useI18n();
-  const hotels = useHotelsLite();
+  const hotels = useHotels();
   const [v, setV] = useState<any>({});
+  const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
   const isEdit = !!initial?.id;
+  const { token } = useAuth();
 
   const views = useHotelViews(v.hotel_id || null);
 
-  const save = useMutation({
-    mutationFn: async () => {
-      if (!v.hotel_id) throw new Error(`${t("room_types.hotel")}: ${t("label.required")}`);
-      if (!v.name_en?.trim() || !v.name_ar?.trim()) throw new Error(t("label.required"));
-      const payload: any = {
-        hotel_id: v.hotel_id,
-        code: v.code?.trim() || "",
-        name_en: v.name_en.trim(), name_ar: v.name_ar.trim(),
-        bed_type: v.bed_type?.trim() || null,
-        view_name: v.view_name?.trim() || null,
-      };
-      if (!isEdit) {
-        payload.max_adults = 2;
-        payload.max_children = 0;
-        payload.max_occupancy = 2;
-        payload.smoking_allowed = false;
-        payload.is_active = true;
-        payload.sort_order = 0;
+  const { data: roomTypesData } = useGetRoomTypesQuery(
+    v.hotel_id ? { hotel_id: v.hotel_id } : undefined,
+    { skip: !v.hotel_id }
+  );
+
+  const roomTypes = Array.isArray(roomTypesData)
+    ? roomTypesData
+    : Array.isArray(roomTypesData?.data)
+      ? roomTypesData.data
+      : [];
+
+  const [createRoom, { isLoading: isCreating }] = useCreateRoomMutation();
+  const [updateRoom, { isLoading: isUpdating }] = useUpdateRoomMutation();
+
+  const isPending = isCreating || isUpdating;
+
+  useEffect(() => {
+    if (open) {
+      setV(initial ?? (fixedHotelId ? { hotel_id: fixedHotelId } : {}));
+      setCoverImageFile(null);
+    }
+  }, [open, initial, fixedHotelId]);
+
+  const handleSave = async () => {
+    if (!v.hotel_id) {
+      toast.error(`${t("room_types.hotel")}: ${t("label.required")}`);
+      return;
+    }
+    if (!v.name_en?.trim() || !v.name_ar?.trim()) {
+      toast.error(t("label.required"));
+      return;
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append("name_ar", v.name_ar.trim());
+      formData.append("name_en", v.name_en.trim());
+      formData.append("view", v.view?.trim() || v.view_name?.trim() || "");
+      formData.append("hotel_id", String(v.hotel_id));
+      formData.append("room_type_id", String(v.room_type_id));
+
+      const statusValue = (v.status === undefined || v.status === true || v.status === 1 || v.status === "1") ? "1" : "0";
+      formData.append("status", statusValue);
+
+      if (coverImageFile) {
+        formData.append("cover_image", coverImageFile);
       }
+
       if (isEdit) {
-        const { error } = await supabase.from("hotel_room_types").update(payload).eq("id", initial.id);
-        if (error) throw error;
+        await updateRoom({ id: initial.id, body: formData }).unwrap();
+        toast.success(t("toast.updated"));
       } else {
-        const { data: u } = await supabase.auth.getUser();
-        payload.created_by = u.user?.id ?? null;
-        const { error } = await supabase.from("hotel_room_types").insert(payload);
-        if (error) throw error;
+        await createRoom(formData).unwrap();
+        toast.success(t("toast.created"));
       }
-    },
-    onSuccess: () => { toast.success(t("toast.saved")); onSaved(); onOpenChange(false); },
-    onError: (e: any) => toast.error(dbErrorMessage(e, t)),
-  });
+      onSaved();
+      onOpenChange(false);
+      setCoverImageFile(null);
+    } catch (e: any) {
+      toast.error(dbErrorMessage(e));
+    }
+  };
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if (o) setV(initial ?? (fixedHotelId ? { hotel_id: fixedHotelId } : {})); }}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold tracking-tight">
@@ -73,10 +105,10 @@ export function RoomTypeDialog({ open, onOpenChange, initial, onSaved, fixedHote
           <div className="grid gap-4 md:grid-cols-2">
             {!fixedHotelId && (
               <Field label={`${t("room_types.hotel")} *`}>
-                <Select value={v.hotel_id ?? ""} onValueChange={(x) => setV({ ...v, hotel_id: x, view_id: null })} disabled={isEdit}>
+                <Select value={v.hotel_id?.toString() ?? ""} onValueChange={(x) => setV({ ...v, hotel_id: x, view_id: null })} disabled={isEdit}>
                   <SelectTrigger className="h-10"><SelectValue placeholder={t("room_types.hotel")} /></SelectTrigger>
                   <SelectContent>
-                    {hotels.data?.map((h) => (
+                    {(Array.isArray(hotels.data) ? hotels.data : Array.isArray(hotels.data?.data) ? hotels.data.data : [])?.map((h: any) => (
                       <SelectItem key={h.id} value={h.id}>
                         {lang === "ar" ? (h.name_ar || h.name_en) : (h.name_en || h.name_ar)}
                       </SelectItem>
@@ -86,15 +118,6 @@ export function RoomTypeDialog({ open, onOpenChange, initial, onSaved, fixedHote
               </Field>
             )}
 
-            <Field label={t("label.code")}>
-              <Input
-                className="h-10 font-mono"
-                dir="ltr"
-                value={v.code ?? ""}
-                onChange={(e) => setV({ ...v, code: e.target.value })}
-                placeholder="RT-00001 (auto)"
-              />
-            </Field>
 
             <Field label={`${t("label.name_ar")} *`}>
               <Input
@@ -117,32 +140,85 @@ export function RoomTypeDialog({ open, onOpenChange, initial, onSaved, fixedHote
             <Field label={t("label.view")}>
               <Input
                 className="h-10"
-                value={v.view_name ?? ""}
-                onChange={(e) => setV({ ...v, view_name: e.target.value })}
+                value={v.view ?? ""}
+                onChange={(e) => setV({ ...v, view: e.target.value })}
                 placeholder={lang === "ar" ? "أدخل الإطلالة (مثال: إطلالة على البحر)" : "Enter view (e.g. Sea View)"}
               />
             </Field>
 
             <Field label={lang === "ar" ? "نوع الغرفة" : "Room Type"}>
-              <Select value={v.bed_type ?? ""} onValueChange={(x) => setV({ ...v, bed_type: x })}>
+              <Select value={v.room_type_id?.toString() ?? ""} onValueChange={(x) => setV({ ...v, room_type_id: x })} disabled={!v.hotel_id}>
                 <SelectTrigger className="h-10">
                   <SelectValue placeholder={lang === "ar" ? "اختر نوع الغرفة" : "Select room type"} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="single">{lang === "ar" ? "أحادي" : "Single"}</SelectItem>
-                  <SelectItem value="double">{lang === "ar" ? "ثنائي" : "Double"}</SelectItem>
-                  <SelectItem value="triple">{lang === "ar" ? "ثلاثي" : "Triple"}</SelectItem>
-                  <SelectItem value="quadruple">{lang === "ar" ? "رباعي" : "Quadruple"}</SelectItem>
-                  <SelectItem value="quintuple">{lang === "ar" ? "خماسي" : "Quintuple"}</SelectItem>
-                  <SelectItem value="sextuple">{lang === "ar" ? "سداسي" : "Sextuple"}</SelectItem>
+                  {roomTypes.map((rt: any) => (
+                    <SelectItem key={rt.id} value={rt.id.toString()}>
+                      {lang === "ar" ? (rt.name_ar || rt.name_en) : (rt.name_en || rt.name_ar)}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
+            </Field>
+
+            <Field label={lang === "ar" ? "الحالة" : "Status"}>
+              <Select
+                value={v.status !== undefined ? (v.status ? "1" : "0") : "1"}
+                onValueChange={(x) => setV({ ...v, status: x === "1" })}
+              >
+                <SelectTrigger className="h-10">
+                  <SelectValue placeholder={lang === "ar" ? "اختر الحالة" : "Select Status"} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">{lang === "ar" ? "نشط" : "Active"}</SelectItem>
+                  <SelectItem value="0">{lang === "ar" ? "غير نشط" : "Inactive"}</SelectItem>
+                </SelectContent>
+              </Select>
+            </Field>
+
+            <Field label={lang === "ar" ? "صورة الغرفة" : "Room Image"}>
+              <Input
+                type="file"
+                accept="image/*"
+                className="h-10"
+                onChange={(e) => {
+                  const file = e.target.files?.[0] || null;
+                  if (file) {
+                    if (file.size > 5 * 1024 * 1024) {
+                      toast.error(lang === "ar" ? "حجم الصورة يجب ألا يتجاوز 5 ميجابايت" : "Image size must not exceed 5MB");
+                      e.target.value = "";
+                      setCoverImageFile(null);
+                      return;
+                    }
+                    const allowedTypes = ["image/jpeg", "image/png", "image/jpg", "image/webp"];
+                    if (!allowedTypes.includes(file.type)) {
+                      toast.error(lang === "ar" ? "امتداد الصورة غير مدعوم" : "Unsupported image format");
+                      e.target.value = "";
+                      setCoverImageFile(null);
+                      return;
+                    }
+                  }
+                  setCoverImageFile(file);
+                }}
+              />
+              {v.cover_image && !coverImageFile && (
+                <div className="mt-2 flex flex-col gap-1">
+                  <span className="text-[11px] text-muted-foreground">{lang === "ar" ? "الصورة الحالية:" : "Current Image:"}</span>
+                  <img src={v.cover_image} alt="Current cover" className="h-16 w-24 object-cover rounded border" />
+                </div>
+              )}
+              {coverImageFile && (
+                <div className="mt-2 flex flex-col gap-1">
+                  <span className="text-[11px] text-muted-foreground">{lang === "ar" ? "معاينة الصورة الجديدة:" : "New Image Preview:"}</span>
+                  <img src={URL.createObjectURL(coverImageFile)} alt="New cover preview" className="h-16 w-24 object-cover rounded border" />
+                </div>
+              )}
             </Field>
           </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>{t("actions.cancel")}</Button>
-          <Button onClick={() => save.mutate()} disabled={save.isPending}>{save.isPending ? t("actions.saving") : t("actions.save")}</Button>
+          <Button onClick={handleSave} disabled={isPending}>{isPending ? t("actions.saving") : t("actions.save")}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

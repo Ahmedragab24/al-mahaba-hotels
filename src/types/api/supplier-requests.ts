@@ -1,0 +1,30 @@
+export interface SupplierRequest {
+  address_line1: string | null;
+  admin_notes: string | null;
+  city_id: string | null;
+  commercial_reg_path: string | null;
+  commercial_registration: string | null;
+  contact_email: string;
+  contact_name: string;
+  contact_phone: string;
+  contact_position: string | null;
+  country_code: string | null;
+  created_at: string;
+  created_supplier_id: string | null;
+  created_user_id: string | null;
+  id: string;
+  legal_name: string | null;
+  name_ar: string;
+  name_en: string;
+  profile_path: string | null;
+  rejection_reason: string | null;
+  reviewed_at: string | null;
+  reviewed_by: string | null;
+  status: string;
+  submitted_at: string;
+  supplier_type: string;
+  tax_cert_path: string | null;
+  tax_number: string | null;
+  updated_at: string;
+  website: string | null;
+}

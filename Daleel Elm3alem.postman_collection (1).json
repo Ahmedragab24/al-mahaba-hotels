@@ -1,0 +1,6162 @@
+{
+  "info": {
+    "_postman_id": "e2ba9fa1-c3e1-496a-8d36-341ca3201689",
+    "name": "Daleel Elm3alem",
+    "description": "Postman Collection with properly formatted raw JSON bodies.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "42346452"
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"super_admin@uat-hrs.sa\",\n    \"password\": \"password\",\n    \"type\": \"super_admin\" //super_admin,sales_manager,financial_manager,viewer,employee\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{url}}/login",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{url}}/logout",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "logout"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Get All Users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{url}}/users",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "users"
+              ],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "en",
+                  "description": "Response language: ar or en",
+                  "disabled": true
+                },
+                {
+                  "key": "search",
+                  "value": "ayman mohamed",
+                  "disabled": true
+                },
+                {
+                  "key": "type",
+                  "value": "",
+                  "description": "Filter by type",
+                  "disabled": true
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get User By ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{url}}/users/1?lang=ar",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "users",
+                "1"
+              ],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "ar"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "name",
+                  "value": "Sales Representative",
+                  "type": "text"
+                },
+                {
+                  "key": "email",
+                  "value": "sales@uat-hrs.sa",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "password123",
+                  "type": "text"
+                },
+                {
+                  "key": "phone",
+                  "value": "+966512345678",
+                  "type": "text"
+                },
+                {
+                  "key": "type",
+                  "value": "sales_manager",
+                  "type": "text"
+                },
+                {
+                  "key": "country_id",
+                  "value": "1",
+                  "type": "text",
+                  "description": "nullable",
+                  "disabled": true
+                },
+                {
+                  "key": "city_id",
+                  "value": "1",
+                  "type": "text",
+                  "description": "nullable",
+                  "disabled": true
+                },
+                {
+                  "key": "status",
+                  "value": "1",
+                  "type": "text"
+                },
+                {
+                  "key": "permissions[bookings]",
+                  "value": "true",
+                  "type": "text"
+                },
+                {
+                  "key": "image",
+                  "type": "file",
+                  "description": "Optional profile picture",
+                  "value": null,
+                  "disabled": true
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{url}}/users",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "users"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "_method",
+                  "value": "PUT",
+                  "type": "text"
+                },
+                {
+                  "key": "name",
+                  "value": "Sales Executive",
+                  "type": "text"
+                },
+                {
+                  "key": "email",
+                  "value": "sales@uat-hrs.sa",
+                  "type": "text"
+                },
+                {
+                  "key": "phone",
+                  "value": "+966512345678",
+                  "type": "text"
+                },
+                {
+                  "key": "type",
+                  "value": "sales_manager",
+                  "type": "text"
+                },
+                {
+                  "key": "country_id",
+                  "value": "1",
+                  "type": "text",
+                  "disabled": true
+                },
+                {
+                  "key": "city_id",
+                  "value": "1",
+                  "type": "text",
+                  "disabled": true
+                },
+                {
+                  "key": "permissions[bookings]",
+                  "value": "true",
+                  "type": "text"
+                },
+                {
+                  "key": "image",
+                  "type": "file",
+                  "description": "Optional profile picture replacement",
+                  "value": null
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{url}}/users/2",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "users",
+                "2"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete User",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{url}}/users/2",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "users",
+                "2"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Suppliers",
+      "item": [
+        {
+          "name": "Get All Suppliers",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{url}}/suppliers?lang=ar&search=&supplier_type_id=1&status=1&country_id=1&all=1&is_archived",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "suppliers"
+              ],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "ar"
+                },
+                {
+                  "key": "search",
+                  "value": ""
+                },
+                {
+                  "key": "supplier_type_id",
+                  "value": "1"
+                },
+                {
+                  "key": "status",
+                  "value": "1"
+                },
+                {
+                  "key": "country_id",
+                  "value": "1"
+                },
+                {
+                  "key": "all",
+                  "value": "1",
+                  "type": "text"
+                },
+                {
+                  "key": "is_archived",
+                  "value": null,
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Supplier By ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{url}}/suppliers/1?lang=ar",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "suppliers",
+                "1"
+              ],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "ar"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Supplier",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name_ar\": \"مورد تجريبي\",\n    \"name_en\": \"Test Supplier\",\n    \"supplier_type_id\": 1,\n    \"tax_number\": \"123456789012345\",\n    \"commercial_register\": \"1010101010\",\n    \"currency_id\": 1,\n    \"country_id\": 1,\n    \"city_id\": 1,\n    \"phone\": \"+966599999999\",\n    \"email\": \"supplier@example.com\",\n    \"address_1\": \"العليا، الرياض\",\n    \"address_2\": \"hhh\",\n    \"website\": \"https://fbi.com\",\n    \"notes\": \"ok\",\n    \"status\": 1\n}\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{url}}/suppliers",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "suppliers"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Supplier",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name_ar\": \"مورد تجريبي\",\n    \"name_en\": \"Test Supplier\",\n    \"supplier_type_id\": 1,\n    \"tax_number\": \"123456789012345\",\n    \"commercial_register\": \"1010101010\",\n    \"currency_id\": 1,\n    \"country_id\": 1,\n    \"city_id\": 1,\n    \"phone\": \"+966599999999\",\n    \"email\": \"suplier@example.com\",\n    \"address_1\": \"العليا، الرياض\",\n    \"address_2\": \"hhh\",\n    \"website\": \"https://fbi.com\",\n    \"notes\": \"ok\",\n    \"rating\":5,\n    \"status\": 1\n}\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{url}}/suppliers/2",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "suppliers",
+                "2"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Supplier",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{url}}/suppliers/1",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "suppliers",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Supplier Requests (Join Applications)",
+      "item": [
+        {
+          "name": "Submit Join Request (Public)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"company_name_ar\": \"شركة النخبة\",\n    \"company_name_en\": \"Elite Company\",\n    \"supplier_type_id\": 1,\n    \"tax_number\": \"123456789012345\",\n    \"commercial_register\": \"1010101010\",\n    \"country_id\": 1,\n    \"city_id\": 1,\n    \"address\": \"الرياض، العليا\",\n    \"website\": \"https://elite.sa\",\n    \"contact_name\": \"محمد العتيبي\",\n    \"contact_position\": \"مدير عام\",\n    \"contact_email\": \"mohammad@elite.sa\",\n    \"contact_phone\": \"+966501234567\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{url}}/supplier-requests",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "supplier-requests"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Requests",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{url}}/supplier-requests?lang=ar&status=pending&search=",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "supplier-requests"
+              ],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "ar"
+                },
+                {
+                  "key": "status",
+                  "value": "pending",
+                  "description": "pending - accepted - rejected"
+                },
+                {
+                  "key": "search",
+                  "value": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Request By ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{url}}/supplier-requests/1?lang=ar",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "supplier-requests",
+                "1"
+              ],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "ar"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Request Status (Approve/Reject)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"status\": \"rejected\", //accepted - rejected\n    \"rejection_reason\": \"مزاجي\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{url}}/supplier-requests/1/status",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "supplier-requests",
+                "1",
+                "status"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Request",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{url}}/supplier-requests/1",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "supplier-requests",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Attributes",
+      "item": [
+        {
+          "name": "Countries",
+          "item": [
+            {
+              "name": "Get All Countries",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{auth_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{url}}/countries?lang=en&all=1",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "countries"
+                  ],
+                  "query": [
+                    {
+                      "key": "lang",
+                      "value": "en"
+                    },
+                    {
+                      "key": "search",
+                      "value": "",
+                      "disabled": true
+                    },
+                    {
+                      "key": "per_page",
+                      "value": "",
+                      "disabled": true
+                    },
+                    {
+                      "key": "all",
+                      "value": "1",
+                      "type": "text"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Get Country By ID",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{url}}/countries/1?lang=ar",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "countries",
+                    "1"
+                  ],
+                  "query": [
+                    {
+                      "key": "lang",
+                      "value": "ar"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Create Country",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{auth_token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"name_ar\": \"مصر\",\n    \"name_en\": \"Egypt\",\n    \"symbol_ar\": \"ج.م\",\n    \"symbol_en\": \"EGP\",\n    \"status\": 1\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{url}}/countries",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "countries"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Update Country",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{auth_token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"name_ar\": \"جمهورية مصر العربية\",\n    \"name_en\": \"Egypt Arab Rep\",\n    \"symbol_ar\": \"ج.م\",\n    \"symbol_en\": \"EGP\",\n    \"status\": 1\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{url}}/countries/1",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "countries",
+                    "1"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Delete Country",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{auth_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{url}}/countries/1",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "countries",
+                    "1"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Cities",
+          "item": [
+            {
+              "name": "Get All Cities",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{url}}/cities?lang=ar&country_id=&search=&per_page=",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "cities"
+                  ],
+                  "query": [
+                    {
+                      "key": "lang",
+                      "value": "ar"
+                    },
+                    {
+                      "key": "country_id",
+                      "value": ""
+                    },
+                    {
+                      "key": "search",
+                      "value": ""
+                    },
+                    {
+                      "key": "per_page",
+                      "value": ""
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Get City By ID",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{url}}/cities/1?lang=ar",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "cities",
+                    "1"
+                  ],
+                  "query": [
+                    {
+                      "key": "lang",
+                      "value": "ar"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Create City",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{auth_token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"name_ar\": \"القاهرة\",\n    \"name_en\": \"Cairo\",\n    \"country_id\": 1,\n    \"status\": 1\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{url}}/cities",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "cities"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Update City",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{auth_token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"name_ar\": \"القاهرة الكبرى\",\n    \"name_en\": \"Greater Cairo\",\n    \"country_id\": 1,\n    \"status\": 1\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{url}}/cities/1",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "cities",
+                    "1"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Delete City",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{auth_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{url}}/cities/1",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "cities",
+                    "1"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Supplier Types",
+          "item": [
+            {
+              "name": "Get All Supplier Types",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{url}}/supplier-types?lang=ar&search=&per_page=",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "supplier-types"
+                  ],
+                  "query": [
+                    {
+                      "key": "lang",
+                      "value": "ar"
+                    },
+                    {
+                      "key": "search",
+                      "value": ""
+                    },
+                    {
+                      "key": "per_page",
+                      "value": ""
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Get Supplier Type By ID",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{url}}/supplier-types/1?lang=ar",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "supplier-types",
+                    "1"
+                  ],
+                  "query": [
+                    {
+                      "key": "lang",
+                      "value": "ar"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Create Supplier Type",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{auth_token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"key\": \"hotel_supplier\",\n    \"name_ar\": \"مورد فندق\",\n    \"name_en\": \"Hotel Supplier\",\n    \"status\": 1\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{url}}/supplier-types",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "supplier-types"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Update Supplier Type",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{auth_token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"key\": \"hotel_supplier\",\n    \"name_ar\": \"مورد فندق معدل\",\n    \"name_en\": \"Hotel Supplier Updated\",\n    \"status\": 1\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{url}}/supplier-types/1",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "supplier-types",
+                    "1"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Delete Supplier Type",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{auth_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{url}}/supplier-types/1",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "supplier-types",
+                    "1"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Currencies",
+          "item": [
+            {
+              "name": "Get All Currencies",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{url}}/currencies?lang=ar&search=&per_page=",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "currencies"
+                  ],
+                  "query": [
+                    {
+                      "key": "lang",
+                      "value": "ar"
+                    },
+                    {
+                      "key": "search",
+                      "value": ""
+                    },
+                    {
+                      "key": "per_page",
+                      "value": ""
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Get Currency By ID",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{url}}/currencies/1?lang=ar",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "currencies",
+                    "1"
+                  ],
+                  "query": [
+                    {
+                      "key": "lang",
+                      "value": "ar"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Create Currency",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{auth_token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"name_ar\": \"دولار أمريكي\",\n    \"name_en\": \"US Dollar\",\n    \"code\": \"USD\",\n    \"symbol_ar\": \"$\",\n    \"symbol_en\": \"$\",\n    \"rate_to_sar\": 3.75,\n    \"country_id\": 1,\n    \"status\": true\n}\n",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{url}}/currencies",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "currencies"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Update Currency",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{auth_token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"name_ar\": \"يورو\",\n    \"name_en\": \"Euro\",\n    \"code\": \"EUR\",\n    \"symbol_ar\": \"€\",\n    \"symbol_en\": \"€\",\n    \"rate_to_sar\": 4.08,\n    \"country_id\": 2,\n    \"status\": false\n}\n",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{url}}/currencies/1",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "currencies",
+                    "1"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Delete Currency",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{auth_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{url}}/currencies/1",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "currencies",
+                    "1"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Room Types",
+          "item": [
+            {
+              "name": "List Room Types",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{auth_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{url}}/room-types?lang=ar&all=1",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "room-types"
+                  ],
+                  "query": [
+                    {
+                      "key": "search",
+                      "value": "single",
+                      "description": "Search by name_ar, name_en, or code",
+                      "disabled": true
+                    },
+                    {
+                      "key": "per_page",
+                      "value": "15",
+                      "disabled": true
+                    },
+                    {
+                      "key": "lang",
+                      "value": "ar",
+                      "description": "Language of the localized fields (ar or en)"
+                    },
+                    {
+                      "key": "all",
+                      "value": "1"
+                    }
+                  ]
+                },
+                "description": "Retrieve list of all room types."
+              },
+              "response": []
+            },
+            {
+              "name": "Create Room Type",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{auth_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"code\": \"eight\",\n    \"name_ar\": \"ثنائي\",\n    \"name_en\": \"Double\"\n}"
+                },
+                "url": {
+                  "raw": "{{url}}/room-types",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "room-types"
+                  ]
+                },
+                "description": "Add a new room type attribute."
+              },
+              "response": []
+            },
+            {
+              "name": "Show Room Type",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{auth_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{url}}/room-types/1",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "room-types",
+                    "1"
+                  ]
+                },
+                "description": "Get details of a single room type attribute."
+              },
+              "response": []
+            },
+            {
+              "name": "Update Room Type",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"code\": \"double-updated\",\n    \"name_ar\": \"ثنائي معدل\",\n    \"name_en\": \"Double Updated\"\n}"
+                },
+                "url": {
+                  "raw": "{{url}}/room-types/8",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "room-types",
+                    "8"
+                  ]
+                },
+                "description": "Update a room type attribute."
+              },
+              "response": []
+            },
+            {
+              "name": "Delete Room Type",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{auth_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{url}}/room-types/7",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "room-types",
+                    "7"
+                  ]
+                },
+                "description": "Delete a room type attribute."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Meal Plans",
+          "item": [
+            {
+              "name": "List Meal Plans",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{auth_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{url}}/meal-plans?search=breakfast&status=1&per_page=15&lang=ar&all=1",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "meal-plans"
+                  ],
+                  "query": [
+                    {
+                      "key": "search",
+                      "value": "breakfast",
+                      "description": "Search by name_ar, name_en, or key"
+                    },
+                    {
+                      "key": "status",
+                      "value": "1",
+                      "description": "1 = Active, 0 = Inactive"
+                    },
+                    {
+                      "key": "per_page",
+                      "value": "15"
+                    },
+                    {
+                      "key": "lang",
+                      "value": "ar",
+                      "description": "Language of the localized fields (ar or en)"
+                    },
+                    {
+                      "key": "all",
+                      "value": "1",
+                      "description": "Optional: set to 1 to get all records without pagination (ideal for select dropdowns)"
+                    }
+                  ]
+                },
+                "description": "Retrieve list of all meal plans with optional query filters."
+              },
+              "response": []
+            },
+            {
+              "name": "Create Meal Plan",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{auth_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"key\": \"lunch\",\n    \"name_ar\": \"غداء\",\n    \"name_en\": \"Lunch\",\n    \"status\": true\n}"
+                },
+                "url": {
+                  "raw": "{{url}}/meal-plans",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "meal-plans"
+                  ]
+                },
+                "description": "Add a new meal plan attribute."
+              },
+              "response": []
+            },
+            {
+              "name": "Show Meal Plan",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{auth_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{url}}/meal-plans/1",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "meal-plans",
+                    "1"
+                  ]
+                },
+                "description": "Get details of a single meal plan."
+              },
+              "response": []
+            },
+            {
+              "name": "Update Meal Plan",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{auth_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"key\": \"lunch\",\n    \"name_ar\": \"غداء معدل\",\n    \"name_en\": \"Lunch Updated\",\n    \"status\": true\n}"
+                },
+                "url": {
+                  "raw": "{{url}}/meal-plans/1",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "meal-plans",
+                    "1"
+                  ]
+                },
+                "description": "Update details of an existing meal plan."
+              },
+              "response": []
+            },
+            {
+              "name": "Delete Meal Plan",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{auth_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{url}}/meal-plans/1",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "meal-plans",
+                    "1"
+                  ]
+                },
+                "description": "Delete a meal plan by ID."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Languages",
+          "item": [
+            {
+              "name": "List Languages",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{auth_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{url}}/languages?lang=ar",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "languages"
+                  ],
+                  "query": [
+                    {
+                      "key": "search",
+                      "value": "",
+                      "description": "Search by name_ar, name_en, or code",
+                      "disabled": true
+                    },
+                    {
+                      "key": "all",
+                      "value": "1",
+                      "description": "Bypass pagination and retrieve all results as flat array (use 1/true)",
+                      "disabled": true
+                    },
+                    {
+                      "key": "per_page",
+                      "value": "15",
+                      "disabled": true
+                    },
+                    {
+                      "key": "lang",
+                      "value": "ar"
+                    }
+                  ]
+                },
+                "description": "Retrieve list of languages (paginated by default, or flat list if all=1 is set)."
+              },
+              "response": []
+            },
+            {
+              "name": "Get Language",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{url}}/languages/1?lang=en",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "languages",
+                    "1"
+                  ],
+                  "query": [
+                    {
+                      "key": "lang",
+                      "value": "en",
+                      "description": "Language locale parameter"
+                    }
+                  ]
+                },
+                "description": "Get a specific language by ID."
+              },
+              "response": []
+            },
+            {
+              "name": "Create Language",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{auth_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name_ar\": \"ألماني\",\n  \"name_en\": \"German\",\n  \"code\": \"de\",\n  \"status\": true\n}"
+                },
+                "url": {
+                  "raw": "{{url}}/languages",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "languages"
+                  ]
+                },
+                "description": "Create a new language."
+              },
+              "response": []
+            },
+            {
+              "name": "Update Language",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{auth_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name_ar\": \"ألماني معدل\",\n  \"name_en\": \"German Updated\",\n  \"code\": \"de\",\n  \"status\": true\n}"
+                },
+                "url": {
+                  "raw": "{{url}}/languages/1",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "languages",
+                    "1"
+                  ]
+                },
+                "description": "Update an existing language."
+              },
+              "response": []
+            },
+            {
+              "name": "Delete Language",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{auth_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{url}}/languages/1",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "languages",
+                    "1"
+                  ]
+                },
+                "description": "Delete a language by ID."
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Hotels",
+      "item": [
+        {
+          "name": "Hotel views (الاطلالات)",
+          "item": [
+            {
+              "name": "List Hotel Views",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{auth_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{url}}/hotel-views?hotel_id=1",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "hotel-views"
+                  ],
+                  "query": [
+                    {
+                      "key": "search",
+                      "value": "HARAM",
+                      "description": "Search by name_ar, name_en, or code",
+                      "disabled": true
+                    },
+                    {
+                      "key": "status",
+                      "value": "1",
+                      "description": "1 = Active, 0 = Inactive ",
+                      "disabled": true
+                    },
+                    {
+                      "key": "per_page",
+                      "value": "15",
+                      "disabled": true
+                    },
+                    {
+                      "key": "lang",
+                      "value": "ar",
+                      "disabled": true
+                    },
+                    {
+                      "key": "all",
+                      "value": "1",
+                      "description": "Optional: set to 1 to get all records without pagination (ideal for select dropdowns)",
+                      "disabled": true
+                    },
+                    {
+                      "key": "hotel_id",
+                      "value": "1",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "description": "Retrieve list of all hotel views with optional query filters."
+              },
+              "response": []
+            },
+            {
+              "name": "Create Hotel View",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{auth_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"hotel_id\": 1, \n    \"code\": \"SEA\",\n    \"name_ar\": \"إطلالة بحرية\",\n    \"name_en\": \"Sea View\",\n    \"status\": 1\n}\n"
+                },
+                "url": {
+                  "raw": "{{url}}/hotel-views",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "hotel-views"
+                  ]
+                },
+                "description": "Add a new hotel view lookup."
+              },
+              "response": []
+            },
+            {
+              "name": "Show Hotel View",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{auth_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{url}}/hotel-views/1",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "hotel-views",
+                    "1"
+                  ]
+                },
+                "description": "Get details of a single hotel view lookup."
+              },
+              "response": []
+            },
+            {
+              "name": "Update Hotel View",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{auth_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"hotel_id\": 1,\n    \"code\": \"SEA_UPDATED\",\n    \"name_ar\": \"إطلالة بحرية معدلة\",\n    \"name_en\": \"Sea View Updated\",\n    \"status\": 0\n}\n"
+                },
+                "url": {
+                  "raw": "{{url}}/hotel-views/1",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "hotel-views",
+                    "1"
+                  ]
+                },
+                "description": "Update details of an existing hotel view lookup."
+              },
+              "response": []
+            },
+            {
+              "name": "Delete Hotel View",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{auth_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{url}}/hotel-views/1",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "hotel-views",
+                    "1"
+                  ]
+                },
+                "description": "Delete a hotel view lookup by ID."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Hotels Images",
+          "item": [
+            {
+              "name": "Upload Hotel Images",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{auth_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "images[]",
+                      "type": "file",
+                      "src": "postman-cloud:///1f12f71b-edb0-4270-9eff-58954117aa26"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{url}}/hotels/1/images",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "hotels",
+                    "1",
+                    "images"
+                  ]
+                },
+                "description": "رفع عدة صور للفندق يدوياً"
+              },
+              "response": []
+            },
+            {
+              "name": "List Hotel Images",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{auth_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{url}}/hotels/1/images",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "hotels",
+                    "1",
+                    "images"
+                  ]
+                },
+                "description": "جلب قائمة الصور الخاصة بفندق معين (المرفوعة يدوياً والمجلوبة تلقائياً)"
+              },
+              "response": []
+            },
+            {
+              "name": "Set Image as Cover",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{auth_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{url}}/hotels/images/1/cover",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "hotels",
+                    "images",
+                    "1",
+                    "cover"
+                  ]
+                },
+                "description": "تحديد صورة معينة لتكون هي صورة الغلاف الرئيسية للفندق"
+              },
+              "response": []
+            },
+            {
+              "name": "Delete Hotel Image",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{auth_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{url}}/hotels/images/1",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "hotels",
+                    "images",
+                    "1"
+                  ]
+                },
+                "description": "حذف صورة معينة للفندق من قاعدة البيانات ومن السيرفر"
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "List Hotels",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{url}}/hotels?per_page=15&lang=ar&all=1",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "hotels"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "Anwar",
+                  "description": "Search by name (AR/EN), brand, code, district, phone, or email",
+                  "disabled": true
+                },
+                {
+                  "key": "status",
+                  "value": "1",
+                  "description": "1 = Active, 0 = Inactive / Archived",
+                  "disabled": true
+                },
+                {
+                  "key": "country_id",
+                  "value": "1",
+                  "description": "Filter by Country ID",
+                  "disabled": true
+                },
+                {
+                  "key": "city_id",
+                  "value": "1",
+                  "disabled": true
+                },
+                {
+                  "key": "stars",
+                  "value": "5",
+                  "description": "Filter by Hotel Stars (1-5)",
+                  "disabled": true
+                },
+                {
+                  "key": "per_page",
+                  "value": "15",
+                  "description": "Number of records per page"
+                },
+                {
+                  "key": "lang",
+                  "value": "ar",
+                  "description": "Response language: 'ar' or 'en'"
+                },
+                {
+                  "key": "all",
+                  "value": "1"
+                },
+                {
+                  "key": "is_archived",
+                  "value": "1",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Retrieve list of hotels with statistics, search, pagination, and multi-filters (status, stars, country)."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Hotel",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "name_ar",
+                  "value": "فندق أنوار المدينة",
+                  "type": "text",
+                  "description": "Arabic Name (Required)"
+                },
+                {
+                  "key": "name_en",
+                  "value": "Anwar Al Madinah Hotel",
+                  "type": "text",
+                  "description": "English Name (Required)"
+                },
+                {
+                  "key": "brand",
+                  "value": "Accor",
+                  "type": "text",
+                  "description": "Hotel Brand/Chain (Optional)"
+                },
+                {
+                  "key": "stars",
+                  "value": "5",
+                  "type": "text",
+                  "description": "Rating stars 1-5 (Required)"
+                },
+                {
+                  "key": "status",
+                  "value": "1",
+                  "type": "text",
+                  "description": "1 = Active, 0 = Inactive"
+                },
+                {
+                  "key": "cover_image",
+                  "type": "file",
+                  "description": "Cover Image (jpeg, png, jpg, webp - Max 5MB)",
+                  "src": "postman-cloud:///1f12f71b-edb0-4270-9eff-58954117aa26"
+                },
+                {
+                  "key": "country_id",
+                  "value": "1",
+                  "type": "text",
+                  "description": "Country ID (Required)"
+                },
+                {
+                  "key": "city_id",
+                  "value": "1",
+                  "type": "text",
+                  "description": "City ID (Required)"
+                },
+                {
+                  "key": "district",
+                  "value": "المنطقة المركزية",
+                  "type": "text",
+                  "description": "Neighborhood/District (Optional)"
+                },
+                {
+                  "key": "address_1",
+                  "value": "شارع أبي ذر الغفاري",
+                  "type": "text",
+                  "description": "Address Line 1 (Optional)"
+                },
+                {
+                  "key": "postal_code",
+                  "value": "41411",
+                  "type": "text",
+                  "description": "Postal Code (Optional)"
+                },
+                {
+                  "key": "map_link",
+                  "value": "https://maps.app.goo.gl/qEBZ8U1GDortTacs8",
+                  "type": "text",
+                  "description": "Google Maps URL (Optional)"
+                },
+                {
+                  "key": "phone",
+                  "value": "+966148200000",
+                  "type": "text",
+                  "description": "Phone number (Optional)"
+                },
+                {
+                  "key": "email",
+                  "value": "anwar@accor.com",
+                  "type": "text",
+                  "description": "Email address (Optional)"
+                },
+                {
+                  "key": "website",
+                  "value": "https://www.anwar-hotel.com",
+                  "type": "text",
+                  "description": "Website URL (Optional)"
+                },
+                {
+                  "key": "check_in",
+                  "value": "16:00",
+                  "type": "text",
+                  "description": "Check-in time (Optional)"
+                },
+                {
+                  "key": "check_out",
+                  "value": "12:00",
+                  "type": "text",
+                  "description": "Check-out time (Optional)"
+                },
+                {
+                  "key": "description_ar",
+                  "value": "يقع فندق أنوار المدينة في قلب المدينة المنورة بالقرب من الحرم الشريف.",
+                  "type": "text",
+                  "description": "Arabic Description (Optional)"
+                },
+                {
+                  "key": "description_en",
+                  "value": "Anwar Al Madinah Hotel is located in the heart of Madinah close to Haram.",
+                  "type": "text",
+                  "description": "English Description (Optional)"
+                },
+                {
+                  "key": "policies_ar",
+                  "value": "يمنع التدخين داخل الغرف، تسجيل الدخول يتطلب الهوية الوطنية.",
+                  "type": "text",
+                  "description": "Arabic Policies (Optional)"
+                },
+                {
+                  "key": "policies_en",
+                  "value": "No smoking inside rooms, check-in requires a national ID.",
+                  "type": "text",
+                  "description": "English Policies (Optional)"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{url}}/hotels",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "hotels"
+              ]
+            },
+            "description": "Create a new hotel. Uses form-data mode to support cover image file uploads."
+          },
+          "response": []
+        },
+        {
+          "name": "Show Hotel",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{url}}/hotels/1",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "hotels",
+                "1"
+              ]
+            },
+            "description": "Get detailed information about a single hotel by its ID."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Hotel",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "_method",
+                  "value": "PUT",
+                  "type": "text",
+                  "description": "Method spoofing is required in Laravel to upload files via PUT requests in multipart format."
+                },
+                {
+                  "key": "name_ar",
+                  "value": "فندق أنوار المدينة المعدل",
+                  "type": "text",
+                  "description": "Arabic Name (Required)"
+                },
+                {
+                  "key": "name_en",
+                  "value": "Anwar Al Madinah Hotel Updated",
+                  "type": "text",
+                  "description": "English Name (Required)"
+                },
+                {
+                  "key": "brand",
+                  "value": "Accor Group",
+                  "type": "text",
+                  "description": "Hotel Brand/Chain (Optional)"
+                },
+                {
+                  "key": "stars",
+                  "value": "4",
+                  "type": "text",
+                  "description": "Rating stars 1-5 (Required)"
+                },
+                {
+                  "key": "status",
+                  "value": "1",
+                  "type": "text",
+                  "description": "1 = Active, 0 = Inactive"
+                },
+                {
+                  "key": "cover_image",
+                  "type": "file",
+                  "description": "New Cover Image (Optional)",
+                  "value": null
+                },
+                {
+                  "key": "country_id",
+                  "value": "1",
+                  "type": "text",
+                  "description": "Country ID (Required)"
+                },
+                {
+                  "key": "city_id",
+                  "value": "1",
+                  "type": "text",
+                  "description": "City ID (Required)"
+                },
+                {
+                  "key": "district",
+                  "value": "المنطقة المركزية - الشمالية",
+                  "type": "text",
+                  "description": "Neighborhood/District (Optional)"
+                },
+                {
+                  "key": "address_1",
+                  "value": "شارع أبي ذر الغفاري",
+                  "type": "text",
+                  "description": "Address Line 1 (Optional)"
+                },
+                {
+                  "key": "postal_code",
+                  "value": "41411",
+                  "type": "text",
+                  "description": "Postal Code (Optional)"
+                },
+                {
+                  "key": "map_link",
+                  "value": "https://maps.google.com/?q=24.469,39.611",
+                  "type": "text",
+                  "description": "Google Maps URL (Optional)"
+                },
+                {
+                  "key": "phone",
+                  "value": "+966148200000",
+                  "type": "text",
+                  "description": "Phone number (Optional)"
+                },
+                {
+                  "key": "email",
+                  "value": "anwar@accor.com",
+                  "type": "text",
+                  "description": "Email address (Optional)"
+                },
+                {
+                  "key": "website",
+                  "value": "https://www.anwar-hotel.com",
+                  "type": "text",
+                  "description": "Website URL (Optional)"
+                },
+                {
+                  "key": "check_in",
+                  "value": "16:00",
+                  "type": "text",
+                  "description": "Check-in time (Optional)"
+                },
+                {
+                  "key": "check_out",
+                  "value": "12:00",
+                  "type": "text",
+                  "description": "Check-out time (Optional)"
+                },
+                {
+                  "key": "description_ar",
+                  "value": "يقع فندق أنوار المدينة في قلب المدينة المنورة بالقرب من الحرم الشريف (معدل).",
+                  "type": "text",
+                  "description": "Arabic Description (Optional)"
+                },
+                {
+                  "key": "description_en",
+                  "value": "Anwar Al Madinah Hotel is located in the heart of Madinah close to Haram (Updated).",
+                  "type": "text",
+                  "description": "English Description (Optional)"
+                },
+                {
+                  "key": "policies_ar",
+                  "value": "سياسات معدلة.",
+                  "type": "text",
+                  "description": "Arabic Policies (Optional)"
+                },
+                {
+                  "key": "policies_en",
+                  "value": "Updated policies.",
+                  "type": "text",
+                  "description": "English Policies (Optional)"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{url}}/api/hotels/1",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "api",
+                "hotels",
+                "1"
+              ]
+            },
+            "description": "Update hotel details. Note: The HTTP method is POST and we send `_method=PUT` inside form-data so Laravel can correctly parse uploaded files during updating."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Hotel",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{url}}/api/hotels/1",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "api",
+                "hotels",
+                "1"
+              ]
+            },
+            "description": "Delete a hotel from database by its ID."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Rooms",
+      "item": [
+        {
+          "name": "Delete Room",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{url}}/rooms/2",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "rooms",
+                "2"
+              ]
+            },
+            "description": "Delete a room by ID."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Room",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "name_ar",
+                  "value": "غرفة ديلوكس",
+                  "type": "text",
+                  "description": "Arabic Name (Required)"
+                },
+                {
+                  "key": "name_en",
+                  "value": "Deluxe Room",
+                  "type": "text",
+                  "description": "English Name (Required)"
+                },
+                {
+                  "key": "view",
+                  "value": "إطلالة كاملة على الحرم",
+                  "type": "text",
+                  "description": "View details (Optional)"
+                },
+                {
+                  "key": "hotel_id",
+                  "value": "1",
+                  "type": "text",
+                  "description": "Hotel ID (Required)"
+                },
+                {
+                  "key": "room_type_id",
+                  "value": "1",
+                  "type": "text",
+                  "description": "Room Type ID (Required)"
+                },
+                {
+                  "key": "status",
+                  "value": "1",
+                  "type": "text",
+                  "description": "1 = Active, 0 = Inactive / Archived"
+                },
+                {
+                  "key": "cover_image",
+                  "type": "file",
+                  "description": "Optional Room image (jpeg, png, jpg, webp - Max 5MB)",
+                  "src": "postman-cloud:///1f12f71b-edb0-4270-9eff-58954117aa26"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{url}}/rooms",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "rooms"
+              ]
+            },
+            "description": "Create a new room. Padded code (RT-00001) will be generated automatically. Uses form-data for cover image uploads."
+          },
+          "response": []
+        },
+        {
+          "name": "Show Room",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{url}}/rooms/1",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "rooms",
+                "1"
+              ]
+            },
+            "description": "Show details of a single room."
+          },
+          "response": []
+        },
+        {
+          "name": "List Rooms",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{url}}/rooms?search=Deluxe&status=1&hotel_id=1&room_type_id=1&per_page=15&lang=ar",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "rooms"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "Deluxe",
+                  "description": "Search by room name, code, or view"
+                },
+                {
+                  "key": "status",
+                  "value": "1",
+                  "description": "1 = Active, 0 = Inactive / Archived"
+                },
+                {
+                  "key": "hotel_id",
+                  "value": "1",
+                  "description": "Filter by Hotel ID"
+                },
+                {
+                  "key": "room_type_id",
+                  "value": "1",
+                  "description": "Filter by Room Type ID"
+                },
+                {
+                  "key": "per_page",
+                  "value": "15"
+                },
+                {
+                  "key": "lang",
+                  "value": "ar"
+                }
+              ]
+            },
+            "description": "Get rooms list with statistics, search, and multi-filters (status, hotel, room type)."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Room",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "_method",
+                  "value": "PUT",
+                  "type": "text"
+                },
+                {
+                  "key": "name_ar",
+                  "value": "غرفة ديلوكس معدلة",
+                  "type": "text"
+                },
+                {
+                  "key": "name_en",
+                  "value": "Deluxe Room Updated",
+                  "type": "text"
+                },
+                {
+                  "key": "view",
+                  "value": "إطلالة على الكعبة المشرفة",
+                  "type": "text"
+                },
+                {
+                  "key": "hotel_id",
+                  "value": "1",
+                  "type": "text"
+                },
+                {
+                  "key": "room_type_id",
+                  "value": "1",
+                  "type": "text"
+                },
+                {
+                  "key": "status",
+                  "value": "1",
+                  "type": "text"
+                },
+                {
+                  "key": "cover_image",
+                  "type": "file",
+                  "description": "Optional updated cover image file",
+                  "src": "postman-cloud:///1f12f71b-edb0-4270-9eff-58954117aa26"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{url}}/rooms/1",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "rooms",
+                "1"
+              ]
+            },
+            "description": "Update room. Method is POST with `_method=PUT` inside form-data so Laravel can correctly parse uploaded files during update."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Pricing",
+      "item": [
+        {
+          "name": "List Prices",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{url}}/prices?search=Hilton&hotel_id=1&supplier_id=1&meal_plan=2&status=approved&valid_from=2026-07-01&valid_to=2026-07-10&latest_only=1&is_archived=0\n&all=1",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "prices"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "Hilton"
+                },
+                {
+                  "key": "hotel_id",
+                  "value": "1"
+                },
+                {
+                  "key": "supplier_id",
+                  "value": "1"
+                },
+                {
+                  "key": "meal_plan",
+                  "value": "2"
+                },
+                {
+                  "key": "status",
+                  "value": "approved",
+                  "description": "draft,pending,approved,rejected,expired"
+                },
+                {
+                  "key": "valid_from",
+                  "value": "2026-07-01"
+                },
+                {
+                  "key": "valid_to",
+                  "value": "2026-07-10"
+                },
+                {
+                  "key": "latest_only",
+                  "value": "1"
+                },
+                {
+                  "key": "is_archived",
+                  "value": "0\n"
+                },
+                {
+                  "key": "all",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "Retrieve list of prices (paginated by default with stats, or flat list if all=1 is set)."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Price",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  // لو مباشر خليه true والمورد null، لو تبع مورد خليه false والمورد إجباري\n  \"is_direct\": false,\n  \"supplier_id\": 1, // معرف المورد (لو false بس)\n\n  \"hotel_id\": 1,\n  \"room_id\": 1,       // لازم تكون الغرفة مربوطة بالفندق ده\n  \"hotel_view_id\": 1, // لازم تكون الإطلالة مربوطة بالفندق ده (اختياري)\n  \"currency_id\": 1,\n\n  \"valid_from\": \"2026-07-01\",\n  \"valid_to\": \"2026-07-10\",\n\n  // نوع نظام الوجبات: يا إما inclusive (مشمولة) أو exclusive (بأسعار منفصلة)\n  \"meal_plan_type\": \"inclusive\",\n\n  // الحالة 1: لو الوجبات مشمولة (inclusive) بنبعت لستة بمعرفات الوجبات المشمولة من قاعدة البيانات\n  \"meal_plan_inclusive_details\": [2, 3],\n  // [1 (Room Only), 2 (Breakfast), 3 (Lunch), 4 (Dinner), 5 (Half Board), 6 (Full Board), 7 (All Inclusive), 8 (Ultra All Inclusive)]\n\n  // الحالة 2: لو الوجبات بأسعار منفصلة (exclusive) بنلغي الحقل اللي فوق (meal_plan_inclusive_details) ونبعت أسعارها كدا:\n  // \"meal_plan_exclusive_prices\": { \"2\": 15, \"4\": 30 }, // المفتاح هو معرف الوجبة والقيمة هي سعرها\n\n  \"cost_per_night\": 100.00, // سعر التكلفة\n  \"selling_price\": 125.00,  // سعر البيع\n  \"profit_margin\": 25.00,   // هامش الربح \n\n  \"tax_type\": \"inclusive_tax\", // نوع الضريبة: يا إما inclusive_tax أو exclusive_tax\n  \"tax_rate\": 15.00, // نسبة الضريبة المئوية\n\n  \"status\": \"approved\", //draft,pending,approved,rejected,expired\n  \"notes_ar\": \"شامل الإفطار والغداء ورسوم الخدمة.\",\n  \"notes_en\": \"Includes breakfast, lunch and service fees.\",\n  \"cancellation_policy_ar\": \"غير مستردة.\",\n  \"cancellation_policy_en\": \"Non-refundable.\"\n}\n"
+            },
+            "url": {
+              "raw": "{{url}}/prices?lang=ar",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "prices"
+              ],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "ar"
+                }
+              ]
+            },
+            "description": "Store a new price. For direct hotels, set is_direct to true and supplier_id to null. For meal plan, use either inclusive (array of meals) or exclusive (key-value pricing object)."
+          },
+          "response": []
+        },
+        {
+          "name": "Show Price",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{url}}/api/prices/1?lang=ar",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "api",
+                "prices",
+                "1"
+              ],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "ar"
+                }
+              ]
+            },
+            "description": "Get detailed information of a single price record."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Price",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  // لو مباشر خليه true والمورد null، لو تبع مورد خليه false والمورد إجباري\n  \"is_direct\": false,\n  \"supplier_id\": 1, // معرف المورد (لو false بس)\n\n  \"hotel_id\": 1,\n  \"room_id\": 1,       // لازم تكون الغرفة مربوطة بالفندق ده\n  \"hotel_view_id\": 1, // لازم تكون الإطلالة مربوطة بالفندق ده (اختياري)\n  \"currency_id\": 1,\n\n  \"valid_from\": \"2026-07-01\",\n  \"valid_to\": \"2026-07-10\",\n\n  // نوع نظام الوجبات: يا إما inclusive (مشمولة) أو exclusive (بأسعار منفصلة)\n  \"meal_plan_type\": \"inclusive\",\n\n  // الحالة 1: لو الوجبات مشمولة (inclusive) بنبعت لستة بمعرفات الوجبات المشمولة من قاعدة البيانات\n  \"meal_plan_inclusive_details\": [2, 3],\n  // [1 (Room Only), 2 (Breakfast), 3 (Lunch), 4 (Dinner), 5 (Half Board), 6 (Full Board), 7 (All Inclusive), 8 (Ultra All Inclusive)]\n\n  // الحالة 2: لو الوجبات بأسعار منفصلة (exclusive) بنلغي الحقل اللي فوق (meal_plan_inclusive_details) ونبعت أسعارها كدا:\n  // \"meal_plan_exclusive_prices\": { \"2\": 15, \"4\": 30 }, // المفتاح هو معرف الوجبة والقيمة هي سعرها\n\n  \"cost_per_night\": 100.00, // سعر التكلفة\n  \"selling_price\": 125.00,  // سعر البيع\n  \"profit_margin\": 25.00,   // هامش الربح \n\n  \"tax_type\": \"inclusive_tax\", // نوع الضريبة: يا إما inclusive_tax أو exclusive_tax\n  \"tax_rate\": 15.00, // نسبة الضريبة المئوية\n\n  \"status\": \"expired\", // الحالة: draft أو approved \n  \"notes_ar\": \"شامل الإفطار والغداء ورسوم الخدمة.\",\n  \"notes_en\": \"Includes breakfast, lunch and service fees.\",\n  \"cancellation_policy_ar\": \"غير مستردة.\",\n  \"cancellation_policy_en\": \"Non-refundable.\"\n}\n"
+            },
+            "url": {
+              "raw": "{{url}}/prices/1?lang=ar",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "prices",
+                "1"
+              ],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "ar"
+                }
+              ]
+            },
+            "description": "Modify an existing price row."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Price",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{url}}/prices/2?lang=ar",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "prices",
+                "2"
+              ],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "ar"
+                }
+              ]
+            },
+            "description": "Remove a price record."
+          },
+          "response": []
+        },
+        {
+          "name": "Pricing Comparison",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{url}}/prices/compare?hotel_id=1&suppliers_only=1",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "prices",
+                "compare"
+              ],
+              "query": [
+                {
+                  "key": "hotel_id",
+                  "value": "1"
+                },
+                {
+                  "key": "room_id",
+                  "value": null,
+                  "type": "text",
+                  "disabled": true
+                },
+                {
+                  "key": "valid_from",
+                  "value": null,
+                  "type": "text",
+                  "disabled": true
+                },
+                {
+                  "key": "valid_to",
+                  "value": null,
+                  "type": "text",
+                  "disabled": true
+                },
+                {
+                  "key": "suppliers_only",
+                  "value": "1"
+                },
+                {
+                  "key": "status",
+                  "value": null,
+                  "type": "text",
+                  "disabled": true
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Customers",
+      "item": [
+        {
+          "name": "List Customers",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{url}}/customers",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "customers"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Search by name_ar, name_en, email, phone, or code",
+                  "disabled": true
+                },
+                {
+                  "key": "type",
+                  "value": "",
+                  "description": "individual, company, agency, government",
+                  "disabled": true
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "description": "1 = Active, 0 = Inactive",
+                  "disabled": true
+                },
+                {
+                  "key": "country_id",
+                  "value": "",
+                  "description": "ID of the country",
+                  "disabled": true
+                },
+                {
+                  "key": "all",
+                  "value": "",
+                  "description": "Set to true to skip pagination",
+                  "disabled": true
+                },
+                {
+                  "key": "is_archived",
+                  "value": "1",
+                  "description": "Set to true to list archived customers (default: false)",
+                  "disabled": true
+                },
+                {
+                  "key": "lang",
+                  "value": "ar",
+                  "description": "Locale translation: ar or en",
+                  "disabled": true
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Customer",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"individual\", // individual, company, agency, government\n  \"name_ar\": \"شركة النخبة للسياحة\",\n  \"name_en\": \"Elite Travel Company\",\n  \"email\": \"info@elitetravel.com\",\n  \"phone\": \"+966512345678\",\n  \"country_id\": 1,\n // \"legal_name\": \"Elite Travel and Tourism LLC\",\n // \"tax_number\": \"TAX-9988776655\",\n // \"commercial_register\": \"CR-4030099887\",\n // \"credit_limit\": 15000.00,\n//  \"credit_days\": 45,\n  \"currency_id\": 1,\n  \"status\": true,\n  \"notes\": \"Premium corporate client\"\n}"
+            },
+            "url": {
+              "raw": "{{url}}/customers",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "customers"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Show Customer",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{url}}/customers/1?lang=ar",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "customers",
+                "1"
+              ],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "ar"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Customer",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"individual\", // individual, company, agency, government\n  \"name_ar\": \"شركة النخبة للسياحة\",\n  \"name_en\": \"Elite Travel Company\",\n  \"email\": \"info@elitetravel.com\",\n  \"phone\": \"+966512345678\",\n  \"country_id\": 1,\n  \"legal_name\": \"Elite Travel and Tourism LLC\",\n  \"tax_number\": \"TAX-9988776655\",\n  \"commercial_register\": \"CR-4030099887\",\n \"credit_limit\": 15000.00,\n    \"credit_days\": 45,\n  \"currency_id\": 1,\n  \"status\": true,\n  \"notes\": \"Premium corporate client\",\n  \"is_archived\": true\n}"
+            },
+            "url": {
+              "raw": "{{url}}/customers/2",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "customers",
+                "2"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Customer",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{url}}/customers/1",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "customers",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Tasks",
+      "item": [
+        {
+          "name": "List Tasks",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{url}}/tasks?scope=sent&is_overdue=false&all=0&per_page=15",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "tasks"
+              ],
+              "query": [
+                {
+                  "key": "scope",
+                  "value": "sent",
+                  "description": "Scope: 'sent' (tasks sent by me), 'received' (tasks assigned to me), 'all' (all tasks, default for super_admin)"
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "description": "Filter by status: open, in_progress, awaiting_reply, completed, closed",
+                  "disabled": true
+                },
+                {
+                  "key": "priority",
+                  "value": "",
+                  "description": "Filter by priority: low, medium, high, urgent",
+                  "disabled": true
+                },
+                {
+                  "key": "department",
+                  "value": "",
+                  "description": "Filter by department",
+                  "disabled": true
+                },
+                {
+                  "key": "assigned_to",
+                  "value": "",
+                  "description": "Filter by assignee user ID",
+                  "disabled": true
+                },
+                {
+                  "key": "is_overdue",
+                  "value": "false",
+                  "description": "Filter overdue tasks (deadline passed & not completed/closed)"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Search by code, title, description, department",
+                  "disabled": true
+                },
+                {
+                  "key": "all",
+                  "value": "0",
+                  "description": "Bypass pagination (use 1/true)"
+                },
+                {
+                  "key": "per_page",
+                  "value": "15"
+                }
+              ]
+            },
+            "description": "Retrieve list of tasks with filters, scoping, and statistics."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Task Detail",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{url}}/tasks/1",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "tasks",
+                "1"
+              ]
+            },
+            "description": "Get a specific task by ID. Automatically marks unread comments as read. Blocks unauthorized requests."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Task",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "title",
+                  "value": "طلب صلاحية وصول لنظام المحاسبة الجديد",
+                  "type": "text"
+                },
+                {
+                  "key": "description",
+                  "value": "أحتاج إلى صلاحية الدخول لنظام المحاسبة الجديد لمراجعة الحسابات والتقارير المالية للربع السنوي الأول.",
+                  "type": "text"
+                },
+                {
+                  "key": "assigned_to",
+                  "value": "2",
+                  "type": "text"
+                },
+                {
+                  "key": "department",
+                  "value": "فريق تقنية المعلومات",
+                  "type": "text"
+                },
+                {
+                  "key": "priority",
+                  "value": "urgent",
+                  "type": "text"
+                },
+                {
+                  "key": "deadline",
+                  "value": "2026-07-10",
+                  "type": "text"
+                },
+                {
+                  "key": "status",
+                  "value": "open",
+                  "type": "text",
+                  "description": "الحالة الافتراضية open ويمكن تمرير أي حالة أخرى: in_progress, awaiting_reply, completed, closed"
+                },
+                {
+                  "key": "attachments[]",
+                  "description": "يمكنك إرفاق ملف أو عدة ملفات للمهمة (مصفوفة ملفات)",
+                  "type": "file",
+                  "value": null,
+                  "disabled": true
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{url}}/tasks",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "tasks"
+              ]
+            },
+            "description": "Create a new task with optional file attachments."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Task Details",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"طلب صلاحية وصول لنظام المحاسبة الجديد (معدل)\",\n  \"description\": \"تم تعديل وصف الطلب ليتضمن الاطلاع على التقارير المالية ومستحقات الموردين.\",\n  \"assigned_to\": 2,\n  \"department\": \"فريق الدعم والتحول الرقمي\",\n  \"priority\": \"high\",\n  \"deadline\": \"2026-07-15\",\n  \"status\": \"in_progress\",\n  \"is_archived\": false\n}"
+            },
+            "url": {
+              "raw": "{{url}}/tasks/1",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "tasks",
+                "1"
+              ]
+            },
+            "description": "Single update endpoint for tasks. Updates all details including title, description, assignee, priority, deadline, status (which logs the change history), and archive state."
+          },
+          "response": []
+        },
+        {
+          "name": "Add Comment to Task",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "body",
+                  "value": "تم التأكيد والمراجعة، رقمي الوظيفي هو 4092. شكراً لتعاونكم.",
+                  "type": "text"
+                },
+                {
+                  "key": "attachments[]",
+                  "description": "يمكنك إرفاق ملف أو ملفات مع الرد (مصفوفة ملفات)",
+                  "type": "file",
+                  "value": null,
+                  "disabled": true
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{url}}/tasks/3/comments",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "tasks",
+                "3",
+                "comments"
+              ]
+            },
+            "description": "Add comment/reply to a task with optional file attachment."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Task Comments",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{url}}/tasks/1/comments",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "tasks",
+                "1",
+                "comments"
+              ]
+            },
+            "description": "Retrieve all comments for a specific task. Marks unread comments as read."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Task Comment",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{url}}/tasks/comments/1",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "tasks",
+                "comments",
+                "1"
+              ]
+            },
+            "description": "Delete a task comment. Authorized strictly for the owner of the comment or super admins."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Task",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{url}}/tasks/1",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "tasks",
+                "1"
+              ]
+            },
+            "description": "Delete a task by ID. Cascades and deletes logs, comments, and attachments physically."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "notifications",
+      "item": [
+        {
+          "name": "notifications-specific-read",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{url}}/notifications/e660091a-d046-407c-88ae-f6e64214fe5c/read",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "notifications",
+                "e660091a-d046-407c-88ae-f6e64214fe5c",
+                "read"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "change password",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{auth_token}}",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"old_password\":\"00000000\",\r\n    \"new_password\":\"12345678\",\r\n    \"new_password_confirmation\":\"12345678\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{url_local}}/changePassword",
+                  "host": [
+                    "{{url_local}}"
+                  ],
+                  "path": [
+                    "changePassword"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Host",
+                  "value": "127.0.0.1:8000"
+                },
+                {
+                  "key": "Date",
+                  "value": "Thu, 15 Jun 2023 18:22:50 GMT"
+                },
+                {
+                  "key": "Date",
+                  "value": "Thu, 15 Jun 2023 18:22:50 GMT"
+                },
+                {
+                  "key": "Connection",
+                  "value": "close"
+                },
+                {
+                  "key": "X-Powered-By",
+                  "value": "PHP/8.1.10"
+                },
+                {
+                  "key": "Cache-Control",
+                  "value": "no-cache, private"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "X-RateLimit-Limit",
+                  "value": "60"
+                },
+                {
+                  "key": "X-RateLimit-Remaining",
+                  "value": "55"
+                },
+                {
+                  "key": "Access-Control-Allow-Origin",
+                  "value": "*"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"message\": \"Success\",\n    \"status_code\": 200\n}"
+            },
+            {
+              "name": "change password",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{auth_token}}",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"old_password\":\"000000000\",\r\n    \"new_password\":\"12345678\",\r\n    \"new_password_confirmation\":\"12345678\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{url_local}}/changePassword",
+                  "host": [
+                    "{{url_local}}"
+                  ],
+                  "path": [
+                    "changePassword"
+                  ]
+                }
+              },
+              "status": "Unprocessable Content",
+              "code": 422,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Host",
+                  "value": "127.0.0.1:8000"
+                },
+                {
+                  "key": "Date",
+                  "value": "Thu, 15 Jun 2023 18:23:01 GMT"
+                },
+                {
+                  "key": "Date",
+                  "value": "Thu, 15 Jun 2023 18:23:01 GMT"
+                },
+                {
+                  "key": "Connection",
+                  "value": "close"
+                },
+                {
+                  "key": "X-Powered-By",
+                  "value": "PHP/8.1.10"
+                },
+                {
+                  "key": "Cache-Control",
+                  "value": "no-cache, private"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "X-RateLimit-Limit",
+                  "value": "60"
+                },
+                {
+                  "key": "X-RateLimit-Remaining",
+                  "value": "59"
+                },
+                {
+                  "key": "Access-Control-Allow-Origin",
+                  "value": "*"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"message\": \"The old password is incorrect\",\n    \"status_code\": 422\n}"
+            }
+          ]
+        },
+        {
+          "name": "notifications-specific-delete",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{url}}/notifications/f6a79fab-3ecd-41f9-a7b1-b6b11625ba5e/delete",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "notifications",
+                "f6a79fab-3ecd-41f9-a7b1-b6b11625ba5e",
+                "delete"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "change password",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{auth_token}}",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"old_password\":\"00000000\",\r\n    \"new_password\":\"12345678\",\r\n    \"new_password_confirmation\":\"12345678\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{url_local}}/changePassword",
+                  "host": [
+                    "{{url_local}}"
+                  ],
+                  "path": [
+                    "changePassword"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Host",
+                  "value": "127.0.0.1:8000"
+                },
+                {
+                  "key": "Date",
+                  "value": "Thu, 15 Jun 2023 18:22:50 GMT"
+                },
+                {
+                  "key": "Date",
+                  "value": "Thu, 15 Jun 2023 18:22:50 GMT"
+                },
+                {
+                  "key": "Connection",
+                  "value": "close"
+                },
+                {
+                  "key": "X-Powered-By",
+                  "value": "PHP/8.1.10"
+                },
+                {
+                  "key": "Cache-Control",
+                  "value": "no-cache, private"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "X-RateLimit-Limit",
+                  "value": "60"
+                },
+                {
+                  "key": "X-RateLimit-Remaining",
+                  "value": "55"
+                },
+                {
+                  "key": "Access-Control-Allow-Origin",
+                  "value": "*"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"message\": \"Success\",\n    \"status_code\": 200\n}"
+            },
+            {
+              "name": "change password",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{auth_token}}",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"old_password\":\"000000000\",\r\n    \"new_password\":\"12345678\",\r\n    \"new_password_confirmation\":\"12345678\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{url_local}}/changePassword",
+                  "host": [
+                    "{{url_local}}"
+                  ],
+                  "path": [
+                    "changePassword"
+                  ]
+                }
+              },
+              "status": "Unprocessable Content",
+              "code": 422,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Host",
+                  "value": "127.0.0.1:8000"
+                },
+                {
+                  "key": "Date",
+                  "value": "Thu, 15 Jun 2023 18:23:01 GMT"
+                },
+                {
+                  "key": "Date",
+                  "value": "Thu, 15 Jun 2023 18:23:01 GMT"
+                },
+                {
+                  "key": "Connection",
+                  "value": "close"
+                },
+                {
+                  "key": "X-Powered-By",
+                  "value": "PHP/8.1.10"
+                },
+                {
+                  "key": "Cache-Control",
+                  "value": "no-cache, private"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "X-RateLimit-Limit",
+                  "value": "60"
+                },
+                {
+                  "key": "X-RateLimit-Remaining",
+                  "value": "59"
+                },
+                {
+                  "key": "Access-Control-Allow-Origin",
+                  "value": "*"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"message\": \"The old password is incorrect\",\n    \"status_code\": 422\n}"
+            }
+          ]
+        },
+        {
+          "name": "notifications-delete-all",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{url}}/notifications/delete-all",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "notifications",
+                "delete-all"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "change password",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{auth_token}}",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"old_password\":\"00000000\",\r\n    \"new_password\":\"12345678\",\r\n    \"new_password_confirmation\":\"12345678\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{url_local}}/changePassword",
+                  "host": [
+                    "{{url_local}}"
+                  ],
+                  "path": [
+                    "changePassword"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Host",
+                  "value": "127.0.0.1:8000"
+                },
+                {
+                  "key": "Date",
+                  "value": "Thu, 15 Jun 2023 18:22:50 GMT"
+                },
+                {
+                  "key": "Date",
+                  "value": "Thu, 15 Jun 2023 18:22:50 GMT"
+                },
+                {
+                  "key": "Connection",
+                  "value": "close"
+                },
+                {
+                  "key": "X-Powered-By",
+                  "value": "PHP/8.1.10"
+                },
+                {
+                  "key": "Cache-Control",
+                  "value": "no-cache, private"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "X-RateLimit-Limit",
+                  "value": "60"
+                },
+                {
+                  "key": "X-RateLimit-Remaining",
+                  "value": "55"
+                },
+                {
+                  "key": "Access-Control-Allow-Origin",
+                  "value": "*"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"message\": \"Success\",\n    \"status_code\": 200\n}"
+            },
+            {
+              "name": "change password",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{auth_token}}",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"old_password\":\"000000000\",\r\n    \"new_password\":\"12345678\",\r\n    \"new_password_confirmation\":\"12345678\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{url_local}}/changePassword",
+                  "host": [
+                    "{{url_local}}"
+                  ],
+                  "path": [
+                    "changePassword"
+                  ]
+                }
+              },
+              "status": "Unprocessable Content",
+              "code": 422,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Host",
+                  "value": "127.0.0.1:8000"
+                },
+                {
+                  "key": "Date",
+                  "value": "Thu, 15 Jun 2023 18:23:01 GMT"
+                },
+                {
+                  "key": "Date",
+                  "value": "Thu, 15 Jun 2023 18:23:01 GMT"
+                },
+                {
+                  "key": "Connection",
+                  "value": "close"
+                },
+                {
+                  "key": "X-Powered-By",
+                  "value": "PHP/8.1.10"
+                },
+                {
+                  "key": "Cache-Control",
+                  "value": "no-cache, private"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "X-RateLimit-Limit",
+                  "value": "60"
+                },
+                {
+                  "key": "X-RateLimit-Remaining",
+                  "value": "59"
+                },
+                {
+                  "key": "Access-Control-Allow-Origin",
+                  "value": "*"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"message\": \"The old password is incorrect\",\n    \"status_code\": 422\n}"
+            }
+          ]
+        },
+        {
+          "name": "notifications-mark-all-read-for-user",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{url}}/notifications/mark-all-read",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "notifications",
+                "mark-all-read"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "change password",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{auth_token}}",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"old_password\":\"00000000\",\r\n    \"new_password\":\"12345678\",\r\n    \"new_password_confirmation\":\"12345678\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{url_local}}/changePassword",
+                  "host": [
+                    "{{url_local}}"
+                  ],
+                  "path": [
+                    "changePassword"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Host",
+                  "value": "127.0.0.1:8000"
+                },
+                {
+                  "key": "Date",
+                  "value": "Thu, 15 Jun 2023 18:22:50 GMT"
+                },
+                {
+                  "key": "Date",
+                  "value": "Thu, 15 Jun 2023 18:22:50 GMT"
+                },
+                {
+                  "key": "Connection",
+                  "value": "close"
+                },
+                {
+                  "key": "X-Powered-By",
+                  "value": "PHP/8.1.10"
+                },
+                {
+                  "key": "Cache-Control",
+                  "value": "no-cache, private"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "X-RateLimit-Limit",
+                  "value": "60"
+                },
+                {
+                  "key": "X-RateLimit-Remaining",
+                  "value": "55"
+                },
+                {
+                  "key": "Access-Control-Allow-Origin",
+                  "value": "*"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"message\": \"Success\",\n    \"status_code\": 200\n}"
+            },
+            {
+              "name": "change password",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{auth_token}}",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"old_password\":\"000000000\",\r\n    \"new_password\":\"12345678\",\r\n    \"new_password_confirmation\":\"12345678\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{url_local}}/changePassword",
+                  "host": [
+                    "{{url_local}}"
+                  ],
+                  "path": [
+                    "changePassword"
+                  ]
+                }
+              },
+              "status": "Unprocessable Content",
+              "code": 422,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Host",
+                  "value": "127.0.0.1:8000"
+                },
+                {
+                  "key": "Date",
+                  "value": "Thu, 15 Jun 2023 18:23:01 GMT"
+                },
+                {
+                  "key": "Date",
+                  "value": "Thu, 15 Jun 2023 18:23:01 GMT"
+                },
+                {
+                  "key": "Connection",
+                  "value": "close"
+                },
+                {
+                  "key": "X-Powered-By",
+                  "value": "PHP/8.1.10"
+                },
+                {
+                  "key": "Cache-Control",
+                  "value": "no-cache, private"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "X-RateLimit-Limit",
+                  "value": "60"
+                },
+                {
+                  "key": "X-RateLimit-Remaining",
+                  "value": "59"
+                },
+                {
+                  "key": "Access-Control-Allow-Origin",
+                  "value": "*"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"message\": \"The old password is incorrect\",\n    \"status_code\": 422\n}"
+            }
+          ]
+        },
+        {
+          "name": "notifications-for-user",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{base_url}}/notifications",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "notifications"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "get user data",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{auth_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{url_local}}/userInformation",
+                  "host": [
+                    "{{url_local}}"
+                  ],
+                  "path": [
+                    "userInformation"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Host",
+                  "value": "127.0.0.1:8000"
+                },
+                {
+                  "key": "Date",
+                  "value": "Tue, 27 Jun 2023 18:33:29 GMT"
+                },
+                {
+                  "key": "Date",
+                  "value": "Tue, 27 Jun 2023 18:33:29 GMT"
+                },
+                {
+                  "key": "Connection",
+                  "value": "close"
+                },
+                {
+                  "key": "X-Powered-By",
+                  "value": "PHP/8.1.10"
+                },
+                {
+                  "key": "Cache-Control",
+                  "value": "no-cache, private"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "X-RateLimit-Limit",
+                  "value": "60"
+                },
+                {
+                  "key": "X-RateLimit-Remaining",
+                  "value": "56"
+                },
+                {
+                  "key": "Access-Control-Allow-Origin",
+                  "value": "*"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"user_id\": 8,\n    \"user_name\": \"taha\",\n    \"user_type\": \"user\",\n    \"user_status\": 1,\n    \"user_email\": \"tahakhaled419@gmail.com\",\n    \"user_email_verified_at\": \"2023-06-27T18:31:03.000000Z\",\n    \"created_at\": \"2023-06-27T18:28:08.000000Z\",\n    \"updated_at\": \"2023-06-27T18:31:03.000000Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "test-notification",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{url}}/test-notification",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "test-notification"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "get user data",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{auth_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{url_local}}/userInformation",
+                  "host": [
+                    "{{url_local}}"
+                  ],
+                  "path": [
+                    "userInformation"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Host",
+                  "value": "127.0.0.1:8000"
+                },
+                {
+                  "key": "Date",
+                  "value": "Tue, 27 Jun 2023 18:33:29 GMT"
+                },
+                {
+                  "key": "Date",
+                  "value": "Tue, 27 Jun 2023 18:33:29 GMT"
+                },
+                {
+                  "key": "Connection",
+                  "value": "close"
+                },
+                {
+                  "key": "X-Powered-By",
+                  "value": "PHP/8.1.10"
+                },
+                {
+                  "key": "Cache-Control",
+                  "value": "no-cache, private"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "X-RateLimit-Limit",
+                  "value": "60"
+                },
+                {
+                  "key": "X-RateLimit-Remaining",
+                  "value": "56"
+                },
+                {
+                  "key": "Access-Control-Allow-Origin",
+                  "value": "*"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"user_id\": 8,\n    \"user_name\": \"taha\",\n    \"user_type\": \"user\",\n    \"user_status\": 1,\n    \"user_email\": \"tahakhaled419@gmail.com\",\n    \"user_email_verified_at\": \"2023-06-27T18:31:03.000000Z\",\n    \"created_at\": \"2023-06-27T18:28:08.000000Z\",\n    \"updated_at\": \"2023-06-27T18:31:03.000000Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "unread-notifications-count-for-user",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{url}}/notifications/unread",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "notifications",
+                "unread"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "get user data",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{auth_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{url_local}}/userInformation",
+                  "host": [
+                    "{{url_local}}"
+                  ],
+                  "path": [
+                    "userInformation"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Host",
+                  "value": "127.0.0.1:8000"
+                },
+                {
+                  "key": "Date",
+                  "value": "Tue, 27 Jun 2023 18:33:29 GMT"
+                },
+                {
+                  "key": "Date",
+                  "value": "Tue, 27 Jun 2023 18:33:29 GMT"
+                },
+                {
+                  "key": "Connection",
+                  "value": "close"
+                },
+                {
+                  "key": "X-Powered-By",
+                  "value": "PHP/8.1.10"
+                },
+                {
+                  "key": "Cache-Control",
+                  "value": "no-cache, private"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "X-RateLimit-Limit",
+                  "value": "60"
+                },
+                {
+                  "key": "X-RateLimit-Remaining",
+                  "value": "56"
+                },
+                {
+                  "key": "Access-Control-Allow-Origin",
+                  "value": "*"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"user_id\": 8,\n    \"user_name\": \"taha\",\n    \"user_type\": \"user\",\n    \"user_status\": 1,\n    \"user_email\": \"tahakhaled419@gmail.com\",\n    \"user_email_verified_at\": \"2023-06-27T18:31:03.000000Z\",\n    \"created_at\": \"2023-06-27T18:28:08.000000Z\",\n    \"updated_at\": \"2023-06-27T18:31:03.000000Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "test-notification",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"title\": \"أهلاً بك في بوت\",\r\n  \"message\": \"مرحباً، تم تفعيل الاشعارات بنجاح ✨\",\r\n  \"title_en\": \"Welcome to Boat\",\r\n  \"message_en\": \"Hello, your account is now active ✨\",\r\n  \"key\": \"welcome_User\",\r\n  \"id_from\": 1,\r\n  \"id_to\": 505\r\n}\r\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/notifications/send-range",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "notifications",
+                "send-range"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "get user data",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{auth_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{url_local}}/userInformation",
+                  "host": [
+                    "{{url_local}}"
+                  ],
+                  "path": [
+                    "userInformation"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Host",
+                  "value": "127.0.0.1:8000"
+                },
+                {
+                  "key": "Date",
+                  "value": "Tue, 27 Jun 2023 18:33:29 GMT"
+                },
+                {
+                  "key": "Date",
+                  "value": "Tue, 27 Jun 2023 18:33:29 GMT"
+                },
+                {
+                  "key": "Connection",
+                  "value": "close"
+                },
+                {
+                  "key": "X-Powered-By",
+                  "value": "PHP/8.1.10"
+                },
+                {
+                  "key": "Cache-Control",
+                  "value": "no-cache, private"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "X-RateLimit-Limit",
+                  "value": "60"
+                },
+                {
+                  "key": "X-RateLimit-Remaining",
+                  "value": "56"
+                },
+                {
+                  "key": "Access-Control-Allow-Origin",
+                  "value": "*"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"user_id\": 8,\n    \"user_name\": \"taha\",\n    \"user_type\": \"user\",\n    \"user_status\": 1,\n    \"user_email\": \"tahakhaled419@gmail.com\",\n    \"user_email_verified_at\": \"2023-06-27T18:31:03.000000Z\",\n    \"created_at\": \"2023-06-27T18:28:08.000000Z\",\n    \"updated_at\": \"2023-06-27T18:31:03.000000Z\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Quotations",
+      "item": [
+        {
+          "name": "Get All Quotations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{url}}/quotations?lang=ar",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "quotations"
+              ],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "ar"
+                },
+                {
+                  "key": "all",
+                  "value": "true",
+                  "description": "لو true هيرجع كل البيانات بدون Pagination",
+                  "disabled": true
+                },
+                {
+                  "key": "status",
+                  "value": "draft",
+                  "description": "فلترة بالحالة (draft, pending, approved, sent)",
+                  "disabled": true
+                },
+                {
+                  "key": "hotel_id",
+                  "value": "1",
+                  "description": "فلترة برقم الفندق",
+                  "disabled": true
+                },
+                {
+                  "key": "customer_id",
+                  "value": "1",
+                  "description": "فلترة برقم العميل",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "جلب جميع عروض الأسعار مع إمكانية الفلترة"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Quotation",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    // معرف العميل اللي هيتبعتله العرض (إجباري)\r\n    \"customer_id\": 1,\r\n\r\n    // عدد المجموعات أو الأفراد (اختياري)\r\n    \"group_size\": 5,\r\n\r\n    // معرف العملة اللي هيتعرض بيها السعر للعميل (إجباري)\r\n    \"currency_id\": 2,\r\n\r\n    // معرف لغة طباعة العرض (إجباري)\r\n    \"language_id\": 1,\r\n\r\n    // تاريخ ووقت بداية العرض (إجباري)\r\n    \"start_date\": \"2026-07-01 14:00\",\r\n\r\n    // تاريخ ووقت نهاية صلاحية العرض (إجباري، لازم يكون بعد تاريخ البداية)\r\n    \"end_date\": \"2026-07-03 12:00\",\r\n\r\n    // معرف الفندق (إجباري)\r\n    \"hotel_id\": 1,\r\n\r\n    // تحديد ما إذا كان هذا العرض موصى به للعميل (اختياري، الافتراضي false)\r\n    \"is_recommended\": true,\r\n\r\n    // ملاحظات إضافية على العرض تظهر للعميل (اختياري)\r\n    \"notes\": \"برجاء توفير غرف متجاورة إن أمكن\",\r\n\r\n    // حالة العرض (اختياري، الافتراضي draft)\r\n    // الحالات المتاحة: draft, pending, approved, sent\r\n    \"status\": \"draft\",\r\n\r\n    // الغرف والأسعار المختارة داخل العرض (إجباري على الأقل عنصر واحد)\r\n    \"items\": [\r\n        {\r\n            // معرف السعر من جدول الأسعار (اللي بيربط الغرفة بالإطلالة بالوجبات)\r\n            \"price_id\": 1,\r\n            \r\n            // عدد الغرف المطلوبة من السعر ده (إجباري)\r\n            \"room_count\": 2\r\n        }\r\n    ]\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{url}}/quotations?lang=ar",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "quotations"
+              ],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "ar"
+                }
+              ]
+            },
+            "description": "إنشاء عرض سعر جديد مع حساب التكلفة وتحويل العملات تلقائياً"
+          },
+          "response": []
+        },
+        {
+          "name": "Show Quotation",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{url}}/quotations/1?lang=ar",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "quotations",
+                "1"
+              ],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "ar"
+                }
+              ]
+            },
+            "description": "عرض تفاصيل عرض السعر بالكامل مع الغرف المختارة"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Quotation (Or Status)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    // الحالات المتاحة: draft, pending, approved, sent\r\n    \"status\": \"pending\",\r\n\r\n    \"is_recommended\": true,\r\n\r\n    // تعديل الملاحظات \r\n    \"notes\": \"تم تعديل الملاحظات وإضافة شارة مميز بناءً على طلب العميل\",\r\n\r\n    // لو حبيت تعدل الغرف، بتبعت لستة الـ items كاملة من تاني (السيستم بيمسح القديم ويحسب من جديد)\r\n    \"items\": [\r\n        {\r\n            \"price_id\": 1,\r\n            \"room_count\": 2\r\n        }\r\n     \r\n    ]\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{url}}/quotations/1?lang=ar",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "quotations",
+                "1"
+              ],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "ar"
+                }
+              ]
+            },
+            "description": "تعديل بيانات عرض السعر أو حالته"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Quotation",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{url}}/quotations/1?lang=ar",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "quotations",
+                "1"
+              ],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "ar"
+                }
+              ]
+            },
+            "description": "حذف عرض السعر"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Bookings",
+      "item": [
+        {
+          "name": "List Bookings",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{url}}/bookings?search=&hotel_id=&customer_id=&status=&start_date=&end_date=&per_page=15&all=false&lang=ar",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "bookings"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Search by booking code or customer name"
+                },
+                {
+                  "key": "hotel_id",
+                  "value": "",
+                  "description": "Filter by hotel ID"
+                },
+                {
+                  "key": "customer_id",
+                  "value": "",
+                  "description": "Filter by customer ID"
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "description": "draft, pending_supplier_confirmation, confirmed, checked_in, checked_out, cancelled, no_show"
+                },
+                {
+                  "key": "start_date",
+                  "value": "",
+                  "description": "Filter check-in start date range"
+                },
+                {
+                  "key": "end_date",
+                  "value": "",
+                  "description": "Filter check-in end date range"
+                },
+                {
+                  "key": "per_page",
+                  "value": "15"
+                },
+                {
+                  "key": "all",
+                  "value": "false",
+                  "description": "Set to true to skip pagination and return all"
+                },
+                {
+                  "key": "lang",
+                  "value": "ar"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Booking (Direct or Quotation)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"booking_type\": \"direct\",\n  \"booking_source\": \"hotel\",\n  \"customer_id\": 1,\n  \"currency_id\": 1,\n  \"booking_date\": \"2026-06-28\",\n  \"country_id\": 1,\n  \"city_id\": 1,\n  \"hotel_id\": 1,\n  \"check_in\": \"2026-07-10\",\n  \"check_out\": \"2026-07-15\",\n  \"payment_method\": \"partial\",\n  \"paid_amount\": 500.00,\n  \"second_payment_due_date\": \"2026-07-05\",\n  \"special_requests\": \"Haram view room requested.\",\n  \"notes\": \"Deposit paid by customer.\",\n  \"status\": \"confirmed\",\n  \"items\": [\n    {\n      \"price_id\": 1,\n      \"room_count\": 2\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{url}}/bookings",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "bookings"
+              ]
+            },
+            "description": "### Create Booking Endpoint\n\nThis endpoint handles bookings of two types:\n\n1. **`booking_type` = `direct` (حجز مباشر)**:\n   Requires `booking_source` which can be `hotel` (مباشر من الفندق) or `supplier` (عن طريق مورد).\n   Also requires: customer_id, currency_id, hotel_id, check_in, check_out, and items array.\n\n2. **`booking_type` = `quotation` (من عرض سعر)**:\n   Requires `quotation_id`. Automatically copies customer, currency, hotel, rooms, check-in, and check-out dates from the accepted quotation.\n\n#### Request Body Schema & Examples:\n\n##### A. Direct Booking:\n```json\n{\n  \"booking_type\": \"direct\",\n  \"booking_source\": \"hotel\", // or \"supplier\"\n  \"customer_id\": 1,\n  \"currency_id\": 1,\n  \"booking_date\": \"2026-06-28\",\n  \"hotel_id\": 1,\n  \"check_in\": \"2026-07-10\",\n  \"check_out\": \"2026-07-15\",\n  \"payment_method\": \"partial\", // full, partial, deferred\n  \"paid_amount\": 500.00,\n  \"second_payment_due_date\": \"2026-07-05\", // required if payment_method is partial\n  \"special_requests\": \"Quiet room\",\n  \"notes\": \"Premium customer\",\n  \"status\": \"confirmed\", // draft, pending_supplier_confirmation, confirmed, checked_in, checked_out, cancelled, no_show\n  \"items\": [\n    {\n      \"price_id\": 1,\n      \"room_count\": 2\n    }\n  ]\n}\n```\n\n##### B. Quotation Booking:\n```json\n{\n  \"booking_type\": \"quotation\",\n  \"booking_date\": \"2026-06-28\",\n  \"quotation_id\": 1,\n  \"payment_method\": \"full\",\n  \"paid_amount\": 1200.00,\n  \"status\": \"confirmed\"\n}\n```"
+          },
+          "response": []
+        },
+        {
+          "name": "Show Booking",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{url}}/bookings/1?lang=ar",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "bookings",
+                "1"
+              ],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "ar"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Booking",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"check_out\": \"2026-07-16\",\n  \"paid_amount\": 800.00\n}"
+            },
+            "url": {
+              "raw": "{{url}}/bookings/1",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "bookings",
+                "1"
+              ]
+            },
+            "description": "### Update Booking Endpoint\n\nAllows updating booking type, source, dates, paid amount, special requests, notes, status, and items.\n\nIf check-in/check-out dates are changed, nights and pricing subtotals are recalculated automatically for direct booking types."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Booking",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{url}}/bookings/1",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "bookings",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "url",
+      "value": "http://127.0.0.1:8000/api"
+    },
+    {
+      "key": "auth_token",
+      "value": "PASTE_YOUR_BEARER_TOKEN_HERE"
+    }
+  ]
+}

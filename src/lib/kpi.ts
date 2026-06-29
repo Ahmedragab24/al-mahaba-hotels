@@ -1,32 +1,68 @@
 // KPI Engine — currency-aware aggregation helpers for Reports & Dashboards (BR-RPT-001 → BR-RPT-006)
-import { supabase } from "@/integrations/supabase/client";
 import type { AppRole } from "@/hooks/use-auth";
+import { apiClient } from "@/lib/api/api-client";
 
 export const BASE_CURRENCY = "SAR";
 export type FxMap = Record<string, number>;
 
 // Permission groups for report visibility (BR-RPT financial access restrictions)
-export const FINANCE_ROLES: AppRole[] = ["super_admin", "admin", "finance_manager", "finance_agent"];
-export const EXEC_ROLES: AppRole[] = ["super_admin", "admin", "sales_manager", "operations_manager", "finance_manager"];
-export const SALES_ROLES: AppRole[] = ["super_admin", "admin", "sales_manager", "sales_agent", "finance_manager"];
-export const BOOKING_ROLES: AppRole[] = ["super_admin", "admin", "sales_manager", "sales_agent", "operations_manager", "operations_agent", "finance_manager", "finance_agent", "viewer"];
-export const SUPPLIER_ROLES: AppRole[] = ["super_admin", "admin", "operations_manager", "operations_agent", "finance_manager", "finance_agent"];
+export const FINANCE_ROLES: AppRole[] = [
+  "super_admin",
+  "admin",
+  "finance_manager",
+  "finance_agent",
+];
+export const EXEC_ROLES: AppRole[] = [
+  "super_admin",
+  "admin",
+  "sales_manager",
+  "operations_manager",
+  "finance_manager",
+];
+export const SALES_ROLES: AppRole[] = [
+  "super_admin",
+  "admin",
+  "sales_manager",
+  "sales_agent",
+  "finance_manager",
+];
+export const BOOKING_ROLES: AppRole[] = [
+  "super_admin",
+  "admin",
+  "sales_manager",
+  "sales_agent",
+  "operations_manager",
+  "operations_agent",
+  "finance_manager",
+  "finance_agent",
+  "viewer",
+];
+export const SUPPLIER_ROLES: AppRole[] = [
+  "super_admin",
+  "admin",
+  "operations_manager",
+  "operations_agent",
+  "finance_manager",
+  "finance_agent",
+];
 
-/** Latest exchange rate per currency (to base SAR). */
 export async function fetchFxRates(): Promise<FxMap> {
-  const { data, error } = await supabase
-    .from("exchange_rates")
-    .select("currency, rate, rate_date")
-    .order("rate_date", { ascending: false });
-  if (error) throw error;
-  const fx: FxMap = { [BASE_CURRENCY]: 1 };
-  for (const r of data ?? []) {
-    if (fx[r.currency] == null) fx[r.currency] = Number(r.rate);
+  try {
+    const rows = await apiClient.exchangeRates.getAll() as any[];
+    const fx: FxMap = { [BASE_CURRENCY]: 1 };
+    for (const row of rows ?? []) {
+      const code = row.currency ?? row.currency_code ?? row.code;
+      const rate = Number(row.rate ?? row.exchange_rate ?? row.to_base_rate);
+      if (code && Number.isFinite(rate) && rate > 0) {
+        fx[String(code)] = rate;
+      }
+    }
+    return fx;
+  } catch {
+    return { [BASE_CURRENCY]: 1 };
   }
-  return fx;
 }
 
-/** Convert an amount to base currency. Prefers the document's stored exchange rate. */
 export function toBase(
   amount: number | string | null | undefined,
   currency: string | null | undefined,
@@ -36,7 +72,8 @@ export function toBase(
   const n = Number(amount ?? 0);
   if (!n) return 0;
   if (!currency || currency === BASE_CURRENCY) return n;
-  const r = explicitRate != null && Number(explicitRate) > 0 ? Number(explicitRate) : fx[currency] ?? 1;
+  const r =
+    explicitRate != null && Number(explicitRate) > 0 ? Number(explicitRate) : (fx[currency] ?? 1);
   return n * r;
 }
 

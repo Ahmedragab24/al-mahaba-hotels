@@ -1,11 +1,13 @@
 // Hotel Information sharing actions — Preview / Print-PDF / WhatsApp (BRD Hotel Information Sharing).
 // Languages: Arabic, English, Indonesian, Urdu. Defaults to customer preferred language in customer context.
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
+import { db } from "@/lib/api/db";
+import { apiClient } from "@/lib/api/api-client";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Eye, Printer, MessageCircle } from "lucide-react";
@@ -33,7 +35,7 @@ export function HotelShareActions({ hotelId, contextCustomerId }: { hotelId: str
   const customers = useQuery({
     queryKey: ["customers-lite-wa"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from("customers")
         .select("id,name_en,name_ar,phone,preferred_language")
         .is("deleted_at", null)
@@ -64,19 +66,23 @@ export function HotelShareActions({ hotelId, contextCustomerId }: { hotelId: str
     const s = HOTEL_RES[effWaLang];
     const rtl = DOC_LANGS[effWaLang].dir === "rtl";
     const nm = (o: any) => (rtl ? o?.name_ar || o?.name_en : o?.name_en || o?.name_ar) ?? "—";
-    const haram = haramInfo(h);
-    const nearLine =
-      haram.meters == null
-        ? `${s.near_haram}: —`
-        : `${s.near_haram}: ${haram.near ? s.yes : s.no} (${haram.meters.toLocaleString("en-US")} m)`;
     return renderWaTemplate("hotel_info", effWaLang, {
       hotel: nm(h),
       city: nm(h.city),
-      rating: h.star_rating ? "★".repeat(h.star_rating) : "—",
-      near_haram: nearLine,
+      rating: (h.stars ?? h.star_rating) ? "★".repeat(h.stars ?? h.star_rating) : "—",
       company: s.company,
     });
   }, [share.data, effWaLang]);
+
+  const [editableBody, setEditableBody] = useState<string>("");
+
+  useEffect(() => {
+    if (waMessage?.body) {
+      setEditableBody(waMessage.body);
+    } else {
+      setEditableBody("");
+    }
+  }, [waMessage]);
 
   const doPrint = async (l: DocLang) => {
     const data = share.data ?? (await fetchHotelShareData(hotelId));
@@ -95,16 +101,15 @@ export function HotelShareActions({ hotelId, contextCustomerId }: { hotelId: str
     // BR-WA: store sent copy with language + template; write success/failure to Audit Log.
     let logged = true;
     try {
-      const { error } = await supabase.from("customer_communications").insert({
+      await apiClient.customerCommunications.create({
         customer_id: cust.id, channel: "whatsapp", direction: "outbound",
-        subject: `${waMessage.name} [${effWaLang}] — ${data.hotel.code}`, body: waMessage.body,
+        subject: `${waMessage.name} [${effWaLang}] — ${data.hotel.code}`, body: editableBody,
       });
-      if (error) throw error;
     } catch {
       logged = false;
     }
     try {
-      await (supabase.rpc as any)("log_audit", {
+      await db.rpc("log_audit", {
         _action: "whatsapp_send",
         _entity_type: "hotels",
         _entity_id: data.hotel.id,
@@ -117,7 +122,7 @@ export function HotelShareActions({ hotelId, contextCustomerId }: { hotelId: str
     setSending(false);
     if (!logged) { toast.error(t("wa.failed")); return; }
     const phone = String(cust.phone ?? "").replace(/[^0-9]/g, "");
-    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(waMessage.body)}`, "_blank");
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(editableBody)}`, "_blank");
     toast.success(t("wa.sent"));
     setWaOpen(false);
   };
@@ -198,7 +203,7 @@ export function HotelShareActions({ hotelId, contextCustomerId }: { hotelId: str
               <Select value={waCustomerId} onValueChange={setWaCustomerId}>
                 <SelectTrigger><SelectValue placeholder={t("wa.select_customer")} /></SelectTrigger>
                 <SelectContent>
-                  {customers.data?.map((c: any) => (
+                  {(Array.isArray(customers.data) ? customers.data : Array.isArray(customers.data?.data) ? customers.data.data : [])?.map((c: any) => (
                     <SelectItem key={c.id} value={c.id}>
                       {(uiLang === "ar" ? c.name_ar || c.name_en : c.name_en || c.name_ar) ?? c.id}
                     </SelectItem>
@@ -209,10 +214,12 @@ export function HotelShareActions({ hotelId, contextCustomerId }: { hotelId: str
             <div className="space-y-1">
               <div className="text-xs text-muted-foreground">{t("wa.message_preview")}</div>
               {waMessage ? (
-                <pre
+                <Textarea
                   dir={DOC_LANGS[effWaLang].dir}
-                  className="max-h-56 overflow-auto whitespace-pre-wrap rounded-md border bg-muted/40 p-3 font-sans text-sm"
-                >{waMessage.body}</pre>
+                  className="min-h-[220px] font-sans text-sm resize-y"
+                  value={editableBody}
+                  onChange={(e) => setEditableBody(e.target.value)}
+                />
               ) : (
                 <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
                   {t("wa.no_template")}
@@ -222,7 +229,7 @@ export function HotelShareActions({ hotelId, contextCustomerId }: { hotelId: str
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setWaOpen(false)}>{t("actions.close")}</Button>
-            <Button onClick={doSend} disabled={sending || !waMessage || !waCustomerId}>
+            <Button onClick={doSend} disabled={sending || !editableBody.trim() || !waCustomerId}>
               <MessageCircle className="h-4 w-4" /> {t("wa.send")}
             </Button>
           </DialogFooter>

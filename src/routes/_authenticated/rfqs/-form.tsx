@@ -1,8 +1,10 @@
 import { useState } from "react";
+import { apiClient } from "@/lib/api/api-client";
 import { useMutation } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
-import { useAuth } from "@/hooks/use-auth";
+import { useSelector } from "react-redux";
+import { selectAuth } from "@/store/features/authSlice";
+import { hasRole, hasAnyRole, isAdmin, canAccessModule } from "@/lib/auth-utils";
 import { useCurrencies } from "@/lib/lookups";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,7 +21,7 @@ type Props = {
 
 export function RfqForm({ initial, onSaved }: Props) {
   const { t } = useI18n();
-  const auth = useAuth();
+  const auth = useSelector(selectAuth);
   const currencies = useCurrencies();
   const [form, setForm] = useState({
     destination: initial?.destination ?? "",
@@ -42,18 +44,16 @@ export function RfqForm({ initial, onSaved }: Props) {
         notes: form.notes || null,
       };
       if (initial?.id) {
-        const { error } = await supabase.from("rfqs").update(payload).eq("id", initial.id);
-        if (error) throw error;
+        await apiClient.rfqs.update(initial.id, payload);
         return initial.id as string;
       } else {
         payload.created_by = auth.user?.id ?? null;
-        const { data, error } = await supabase.from("rfqs").insert(payload).select("id").single();
-        if (error) throw error;
+        const data = await apiClient.rfqs.create(payload);
         return data.id as string;
       }
     },
     onSuccess: (id) => { toast.success(t("toast.saved")); onSaved(id); },
-    onError: (e: any) => toast.error(dbErrorMessage(e, t)),
+    onError: (e: any) => toast.error(dbErrorMessage(e)),
   });
 
   return (
@@ -68,7 +68,7 @@ export function RfqForm({ initial, onSaved }: Props) {
           <Select value={form.currency} onValueChange={(val) => set("currency", val)}>
             <SelectTrigger className="w-full"><SelectValue placeholder={t("label.currency")} /></SelectTrigger>
             <SelectContent>
-              {currencies.data?.map((c) => (
+              {(Array.isArray(currencies.data) ? currencies.data : Array.isArray(currencies.data?.data) ? currencies.data.data : [])?.map((c: any) => (
                 <SelectItem key={c.code} value={c.code}>
                   {c.code}
                 </SelectItem>

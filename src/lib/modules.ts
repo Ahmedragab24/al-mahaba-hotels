@@ -1,49 +1,67 @@
 import type { AppRole } from "@/hooks/use-auth";
 
-const ALL: AppRole[] = ["super_admin", "admin", "sales_manager", "sales_agent", "operations_manager", "operations_agent", "finance_manager", "finance_agent", "viewer"];
-const OPS: AppRole[] = ["super_admin", "admin", "operations_manager", "operations_agent", "finance_manager", "finance_agent", "viewer"];
+const ALL: AppRole[] = ["super_admin", "admin", "sales_manager", "sales_agent", "operations_manager", "operations_agent", "finance_manager", "finance_agent", "viewer", "employee"];
+const OPS: AppRole[] = ["super_admin", "admin", "operations_manager", "operations_agent", "finance_manager", "finance_agent", "viewer", "employee"];
 const FIN: AppRole[] = ["super_admin", "admin", "finance_manager", "finance_agent"];
-const FIN_SALES: AppRole[] = ["super_admin", "admin", "finance_manager", "finance_agent", "sales_manager"];
 const ADMIN: AppRole[] = ["super_admin", "admin"];
 
-// Central list of app modules: which roles may see each module (mirrors the sidebar),
-// and modules can additionally be hidden per-employee by the super admin.
-// module key = first URL path segment.
 export const MODULES: { key: string; labelKey: string; roles: AppRole[] }[] = [
-  { key: "bookings", labelKey: "nav.bookings", roles: ALL },
-  { key: "rfqs", labelKey: "nav.rfqs", roles: ALL },
-  { key: "quotations", labelKey: "nav.quotations", roles: ["super_admin", "admin", "sales_manager", "sales_agent", "operations_manager", "finance_manager", "finance_agent", "viewer"] },
-  { key: "customers", labelKey: "nav.customers", roles: ALL },
+  { key: "dashboard", labelKey: "nav.dashboard", roles: ALL },
   { key: "hotels", labelKey: "nav.hotels", roles: ALL },
+  { key: "rooms", labelKey: "nav.rooms", roles: ALL },
   { key: "suppliers", labelKey: "nav.suppliers", roles: OPS },
+  { key: "supplier_applications", labelKey: "nav.supplier_applications", roles: ALL },
   { key: "rates", labelKey: "nav.rates", roles: ALL },
-  { key: "room-types", labelKey: "nav.room_types", roles: ["super_admin", "admin", "sales_manager", "sales_agent", "operations_manager", "operations_agent", "viewer"] },
-  { key: "contracts", labelKey: "nav.contracts", roles: OPS },
-  { key: "seasons", labelKey: "nav.seasons", roles: ["super_admin", "admin", "sales_manager", "sales_agent", "operations_manager", "operations_agent", "viewer"] },
-  { key: "taxes", labelKey: "nav.taxes", roles: OPS },
+  { key: "quotations", labelKey: "nav.quotations", roles: ALL },
+  { key: "bookings", labelKey: "nav.bookings", roles: ALL },
+  { key: "customers", labelKey: "nav.customers", roles: ALL },
   { key: "invoices", labelKey: "nav.invoices", roles: FIN },
-  { key: "receipts", labelKey: "nav.receipts", roles: FIN },
-  { key: "receivables", labelKey: "nav.receivables", roles: FIN_SALES },
-  { key: "payments", labelKey: "nav.payments", roles: FIN_SALES },
-  { key: "payables", labelKey: "nav.payables", roles: FIN },
+  { key: "payments", labelKey: "nav.payments", roles: FIN },
+  { key: "receivables", labelKey: "nav.receivables", roles: FIN },
+  { key: "room_types", labelKey: "nav.room_types", roles: ALL },
+  { key: "currencies", labelKey: "nav.currencies", roles: ALL },
+  { key: "contracts", labelKey: "nav.contracts", roles: OPS },
+  { key: "users", labelKey: "nav.users", roles: ADMIN },
+  { key: "settings", labelKey: "nav.settings", roles: ADMIN },
   { key: "reports", labelKey: "nav.reports", roles: ALL },
   { key: "tasks", labelKey: "nav.tasks", roles: ALL },
-  { key: "users", labelKey: "nav.users", roles: ADMIN },
-  { key: "supplier-applications", labelKey: "nav.supplier_applications", roles: ADMIN },
-  { key: "supplier-portal", labelKey: "nav.supplier_portal", roles: ["supplier"] },
-  { key: "approval-thresholds", labelKey: "nav.approval_thresholds", roles: ["super_admin", "admin", "finance_manager"] },
-  { key: "audit", labelKey: "nav.audit", roles: ADMIN },
-  { key: "simulation", labelKey: "nav.simulation", roles: ADMIN },
-  { key: "settings", labelKey: "nav.settings", roles: ADMIN },
 ];
 
-export function pathToModule(path: string): string | null {
-  const seg = path.replace(/^\/+/, "").split("/")[0];
-  if (!seg) return null; // dashboard is always visible
-  return MODULES.some((m) => m.key === seg) ? seg : null;
+const PATH_MAP: Record<string, string | null> = {
+  "/": "dashboard",
+  "/hotels": "hotels",
+  "/rooms": "rooms",
+  "/suppliers": "suppliers",
+  "/supplier-applications": "supplier_applications",
+  "/rates": "rates",
+  "/quotations": "quotations",
+  "/bookings": "bookings",
+  "/customers": "customers",
+  "/invoices": "invoices",
+  "/payments": "payments",
+  "/receivables": "receivables",
+  "/room-types": "room_types",
+  "/currencies": "currencies",
+  "/contracts": "contracts",
+  "/users": "users",
+  "/settings": "settings",
+  "/reports": "reports",
+  "/tasks": "tasks",
+};
+
+export function pathToModule(pathname: string): string | null {
+  // Try exact match first
+  if (PATH_MAP[pathname] !== undefined) return PATH_MAP[pathname];
+  // Try prefix match (e.g. /hotels/123 → hotels)
+  const segments = pathname.split("/").filter(Boolean);
+  if (segments.length > 0) {
+    const prefix = "/" + segments[0];
+    if (PATH_MAP[prefix] !== undefined) return PATH_MAP[prefix];
+  }
+  return null;
 }
 
-export function moduleRoles(key: string | null): AppRole[] | null {
-  if (!key) return null;
-  return MODULES.find((m) => m.key === key)?.roles ?? null;
+export function moduleRoles(moduleKey: string | null): AppRole[] | null {
+  if (!moduleKey) return null;
+  return MODULES.find((m) => m.key === moduleKey)?.roles ?? null;
 }

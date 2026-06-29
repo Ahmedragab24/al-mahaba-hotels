@@ -7,12 +7,13 @@ import { QuotationRatesDialog, SelectedRate } from "@/components/quotation-rates
 
 interface HotelRatesSelectorProps {
   hotelId: string;
-  currency: string;
+  currencyId: string;
+  currencyCode?: string;
   selectedItems: SelectedRate[];
   onChange: (items: SelectedRate[]) => void;
 }
 
-export function HotelRatesSelector({ hotelId, currency, selectedItems, onChange }: HotelRatesSelectorProps) {
+export function HotelRatesSelector({ hotelId, currencyId, currencyCode, selectedItems, onChange }: HotelRatesSelectorProps) {
   const { t, lang } = useI18n();
   const [ratesDialogOpen, setRatesDialogOpen] = useState(false);
 
@@ -136,12 +137,12 @@ export function HotelRatesSelector({ hotelId, currency, selectedItems, onChange 
                         </td>
                         <td className="py-3 px-4 text-center">
                           <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-medium py-2 px-4 rounded-lg mx-auto w-fit min-w-[100px]">
-                            {t(`board.${item.meal_plan}`)}
+                            {t(`board.${item.meal_plan}`, item.meal_plan || "—")}
                           </div>
                         </td>
                         <td className="py-3 px-4 text-center">
                           <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 text-amber-600/90 dark:text-amber-500 font-medium py-2 px-4 rounded-lg mx-auto w-fit min-w-[100px]">
-                            {item.selling_price} {currency}
+                            {item.selling_price} {String(currencyCode || "")}
                           </div>
                         </td>
                         <td className="py-3 px-4 text-center">

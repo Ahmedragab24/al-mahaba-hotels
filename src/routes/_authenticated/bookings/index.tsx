@@ -1,10 +1,13 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "react-router-dom";
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { apiClient } from "@/lib/api/api-client";
+import { useGetBookingsQuery, useDeleteBookingMutation } from "@/store/api";
 import { PageHeader } from "@/components/page-header";
 import { useI18n } from "@/lib/i18n";
-import { useAuth } from "@/hooks/use-auth";
+import { useSelector } from "react-redux";
+import { selectAuth } from "@/store/features/authSlice";
+import { hasAnyRole } from "@/lib/auth-utils";
 import { useDebounce } from "@/lib/use-debounce";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -14,16 +17,17 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DataPagination } from "@/components/data-pagination";
+import { ConfirmDialog } from "@/components/confirm-dialog";
+import { toast } from "sonner";
 import {
   Plus, Search, Eye, X, CalendarCheck2, BedDouble, ClipboardList,
   CheckCircle2, LogIn, CheckCheck, XCircle, DollarSign, FileText, Hotel,
+  Pencil, Trash2,
 } from "lucide-react";
 import { formatDate } from "@/lib/format";
 import { KpiCard, StatusPill, type KpiTone } from "@/components/list-toolkit";
 
-export const Route = createFileRoute("/_authenticated/bookings/")({
-  component: BookingsList,
-});
+
 
 const PAGE_SIZE = 20;
 export const BK_STATUSES = ["draft", "pending_confirmation", "confirmed", "checked_in", "checked_out", "cancelled", "no_show"] as const;
@@ -38,11 +42,11 @@ export function BkStatusBadge({ status, t }: { status: string; t: (k: string, f?
 }
 
 
-function BookingsList() {
+export default function BookingsList() {
   const { t, lang } = useI18n();
-  const auth = useAuth();
+  const auth = useSelector(selectAuth);
   const navigate = useNavigate();
-  const canWrite = auth.hasAnyRole([...BK_WRITE_ROLES]);
+  const canWrite = hasAnyRole(auth, BK_WRITE_ROLES as any);
 
   const [search, setSearch] = useState("");
   const [customer, setCustomer] = useState("all");
@@ -58,22 +62,69 @@ function BookingsList() {
 
   const customers = useQuery({
     queryKey: ["lookup-customers"],
-    queryFn: async () => (await supabase.from("customers").select("id,name_en,name_ar").is("deleted_at", null).order("name_en")).data ?? [],
+    queryFn: async () => {
+      const response = await apiClient.customers.getAll();
+      return Array.isArray(response) ? response : (response?.data?.data || response?.data || []);
+    },
   });
   const hotels = useQuery({
     queryKey: ["lookup-hotels"],
-    queryFn: async () => (await supabase.from("hotels").select("id,name_en,name_ar").is("deleted_at", null).order("name_en")).data ?? [],
+    queryFn: async () => {
+      const response = await apiClient.hotels.getAll();
+      return Array.isArray(response) ? response : (response?.data?.data || response?.data || []);
+    },
   });
 
-  const metrics = useQuery({
-    queryKey: ["bookings-metrics"],
-    queryFn: async () => {
-      const { data } = await supabase.from("bookings").select("status, rooms:booking_rooms(total_selling)").is("deleted_at", null);
-      const rows = data ?? [];
-      const sum = rows.reduce((a, r: any) => a + (r.rooms ?? []).reduce((x: number, i: any) => x + Number(i.total_selling), 0), 0);
-      const by = (...s: string[]) => rows.filter((r: any) => s.includes(r.status)).length;
+  const { data: rawBookings, isLoading: isLoadingBookings, refetch } = useGetBookingsQuery();
+  const [deleteBooking, { isLoading: isDeleting }] = useDeleteBookingMutation();
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteBooking(id).unwrap();
+      toast.success(t("toast.deleted"));
+      setConfirmDeleteId(null);
+      refetch();
+    } catch (e: any) {
+      toast.error(e?.data?.message || e?.message || t("toast.error"));
+    }
+  };
+
+  const allBookings = useMemo(() => {
+    if (!rawBookings) return [];
+    if (Array.isArray(rawBookings)) return rawBookings;
+    const anyRaw = rawBookings as any;
+    if (Array.isArray(anyRaw.data)) return anyRaw.data;
+    if (anyRaw.data && Array.isArray(anyRaw.data.data)) return anyRaw.data.data;
+    if (Array.isArray(anyRaw.rows)) return anyRaw.rows;
+    if (Array.isArray(anyRaw.items)) return anyRaw.items;
+    return [];
+  }, [rawBookings]);
+
+  const metrics = useMemo(() => {
+    const backendStats = (rawBookings as any)?.statistics;
+    if (backendStats) {
+      const by = (...s: string[]) => allBookings.filter((r: any) => s.includes(r.status)).length;
       return {
-        total: rows.length,
+        data: {
+          total: backendStats.total_bookings_count,
+          draft: by("draft"),
+          pending: by("pending_confirmation"),
+          confirmed: backendStats.confirmed_count,
+          inHouse: backendStats.checked_in_count,
+          completed: backendStats.checked_out_count,
+          cancelled: backendStats.cancelled_no_show_count || by("cancelled", "no_show"),
+          value: backendStats.total_sales_sar,
+        },
+        isLoading: isLoadingBookings,
+      };
+    }
+
+    const sum = allBookings.reduce((a: number, r: any) => a + (r.total_amount !== undefined ? Number(r.total_amount) : (r.rooms ?? []).reduce((x: number, i: any) => x + Number(i.total_selling), 0)), 0);
+    const by = (...s: string[]) => allBookings.filter((r: any) => s.includes(r.status)).length;
+    return {
+      data: {
+        total: allBookings.length,
         draft: by("draft"),
         pending: by("pending_confirmation"),
         confirmed: by("confirmed"),
@@ -81,41 +132,47 @@ function BookingsList() {
         completed: by("checked_out"),
         cancelled: by("cancelled", "no_show"),
         value: sum,
-      };
-    },
-  });
+      },
+      isLoading: isLoadingBookings,
+    };
+  }, [rawBookings, allBookings, isLoadingBookings]);
 
-  const list = useQuery({
-    queryKey: ["bookings", { dSearch, customer, status, hotel, from, to, page }],
-    queryFn: async () => {
-      let ids: string[] | null = null;
-      if (hotel !== "all") {
-        const { data } = await supabase.from("booking_rooms").select("booking_id").eq("hotel_id", hotel);
-        ids = Array.from(new Set((data ?? []).map((x: any) => x.booking_id)));
-        if (ids.length === 0) return { rows: [], count: 0 };
-      }
-      let q = supabase.from("bookings").select(
-        "id,booking_no,status,currency,booking_date,quotation_id,created_by,customer:customers(name_en,name_ar),rooms:booking_rooms(total_selling,check_in,check_out,hotel:hotels(name_en,name_ar))",
-        { count: "exact" },
-      ).is("deleted_at", null);
-      if (ids) q = q.in("id", ids);
-      if (customer !== "all") q = q.eq("customer_id", customer);
-      if (status !== "all") q = q.eq("status", status);
-      if (from) q = q.gte("booking_date", from);
-      if (to) q = q.lte("booking_date", to);
-      if (dSearch.trim()) q = q.ilike("booking_no", `%${dSearch.trim()}%`);
-      const f = (page - 1) * PAGE_SIZE;
-      q = q.order("created_at", { ascending: false }).range(f, f + PAGE_SIZE - 1);
-      const { data, error, count } = await q;
-      if (error) throw error;
-      return { rows: data ?? [], count: count ?? 0 };
-    },
-  });
+  const list = useMemo(() => {
+    let rows = allBookings;
+    if (status !== "all") {
+      rows = rows.filter((b: any) => b.status === status);
+    }
+    if (customer !== "all") {
+      rows = rows.filter((b: any) => String(b.customer_id) === String(customer));
+    }
+    if (hotel !== "all") {
+      rows = rows.filter((b: any) => String(b.hotel_id) === String(hotel) || (b.rooms ?? []).some((r: any) => String(r.hotel_id) === String(hotel)));
+    }
+    if (from) {
+      rows = rows.filter((b: any) => b.booking_date >= from);
+    }
+    if (to) {
+      rows = rows.filter((b: any) => b.booking_date <= to);
+    }
+    if (dSearch.trim()) {
+      rows = rows.filter((b: any) => (b.code || b.booking_no)?.toLowerCase().includes(dSearch.trim().toLowerCase()));
+    }
+    
+    const count = rows.length;
+    const f = (page - 1) * PAGE_SIZE;
+    return {
+      data: {
+        rows: rows.slice(f, f + PAGE_SIZE),
+        count,
+      },
+      isLoading: isLoadingBookings,
+    };
+  }, [allBookings, status, customer, hotel, from, to, dSearch, page, isLoadingBookings]);
 
   const total = list.data?.count ?? 0;
   const fmt = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 0 });
   const actions = useMemo(() => canWrite && (
-    <Button size="sm" onClick={() => navigate({ to: "/bookings/new" })}>
+    <Button size="sm" onClick={() => navigate("/bookings/new")}>
       <Plus className="h-4 w-4" /> {t("bk.new")}
     </Button>
   ), [canWrite, navigate, t]);
@@ -248,7 +305,7 @@ function BookingsList() {
                           </Button>
                         )}
                         {!filtersActive && canWrite && (
-                          <Button size="sm" onClick={() => navigate({ to: "/bookings/new" })}>
+                          <Button size="sm" onClick={() => navigate("/bookings/new")}>
                             <Plus className="h-4 w-4" /> {t("bk.new")}
                           </Button>
                         )}
@@ -257,28 +314,35 @@ function BookingsList() {
                   </TableRow>
                 )}
                 {list.data?.rows.map((b: any) => {
-                  const value = (b.rooms ?? []).reduce((a: number, i: any) => a + Number(i.total_selling), 0);
-                  const earliestCheckIn = (b.rooms ?? [])
+                  const value = b.total_amount !== undefined ? Number(b.total_amount) : (b.rooms ?? []).reduce((a: number, i: any) => a + Number(i.total_selling), 0);
+                  const earliestCheckIn = b.check_in || (b.rooms ?? [])
                     .map((r: any) => r.check_in).filter(Boolean).sort()[0];
-                  const latestCheckOut = (b.rooms ?? [])
+                  const latestCheckOut = b.check_out || (b.rooms ?? [])
                     .map((r: any) => r.check_out).filter(Boolean).sort().slice(-1)[0];
-                  const nights = earliestCheckIn && latestCheckOut
+                  const nights = b.nights || (earliestCheckIn && latestCheckOut
                     ? Math.max(0, Math.round((new Date(latestCheckOut).getTime() - new Date(earliestCheckIn).getTime()) / 86400000))
-                    : null;
-                  const hotelNames: string[] = Array.from(new Set(
-                    (b.rooms ?? [])
-                      .map((r: any) => r.hotel ? (lang === "ar" ? (r.hotel.name_ar || r.hotel.name_en) : (r.hotel.name_en || r.hotel.name_ar)) : null)
-                      .filter((x: any): x is string => typeof x === "string" && x.length > 0)
-                  ));
+                    : null);
+                  
+                  let hotelNames: string[] = [];
+                  if (b.hotel) {
+                    const hName = lang === "ar" ? (b.hotel.name_ar || b.hotel.name_en) : (b.hotel.name_en || b.hotel.name_ar);
+                    if (hName) hotelNames.push(hName);
+                  } else {
+                    hotelNames = Array.from(new Set(
+                      (b.rooms ?? [])
+                        .map((r: any) => r.hotel ? (lang === "ar" ? (r.hotel.name_ar || r.hotel.name_en) : (r.hotel.name_en || r.hotel.name_ar)) : null)
+                        .filter((x: any): x is string => typeof x === "string" && x.length > 0)
+                    ));
+                  }
                   return (
                     <TableRow
                       key={b.id}
                       className="whitespace-nowrap cursor-pointer hover:bg-muted/50"
-                      onClick={() => navigate({ to: "/bookings/$id", params: { id: b.id } })}
+                      onClick={() => navigate(`/bookings/${b.id}`)}
                     >
                       <TableCell className="font-mono text-xs">
-                        <Link to="/bookings/$id" params={{ id: b.id }} className="text-primary hover:underline" onClick={(e) => e.stopPropagation()}>
-                          {b.booking_no}
+                        <Link to={`/bookings/${b.id}`} className="text-primary hover:underline" onClick={(e) => e.stopPropagation()}>
+                          {b.code || b.booking_no}
                         </Link>
                       </TableCell>
                       <TableCell className="text-sm font-medium">
@@ -317,13 +381,31 @@ function BookingsList() {
                         )}
                       </TableCell>
                       <TableCell dir="ltr" className="text-end text-xs font-semibold tabular-nums">
-                        {fmt(value)} <span className="text-muted-foreground font-normal">{b.currency}</span>
+                        {fmt(value)} <span className="text-muted-foreground font-normal">{typeof b.currency === "object" ? b.currency?.code : (b.currency || "SAR")}</span>
                       </TableCell>
                       <TableCell><BkStatusBadge status={b.status} t={t} /></TableCell>
                       <TableCell className="text-end" onClick={(e) => e.stopPropagation()}>
-                        <Button asChild variant="ghost" size="icon" title={t("actions.view")}>
-                          <Link to="/bookings/$id" params={{ id: b.id }}><Eye className="h-4 w-4" /></Link>
-                        </Button>
+                        <div className="flex justify-end gap-1">
+                          <Button asChild variant="ghost" size="icon" title={t("actions.view")}>
+                            <Link to={`/bookings/${b.id}`}><Eye className="h-4 w-4" /></Link>
+                          </Button>
+                          {canWrite && (
+                            <Button asChild variant="ghost" size="icon" title={t("actions.edit")}>
+                              <Link to={`/bookings/${b.id}?edit=true`}><Pencil className="h-4 w-4 text-amber-600 dark:text-amber-500" /></Link>
+                            </Button>
+                          )}
+                          {canWrite && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title={t("actions.delete")}
+                              onClick={() => setConfirmDeleteId(b.id)}
+                              disabled={isDeleting}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
@@ -334,6 +416,15 @@ function BookingsList() {
           </CardContent>
         </Card>
       </div>
+
+      <ConfirmDialog
+        open={!!confirmDeleteId}
+        onOpenChange={(v) => !v && setConfirmDeleteId(null)}
+        title={t("actions.delete")}
+        description={t("toast.confirm_delete") || "Are you sure you want to delete this booking?"}
+        destructive
+        onConfirm={() => confirmDeleteId && handleDelete(confirmDeleteId)}
+      />
     </>
   );
 }

@@ -1,7 +1,4 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/page-header";
 import { useI18n } from "@/lib/i18n";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,26 +18,13 @@ import {
   purgeSimulatedData,
 } from "@/lib/simulation.functions";
 
-export const Route = createFileRoute("/_authenticated/simulation")({
-  beforeLoad: async () => {
-    const { data } = await supabase.auth.getUser();
-    if (!data.user) throw redirect({ to: "/auth" });
-    const { data: ok } = await supabase.rpc("has_any_role", {
-      _user_id: data.user.id,
-      _roles: ["super_admin", "admin"],
-    });
-    if (!ok) throw redirect({ to: "/" });
-  },
-  component: SimulationPage,
-});
-
-function SimulationPage() {
+export default function SimulationPage() {
   const { dir } = useI18n();
   const qc = useQueryClient();
-  const fetchSettings = useServerFn(getSimulationSettings);
-  const updateFn = useServerFn(updateSimulationSettings);
-  const runFn = useServerFn(runSimulationNow);
-  const purgeFn = useServerFn(purgeSimulatedData);
+  const fetchSettings = getSimulationSettings;
+  const updateFn = updateSimulationSettings;
+  const runFn = runSimulationNow;
+  const purgeFn = purgeSimulatedData;
 
   const q = useQuery({
     queryKey: ["simulation-settings"],

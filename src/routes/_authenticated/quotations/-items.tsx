@@ -1,7 +1,8 @@
 // Quotation Items tab — cascading Hotel → Contract → Room Type (rate) → Season → Occupancy → Pricing
 import { useMemo, useState } from "react";
+import { db } from "@/lib/api/db";
+import { apiClient } from "@/lib/api/api-client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from "@/components/ui/table";
@@ -34,7 +35,7 @@ export function useQuotationItems(quotationId: string) {
   return useQuery({
     queryKey: ["quotation-items", quotationId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from("quotation_items")
         .select("*, hotel:hotels(name_en,name_ar), room_type:hotel_room_types(name_en,name_ar), rate:rates(code, contract:supplier_contracts(contract_number,title))")
         .eq("quotation_id", quotationId)
@@ -59,14 +60,14 @@ export function ItemsTab({ quotationId, currency, editable }: { quotationId: str
   // ===== Cascading lookups =====
   const hotels = useQuery({
     queryKey: ["lookup-hotels"],
-    queryFn: async () => (await supabase.from("hotels").select("id,name_en,name_ar").is("deleted_at", null).order("name_en")).data ?? [],
+    queryFn: async () => (await apiClient.hotels.getAll()) ?? [],
   });
 
   const contracts = useQuery({
     queryKey: ["q-contracts", form.hotel_id],
     enabled: !!form.hotel_id,
     queryFn: async () =>
-      (await supabase.from("supplier_contracts").select("id,contract_number,title,start_date,end_date")
+      (await db.from("supplier_contracts").select("id,contract_number,title,start_date,end_date")
         .eq("hotel_id", form.hotel_id).eq("status", "active").is("deleted_at", null).order("start_date", { ascending: false })).data ?? [],
   });
 
@@ -74,7 +75,7 @@ export function ItemsTab({ quotationId, currency, editable }: { quotationId: str
     queryKey: ["q-rates", form.hotel_id, form.contract_id],
     enabled: !!form.hotel_id && !!form.contract_id,
     queryFn: async () =>
-      (await supabase.from("rates")
+      (await db.from("rates")
         .select("id,code,currency,valid_from,valid_to,room_type_id,room_type:hotel_room_types(name_en,name_ar)")
         .eq("hotel_id", form.hotel_id).eq("contract_id", form.contract_id)
         .eq("status", "approved").is("deleted_at", null).order("valid_from", { ascending: false })).data ?? [],
@@ -84,14 +85,14 @@ export function ItemsTab({ quotationId, currency, editable }: { quotationId: str
     queryKey: ["q-rate-seasons", form.rate_id],
     enabled: !!form.rate_id,
     queryFn: async () =>
-      (await supabase.from("rate_seasons").select("id,name,start_date,end_date").eq("rate_id", form.rate_id).order("start_date")).data ?? [],
+      (await db.from("rate_seasons").select("id,name,start_date,end_date").eq("rate_id", form.rate_id).order("start_date")).data ?? [],
   });
 
   const occPrices = useQuery({
     queryKey: ["q-occ-prices", form.rate_id],
     enabled: !!form.rate_id,
     queryFn: async () =>
-      (await supabase.from("rate_occupancy_prices")
+      (await db.from("rate_occupancy_prices")
         .select("occupancy_type,cost_price,selling_price,markup_percent,currency")
         .eq("rate_id", form.rate_id).eq("active", true)).data ?? [],
   });
@@ -100,7 +101,7 @@ export function ItemsTab({ quotationId, currency, editable }: { quotationId: str
     queryKey: ["q-hotel-taxes", form.hotel_id],
     enabled: !!form.hotel_id,
     queryFn: async () =>
-      (await supabase.from("hotel_taxes").select("calc_method,value,apply_scope,is_inclusive,effective_date,expiry_date")
+      (await db.from("hotel_taxes").select("calc_method,value,apply_scope,is_inclusive,effective_date,expiry_date")
         .eq("hotel_id", form.hotel_id).eq("is_active", true).is("deleted_at", null)).data ?? [],
   });
 
@@ -165,11 +166,9 @@ export function ItemsTab({ quotationId, currency, editable }: { quotationId: str
         selling_price: null,
       };
       if (form.id) {
-        const { error } = await supabase.from("quotation_items").update(payload).eq("id", form.id);
-        if (error) throw error;
+        await apiClient.quotationItems.update(form.id, payload);
       } else {
-        const { error } = await supabase.from("quotation_items").insert(payload);
-        if (error) throw error;
+        await apiClient.quotationItems.create(payload);
       }
     },
     onSuccess: () => {
@@ -178,13 +177,12 @@ export function ItemsTab({ quotationId, currency, editable }: { quotationId: str
       qc.invalidateQueries({ queryKey: ["quotation-items", quotationId] });
       qc.invalidateQueries({ queryKey: ["quotation", quotationId] });
     },
-    onError: (e: any) => toast.error(dbErrorMessage(e, t)),
+    onError: (e: any) => toast.error(dbErrorMessage(e)),
   });
 
   const del = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("quotation_items").delete().eq("id", id);
-      if (error) throw error;
+      await apiClient.quotationItems.delete(id);
     },
     onSuccess: () => {
       toast.success(t("toast.deleted", t("toast.saved")));
@@ -192,7 +190,7 @@ export function ItemsTab({ quotationId, currency, editable }: { quotationId: str
       qc.invalidateQueries({ queryKey: ["quotation-items", quotationId] });
       qc.invalidateQueries({ queryKey: ["quotation", quotationId] });
     },
-    onError: (e: any) => toast.error(dbErrorMessage(e, t)),
+    onError: (e: any) => toast.error(dbErrorMessage(e)),
   });
 
   const startEdit = (it: any) => {
@@ -206,7 +204,7 @@ export function ItemsTab({ quotationId, currency, editable }: { quotationId: str
 
   const rows = items.data ?? [];
   const sums = rows.reduce(
-    (a, i: any) => ({
+    (a: any, i: any) => ({
       cost: a.cost + Number(i.total_cost), taxes: a.taxes + Number(i.taxes), fees: a.fees + Number(i.fees),
       margin: a.margin + Number(i.margin), total: a.total + Number(i.total_selling),
     }),
@@ -303,7 +301,7 @@ export function ItemsTab({ quotationId, currency, editable }: { quotationId: str
               <label className="text-sm">{t("quotes.items.hotel")} *</label>
               <Select value={form.hotel_id} onValueChange={pickHotel}>
                 <SelectTrigger><SelectValue placeholder={t("quotes.items.hotel")} /></SelectTrigger>
-                <SelectContent>{hotels.data?.map((h: any) => <SelectItem key={h.id} value={h.id}>{nm(h)}</SelectItem>)}</SelectContent>
+                <SelectContent>{(Array.isArray(hotels.data) ? hotels.data : Array.isArray(hotels.data?.data) ? hotels.data.data : [])?.map((h: any) => <SelectItem key={h.id} value={h.id}>{nm(h)}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">

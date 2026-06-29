@@ -1,23 +1,29 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  Outlet,
-  Link,
-  createRootRouteWithContext,
-  useRouter,
-  HeadContent,
-  Scripts,
-} from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
-
-import appCss from "../styles.css?url";
-import { reportLovableError } from "../lib/lovable-error-reporting";
+import { Outlet, Link } from "react-router-dom";
+import type { ReactNode } from "react";
 import { I18nProvider, useI18n } from "@/lib/i18n";
 import { DirectionProvider } from "@radix-ui/react-direction";
-import { AuthProvider } from "@/hooks/use-auth";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
-function NotFoundComponent() {
+function DirectionWrapper({ children }: { children: ReactNode }) {
+  const { dir } = useI18n();
+  return <DirectionProvider dir={dir}>{children}</DirectionProvider>;
+}
+
+export default function RootLayout() {
+  return (
+    <I18nProvider>
+      <DirectionWrapper>
+        <TooltipProvider>
+          <Outlet />
+          <Toaster richColors position="top-center" />
+        </TooltipProvider>
+      </DirectionWrapper>
+    </I18nProvider>
+  );
+}
+
+export function NotFoundPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
@@ -36,111 +42,5 @@ function NotFoundComponent() {
         </div>
       </div>
     </div>
-  );
-}
-
-function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
-  console.error(error);
-  const router = useRouter();
-  useEffect(() => {
-    reportLovableError(error, { boundary: "tanstack_root_error_component" });
-  }, [error]);
-
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="max-w-md text-center">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">This page didn't load</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Something went wrong on our end.</p>
-        <div className="mt-6 flex flex-wrap justify-center gap-2">
-          <button
-            onClick={() => { router.invalidate(); reset(); }}
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-          >
-            Try again
-          </button>
-          <a
-            href="/"
-            className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-accent"
-          >
-            Go home
-          </a>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
-  head: () => ({
-    meta: [
-      { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "نظام إدارة الحجوزات الفندقية" },
-      { name: "description", content: "Enterprise hotel quotation and reservation management system" },
-      { property: "og:title", content: "نظام إدارة الحجوزات الفندقية" },
-      { name: "twitter:title", content: "نظام إدارة الحجوزات الفندقية" },
-      { property: "og:description", content: "Enterprise hotel quotation and reservation management system" },
-      { name: "twitter:description", content: "Enterprise hotel quotation and reservation management system" },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/c1d51ef0-3b0c-47f8-9a74-465d862a9eac/id-preview-862ac66c--2d28f67f-e9e1-4975-bb2e-db98999a94f7.lovable.app-1781104211536.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/c1d51ef0-3b0c-47f8-9a74-465d862a9eac/id-preview-862ac66c--2d28f67f-e9e1-4975-bb2e-db98999a94f7.lovable.app-1781104211536.png" },
-      { name: "twitter:card", content: "summary_large_image" },
-      { property: "og:type", content: "website" },
-    ],
-    links: [
-      { rel: "stylesheet", href: appCss },
-      { rel: "preconnect", href: "https://fonts.googleapis.com" },
-      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      {
-        rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap",
-      },
-    ],
-  }),
-  shellComponent: RootShell,
-  component: RootComponent,
-  notFoundComponent: NotFoundComponent,
-  errorComponent: ErrorComponent,
-});
-
-function RootShell({ children }: { children: ReactNode }) {
-  return (
-    <html lang="ar" dir="rtl">
-      <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html:
-              "try{if(localStorage.getItem('theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}",
-          }}
-        />
-        <HeadContent />
-      </head>
-      <body>
-        {children}
-        <Scripts />
-      </body>
-    </html>
-  );
-}
-
-function DirectionWrapper({ children }: { children: ReactNode }) {
-  const { dir } = useI18n();
-  return <DirectionProvider dir={dir}>{children}</DirectionProvider>;
-}
-
-function RootComponent() {
-  const { queryClient } = Route.useRouteContext();
-  return (
-    <QueryClientProvider client={queryClient}>
-      <I18nProvider>
-        <DirectionWrapper>
-          <AuthProvider>
-            <TooltipProvider>
-              <Outlet />
-              <Toaster richColors position="top-center" />
-            </TooltipProvider>
-          </AuthProvider>
-        </DirectionWrapper>
-      </I18nProvider>
-    </QueryClientProvider>
   );
 }

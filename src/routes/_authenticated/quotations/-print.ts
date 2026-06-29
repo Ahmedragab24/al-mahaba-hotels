@@ -1,6 +1,6 @@
 // Quotation print / PDF engine — opens a printable bilingual document in a new window.
-import { supabase } from "@/integrations/supabase/client";
 import logoUrl from "@/assets/daleel-logo-transparent.png";
+import { db } from "@/lib/api/db";
 import { DOC_LANGS, QUOTE_RES, OCC_RES, missingDocKeys, type DocLang } from "@/lib/doc-lang";
 
 type Lang = DocLang;
@@ -50,7 +50,13 @@ export async function openQuotationPrint(opts: {
   const locale = DOC_LANGS[lang].locale;
   const money = (n: number) =>
     `${Number(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${q.currency}`;
-  const d = (v: string | null) => (v ? new Date(v + "T00:00:00").toLocaleDateString(locale) : "—");
+  const d = (v: string | null) => {
+    if (!v) return "—";
+    // Handle dates that might already include time
+    const dateStr = v.includes(' ') ? v.replace(' ', 'T') : v;
+    const date = new Date(dateStr);
+    return isNaN(date.getTime()) ? "—" : date.toLocaleDateString(locale);
+  };
   const name = (o?: { name_en?: string | null; name_ar?: string | null } | null) =>
     dir === "rtl" ? o?.name_ar || o?.name_en || "—" : o?.name_en || o?.name_ar || "—";
 
@@ -127,7 +133,6 @@ export async function openQuotationPrint(opts: {
     <div class="box"><div class="k">${esc(s.to)}</div><div class="v">${esc(customerName)}</div></div>
     <div class="box"><div class="k">${esc(s.date)}</div><div class="v" dir="ltr">${d(q.quotation_date)}</div></div>
     <div class="box"><div class="k">${esc(s.valid_until)}</div><div class="v" dir="ltr">${d(q.expiry_date)}</div></div>
-    <div class="box"><div class="k">${esc(s.travel_date)}</div><div class="v" dir="ltr">${d(q.travel_date)}</div></div>
     <div class="box"><div class="k">${esc(s.generated)}</div><div class="v" dir="ltr">${new Date().toLocaleString(locale)}</div></div>
     <div class="box"><div class="k">${esc(s.quotation_no)}</div><div class="v" dir="ltr">${esc(q.quotation_no)}</div></div>
   </div>
@@ -165,7 +170,7 @@ export async function openQuotationPrint(opts: {
 
   // Audit: PDF generation
   try {
-    await (supabase.rpc as any)("log_audit", {
+    await db.rpc("log_audit", {
       _action: "pdf_generate",
       _entity_type: "quotations",
       _entity_id: q.id,

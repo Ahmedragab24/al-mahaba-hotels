@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useI18n } from "@/lib/i18n";
 import { PageHeader } from "@/components/page-header";
@@ -10,12 +10,7 @@ import {
   getMySupplierProfile, listMyHotels, listMyRates, listMyBookings, listMyPayables,
 } from "@/lib/supplier-portal.functions";
 
-export const Route = createFileRoute("/_authenticated/supplier-portal")({
-  ssr: false,
-  component: SupplierPortalPage,
-});
-
-function SupplierPortalPage() {
+export default function SupplierPortalPage() {
   const { t, lang } = useI18n();
   const profile = useQuery({ queryKey: ["my-supplier"], queryFn: () => getMySupplierProfile() });
 
@@ -188,3 +183,5 @@ const Th = ({ children }: { children: React.ReactNode }) => <th className="text-
 const Td = ({ children }: { children: React.ReactNode }) => <td className="px-3 py-2">{children}</td>;
 const Loader = () => <div className="flex items-center justify-center py-10"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>;
 const Empty = ({ msg }: { msg: string }) => <Card><CardContent className="py-10 text-center text-muted-foreground text-sm">{msg}</CardContent></Card>;
+
+export { SupplierPortalPage as Component };

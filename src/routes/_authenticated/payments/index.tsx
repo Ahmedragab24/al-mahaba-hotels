@@ -1,10 +1,13 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "react-router-dom";
+import { db } from "@/lib/api/db";
+import { apiClient } from "@/lib/api/api-client";
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/page-header";
 import { useI18n } from "@/lib/i18n";
-import { useAuth } from "@/hooks/use-auth";
+import { useSelector } from "react-redux";
+import { selectAuth } from "@/store/features/authSlice";
+import { hasRole, hasAnyRole, isAdmin, canAccessModule } from "@/lib/auth-utils";
 import { useDebounce } from "@/lib/use-debounce";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -19,15 +22,11 @@ import { formatDate } from "@/lib/format";
 import { KpiCard } from "@/components/list-toolkit";
 import { BkStatusBadge } from "../bookings";
 
-export const Route = createFileRoute("/_authenticated/payments/")({
-  component: PaymentsList,
-});
-
 const PAGE_SIZE = 50; // Increased since we filter in memory
 
-function PaymentsList() {
+export default function PaymentsList() {
   const { t, lang } = useI18n();
-  const auth = useAuth();
+  const auth = useSelector(selectAuth);
   const navigate = useNavigate();
 
   const [search, setSearch] = useState("");
@@ -42,15 +41,14 @@ function PaymentsList() {
 
   const customers = useQuery({
     queryKey: ["lookup-customers"],
-    queryFn: async () => (await supabase.from("customers").select("id,name_en,name_ar").is("deleted_at", null).order("name_en")).data ?? [],
+    queryFn: async () => (await apiClient.customers.getAll()) ?? [],
   });
 
   const list = useQuery({
     queryKey: ["payments-bookings", { dSearch, customer }],
     queryFn: async () => {
       // Fetch bookings where total_amount > 0 and status is not cancelled/no_show
-      // @ts-ignore - Supabase generated types might not have the newly added fields yet
-      let q = supabase.from("bookings").select(
+            let q = db.from("bookings").select(
         "id, booking_no, status, currency, booking_date, check_in, total_amount, amount_paid, payment_mode, customer:customers(id, name_en, name_ar, phone)"
       )
         .is("deleted_at", null)
@@ -147,7 +145,7 @@ function PaymentsList() {
                 <SelectTrigger className="w-full"><SelectValue placeholder={t("bk.customer")} /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t("filter.all")}</SelectItem>
-                  {customers.data?.map((c: any) => <SelectItem key={c.id} value={c.id}>{lang === "ar" ? (c.name_ar || c.name_en) : (c.name_en || c.name_ar)}</SelectItem>)}
+                  {(Array.isArray(customers.data) ? customers.data : Array.isArray(customers.data?.data) ? customers.data.data : []).map((c: any) => <SelectItem key={c.id} value={c.id}>{lang === "ar" ? (c.name_ar || c.name_en) : (c.name_en || c.name_ar)}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -199,9 +197,9 @@ function PaymentsList() {
                   const customerName = b.customer ? (lang === "ar" ? (b.customer.name_ar || b.customer.name_en) : (b.customer.name_en || b.customer.name_ar)) : "—";
 
                   return (
-                    <TableRow key={b.id} className="whitespace-nowrap cursor-pointer hover:bg-muted/50" onClick={() => navigate({ to: "/bookings/$id", params: { id: b.id } })}>
+                    <TableRow key={b.id} className="whitespace-nowrap cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/bookings/${b.id}`)}>
                       <TableCell className="font-mono text-xs">
-                        <Link to="/bookings/$id" params={{ id: b.id }} className="text-primary hover:underline" onClick={(e) => e.stopPropagation()}>
+                        <Link to={`/bookings/${b.id}`} className="text-primary hover:underline" onClick={(e) => e.stopPropagation()}>
                           {b.booking_no}
                         </Link>
                       </TableCell>
@@ -215,14 +213,14 @@ function PaymentsList() {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell dir="ltr" className="text-sm tabular-nums text-blue-600 font-semibold">{fmt(total)} <span className="text-xs text-muted-foreground font-normal">{b.currency}</span></TableCell>
-                      <TableCell dir="ltr" className="text-sm tabular-nums text-emerald-600 font-semibold">{fmt(paid)} <span className="text-xs text-muted-foreground font-normal">{b.currency}</span></TableCell>
-                      <TableCell dir="ltr" className="text-sm tabular-nums text-red-600 font-bold bg-red-50/50 dark:bg-red-950/10">{fmt(remaining)} <span className="text-xs text-muted-foreground font-normal">{b.currency}</span></TableCell>
+                      <TableCell dir="ltr" className="text-sm tabular-nums text-blue-600 font-semibold">{fmt(total)} <span className="text-xs text-muted-foreground font-normal">{typeof b.currency === "object" ? b.currency?.code : (b.currency || "SAR")}</span></TableCell>
+                      <TableCell dir="ltr" className="text-sm tabular-nums text-emerald-600 font-semibold">{fmt(paid)} <span className="text-xs text-muted-foreground font-normal">{typeof b.currency === "object" ? b.currency?.code : (b.currency || "SAR")}</span></TableCell>
+                      <TableCell dir="ltr" className="text-sm tabular-nums text-red-600 font-bold bg-red-50/50 dark:bg-red-950/10">{fmt(remaining)} <span className="text-xs text-muted-foreground font-normal">{typeof b.currency === "object" ? b.currency?.code : (b.currency || "SAR")}</span></TableCell>
                       <TableCell dir="ltr" className="text-xs">{b.check_in ? formatDate(b.check_in, lang) : "—"}</TableCell>
                       <TableCell><BkStatusBadge status={b.status} t={t} /></TableCell>
                       <TableCell className="text-end" onClick={(e) => e.stopPropagation()}>
                         <Button asChild variant="ghost" size="icon" title={t("actions.view")}>
-                          <Link to="/bookings/$id" params={{ id: b.id }}><Eye className="h-4 w-4" /></Link>
+                          <Link to={`/bookings/${b.id}`}><Eye className="h-4 w-4" /></Link>
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -237,3 +235,5 @@ function PaymentsList() {
     </>
   );
 }
+
+export { PaymentsList as Component };

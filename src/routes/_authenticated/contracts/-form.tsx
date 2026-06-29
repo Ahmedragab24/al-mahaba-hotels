@@ -1,7 +1,8 @@
+import { useNavigate } from "react-router-dom";
+import { getCurrentUserId } from "@/lib/api/base";
+import { apiClient } from "@/lib/api/api-client";
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
-import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
 import { useHotelsLite, useSuppliersLite, useCurrencies } from "@/lib/lookups";
 import { dbErrorMessage } from "@/lib/db-errors";
@@ -51,23 +52,21 @@ export function ContractForm({ initial, onSaved }: { initial?: any; onSaved?: ()
         throw new Error(t("taxes.err_pct"));
       }
       if (isEdit) {
-        const { error } = await supabase.from("supplier_contracts").update(payload as any).eq("id", initial.id);
-        if (error) throw error;
+        await apiClient.supplierContracts.update(initial.id, payload as any);
         return initial.id as string;
       } else {
-        const { data: u } = await supabase.auth.getUser();
+        const u = { user: { id: getCurrentUserId() } };
         payload.contract_number = "";
         payload.status = "draft";
         payload.created_by = u.user?.id ?? null;
-        const { data, error } = await supabase.from("supplier_contracts").insert(payload as any).select("id").single();
-        if (error) throw error;
+        const data = await apiClient.supplierContracts.create(payload as any);
         return data.id as string;
       }
     },
     onSuccess: (id) => {
       toast.success(t("toast.saved"));
       if (onSaved) onSaved();
-      else navigate({ to: "/contracts/$id", params: { id } });
+      else navigate(`/contracts/${id}`);
     },
     onError: (e: any) => toast.error(dbErrorMessage(e, t)),
   });
@@ -80,7 +79,7 @@ export function ContractForm({ initial, onSaved }: { initial?: any; onSaved?: ()
             <Select value={v.supplier_id ?? ""} onValueChange={(x) => setV({ ...v, supplier_id: x })}>
               <SelectTrigger><SelectValue placeholder={t("contracts.supplier")} /></SelectTrigger>
               <SelectContent>
-                {suppliers.data?.map((s) => <SelectItem key={s.id} value={s.id}>{lang === "ar" ? (s.name_ar || s.name_en) : (s.name_en || s.name_ar)}</SelectItem>)}
+                {(Array.isArray(suppliers.data) ? suppliers.data : Array.isArray(suppliers.data?.data) ? suppliers.data.data : [])?.map((s: any) => <SelectItem key={s.id} value={s.id}>{lang === "ar" ? (s.name_ar || s.name_en) : (s.name_en || s.name_ar)}</SelectItem>)}
               </SelectContent>
             </Select>
           </Field>
@@ -88,7 +87,7 @@ export function ContractForm({ initial, onSaved }: { initial?: any; onSaved?: ()
             <Select value={v.hotel_id ?? ""} onValueChange={(x) => setV({ ...v, hotel_id: x })}>
               <SelectTrigger><SelectValue placeholder={t("contracts.hotel")} /></SelectTrigger>
               <SelectContent>
-                {hotels.data?.map((h) => <SelectItem key={h.id} value={h.id}>{lang === "ar" ? (h.name_ar || h.name_en) : (h.name_en || h.name_ar)}</SelectItem>)}
+                {(Array.isArray(hotels.data) ? hotels.data : Array.isArray(hotels.data?.data) ? hotels.data.data : [])?.map((h: any) => <SelectItem key={h.id} value={h.id}>{lang === "ar" ? (h.name_ar || h.name_en) : (h.name_en || h.name_ar)}</SelectItem>)}
               </SelectContent>
             </Select>
           </Field>
@@ -107,7 +106,7 @@ export function ContractForm({ initial, onSaved }: { initial?: any; onSaved?: ()
             <Select value={v.currency ?? ""} onValueChange={(x) => setV({ ...v, currency: x })}>
               <SelectTrigger><SelectValue placeholder={t("label.currency")} /></SelectTrigger>
               <SelectContent>
-                {currencies.data?.map((c) => <SelectItem key={c.code} value={c.code}>{c.code} — {lang === "ar" ? c.name_ar : c.name_en}</SelectItem>)}
+                {(Array.isArray(currencies.data) ? currencies.data : Array.isArray(currencies.data?.data) ? currencies.data.data : [])?.map((c: any) => <SelectItem key={c.code} value={c.code}>{c.code} — {lang === "ar" ? c.name_ar : c.name_en}</SelectItem>)}
               </SelectContent>
             </Select>
           </Field>
@@ -131,7 +130,7 @@ export function ContractForm({ initial, onSaved }: { initial?: any; onSaved?: ()
           <Field label={t("label.notes")}><Textarea rows={2} value={v.notes ?? ""} onChange={(e) => setV({ ...v, notes: e.target.value })} /></Field>
         </div>
         <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={() => (onSaved ? onSaved() : navigate({ to: "/contracts" }))}>{t("actions.cancel")}</Button>
+          <Button variant="outline" onClick={() => (onSaved ? onSaved() : navigate("/contracts"))}>{t("actions.cancel")}</Button>
           <Button onClick={() => save.mutate()} disabled={save.isPending}>{save.isPending ? t("actions.saving") : t("actions.save")}</Button>
         </div>
       </CardContent>

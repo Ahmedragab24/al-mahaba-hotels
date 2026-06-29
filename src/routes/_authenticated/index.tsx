@@ -1,20 +1,18 @@
-import { createFileRoute, Link, Navigate, type LinkProps } from "@tanstack/react-router";
+import { Link, Navigate, type LinkProps } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { apiClient } from "@/lib/api/api-client";
 import { useI18n } from "@/lib/i18n";
-import { useAuth } from "@/hooks/use-auth";
+import { useSelector } from "react-redux";
+import { selectAuth } from "@/store/features/authSlice";
+import { hasRole, hasAnyRole, isAdmin, canAccessModule } from "@/lib/auth-utils";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Hotel, Truck, Tags, ClipboardCheck, Activity, TrendingUp, TrendingDown, Percent, FileText, Hourglass, CheckCircle2, ThumbsUp, XCircle, Clock, Banknote } from "lucide-react";
 import { formatDateTime } from "@/lib/format";
 
-export const Route = createFileRoute("/_authenticated/")({
-  component: DashboardOrRedirect,
-});
-
-function DashboardOrRedirect() {
-  const auth = useAuth();
-  if (!auth.loading && auth.hasRole("supplier") && !auth.hasAnyRole(["super_admin", "admin", "sales_manager", "sales_agent", "operations_manager", "operations_agent", "finance_manager", "finance_agent", "viewer"])) {
+export default function DashboardOrRedirect() {
+  const auth = useSelector(selectAuth);
+  if (hasRole(auth, "viewer") && !hasAnyRole(auth, ["super_admin", "sales_manager", "financial_manager", "employee", "viewer"])) {
     return <Navigate to="/supplier-portal" replace />;
   }
   return <Dashboard />;
@@ -38,26 +36,35 @@ function StatCard({ icon: Icon, label, value, to }: { icon: React.ComponentType<
   return card;
 }
 
+/** Helper: safely get array length from API response (handles {data:[...]}, [...], or wrapped objects) */
+function extractList(res: any): any[] {
+  if (Array.isArray(res)) return res;
+  if (res?.data && Array.isArray(res.data)) return res.data;
+  return [];
+}
+
 function Dashboard() {
   const { t, lang } = useI18n();
-  const auth = useAuth();
+  const auth = useSelector(selectAuth);
 
   const stats = useQuery({
     queryKey: ["dashboard-stats"],
     queryFn: async () => {
-      const [c, h, s, r, p] = await Promise.all([
-        supabase.from("customers").select("*", { count: "exact", head: true }).is("deleted_at", null),
-        supabase.from("hotels").select("*", { count: "exact", head: true }).is("deleted_at", null),
-        supabase.from("suppliers").select("*", { count: "exact", head: true }).is("deleted_at", null),
-        supabase.from("rates").select("*", { count: "exact", head: true }).is("deleted_at", null),
-        supabase.from("rates").select("*", { count: "exact", head: true }).eq("status", "pending_approval"),
+      // Fetch counts from available API endpoints
+      const [suppliersRes, hotelsRes] = await Promise.allSettled([
+        apiClient.suppliers.getAll(),
+        apiClient.hotels.getAll(),
       ]);
+
+      const suppliers = suppliersRes.status === "fulfilled" ? extractList(suppliersRes.value).length : 0;
+      const hotels = hotelsRes.status === "fulfilled" ? extractList(hotelsRes.value).length : 0;
+
       return {
-        customers: c.count ?? 0,
-        hotels: h.count ?? 0,
-        suppliers: s.count ?? 0,
-        rates: r.count ?? 0,
-        pending: p.count ?? 0,
+        customers: "—",  // No endpoint yet
+        hotels,
+        suppliers,
+        rates: "—",       // No endpoint yet
+        pending: "—",     // No endpoint yet
       };
     },
   });
@@ -65,23 +72,11 @@ function Dashboard() {
   const pricing = useQuery({
     queryKey: ["dashboard-pricing"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("rate_occupancy_prices")
-        .select("cost_price, selling_price")
-        .eq("active", true);
-      if (error) throw error;
-      const rows = data ?? [];
-      if (rows.length === 0) return null;
-      const avg = (ns: number[]) => ns.reduce((a, b) => a + b, 0) / ns.length;
-      const costs = rows.map((r) => Number(r.cost_price));
-      const sells = rows.filter((r) => r.selling_price != null).map((r) => Number(r.selling_price));
-      const margins = rows
-        .filter((r) => r.selling_price != null && Number(r.cost_price) > 0)
-        .map((r) => ((Number(r.selling_price) - Number(r.cost_price)) / Number(r.cost_price)) * 100);
+      // No dedicated pricing stats endpoint yet — return placeholder
       return {
-        avgCost: costs.length ? avg(costs).toFixed(2) : "—",
-        avgSelling: sells.length ? avg(sells).toFixed(2) : "—",
-        avgMargin: margins.length ? avg(margins).toFixed(2) + " %" : "—",
+        avgCost: "—",
+        avgSelling: "—",
+        avgMargin: "—",
       };
     },
   });
@@ -89,22 +84,15 @@ function Dashboard() {
   const quotes = useQuery({
     queryKey: ["dashboard-quotes"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("quotations")
-        .select("status, items:quotation_items(total_selling)")
-        .is("deleted_at", null);
-      if (error) throw error;
-      const rows = data ?? [];
-      const by = (s: string) => rows.filter((r: any) => r.status === s).length;
-      const value = rows.reduce((a, r: any) => a + (r.items ?? []).reduce((x: number, i: any) => x + Number(i.total_selling), 0), 0);
+      // No dedicated quotations stats endpoint yet — return placeholder
       return {
-        total: rows.length,
-        pending: by("pending_approval"),
-        approved: by("approved"),
-        accepted: by("accepted"),
-        rejected: by("rejected"),
-        expired: by("expired"),
-        value: value.toLocaleString("en-US", { maximumFractionDigits: 0 }),
+        total: "—",
+        pending: "—",
+        approved: "—",
+        accepted: "—",
+        rejected: "—",
+        expired: "—",
+        value: "—",
       };
     },
   });
@@ -112,18 +100,12 @@ function Dashboard() {
   const activity = useQuery({
     queryKey: ["recent-activity"],
     queryFn: async () => {
-      const { data } = await supabase
-        .from("audit_logs")
-        .select("id, action, entity_type, entity_id, user_email, created_at")
-        .order("created_at", { ascending: false })
-        .limit(10);
-      return data ?? [];
+      // No dedicated audit logs endpoint yet — return empty list
+      return [] as any[];
     },
   });
 
-  const greet = lang === "ar"
-    ? (auth.profile?.full_name_ar || auth.profile?.full_name_en || auth.user?.email)
-    : (auth.profile?.full_name_en || auth.profile?.full_name_ar || auth.user?.email);
+  const greet = (auth.profile as any)?.name || (auth.profile as any)?.full_name_en || (auth.profile as any)?.full_name_ar || auth.user?.email;
 
   return (
     <>
@@ -169,7 +151,7 @@ function Dashboard() {
               <p className="text-sm text-muted-foreground">{t("label.no_results")}</p>
             ) : (
               <ul className="divide-y">
-                {activity.data!.map((a) => (
+                {activity.data!.map((a: any) => (
                   <li key={a.id} className="flex items-center justify-between py-3 text-sm">
                     <span className="font-medium">{a.action}</span>
                     <span className="text-muted-foreground">{a.entity_type}</span>
@@ -185,3 +167,5 @@ function Dashboard() {
     </>
   );
 }
+
+export { DashboardOrRedirect as Component };

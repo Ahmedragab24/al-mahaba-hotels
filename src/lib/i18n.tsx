@@ -39,11 +39,21 @@ export const dict: Dict = {
   "nav.dashboard": { ar: "لوحة التحكم", en: "Dashboard" },
   "nav.customers": { ar: "العملاء", en: "Customers" },
   "nav.hotels": { ar: "الفنادق", en: "Hotels" },
+  "nav.rooms": { ar: "الغرف", en: "Rooms" },
   "nav.suppliers": { ar: "الموردون", en: "Suppliers" },
   "nav.rates": { ar: "الأسعار", en: "Rates" },
+  "nav.quotations": { ar: "عروض الأسعار", en: "Quotations" },
+  "nav.rfqs": { ar: "طلبات الأسعار", en: "RFQs" },
+  "nav.bookings": { ar: "الحجوزات", en: "Bookings" },
+  "nav.invoices": { ar: "الفواتير", en: "Invoices" },
+  "nav.receipts": { ar: "سندات القبض", en: "Receipts" },
+  "nav.payables": { ar: "مستحقات الموردين", en: "Supplier Payables" },
+  "nav.taxes": { ar: "الضرائب", en: "Taxes" },
+  "nav.reports": { ar: "التقارير", en: "Reports" },
+  "nav.currencies": { ar: "العملات", en: "Currencies" },
   "nav.admin": { ar: "الإدارة", en: "Administration" },
   "nav.users": { ar: "المستخدمون", en: "Users" },
-  "nav.tasks": { ar: "التاسكات", en: "Tasks" },
+  "nav.tasks": { ar: "المهام", en: "Tasks" },
   "nav.audit": { ar: "سجل التدقيق", en: "Audit Log" },
   "nav.simulation": { ar: "وضع المحاكاة", en: "Simulation Mode" },
   "nav.settings": { ar: "الإعدادات", en: "Settings" },
@@ -68,6 +78,7 @@ export const dict: Dict = {
   "actions.view": { ar: "عرض", en: "View" },
   "actions.back": { ar: "رجوع", en: "Back" },
   "actions.add": { ar: "إضافة", en: "Add" },
+  "actions.upload": { ar: "رفع", en: "Upload" },
   "actions.submit_approval": { ar: "إرسال للاعتماد", en: "Submit for approval" },
   "actions.approve": { ar: "اعتماد", en: "Approve" },
   "actions.reject": { ar: "رفض", en: "Reject" },
@@ -89,6 +100,7 @@ export const dict: Dict = {
   "label.city": { ar: "المدينة", en: "City" },
   "label.address": { ar: "العنوان", en: "Address" },
   "label.status": { ar: "الحالة", en: "Status" },
+  "label.is_archived": { ar: "مؤرشف", en: "Archived" },
   "label.currency": { ar: "العملة", en: "Currency" },
   "label.language": { ar: "اللغة", en: "Language" },
   "label.tax_number": { ar: "الرقم الضريبي", en: "Tax Number" },
@@ -112,6 +124,9 @@ export const dict: Dict = {
   "label.no_results": { ar: "لا توجد نتائج", en: "No results" },
   "label.loading": { ar: "جاري التحميل...", en: "Loading..." },
   "label.required": { ar: "مطلوب", en: "Required" },
+  "label.image": { ar: "صورة", en: "Image" },
+  "label.images": { ar: "صور", en: "Images" },
+  "label.uploading": { ar: "جاري الرفع...", en: "Uploading..." },
 
   // Status values
   "status.active": { ar: "نشط", en: "Active" },
@@ -123,7 +138,22 @@ export const dict: Dict = {
   "status.rejected": { ar: "مرفوض", en: "Rejected" },
   "status.expired": { ar: "منتهي", en: "Expired" },
 
+  // User roles
+  "role.super_admin": { ar: "مدير النظام", en: "Super Admin" },
+  "role.admin": { ar: "مدير عام", en: "Admin" },
+  "role.financial_manager": { ar: "مدير مالي", en: "Financial Manager" },
+  "role.finance_manager": { ar: "مدير الحسابات", en: "Finance Manager" },
+  "role.finance_agent": { ar: "ممثل مالي", en: "Finance Agent" },
+  "role.operations_manager": { ar: "مدير العمليات", en: "Operations Manager" },
+  "role.operations_agent": { ar: "ممثل عمليات", en: "Operations Agent" },
+  "role.sales_manager": { ar: "مدير المبيعات", en: "Sales Manager" },
+  "role.sales_agent": { ar: "ممثل مبيعات", en: "Sales Agent" },
+  "role.viewer": { ar: "مشاهد", en: "Viewer" },
+  "role.employee": { ar: "موظف", en: "Employee" },
+  "role.supplier": { ar: "مورد", en: "Supplier" },
+
   // Customer types
+  "ctype.company": { ar: "شركة", en: "Company" },
   "ctype.corporate": { ar: "شركة", en: "Corporate" },
   "ctype.individual": { ar: "فرد", en: "Individual" },
   "ctype.agency": { ar: "وكالة", en: "Agency" },
@@ -160,18 +190,15 @@ export const dict: Dict = {
   "board.FB": { ar: "Full Board", en: "Full Board" },
   "board.AI": { ar: "كل شيء مشمول", en: "All Inclusive" },
   "board.UAI": { ar: "كل شيء مشمول فاخر", en: "Ultra All Inclusive" },
+  "board.exclusive": { ar: "وجبات اختيارية", en: "Exclusive Meals" },
+  "board.inclusive": { ar: "وجبات مشمولة", en: "Inclusive Meals" },
+  "board.breakfast": { ar: "إفطار", en: "Breakfast" },
+  "board.lunch": { ar: "غداء", en: "Lunch" },
+  "board.dinner": { ar: "عشاء", en: "Dinner" },
+  "board.half_board": { ar: "نصف إقامة", en: "Half Board" },
+  "board.full_board": { ar: "إقامة كاملة", en: "Full Board" },
+  "board.all_inclusive": { ar: "شامل الكل", en: "All Inclusive" },
 
-  // Roles
-  "role.super_admin": { ar: "مدير عام", en: "Super Admin" },
-  "role.admin": { ar: "مدير", en: "Administrator" },
-  "role.sales_manager": { ar: "مدير مبيعات", en: "Sales Manager" },
-  "role.sales_agent": { ar: "موظف مبيعات", en: "Sales Agent" },
-  "role.operations_manager": { ar: "مدير عمليات", en: "Operations Manager" },
-  "role.operations_agent": { ar: "موظف عمليات", en: "Operations Agent" },
-  "role.finance_manager": { ar: "مدير مالية", en: "Finance Manager" },
-  "role.finance_agent": { ar: "موظف مالية", en: "Finance Agent" },
-  "role.viewer": { ar: "مشاهد فقط", en: "Viewer" },
-  "role.supplier": { ar: "مورد", en: "Supplier" },
 
   // Supplier types
   "supplier.type.direct_hotel": { ar: "فندق مباشر", en: "Direct Hotel" },
@@ -200,7 +227,8 @@ export const dict: Dict = {
   "supplier.apply.have_account": { ar: "لديك حساب؟ تسجيل الدخول", en: "Have an account? Sign in" },
   "supplier.apply.back_to_signin": { ar: "العودة لتسجيل الدخول", en: "Back to sign-in" },
   "supplier.apply.success_title": { ar: "تم استلام طلبك بنجاح", en: "Application received" },
-  "supplier.apply.success_desc": { ar: "سيراجع المسؤول طلبك خلال 24-48 ساعة وسيتم تزويدك ببيانات الدخول عبر البريد المُسجَّل.", en: "An administrator will review your request within 24-48 hours and email you login credentials." },
+  "supplier.apply.request_id": { ar: "رقم الطلب", en: "Request ID" },
+  "supplier.apply.success_desc": { ar: "سيراجع المسؤول طلبك خلال 24-48 ساعة وسيتم الرد عليك.", en: "An administrator will review your request within 24-48 hours and will respond to you." },
   "supplier.apply.err_duplicate": { ar: "يوجد طلب سابق بنفس البريد الإلكتروني.", en: "An application with this email already exists." },
   "supplier.apply.err_email": { ar: "بريد إلكتروني غير صالح.", en: "Invalid email address." },
   "supplier.apply.err_missing": { ar: "حقول مطلوبة ناقصة.", en: "Required fields are missing." },
@@ -254,12 +282,18 @@ export const dict: Dict = {
   "hotels.new": { ar: "فندق جديد", en: "New Hotel" },
   "hotels.edit": { ar: "تعديل الفندق", en: "Edit Hotel" },
   "hotels.profile": { ar: "بيانات الفندق", en: "Profile" },
-  "hotels.rooms": { ar: "أنواع الغرف", en: "Room Types" },
+  "hotels.rooms": { ar: "الغرف", en: "Rooms" },
+  "hotels.room_type": { ar: "نوع الغرفة", en: "Room Type" },
+  "hotels.room_details": { ar: "تفاصيل الغرفة", en: "Room Details" },
   "hotels.views": { ar: "الإطلالات", en: "Views" },
+  "hotels.view": { ar: "الإطلالة", en: "View" },
   "hotels.meal_plans": { ar: "خطط الوجبات", en: "Meal Plans" },
   "hotels.facilities": { ar: "المرافق", en: "Facilities" },
   "hotels.suppliers": { ar: "الموردون المرتبطون", en: "Linked Suppliers" },
   "hotels.images": { ar: "الصور", en: "Images" },
+  "hotels.upload_images": { ar: "رفع الصور", en: "Upload Images" },
+  "hotels.click_to_upload": { ar: "انقر هنا لرفع الصور", en: "Click here to upload images" },
+  "hotels.supported_formats": { ar: "الصيغ المدعومة: JPG, PNG, WEBP", en: "Supported formats: JPG, PNG, WEBP" },
   "hotels.contacts": { ar: "جهات الاتصال", en: "Contacts" },
   "hotels.bookings": { ar: "سجل الحجوزات", en: "Booking History" },
   "hotels.rates_history": { ar: "سجل الأسعار", en: "Rates History" },
@@ -484,11 +518,15 @@ export const dict: Dict = {
 
   // Toasts
   "toast.saved": { ar: "تم الحفظ بنجاح", en: "Saved successfully" },
+  "toast.created": { ar: "تم الإنشاء بنجاح", en: "Created successfully" },
+  "toast.updated": { ar: "تم التعديل بنجاح", en: "Updated successfully" },
   "toast.deleted": { ar: "تم الحذف بنجاح", en: "Deleted successfully" },
   "toast.restored": { ar: "تمت الاستعادة", en: "Restored successfully" },
   "toast.error": { ar: "حدث خطأ", en: "An error occurred" },
   "toast.confirm_delete": { ar: "هل أنت متأكد من الحذف؟", en: "Are you sure you want to delete this?" },
   "toast.confirm_archive": { ar: "تأكيد الأرشفة؟", en: "Archive this record?" },
+  "pagination.prev": { ar: "السابق", en: "Previous" },
+  "pagination.next": { ar: "التالي", en: "Next" },
 
   // Filters
   "filter.all": { ar: "الكل", en: "All" },
@@ -534,6 +572,7 @@ export const dict: Dict = {
   "label.size_sqm": { ar: "المساحة م²", en: "Size m²" },
   "label.caption": { ar: "التعليق", en: "Caption" },
   "label.is_cover": { ar: "الغلاف", en: "Cover" },
+  "label.set_cover": { ar: "تعيين كغلاف", en: "Set as Cover" },
   "label.sort_order": { ar: "الترتيب", en: "Sort" },
   "label.is_active": { ar: "مفعّل", en: "Active" },
   "label.tax_value": { ar: "القيمة", en: "Value" },
@@ -564,7 +603,7 @@ export const dict: Dict = {
   "nav.room_types": { ar: "أنواع الغرف", en: "Room Types" },
   "nav.contracts": { ar: "العقود", en: "Contracts" },
   "nav.seasons": { ar: "المواسم", en: "Seasons" },
-  "nav.taxes": { ar: "الضرائب والرسوم", en: "Taxes & Fees" },
+  "nav.taxes_fees": { ar: "الضرائب والرسوم", en: "Taxes & Fees" },
 
   // Contract statuses
   "status.suspended": { ar: "موقوف مؤقتًا", en: "Suspended" },
@@ -727,7 +766,6 @@ export const dict: Dict = {
 
 
   // Quotations module
-  "nav.quotations": { ar: "عروض الأسعار", en: "Quotations" },
   "quotes.title": { ar: "عروض الأسعار", en: "Quotations" },
   "quotes.new": { ar: "عرض سعر جديد", en: "New Quotation" },
   "quotes.edit": { ar: "تعديل عرض السعر", en: "Edit Quotation" },
@@ -735,6 +773,8 @@ export const dict: Dict = {
   "quotes.customer": { ar: "العميل", en: "Customer" },
   "quotes.quotation_date": { ar: "تاريخ العرض", en: "Quotation Date" },
   "quotes.travel_date": { ar: "تاريخ السفر", en: "Travel Date" },
+  "quotes.start_date": { ar: "تاريخ البداية", en: "Start Date" },
+  "quotes.end_date": { ar: "تاريخ النهاية", en: "End Date" },
   "quotes.expiry_date": { ar: "تاريخ انتهاء الصلاحية", en: "Expiry Date" },
   "quotes.creator": { ar: "أنشئ بواسطة", en: "Created By" },
   "label.employee": { ar: "الموظف", en: "Employee" },
@@ -746,6 +786,12 @@ export const dict: Dict = {
   "perm.visible": { ar: "ظاهر", en: "Visible" },
   "perm.hidden": { ar: "مخفي", en: "Hidden" },
   "perm.super_admin_note": { ar: "لا يمكن تقييد صلاحيات المدير العام.", en: "The super admin's access cannot be restricted." },
+  "label.user_type": { ar: "نوع المستخدم", en: "User Type" },
+  "usertype.super_admin": { ar: "مدير عام", en: "Super Admin" },
+  "usertype.sales_manager": { ar: "مدير مبيعات", en: "Sales Manager" },
+  "usertype.financial_manager": { ar: "مدير مالي", en: "Financial Manager" },
+  "usertype.viewer": { ar: "مشاهد فقط", en: "Viewer" },
+  "usertype.employee": { ar: "موظف", en: "Employee" },
   "quotes.no_found": { ar: "عرض السعر غير موجود", en: "Quotation not found" },
   "quotes.value": { ar: "قيمة العرض", en: "Quotation Value" },
   "quotes.tab.general": { ar: "البيانات العامة", en: "General" },
@@ -793,6 +839,7 @@ export const dict: Dict = {
   "quotes.err_dates": { ar: "تاريخ الخروج يجب أن يكون بعد تاريخ الدخول", en: "Check-out must be after check-in" },
   "quotes.err_approval_required": { ar: "هذا العرض يتجاوز حد الاعتماد ويجب اعتماده قبل الإرسال", en: "This quotation exceeds the approval threshold and must be approved before sending" },
   "qstatus.draft": { ar: "مسودة", en: "Draft" },
+  "qstatus.pending": { ar: "قيد الانتظار", en: "Pending" },
   "qstatus.pending_approval": { ar: "بانتظار الاعتماد", en: "Pending Approval" },
   "qstatus.approved": { ar: "معتمد", en: "Approved" },
   "qstatus.rejected": { ar: "مرفوض", en: "Rejected" },
@@ -834,7 +881,6 @@ export const dict: Dict = {
   "dash.quotes_expired": { ar: "منتهية", en: "Expired" },
 
   // RFQ module
-  "nav.rfqs": { ar: "طلبات الأسعار", en: "RFQs" },
   "rfq.title": { ar: "طلبات الأسعار والتوافر", en: "RFQs & Availability" },
   "rfq.new": { ar: "طلب سعر جديد", en: "New RFQ" },
   "rfq.number": { ar: "رقم الطلب", en: "RFQ No." },
@@ -927,7 +973,6 @@ export const dict: Dict = {
   "rfq.err_duplicate_supplier": { ar: "هذا المورد مضاف بالفعل لهذا الطلب", en: "This supplier is already added to this RFQ" },
 
   // ===== Bookings (Section 14) =====
-  "nav.bookings": { ar: "الحجوزات", en: "Bookings" },
   "bk.title": { ar: "إدارة الحجوزات", en: "Booking Management" },
   "bk.new": { ar: "حجز جديد", en: "New Booking" },
   "bk.edit": { ar: "تعديل الحجز", en: "Edit Booking" },
@@ -1040,9 +1085,6 @@ export const dict: Dict = {
 
   // ===== Finance: navigation =====
   "nav.finance": { ar: "المالية", en: "Finance" },
-  "nav.invoices": { ar: "الفواتير", en: "Invoices" },
-  "nav.receipts": { ar: "سندات القبض", en: "Receipts" },
-  "nav.payables": { ar: "مستحقات الموردين", en: "Supplier Payables" },
 
   // ===== Invoices =====
   "inv.title": { ar: "الفواتير", en: "Invoices" },
@@ -1246,7 +1288,6 @@ export const dict: Dict = {
   "aging.b90p": { ar: "أكثر من 90 يوم", en: "90+ days" },
 
   // ===== Reports & Dashboards (Section 17) =====
-  "nav.reports": { ar: "التقارير", en: "Reports" },
   "nav.rpt_dashboards": { ar: "المؤشر العام", en: "Overview" },
   "nav.rpt_operational": { ar: "التقرير التشغيلي", en: "Operational Report" },
   "nav.rpt_financial": { ar: "التقرير المالي", en: "Financial Report" },
@@ -1369,6 +1410,10 @@ export const dict: Dict = {
   "pagedesc.audit": { ar: "سجل تدقيق شامل لجميع العمليات الحساسة لأغراض الحوكمة والامتثال.", en: "Full audit trail of sensitive operations for governance and compliance." },
   "pagedesc.settings": { ar: "إعدادات المنصة العامة: الهوية، اللغة، العملات، والتكاملات.", en: "Global platform settings: identity, language, currencies, and integrations." },
   "pagedesc.approval_thresholds": { ar: "إعداد حدود الاعتماد المالي ومسارات الموافقة حسب الدور والقيمة.", en: "Configure financial approval thresholds and routing by role and amount." },
+
+  // Rates Form
+  "rates.profit_margin": { ar: "هامش الربح", en: "Profit Margin" },
+  "rates.tax_rate": { ar: "نسبة الضريبة", en: "Tax Rate" },
 };
 
 type I18nCtx = {

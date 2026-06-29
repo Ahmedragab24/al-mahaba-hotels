@@ -1,67 +1,73 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useNavigate, useParams } from "react-router-dom";
 import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useI18n } from "@/lib/i18n";
-import { useAuth } from "@/hooks/use-auth";
+import { useSelector } from "react-redux";
+import { selectAuth } from "@/store/features/authSlice";
+import { hasAnyRole, isAdmin } from "@/lib/auth-utils";
 import { PageHeader } from "@/components/page-header";
-import { EntityHistory } from "@/components/entity-history";
 import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { StatusPill } from "@/components/status-pill";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { RoomTypeDialog } from "./-dialog";
-import { ArrowLeft, Pencil } from "lucide-react";
-import { formatDateTime, formatDate, formatMoney } from "@/lib/format";
-
-export const Route = createFileRoute("/_authenticated/room-types/$id")({
-  component: RoomTypeDetail,
-});
+import { ArrowLeft, Pencil, Archive, RotateCcw, Trash2 } from "lucide-react";
+import { formatDateTime } from "@/lib/format";
+import { useGetRoomByIdQuery, useUpdateRoomMutation, useDeleteRoomMutation } from "@/store/services/rooms/roomsService";
+import { toast } from "sonner";
+import { dbErrorMessage } from "@/lib/db-errors";
 
 function KV({ label, value, mono }: { label: string; value: any; mono?: boolean }) {
+  if (value === null || value === undefined || value === "" || value === false) return null;
   return (
     <div className="space-y-0.5">
       <div className="text-xs text-muted-foreground">{label}</div>
-      <div className={mono ? "font-mono text-sm" : "text-sm"}>{value || <span className="text-muted-foreground">—</span>}</div>
+      <div className={mono ? "font-mono text-sm" : "text-sm"}>{value}</div>
     </div>
   );
 }
 
-function RoomTypeDetail() {
-  const { id } = Route.useParams();
+export default function RoomTypeDetail() {
+  const { id } = useParams() as { id: string };
   const { t, lang } = useI18n();
-  const auth = useAuth();
+  const auth = useSelector(selectAuth);
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const canWrite = auth.hasAnyRole(["super_admin", "admin", "operations_manager", "operations_agent"]);
+  const canWrite = hasAnyRole(auth, ["super_admin", "admin", "operations_manager", "operations_agent"]);
   const [editing, setEditing] = useState(false);
+  const [confirm, setConfirm] = useState<{ action: "archive" | "restore" | "delete" } | null>(null);
 
-  const q = useQuery({
-    queryKey: ["room-type", id],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("hotel_room_types")
-        .select("*, hotel:hotels(id,name_en,name_ar)").eq("id", id).maybeSingle();
-      if (error) throw error;
-      return data as any;
-    },
-  });
+  const [updateRoom] = useUpdateRoomMutation();
+  const [deleteRoom] = useDeleteRoomMutation();
 
-  const rates = useQuery({
-    queryKey: ["room-type-rates", id],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("rates")
-        .select("id,code,valid_from,valid_to,currency,cost_per_night,selling_price,status,deleted_at")
-        .eq("room_type_id", id).order("valid_from", { ascending: false }).limit(50);
-      if (error) throw error;
-      return data ?? [];
+  const q = useGetRoomByIdQuery({ id });
+
+  const archiveMut = useMutation({
+    mutationFn: async (action: "archive" | "restore" | "delete") => {
+      if (action === "delete" || action === "archive") {
+        await deleteRoom(id).unwrap();
+      } else {
+        await updateRoom({ id, body: { status: "1" } as any }).unwrap();
+      }
     },
+    onSuccess: (_d, action) => {
+      toast.success(action === "restore" ? t("toast.restored") : t("toast.deleted"));
+      if (action === "delete") {
+        navigate("/room-types");
+      } else {
+        q.refetch();
+      }
+      qc.invalidateQueries({ queryKey: ["rooms"] });
+      qc.invalidateQueries({ queryKey: ["lookup", "room-types"] });
+      setConfirm(null);
+    },
+    onError: (e: any) => { toast.error(dbErrorMessage(e)); setConfirm(null); },
   });
 
   if (q.isLoading) return <div className="p-6 text-muted-foreground">{t("label.loading")}</div>;
   if (!q.data) return <div className="p-6 text-muted-foreground">{t("room_types.no_found")}</div>;
-  const r = q.data;
+  const r = q.data as any;
   const name = lang === "ar" ? (r.name_ar || r.name_en) : (r.name_en || r.name_ar);
 
   return (
@@ -71,87 +77,73 @@ function RoomTypeDetail() {
         subtitle={`${r.code} · ${r.hotel ? (lang === "ar" ? (r.hotel.name_ar || r.hotel.name_en) : (r.hotel.name_en || r.hotel.name_ar)) : ""}`}
         children={
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => navigate({ to: "/room-types" })}>
+            <Button variant="outline" size="sm" onClick={() => navigate("/room-types")}>
               <ArrowLeft className="h-4 w-4 rtl:rotate-180" />{t("actions.back")}
             </Button>
-            {canWrite && !r.deleted_at && (
+            {canWrite && !r.is_archived && (
               <Button size="sm" onClick={() => setEditing(true)}><Pencil className="h-4 w-4" />{t("actions.edit")}</Button>
             )}
-            {r.deleted_at
+            {isAdmin(auth) && (r.is_archived
+              ? <Button variant="outline" size="sm" onClick={() => setConfirm({ action: "restore" })}><RotateCcw className="h-4 w-4" />{t("actions.restore")}</Button>
+              : <Button variant="outline" size="sm" onClick={() => setConfirm({ action: "archive" })}><Archive className="h-4 w-4" />{t("actions.archive")}</Button>
+            )}
+            {isAdmin(auth) && r.is_archived && (
+              <Button variant="destructive" size="sm" onClick={() => setConfirm({ action: "delete" })}><Trash2 className="h-4 w-4" />{t("actions.delete")}</Button>
+            )}
+            {r.is_archived
               ? <Badge variant="secondary">{t("status.archived")}</Badge>
-              : <StatusPill status={r.is_active ? "active" : "inactive"} />}
+              : <StatusPill status={r.status ? "active" : "inactive"} />}
           </div>
         }
       />
       <div className="p-6">
-        <Tabs defaultValue="profile" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="profile">{t("room_types.tab.profile")}</TabsTrigger>
-            <TabsTrigger value="rates">{t("contracts.tab.rates")} ({rates.data?.length ?? 0})</TabsTrigger>
-            <TabsTrigger value="history">{t("room_types.tab.history")}</TabsTrigger>
-          </TabsList>
+        <Card><CardContent className="grid gap-3 p-6 md:grid-cols-3 text-sm">
+          <KV label={t("label.id") || "ID"} value={r.id} />
+          <KV label={t("label.code")} value={r.code} mono />
+          <KV label={t("label.name_en")} value={r.name_en} />
+          <KV label={t("label.name_ar")} value={r.name_ar} />
+          <KV label={t("label.view")} value={r.view} />
 
-          <TabsContent value="profile">
-            <Card><CardContent className="grid gap-3 p-6 md:grid-cols-3 text-sm">
-              <KV label={t("label.code")} value={r.code} mono />
-              <KV label={t("label.name_en")} value={r.name_en} />
-              <KV label={t("label.name_ar")} value={r.name_ar} />
-              <KV label={t("room_types.hotel")} value={r.hotel ? (lang === "ar" ? r.hotel.name_ar : r.hotel.name_en) : ""} />
-              <KV label={t("label.max_adults")} value={r.max_adults} />
-              <KV label={t("label.max_children")} value={r.max_children} />
-              <KV label={t("label.max_occupancy")} value={r.max_occupancy} />
-              <KV label={t("label.bed_type")} value={r.bed_type} />
-              <KV label={t("label.size_sqm")} value={r.size_sqm} />
-              <KV label={t("room_types.smoking")} value={r.smoking_allowed ? t("status.active") : t("status.inactive")} />
-              <KV label={t("label.created_at")} value={formatDateTime(r.created_at, lang)} />
-              <KV label={t("label.updated_at")} value={formatDateTime(r.updated_at, lang)} />
-              {(r.description_en || r.description_ar) && (
-                <div className="md:col-span-3 space-y-1">
-                  <div className="text-xs text-muted-foreground">{t("label.description")}</div>
-                  <div className="whitespace-pre-wrap">{lang === "ar" ? (r.description_ar || r.description_en) : (r.description_en || r.description_ar)}</div>
-                </div>
-              )}
-            </CardContent></Card>
-          </TabsContent>
+          {/* Hotel Info */}
+          <KV label={lang === "ar" ? "اسم الفندق" : "Hotel Name"} value={r.hotel ? (lang === "ar" ? r.hotel.name_ar : r.hotel.name_en) : ""} />
+          <KV label={lang === "ar" ? "كود الفندق" : "Hotel Code"} value={r.hotel?.code} mono />
+          <KV label={lang === "ar" ? "العلامة التجارية للفندق" : "Hotel Brand"} value={r.hotel?.brand} />
+          <KV label={lang === "ar" ? "نجوم الفندق" : "Hotel Stars"} value={r.hotel?.stars ? `${r.hotel.stars} ★` : ""} />
+          <KV label={lang === "ar" ? "الدولة" : "Country"} value={r.hotel?.country ? (lang === "ar" ? r.hotel.country.name_ar : r.hotel.country.name_en) : ""} />
+          <KV label={lang === "ar" ? "المدينة" : "City"} value={r.hotel?.city ? (lang === "ar" ? r.hotel.city.name_ar : r.hotel.city.name_en) : ""} />
 
-          <TabsContent value="rates">
-            <Card><CardContent className="p-0">
-              <Table>
-                <TableHeader><TableRow>
-                  <TableHead>{t("label.code")}</TableHead>
-                  <TableHead>{t("filter.from")}</TableHead>
-                  <TableHead>{t("filter.to")}</TableHead>
-                  <TableHead>{t("label.currency")}</TableHead>
-                  <TableHead>{t("label.tax_value")}</TableHead>
-                  <TableHead>{t("label.status")}</TableHead>
-                </TableRow></TableHeader>
-                <TableBody>
-                  {(rates.data?.length ?? 0) === 0 && <TableRow><TableCell colSpan={6} className="py-10 text-center text-muted-foreground">{t("contracts.no_rates")}</TableCell></TableRow>}
-                  {rates.data?.map((x: any) => (
-                    <TableRow key={x.id} className={x.deleted_at ? "opacity-60" : ""}>
-                      <TableCell className="font-mono text-xs">
-                        <Link to="/rates/$id" params={{ id: x.id }} className="hover:underline">{x.code}</Link>
-                      </TableCell>
-                      <TableCell dir="ltr" className="text-xs">{formatDate(x.valid_from, lang)}</TableCell>
-                      <TableCell dir="ltr" className="text-xs">{formatDate(x.valid_to, lang)}</TableCell>
-                      <TableCell className="text-xs">{x.currency}</TableCell>
-                      <TableCell dir="ltr" className="text-xs">{formatMoney(x.selling_price ?? x.cost_per_night, x.currency, lang)}</TableCell>
-                      <TableCell><StatusPill status={x.status} /></TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent></Card>
-          </TabsContent>
+          {/* Room Type Info */}
+          <KV label={lang === "ar" ? "نوع الغرفة" : "Room Type"} value={r.room_type ? (lang === "ar" ? r.room_type.name_ar : r.room_type.name_en) : ""} />
+          <KV label={lang === "ar" ? "كود نوع الغرفة" : "Room Type Code"} value={r.room_type?.code} mono />
 
-          <TabsContent value="history">
-            <EntityHistory entityType="hotel_room_types" entityId={id} />
-          </TabsContent>
-        </Tabs>
+          {/* Optional Spec Values (Hidden if empty) */}
+          <KV label={t("label.max_adults")} value={r.room_type?.max_adults} />
+          <KV label={t("label.max_children")} value={r.room_type?.max_children} />
+          <KV label={t("label.max_occupancy")} value={r.room_type?.max_occupancy} />
+          <KV label={t("label.size_sqm")} value={r.room_type?.size_sqm} />
+          <KV label={t("room_types.smoking")} value={r.room_type?.smoking_allowed ? (lang === "ar" ? "مسموح" : "Allowed") : null} />
+
+          <KV label={t("label.created_at")} value={formatDateTime(r.created_at, lang)} />
+          <KV label={t("label.updated_at")} value={formatDateTime(r.updated_at, lang)} />
+          {(r.description_en || r.description_ar) && (
+            <div className="md:col-span-3 space-y-1">
+              <div className="text-xs text-muted-foreground">{t("label.description")}</div>
+              <div className="whitespace-pre-wrap">{lang === "ar" ? (r.description_ar || r.description_en) : (r.description_en || r.description_ar)}</div>
+            </div>
+          )}
+        </CardContent></Card>
       </div>
 
       <RoomTypeDialog open={editing} onOpenChange={setEditing} initial={r}
-        onSaved={() => { qc.invalidateQueries({ queryKey: ["room-type", id] }); qc.invalidateQueries({ queryKey: ["room-types"] }); }} />
+        onSaved={() => { q.refetch(); qc.invalidateQueries({ queryKey: ["rooms"] }); qc.invalidateQueries({ queryKey: ["lookup", "room-types"] }); }} />
+      <ConfirmDialog
+        open={!!confirm}
+        onOpenChange={(v) => !v && setConfirm(null)}
+        title={confirm?.action === "restore" ? t("actions.restore") : confirm?.action === "delete" ? t("actions.delete") : t("actions.archive")}
+        description={confirm?.action === "delete" ? t("toast.confirm_delete") : confirm?.action === "restore" ? "" : t("toast.confirm_archive")}
+        destructive={confirm?.action !== "restore"}
+        onConfirm={() => confirm && archiveMut.mutate(confirm.action)}
+      />
     </>
   );
 }

@@ -1,8 +1,8 @@
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
 import { useCountries, useCities } from "@/lib/lookups";
 import { Card, CardContent } from "@/components/ui/card";
@@ -11,32 +11,31 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { ImageUpload } from "@/components/image-upload";
+import { useCreateHotelMutation, useUpdateHotelMutation } from "@/store/services/hotels/hotelsService";
 
 const schema = z.object({
   name_en: z.string().trim().min(1).max(200),
   name_ar: z.string().trim().min(1).max(200),
   brand: z.string().trim().max(120).optional().or(z.literal("")),
-  star_rating: z.coerce.number().int().min(1).max(5).optional().nullable(),
-  status: z.enum(["active", "inactive", "archived"]),
-  country_code: z.string().length(2).optional().or(z.literal("")),
-  city_id: z.string().uuid().optional().or(z.literal("")),
+  stars: z.coerce.number().int().min(1).max(5),
+  status: z.enum(["1", "0"]),
+  country_id: z.string().min(1),
+  city_id: z.string().min(1),
   district: z.string().trim().max(120).optional().or(z.literal("")),
-  address_line1: z.string().trim().max(200).optional().or(z.literal("")),
-  address_line2: z.string().trim().max(200).optional().or(z.literal("")),
+  address_1: z.string().trim().max(200).optional().or(z.literal("")),
   postal_code: z.string().trim().max(20).optional().or(z.literal("")),
-  location_url: z.string().trim().max(1000).optional().or(z.literal("")),
+  map_link: z.string().trim().max(1000).optional().or(z.literal("")),
   phone: z.string().trim().max(40).optional().or(z.literal("")),
-  email: z.string().trim().email().max(255).optional().or(z.literal("")),
+  email: z.string().trim().email().max(255).optional().or(z.literal("")).nullable(),
   website: z.string().trim().max(200).optional().or(z.literal("")),
-  check_in_time: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/).optional().or(z.literal("")),
-  check_out_time: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/).optional().or(z.literal("")),
+  check_in: z.string().regex(/^\d{2}:\d{2}$/).optional().or(z.literal("")),
+  check_out: z.string().regex(/^\d{2}:\d{2}$/).optional().or(z.literal("")),
   description_en: z.string().trim().max(4000).optional().or(z.literal("")),
   description_ar: z.string().trim().max(4000).optional().or(z.literal("")),
   policies_en: z.string().trim().max(4000).optional().or(z.literal("")),
   policies_ar: z.string().trim().max(4000).optional().or(z.literal("")),
-  cover_image_path: z.string().trim().max(500).optional().or(z.literal("")),
 });
 
 type FormVals = z.input<typeof schema>;
@@ -45,6 +44,10 @@ export function HotelForm({ initial, onSaved }: { initial?: any; onSaved: (id: s
   const { t, lang } = useI18n();
   const qc = useQueryClient();
   const countries = useCountries();
+  const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
+
+  const [createHotel] = useCreateHotelMutation();
+  const [updateHotel] = useUpdateHotelMutation();
 
   const form = useForm<FormVals>({
     resolver: zodResolver(schema),
@@ -52,45 +55,64 @@ export function HotelForm({ initial, onSaved }: { initial?: any; onSaved: (id: s
       name_en: initial?.name_en ?? "",
       name_ar: initial?.name_ar ?? "",
       brand: initial?.brand ?? "",
-      star_rating: initial?.star_rating ?? null,
-      status: initial?.status ?? "active",
-      country_code: initial?.country_code ?? "",
-      city_id: initial?.city_id ?? "",
+      stars: initial?.stars ?? 5,
+      status: initial?.status !== undefined ? (initial.status ? "1" : "0") : "1",
+      country_id: initial?.country_id ? String(initial.country_id) : "",
+      city_id: initial?.city_id ? String(initial.city_id) : "",
       district: initial?.district ?? "",
-      address_line1: initial?.address_line1 ?? "",
-      address_line2: initial?.address_line2 ?? "",
+      address_1: initial?.address_1 ?? "",
       postal_code: initial?.postal_code ?? "",
-      location_url: initial?.location_url ?? "",
+      map_link: initial?.map_link ?? "",
       phone: initial?.phone ?? "",
       email: initial?.email ?? "",
       website: initial?.website ?? "",
-      check_in_time: initial?.check_in_time?.slice(0, 5) ?? "14:00",
-      check_out_time: initial?.check_out_time?.slice(0, 5) ?? "12:00",
+      check_in: initial?.check_in?.slice(0, 5) ?? "16:00",
+      check_out: initial?.check_out?.slice(0, 5) ?? "12:00",
       description_en: initial?.description_en ?? "",
       description_ar: initial?.description_ar ?? "",
       policies_en: initial?.policies_en ?? "",
       policies_ar: initial?.policies_ar ?? "",
-      cover_image_path: initial?.cover_image_path ?? "",
     },
   });
 
-  const country = form.watch("country_code");
-  const cities = useCities(country || null);
+  const countryId = form.watch("country_id");
+  const cities = useCities(countryId ? { country_id: countryId } : null);
 
   const mut = useMutation({
     mutationFn: async (vals: FormVals) => {
-      const clean: any = { ...vals };
-      Object.keys(clean).forEach((k) => {
-        if (clean[k] === "") clean[k] = null;
-      });
-      if (initial?.id) {
-        const { error } = await supabase.from("hotels").update(clean).eq("id", initial.id);
-        if (error) throw error;
-        return initial.id as string;
+      const formData = new FormData();
+      formData.append("name_ar", vals.name_ar);
+      formData.append("name_en", vals.name_en);
+      if (vals.brand) formData.append("brand", vals.brand);
+      formData.append("stars", String(vals.stars));
+      formData.append("status", vals.status);
+      formData.append("country_id", vals.country_id);
+      formData.append("city_id", vals.city_id);
+      if (vals.district) formData.append("district", vals.district);
+      if (vals.address_1) formData.append("address_1", vals.address_1);
+      if (vals.postal_code) formData.append("postal_code", vals.postal_code);
+      if (vals.map_link) formData.append("map_link", vals.map_link);
+      if (vals.phone) formData.append("phone", vals.phone);
+      if (vals.email) formData.append("email", vals.email);
+      if (vals.website) formData.append("website", vals.website);
+      if (vals.check_in) formData.append("check_in", vals.check_in);
+      if (vals.check_out) formData.append("check_out", vals.check_out);
+      if (vals.description_ar) formData.append("description_ar", vals.description_ar);
+      if (vals.description_en) formData.append("description_en", vals.description_en);
+      if (vals.policies_ar) formData.append("policies_ar", vals.policies_ar);
+      if (vals.policies_en) formData.append("policies_en", vals.policies_en);
+
+      if (coverImageFile) {
+        formData.append("cover_image", coverImageFile);
       }
-      const { data, error } = await supabase.from("hotels").insert(clean).select("id").single();
-      if (error) throw error;
-      return (data as any).id as string;
+
+      if (initial?.id) {
+        const res = await updateHotel({ id: initial.id, body: formData }).unwrap();
+        return String(res.id);
+      } else {
+        const res = await createHotel(formData as any).unwrap();
+        return String(res.id);
+      }
     },
     onSuccess: (id) => {
       toast.success(t("toast.saved"));
@@ -99,7 +121,7 @@ export function HotelForm({ initial, onSaved }: { initial?: any; onSaved: (id: s
       qc.invalidateQueries({ queryKey: ["lookup", "hotels-lite"] });
       onSaved(id);
     },
-    onError: (e: any) => toast.error(e.message ?? t("toast.error")),
+    onError: (e: any) => toast.error(e.data?.message || e.message || t("toast.error")),
   });
 
   return (
@@ -115,9 +137,9 @@ export function HotelForm({ initial, onSaved }: { initial?: any; onSaved: (id: s
           <FormField control={form.control} name="brand" render={({ field }) => (
             <FormItem><FormLabel>{t("label.brand")}</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
           )} />
-          <FormField control={form.control} name="star_rating" render={({ field }) => (
+          <FormField control={form.control} name="stars" render={({ field }) => (
             <FormItem><FormLabel>{t("label.stars")} (1-5)</FormLabel>
-              <Select value={field.value ? String(field.value) : ""} onValueChange={(v) => field.onChange(v ? Number(v) : null)}>
+              <Select value={field.value ? String(field.value) : ""} onValueChange={(v) => field.onChange(v ? Number(v) : 5)}>
                 <FormControl><SelectTrigger><SelectValue placeholder="—" /></SelectTrigger></FormControl>
                 <SelectContent>{[1, 2, 3, 4, 5].map((n) => <SelectItem key={n} value={String(n)}>{"★".repeat(n)}</SelectItem>)}</SelectContent>
               </Select><FormMessage /></FormItem>
@@ -127,63 +149,78 @@ export function HotelForm({ initial, onSaved }: { initial?: any; onSaved: (id: s
               <Select value={field.value} onValueChange={field.onChange}>
                 <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                 <SelectContent>
-                  {(["active", "inactive", "archived"] as const).map((s) => <SelectItem key={s} value={s}>{t(`status.${s}`)}</SelectItem>)}
+                  <SelectItem value="1">{t("status.active")}</SelectItem>
+                  <SelectItem value="0">{t("status.inactive")}</SelectItem>
                 </SelectContent>
               </Select><FormMessage /></FormItem>
           )} />
 
           <div className="md:col-span-2">
-            <FormField control={form.control} name="cover_image_path" render={({ field }) => (
-              <FormItem>
-                <FormLabel>{t("label.cover_image")}</FormLabel>
-                <FormControl>
-                  <ImageUpload
-                    value={field.value || ""}
-                    onChange={field.onChange}
-                    lang={lang}
-                    pathPrefix="hotels/covers"
-                    className="h-70"
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )} />
+            <div className="flex flex-col gap-1.5">
+              <Label>{t("label.cover_image")}</Label>
+              <Input
+                type="file"
+                accept="image/jpeg,image/png,image/jpg,image/webp"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    const allowedTypes = ["image/jpeg", "image/png", "image/jpg", "image/webp"];
+                    if (!allowedTypes.includes(file.type)) {
+                      toast.error(lang === "ar" ? "امتداد الصورة غير مدعوم" : "Unsupported image format");
+                      e.target.value = "";
+                      setCoverImageFile(null);
+                      return;
+                    }
+                    setCoverImageFile(file);
+                  }
+                }}
+              />
+              {initial?.cover_image && !coverImageFile && (
+                <div className="mt-2 flex flex-col gap-1">
+                  <span className="text-[11px] text-muted-foreground">{lang === "ar" ? "الصورة الحالية:" : "Current Image:"}</span>
+                  <img src={initial.cover_image} alt="Current cover" className="h-16 w-24 object-cover rounded border" />
+                </div>
+              )}
+              {coverImageFile && (
+                <div className="mt-2 flex flex-col gap-1">
+                  <span className="text-[11px] text-muted-foreground">{lang === "ar" ? "معاينة الصورة الجديدة:" : "New Image Preview:"}</span>
+                  <img src={URL.createObjectURL(coverImageFile)} alt="New cover preview" className="h-16 w-24 object-cover rounded border animate-pulse" />
+                </div>
+              )}
+            </div>
           </div>
         </CardContent></Card>
 
         <Card><CardContent className="grid gap-4 p-6 md:grid-cols-3">
           <div className="md:col-span-3 text-sm font-medium text-muted-foreground">{t("hotels.location")}</div>
-          <FormField control={form.control} name="country_code" render={({ field }) => (
-            <FormItem><FormLabel>{t("label.country")}</FormLabel>
+          <FormField control={form.control} name="country_id" render={({ field }) => (
+            <FormItem><FormLabel>{t("label.country")} *</FormLabel>
               <Select value={field.value || ""} onValueChange={(v) => { field.onChange(v); form.setValue("city_id", ""); }}>
                 <FormControl><SelectTrigger><SelectValue placeholder="—" /></SelectTrigger></FormControl>
                 <SelectContent>
-                  {countries.data?.map((c) => <SelectItem key={c.code} value={c.code}>{lang === "ar" ? c.name_ar : c.name_en}</SelectItem>)}
+                  {(Array.isArray(countries.data) ? countries.data : Array.isArray(countries.data?.data) ? countries.data.data : [])?.map((c: any) => <SelectItem key={c.id} value={String(c.id)}>{lang === "ar" ? c.name_ar : c.name_en}</SelectItem>)}
                 </SelectContent>
               </Select><FormMessage /></FormItem>
           )} />
           <FormField control={form.control} name="city_id" render={({ field }) => (
-            <FormItem><FormLabel>{t("label.city")}</FormLabel>
-              <Select value={field.value || ""} onValueChange={field.onChange} disabled={!country}>
+            <FormItem><FormLabel>{t("label.city")} *</FormLabel>
+              <Select value={field.value || ""} onValueChange={field.onChange} disabled={!countryId}>
                 <FormControl><SelectTrigger><SelectValue placeholder="—" /></SelectTrigger></FormControl>
                 <SelectContent>
-                  {cities.data?.map((c) => <SelectItem key={c.id} value={c.id}>{lang === "ar" ? c.name_ar : c.name_en}</SelectItem>)}
+                  {(Array.isArray(cities.data) ? cities.data : Array.isArray(cities.data?.data) ? cities.data.data : [])?.map((c: any) => <SelectItem key={c.id} value={String(c.id)}>{lang === "ar" ? c.name_ar : c.name_en}</SelectItem>)}
                 </SelectContent>
               </Select><FormMessage /></FormItem>
           )} />
           <FormField control={form.control} name="district" render={({ field }) => (
             <FormItem><FormLabel>{t("label.district")}</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
           )} />
-          <FormField control={form.control} name="address_line1" render={({ field }) => (
+          <FormField control={form.control} name="address_1" render={({ field }) => (
             <FormItem className="md:col-span-2"><FormLabel>{t("label.address")} 1</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
           )} />
           <FormField control={form.control} name="postal_code" render={({ field }) => (
             <FormItem><FormLabel>{t("label.postal_code")}</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
           )} />
-          <FormField control={form.control} name="address_line2" render={({ field }) => (
-            <FormItem className="md:col-span-3"><FormLabel>{t("label.address")} 2</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-          )} />
-          <FormField control={form.control} name="location_url" render={({ field }) => (
+          <FormField control={form.control} name="map_link" render={({ field }) => (
             <FormItem className="md:col-span-3"><FormLabel>{t("label.location_url")}</FormLabel><FormControl><Input dir="ltr" placeholder="https://maps.google.com/..." {...field} /></FormControl><FormMessage /></FormItem>
           )} />
         </CardContent></Card>
@@ -194,15 +231,15 @@ export function HotelForm({ initial, onSaved }: { initial?: any; onSaved: (id: s
             <FormItem><FormLabel>{t("label.phone")}</FormLabel><FormControl><Input dir="ltr" {...field} /></FormControl><FormMessage /></FormItem>
           )} />
           <FormField control={form.control} name="email" render={({ field }) => (
-            <FormItem><FormLabel>{t("label.email")}</FormLabel><FormControl><Input type="email" dir="ltr" {...field} /></FormControl><FormMessage /></FormItem>
+            <FormItem><FormLabel>{t("label.email")}</FormLabel><FormControl><Input type="email" dir="ltr" {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem>
           )} />
           <FormField control={form.control} name="website" render={({ field }) => (
-            <FormItem><FormLabel>{t("label.website")}</FormLabel><FormControl><Input dir="ltr"  {...field} /></FormControl><FormMessage /></FormItem>
+            <FormItem><FormLabel>{t("label.website")}</FormLabel><FormControl><Input dir="ltr" {...field} /></FormControl><FormMessage /></FormItem>
           )} />
-          <FormField control={form.control} name="check_in_time" render={({ field }) => (
+          <FormField control={form.control} name="check_in" render={({ field }) => (
             <FormItem><FormLabel>{t("label.checkin")}</FormLabel><FormControl><Input type="time" className="flex! justify-center! gap-4!" dir="ltr" {...field} /></FormControl><FormMessage /></FormItem>
           )} />
-          <FormField control={form.control} name="check_out_time" render={({ field }) => (
+          <FormField control={form.control} name="check_out" render={({ field }) => (
             <FormItem><FormLabel>{t("label.checkout")}</FormLabel><FormControl><Input type="time" className="flex! justify-center! gap-4!" dir="ltr" {...field} /></FormControl><FormMessage /></FormItem>
           )} />
         </CardContent></Card>

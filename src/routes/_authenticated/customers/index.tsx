@@ -1,10 +1,9 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useMemo } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/page-header";
 import { useI18n } from "@/lib/i18n";
-import { useAuth } from "@/hooks/use-auth";
+import { useSelector } from "react-redux";
+import { selectAuth } from "@/store/features/authSlice";
+import { hasRole, hasAnyRole, isAdmin, canAccessModule } from "@/lib/auth-utils";
 import { useDebounce } from "@/lib/use-debounce";
 import { useCountries } from "@/lib/lookups";
 import { Card, CardContent } from "@/components/ui/card";
@@ -21,21 +20,18 @@ import { DataPagination } from "@/components/data-pagination";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Plus, Search, Eye, Pencil, Archive, RotateCcw, Trash2, Users, UserCheck, UserX, CreditCard, Calendar } from "lucide-react";
 import { toast } from "sonner";
-
-export const Route = createFileRoute("/_authenticated/customers/")({
-  component: CustomersList,
-});
+import { useNavigate, Link } from "react-router-dom";
+import { useGetCustomersQuery, useUpdateCustomerMutation, useDeleteCustomerMutation } from "@/store/services/customers/customersService";
 
 const PAGE_SIZE = 20;
-const TYPES = ["corporate", "individual", "agency", "government"] as const;
+const TYPES = ["company", "individual", "agency", "government"] as const;
 const STATUSES = ["active", "inactive", "archived"] as const;
 
 function CustomersList() {
   const { t, lang } = useI18n();
-  const auth = useAuth();
-  const qc = useQueryClient();
+  const auth = useSelector(selectAuth);
   const navigate = useNavigate();
-  const canWrite = auth.hasAnyRole(["super_admin", "admin", "sales_manager", "sales_agent", "operations_manager"]);
+  const canWrite = hasAnyRole(auth, ["super_admin", "financial_manager", "sales_manager", "employee", "viewer"]);
 
   const [search, setSearch] = useState("");
   const [type, setType] = useState<string>("all");
@@ -48,71 +44,66 @@ function CustomersList() {
   const dSearch = useDebounce(search, 300);
   const countries = useCountries();
 
-  const metrics = useQuery({
-    queryKey: ["customers-metrics"],
-    queryFn: async () => {
-      const { data } = await supabase.from("customers").select("status,credit_limit,created_at,deleted_at");
-      const rows = data ?? [];
-      const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
-      return {
-        total: rows.filter(r => !r.deleted_at).length,
-        active: rows.filter(r => r.status === "active" && !r.deleted_at).length,
-        inactive: rows.filter(r => r.status === "inactive" && !r.deleted_at).length,
-        archived: rows.filter(r => r.deleted_at).length,
-        withCredit: rows.filter(r => Number(r.credit_limit) > 0 && !r.deleted_at).length,
-        thisMonth: rows.filter(r => new Date(r.created_at) >= monthStart && !r.deleted_at).length,
-      };
-    },
+  const { data: allCustomers = [] } = useGetCustomersQuery({ all: true, lang });
+
+  const metricsData = useMemo(() => {
+    let rows: any[] = [];
+    if (Array.isArray(allCustomers)) rows = allCustomers;
+    else if (allCustomers && typeof allCustomers === "object") {
+      const dataObj = (allCustomers as any).data || (allCustomers as any).rows || allCustomers;
+      rows = Array.isArray(dataObj) ? dataObj : (Array.isArray(dataObj.data) ? dataObj.data : (Array.isArray(dataObj.items) ? dataObj.items : []));
+    }
+    const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
+    return {
+      total: rows.filter((r: any) => !r.is_archived).length,
+      active: rows.filter((r: any) => r.status === true && !r.is_archived).length,
+      inactive: rows.filter((r: any) => r.status === false && !r.is_archived).length,
+      archived: rows.filter((r: any) => r.is_archived).length,
+      withCredit: rows.filter((r: any) => Number(r.credit_limit) > 0 && !r.is_archived).length,
+      thisMonth: rows.filter((r: any) => new Date(r.created_at) >= monthStart && !r.is_archived).length,
+    };
+  }, [allCustomers]);
+
+  const { data: listData = [], isLoading: listIsLoading } = useGetCustomersQuery({
+    search: dSearch || undefined,
+    type: type !== "all" ? type : undefined,
+    status: status !== "all" ? (status === "active") : undefined,
+    country_id: country !== "all" ? country : undefined,
+    is_archived: showArchived,
+    lang
   });
 
-  const list = useQuery({
-    queryKey: ["customers", { dSearch, type, status, country, showArchived, page }],
-    queryFn: async () => {
-      let q = supabase.from("customers").select(
-        "id,code,name_en,name_ar,customer_type,email,phone,country_code,status,credit_limit,rating,preferred_language,created_at,deleted_at",
-        { count: "exact" },
-      );
-      if (!showArchived) q = q.is("deleted_at", null);
-      if (type !== "all") q = q.eq("customer_type", type);
-      if (status !== "all") q = q.eq("status", status as any);
-      if (country !== "all") q = q.eq("country_code", country);
-      if (dSearch.trim()) {
-        const s = `%${dSearch.trim()}%`;
-        q = q.or(`code.ilike.${s},name_en.ilike.${s},name_ar.ilike.${s},email.ilike.${s},phone.ilike.${s},tax_number.ilike.${s}`);
-      }
-      const from = (page - 1) * PAGE_SIZE;
-      q = q.order("created_at", { ascending: false }).range(from, from + PAGE_SIZE - 1);
-      const { data, error, count } = await q;
-      if (error) throw error;
-      return { rows: data ?? [], count: count ?? 0 };
-    },
-  });
+  let actualListData: any[] = [];
+  if (Array.isArray(listData)) actualListData = listData;
+  else if (listData && typeof listData === "object") {
+    const dataObj = (listData as any).data || (listData as any).rows || listData;
+    actualListData = Array.isArray(dataObj) ? dataObj : (Array.isArray(dataObj.data) ? dataObj.data : (Array.isArray(dataObj.items) ? dataObj.items : []));
+  }
+  const total = (listData as any)?.total ?? (listData as any)?.count ?? actualListData.length;
+  const from = (page - 1) * PAGE_SIZE;
+  const pagedRows = actualListData.slice(from, from + PAGE_SIZE);
 
-  const archiveMut = useMutation({
-    mutationFn: async ({ id, action }: { id: string; action: "archive" | "restore" | "delete" }) => {
+  const [deleteCustomer] = useDeleteCustomerMutation();
+  const [updateCustomer] = useUpdateCustomerMutation();
+
+  const handleArchive = async ({ id, action }: { id: string; action: "archive" | "restore" | "delete" }) => {
+    try {
       if (action === "delete") {
-        const { error } = await supabase.from("customers").delete().eq("id", id);
-        if (error) throw error;
+        await deleteCustomer(id).unwrap();
       } else if (action === "archive") {
-        const { error } = await supabase.from("customers").update({ deleted_at: new Date().toISOString(), status: "archived" }).eq("id", id);
-        if (error) throw error;
+        await updateCustomer({ id, body: { is_archived: true, status: false } }).unwrap();
       } else {
-        const { error } = await supabase.from("customers").update({ deleted_at: null, status: "active" }).eq("id", id);
-        if (error) throw error;
+        await updateCustomer({ id, body: { is_archived: false, status: true } }).unwrap();
       }
-    },
-    onSuccess: (_d, v) => {
-      toast.success(v.action === "delete" ? t("toast.deleted") : v.action === "archive" ? t("toast.deleted") : t("toast.restored"));
-      qc.invalidateQueries({ queryKey: ["customers"] });
+      toast.success(action === "delete" ? t("toast.deleted") : action === "archive" ? t("toast.deleted") : t("toast.restored"));
       setConfirmId(null);
-    },
-    onError: (e: any) => toast.error(e.message ?? t("toast.error")),
-  });
-
-  const total = list.data?.count ?? 0;
+    } catch (e: any) {
+      toast.error(e?.data?.message || e?.message || t("toast.error"));
+    }
+  };
 
   const actions = useMemo(() => canWrite && (
-    <Button onClick={() => navigate({ to: "/customers/new" })} size="sm">
+    <Button onClick={() => navigate("/customers/new")} size="sm">
       <Plus className="h-4 w-4" /> {t("customers.new")}
     </Button>
   ), [canWrite, navigate, t]);
@@ -122,16 +113,16 @@ function CustomersList() {
       <PageHeader title={t("customers.title")} subtitle={`${total} ${t("label.total")}`} children={actions} />
       <div className="space-y-4 p-6">
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          <KpiCard icon={Users} tone="primary" label={t("kpi.total")} value={metrics.data?.total ?? "—"}
+          <KpiCard icon={Users} tone="primary" label={t("kpi.total")} value={metricsData.total ?? "—"}
             active={status === "all" && !showArchived} onClick={() => { setStatus("all"); setShowArchived(false); setPage(1); }} />
-          <KpiCard icon={UserCheck} tone="success" label={t("kpi.active")} value={metrics.data?.active ?? "—"}
+          <KpiCard icon={UserCheck} tone="success" label={t("kpi.active")} value={metricsData.active ?? "—"}
             active={status === "active"} onClick={() => { setStatus("active"); setShowArchived(false); setPage(1); }} />
-          <KpiCard icon={UserX} tone="warning" label={t("kpi.inactive")} value={metrics.data?.inactive ?? "—"}
+          <KpiCard icon={UserX} tone="warning" label={t("kpi.inactive")} value={metricsData.inactive ?? "—"}
             active={status === "inactive"} onClick={() => { setStatus("inactive"); setShowArchived(false); setPage(1); }} />
-          <KpiCard icon={Archive} tone="muted" label={t("kpi.archived")} value={metrics.data?.archived ?? "—"}
+          <KpiCard icon={Archive} tone="muted" label={t("kpi.archived")} value={metricsData.archived ?? "—"}
             active={showArchived} onClick={() => { setShowArchived(true); setStatus("all"); setPage(1); }} />
-          <KpiCard icon={CreditCard} tone="info" label={t("kpi.with_credit")} value={metrics.data?.withCredit ?? "—"} />
-          <KpiCard icon={Calendar} tone="info" label={t("kpi.this_month")} value={metrics.data?.thisMonth ?? "—"} />
+          <KpiCard icon={CreditCard} tone="info" label={t("kpi.with_credit")} value={metricsData.withCredit ?? "—"} />
+          <KpiCard icon={Calendar} tone="info" label={t("kpi.this_month")} value={metricsData.thisMonth ?? "—"} />
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -151,7 +142,7 @@ function CustomersList() {
                   placeholder={t("actions.search")} className="ps-8 w-full" />
               </div>
             </div>
-            
+
             <div className="flex flex-col gap-1.5">
               <Label className="text-muted-foreground">{t("filter.type")}</Label>
               <Select value={type} onValueChange={(v) => { setType(v); setPage(1); }}>
@@ -162,7 +153,7 @@ function CustomersList() {
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="flex flex-col gap-1.5">
               <Label className="text-muted-foreground">{t("filter.status")}</Label>
               <Select value={status} onValueChange={(v) => { setStatus(v); setPage(1); }}>
@@ -173,20 +164,20 @@ function CustomersList() {
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="flex flex-col gap-1.5">
               <Label className="text-muted-foreground">{t("filter.country")}</Label>
               <Select value={country} onValueChange={(v) => { setCountry(v); setPage(1); }}>
                 <SelectTrigger className="w-full"><SelectValue placeholder={t("filter.country")} /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t("filter.all")}</SelectItem>
-                  {countries.data?.map(c => (
+                  {(Array.isArray(countries.data) ? countries.data : Array.isArray(countries.data?.data) ? countries.data.data : [])?.map((c: any) => (
                     <SelectItem key={c.code} value={c.code}>{lang === "ar" ? c.name_ar : c.name_en}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            
+
             <label className="flex items-center gap-2 text-sm self-end pb-2 cursor-pointer mt-auto">
               <Checkbox checked={showArchived} onCheckedChange={(v) => { setShowArchived(!!v); setPage(1); }} />
               {t("filter.show_archived")}
@@ -210,40 +201,48 @@ function CustomersList() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {list.isLoading && (
+                {listIsLoading && (
                   <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-10">{t("label.loading")}</TableCell></TableRow>
                 )}
-                {!list.isLoading && (list.data?.rows.length ?? 0) === 0 && (
+                {!listIsLoading && (pagedRows.length ?? 0) === 0 && (
                   <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-10">{t("label.no_results")}</TableCell></TableRow>
                 )}
-                {list.data?.rows.map((c: any) => (
-                  <TableRow key={c.id} className={c.deleted_at ? "opacity-60" : ""}>
+                {pagedRows.map((c: any) => (
+                  <TableRow key={c.id} className={c.is_archived ? "opacity-60" : ""}>
                     <TableCell className="font-mono text-xs">{c.code}</TableCell>
                     <TableCell className="font-medium">
-                      <Link to="/customers/$id" params={{ id: c.id }} className="hover:underline">
+                      <Link to={`/customers/${c.id}`} className="hover:underline">
                         {lang === "ar" ? (c.name_ar || c.name_en) : (c.name_en || c.name_ar)}
                       </Link>
                     </TableCell>
-                    <TableCell><Badge variant="outline">{t(`ctype.${c.customer_type}`)}</Badge></TableCell>
-                    <TableCell dir="ltr" className="text-xs">{c.email}</TableCell>
-                    <TableCell dir="ltr" className="text-xs">{c.phone}</TableCell>
-                    <TableCell className="text-xs">{c.country_code}</TableCell>
-                    <TableCell><StatusBadge status={c.status} /></TableCell>
+                    <TableCell>
+                      {c.type === "individual" && <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-200 dark:bg-blue-500/20 dark:text-blue-400 dark:hover:bg-blue-500/30 border-transparent">{t(`ctype.${c.type}`)}</Badge>}
+                      {c.type === "company" && <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-200 dark:bg-purple-500/20 dark:text-purple-400 dark:hover:bg-purple-500/30 border-transparent">{t(`ctype.${c.type}`)}</Badge>}
+                      {c.type === "agency" && <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-200 dark:bg-amber-500/20 dark:text-amber-400 dark:hover:bg-amber-500/30 border-transparent">{t(`ctype.${c.type}`)}</Badge>}
+                      {c.type === "government" && <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-400 dark:hover:bg-emerald-500/30 border-transparent">{t(`ctype.${c.type}`)}</Badge>}
+                      {!["individual", "company", "agency", "government"].includes(c.type) && <Badge variant="outline">{t(`ctype.${c.type}`)}</Badge>}
+                    </TableCell>
+                    <TableCell className="text-xs">{c.email}</TableCell>
+                    <TableCell className="text-xs">{c.phone || "-"}</TableCell>
+                    <TableCell className="text-xs">{c.country?.code || c.country_id || "-"}</TableCell>
+                    <TableCell><StatusBadge status={c.status ? "active" : "inactive"} /></TableCell>
                     <TableCell className="text-end">
                       <div className="flex justify-end gap-1">
                         <Button asChild variant="ghost" size="icon" title={t("actions.view")}>
-                          <Link to="/customers/$id" params={{ id: c.id }}><Eye className="h-4 w-4" /></Link>
+                          <Link to={`/customers/${c.id}`}><Eye className="h-4 w-4" /></Link>
                         </Button>
-                        {canWrite && !c.deleted_at && (
+                        {canWrite && !c.is_archived && (
                           <Button asChild variant="ghost" size="icon" title={t("actions.edit")}>
-                            <Link to="/customers/$id" params={{ id: c.id }} search={{ edit: 1 } as any}><Pencil className="h-4 w-4" /></Link>
+                            <Link to={`/customers/${c.id}?edit=1`}><Pencil className="h-4 w-4" /></Link>
                           </Button>
                         )}
-                        {auth.isAdmin && (c.deleted_at
-                          ? <Button variant="ghost" size="icon" title={t("actions.restore")} onClick={() => setConfirmId({ id: c.id, action: "restore" })}><RotateCcw className="h-4 w-4" /></Button>
-                          : <Button variant="ghost" size="icon" title={t("actions.archive")} onClick={() => setConfirmId({ id: c.id, action: "archive" })}><Archive className="h-4 w-4" /></Button>
+                        {isAdmin(auth) && !c.is_archived && (
+                          <Button variant="ghost" size="icon" title={t("actions.archive")} onClick={() => setConfirmId({ id: c.id, action: "archive" })}><Archive className="h-4 w-4" /></Button>
                         )}
-                        {auth.isAdmin && c.deleted_at && (
+                        {isAdmin(auth) && c.is_archived && (
+                          <Button variant="ghost" size="icon" title={t("actions.restore")} onClick={() => setConfirmId({ id: c.id, action: "restore" })}><RotateCcw className="h-4 w-4" /></Button>
+                        )}
+                        {isAdmin(auth) && c.is_archived && (
                           <Button variant="ghost" size="icon" title={t("actions.delete")} onClick={() => setConfirmId({ id: c.id, action: "delete" })}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                         )}
                       </div>
@@ -263,8 +262,11 @@ function CustomersList() {
         title={confirmId?.action === "restore" ? t("actions.restore") : confirmId?.action === "delete" ? t("actions.delete") : t("actions.archive")}
         description={confirmId?.action === "delete" ? t("toast.confirm_delete") : confirmId?.action === "restore" ? "" : t("toast.confirm_archive")}
         destructive={confirmId?.action !== "restore"}
-        onConfirm={() => confirmId && archiveMut.mutate(confirmId)}
+        onConfirm={() => confirmId && handleArchive(confirmId)}
       />
     </>
   );
 }
+
+export default CustomersList;
+export { CustomersList as Component };

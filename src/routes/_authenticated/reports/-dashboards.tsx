@@ -1,7 +1,8 @@
 // Dashboard widgets — six role-gated dashboards with real KPI calculations (BR-RPT-001 → BR-RPT-006).
 import { useQuery } from "@tanstack/react-query";
-import { Link, type LinkProps } from "@tanstack/react-router";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/lib/api/db";
+import { apiClient } from "@/lib/api/api-client";
+import { Link, type LinkProps } from "react-router-dom";
 import { useI18n } from "@/lib/i18n";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatMoney } from "@/lib/format";
@@ -30,8 +31,7 @@ const TOOLTIP_LABEL_STYLE = {
   color: "var(--popover-foreground)",
 } as const;
 
-type Take<T> = { data: T[] | null; error: { message: string } | null };
-function take<T>(r: Take<T>): T[] {
+function take(r: any): any[] {
   if (r.error) throw new Error(r.error.message);
   return r.data ?? [];
 }
@@ -84,12 +84,12 @@ export function ExecutiveDashboard() {
     queryFn: async () => {
       const fx = await fetchFxRates();
       const [invR, recR, payR, bkR, qtR, roomsR] = await Promise.all([
-        supabase.from("invoices").select("total_amount, paid_amount, currency, exchange_rate, status, invoice_date").is("deleted_at", null),
-        supabase.from("receipts").select("amount, currency, exchange_rate, status").is("deleted_at", null),
-        supabase.from("supplier_payables").select("amount, paid_amount, currency, exchange_rate, status").is("deleted_at", null),
-        supabase.from("bookings").select("status").is("deleted_at", null),
-        supabase.from("quotations").select("status").is("deleted_at", null),
-        supabase.from("booking_rooms").select("total_cost, total_selling, booking:bookings!inner(status, currency, deleted_at)"),
+        db.from("invoices").select("total_amount, paid_amount, currency, exchange_rate, status, invoice_date").is("deleted_at", null),
+        db.from("receipts").select("amount, currency, exchange_rate, status").is("deleted_at", null),
+        db.from("supplier_payables").select("amount, paid_amount, currency, exchange_rate, status").is("deleted_at", null),
+        db.from("bookings").select("status").is("deleted_at", null),
+        db.from("quotations").select("status").is("deleted_at", null),
+        db.from("booking_rooms").select("total_cost, total_selling, booking:bookings!inner(status, currency, deleted_at)"),
       ]);
       const inv = take(invR).filter((i) => i.status !== "cancelled");
       const rec = take(recR).filter((r) => r.status !== "cancelled");
@@ -123,6 +123,7 @@ export function ExecutiveDashboard() {
   });
 
   if (q.isLoading) return <Loading />;
+  if (q.isError || !q.data) return <div className="p-4 text-red-500 flex items-center justify-center h-48 border rounded-xl bg-slate-50 dark:bg-slate-900">Failed to load dashboard data</div>;
   const d = q.data!;
   return (
     <div className="space-y-6">
@@ -160,8 +161,8 @@ export function SalesDashboard() {
     queryFn: async () => {
       const fx = await fetchFxRates();
       const [qtR, invR] = await Promise.all([
-        supabase.from("quotations").select("status, created_at, items:quotation_items(total_selling)").is("deleted_at", null),
-        supabase.from("invoices").select("total_amount, currency, exchange_rate, status, invoice_date, customer:customers(name_ar, name_en)").is("deleted_at", null),
+        db.from("quotations").select("status, created_at, items:quotation_items(total_selling)").is("deleted_at", null),
+        db.from("invoices").select("total_amount, currency, exchange_rate, status, invoice_date, customer:customers(name_ar, name_en)").is("deleted_at", null),
       ]);
       const qt = take(qtR);
       const inv = take(invR).filter((i) => i.status !== "cancelled");
@@ -195,6 +196,7 @@ export function SalesDashboard() {
   });
 
   if (q.isLoading) return <Loading />;
+  if (q.isError || !q.data) return <div className="p-4 text-red-500 flex items-center justify-center h-48 border rounded-xl bg-slate-50 dark:bg-slate-900">Failed to load dashboard data</div>;
   const d = q.data!;
   return (
     <div className="space-y-6">
@@ -208,7 +210,7 @@ export function SalesDashboard() {
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie data={d.byStatus} dataKey="value" nameKey="name" innerRadius={55} outerRadius={95} paddingAngle={2}>
-                {d.byStatus.map((_, i) => <Cell key={i} fill={PALETTE[i % PALETTE.length]} />)}
+                {d.byStatus.map((_: any, i: number) => <Cell key={i} fill={PALETTE[i % PALETTE.length]} />)}
               </Pie>
               <Tooltip contentStyle={TOOLTIP_STYLE} itemStyle={TOOLTIP_ITEM_STYLE} labelStyle={TOOLTIP_LABEL_STYLE} />
               <Legend />
@@ -249,8 +251,8 @@ export function BookingDashboard() {
     queryKey: ["rpt-bookings"],
     queryFn: async () => {
       const [bkR, roomsR] = await Promise.all([
-        supabase.from("bookings").select("status, booking_date").is("deleted_at", null),
-        supabase.from("booking_rooms").select("rooms, nights, check_in, hotel:hotels(name_ar, name_en), booking:bookings!inner(status, deleted_at)"),
+        db.from("bookings").select("status, booking_date").is("deleted_at", null),
+        db.from("booking_rooms").select("rooms, nights, check_in, hotel:hotels(name_ar, name_en), booking:bookings!inner(status, deleted_at)"),
       ]);
       const bk = take(bkR);
       const rooms = take(roomsR).filter((r) => {
@@ -286,6 +288,7 @@ export function BookingDashboard() {
   });
 
   if (q.isLoading) return <Loading />;
+  if (q.isError || !q.data) return <div className="p-4 text-red-500 flex items-center justify-center h-48 border rounded-xl bg-slate-50 dark:bg-slate-900">Failed to load dashboard data</div>;
   const d = q.data!;
   return (
     <div className="space-y-6">
@@ -299,7 +302,7 @@ export function BookingDashboard() {
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie data={d.byStatus} dataKey="value" nameKey="name" innerRadius={55} outerRadius={95} paddingAngle={2}>
-                {d.byStatus.map((_, i) => <Cell key={i} fill={PALETTE[i % PALETTE.length]} />)}
+                {d.byStatus.map((_: any, i: number) => <Cell key={i} fill={PALETTE[i % PALETTE.length]} />)}
               </Pie>
               <Tooltip contentStyle={TOOLTIP_STYLE} itemStyle={TOOLTIP_ITEM_STYLE} labelStyle={TOOLTIP_LABEL_STYLE} />
               <Legend />
@@ -329,7 +332,7 @@ export function SupplierDashboard() {
     queryKey: ["rpt-suppliers"],
     queryFn: async () => {
       const fx = await fetchFxRates();
-      const payR = await supabase
+      const payR = await db
         .from("supplier_payables")
         .select("amount, paid_amount, currency, exchange_rate, status, supplier:suppliers(name_ar, name_en)")
         .is("deleted_at", null);
@@ -355,6 +358,7 @@ export function SupplierDashboard() {
   });
 
   if (q.isLoading) return <Loading />;
+  if (q.isError || !q.data) return <div className="p-4 text-red-500 flex items-center justify-center h-48 border rounded-xl bg-slate-50 dark:bg-slate-900">Failed to load dashboard data</div>;
   const d = q.data!;
   return (
     <div className="space-y-6">
@@ -387,7 +391,7 @@ export function ReceivablesDashboard() {
     queryKey: ["rpt-receivables"],
     queryFn: async () => {
       const fx = await fetchFxRates();
-      const invR = await supabase
+      const invR = await db
         .from("invoices")
         .select("total_amount, paid_amount, due_date, currency, exchange_rate, status, customer:customers(name_ar, name_en)")
         .is("deleted_at", null);
@@ -420,6 +424,7 @@ export function ReceivablesDashboard() {
   });
 
   if (q.isLoading) return <Loading />;
+  if (q.isError || !q.data) return <div className="p-4 text-red-500 flex items-center justify-center h-48 border rounded-xl bg-slate-50 dark:bg-slate-900">Failed to load dashboard data</div>;
   const d = q.data!;
   return (
     <div className="space-y-6">
@@ -446,7 +451,7 @@ export function ReceivablesDashboard() {
               <p className="text-sm text-muted-foreground">{t("label.no_results")}</p>
             ) : (
               <ul className="divide-y">
-                {d.debtors.map((x) => (
+                {d.debtors.map((x: any) => (
                   <li key={x.name} className="flex items-center justify-between gap-3 py-2.5 text-sm">
                     <span className="truncate font-medium">{x.name}</span>
                     <span className="shrink-0 tabular-nums text-muted-foreground">{money(x.balance, lang)}</span>
@@ -469,7 +474,7 @@ export function ProfitDashboard() {
     queryKey: ["rpt-profit"],
     queryFn: async () => {
       const fx = await fetchFxRates();
-      const roomsR = await supabase
+      const roomsR = await db
         .from("booking_rooms")
         .select("total_cost, total_selling, check_in, hotel:hotels(name_ar, name_en), booking:bookings!inner(status, currency, deleted_at)");
       const rooms = take(roomsR).filter((r) => {
@@ -512,6 +517,7 @@ export function ProfitDashboard() {
   });
 
   if (q.isLoading) return <Loading />;
+  if (q.isError || !q.data) return <div className="p-4 text-red-500 flex items-center justify-center h-48 border rounded-xl bg-slate-50 dark:bg-slate-900">Failed to load dashboard data</div>;
   const d = q.data!;
   return (
     <div className="space-y-6">

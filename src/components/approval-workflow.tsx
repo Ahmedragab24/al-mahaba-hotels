@@ -1,8 +1,11 @@
 import { useState } from "react";
+import { db } from "@/lib/api/db";
+import { apiClient } from "@/lib/api/api-client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
-import { useAuth } from "@/hooks/use-auth";
+import { useSelector } from "react-redux";
+import { selectAuth } from "@/store/features/authSlice";
+import { hasRole, hasAnyRole, isAdmin, canAccessModule } from "@/lib/auth-utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -30,18 +33,18 @@ const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "
 
 export function ApprovalWorkflow({ entityType, entityId }: { entityType: AttachmentEntityType; entityId: string }) {
   const { t, lang } = useI18n();
-  const auth = useAuth();
+  const auth = useSelector(selectAuth);
   const qc = useQueryClient();
   const [notesAction, setNotesAction] = useState<"rejected" | "returned" | null>(null);
   const [notes, setNotes] = useState("");
 
-  const canSubmit = auth.hasAnyRole([...SUBMIT_ROLES]);
-  const canApprove = auth.hasAnyRole([...APPROVER_ROLES]);
+  const canSubmit = hasAnyRole(auth, [...SUBMIT_ROLES]);
+  const canApprove = hasAnyRole(auth, [...APPROVER_ROLES]);
 
   const list = useQuery({
     queryKey: ["approval-requests", entityType, entityId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from("approval_requests")
         .select("*")
         .eq("entity_type", entityType)
@@ -57,7 +60,7 @@ export function ApprovalWorkflow({ entityType, entityId }: { entityType: Attachm
     queryKey: ["approval-profiles", userIds.join(",")],
     enabled: userIds.length > 0,
     queryFn: async () => {
-      const { data } = await supabase.from("profiles").select("id,email").in("id", userIds);
+      const { data } = await db.from("profiles").select("id,email").in("id", userIds);
       const map: Record<string, string> = {};
       (data ?? []).forEach((p: any) => { map[p.id] = p.email; });
       return map;
@@ -69,12 +72,11 @@ export function ApprovalWorkflow({ entityType, entityId }: { entityType: Attachm
 
   const createMut = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("approval_requests").insert({
+      await apiClient.approvalRequests.create({
         entity_type: entityType,
         entity_id: entityId,
         status: "submitted",
       });
-      if (error) throw error;
     },
     onSuccess: () => { toast.success(t("approval.submitted_ok")); qc.invalidateQueries({ queryKey: ["approval-requests", entityType, entityId] }); },
     onError: (e: any) => toast.error(dbErrorMessage(e, t)),
@@ -84,8 +86,7 @@ export function ApprovalWorkflow({ entityType, entityId }: { entityType: Attachm
     mutationFn: async ({ id, status, withNotes }: { id: string; status: string; withNotes?: string }) => {
       const patch: any = { status };
       if (withNotes !== undefined) patch.approval_notes = withNotes;
-      const { error } = await supabase.from("approval_requests").update(patch).eq("id", id);
-      if (error) throw error;
+      await apiClient.approvalRequests.update(id, patch);
     },
     onSuccess: () => {
       toast.success(t("toast.saved"));
@@ -161,7 +162,7 @@ export function ApprovalWorkflow({ entityType, entityId }: { entityType: Attachm
               {!list.isLoading && (list.data?.length ?? 0) === 0 && (
                 <TableRow><TableCell colSpan={6} className="py-8 text-center text-muted-foreground">{t("approval.empty")}</TableCell></TableRow>
               )}
-              {list.data?.map((r: any) => (
+              {(Array.isArray(list.data) ? list.data : Array.isArray(list.data?.data) ? list.data.data : [])?.map((r: any) => (
                 <TableRow key={r.id}>
                   <TableCell>{statusBadge(r.status)}</TableCell>
                   <TableCell className="text-xs">{who(r.submitted_by)}</TableCell>

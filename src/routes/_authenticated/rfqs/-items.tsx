@@ -1,6 +1,7 @@
 import { useState } from "react";
+import { db } from "@/lib/api/db";
+import { apiClient } from "@/lib/api/api-client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -22,7 +23,7 @@ export function useRfqItems(rfqId: string) {
   return useQuery({
     queryKey: ["rfq-items", rfqId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from("rfq_items")
         .select("*, hotel:hotels(name_en,name_ar), room_type:hotel_room_types(name_en,name_ar)")
         .eq("rfq_id", rfqId)
@@ -52,12 +53,12 @@ export function RfqItemsTab({ rfqId, editable }: { rfqId: string; editable: bool
 
   const hotels = useQuery({
     queryKey: ["lookup-hotels"],
-    queryFn: async () => (await supabase.from("hotels").select("id,name_en,name_ar").is("deleted_at", null).order("name_en")).data ?? [],
+    queryFn: async () => (await apiClient.hotels.getAll()) ?? [],
   });
   const roomTypes = useQuery({
     queryKey: ["lookup-room-types", form.hotel_id],
     enabled: !!form.hotel_id,
-    queryFn: async () => (await supabase.from("hotel_room_types").select("id,name_en,name_ar").eq("hotel_id", form.hotel_id).is("deleted_at", null).order("name_en")).data ?? [],
+    queryFn: async () => (await db.from("hotel_room_types").select("id,name_en,name_ar").eq("hotel_id", form.hotel_id).is("deleted_at", null).order("name_en")).data ?? [],
   });
 
   const nm = (x: any) => (x ? (lang === "ar" ? (x.name_ar || x.name_en) : (x.name_en || x.name_ar)) : "—");
@@ -77,8 +78,8 @@ export function RfqItemsTab({ rfqId, editable }: { rfqId: string; editable: bool
         special_requests: form.special_requests || null,
       };
       const { error } = editing
-        ? await supabase.from("rfq_items").update(payload).eq("id", editing.id)
-        : await supabase.from("rfq_items").insert(payload);
+        ? await db.from("rfq_items").update(payload).eq("id", editing.id)
+        : await apiClient.rfqItems.create(payload);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -86,16 +87,15 @@ export function RfqItemsTab({ rfqId, editable }: { rfqId: string; editable: bool
       setOpen(false); setEditing(null); setForm(empty);
       qc.invalidateQueries({ queryKey: ["rfq-items", rfqId] });
     },
-    onError: (e: any) => toast.error(dbErrorMessage(e, t)),
+    onError: (e: any) => toast.error(dbErrorMessage(e)),
   });
 
   const deleteMut = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("rfq_items").delete().eq("id", id);
-      if (error) throw error;
+      await apiClient.rfqItems.delete(id);
     },
     onSuccess: () => { toast.success(t("toast.saved")); setDeleteId(null); qc.invalidateQueries({ queryKey: ["rfq-items", rfqId] }); },
-    onError: (e: any) => { setDeleteId(null); toast.error(dbErrorMessage(e, t)); },
+    onError: (e: any) => { setDeleteId(null); toast.error(dbErrorMessage(e)); },
   });
 
   const startEdit = (i: any) => {
@@ -136,7 +136,7 @@ export function RfqItemsTab({ rfqId, editable }: { rfqId: string; editable: bool
               {(items.data?.length ?? 0) === 0 && (
                 <TableRow><TableCell colSpan={9} className="py-10 text-center text-muted-foreground">{t("rfq.items.empty")}</TableCell></TableRow>
               )}
-              {items.data?.map((i: any) => (
+              {(Array.isArray(items.data) ? items.data : Array.isArray(items.data?.data) ? items.data.data : [])?.map((i: any) => (
                 <TableRow key={i.id} className="whitespace-nowrap">
                   <TableCell>{nm(i.hotel)}</TableCell>
                   <TableCell>{nm(i.room_type)}</TableCell>
@@ -168,7 +168,7 @@ export function RfqItemsTab({ rfqId, editable }: { rfqId: string; editable: bool
               <Select value={form.hotel_id} onValueChange={(v) => { set("hotel_id", v); set("room_type_id", ""); }}>
                 <SelectTrigger className="w-full"><SelectValue placeholder={t("quotes.items.hotel")} /></SelectTrigger>
                 <SelectContent>
-                  {hotels.data?.map((h: any) => <SelectItem key={h.id} value={h.id}>{nm(h)}</SelectItem>)}
+                  {(Array.isArray(hotels.data) ? hotels.data : Array.isArray(hotels.data?.data) ? hotels.data.data : [])?.map((h: any) => <SelectItem key={h.id} value={h.id}>{nm(h)}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -177,7 +177,7 @@ export function RfqItemsTab({ rfqId, editable }: { rfqId: string; editable: bool
               <Select value={form.room_type_id} onValueChange={(v) => set("room_type_id", v)} disabled={!form.hotel_id}>
                 <SelectTrigger className="w-full"><SelectValue placeholder={t("quotes.items.room_type")} /></SelectTrigger>
                 <SelectContent>
-                  {roomTypes.data?.map((r: any) => <SelectItem key={r.id} value={r.id}>{nm(r)}</SelectItem>)}
+                  {(Array.isArray(roomTypes.data) ? roomTypes.data : Array.isArray(roomTypes.data?.data) ? roomTypes.data.data : [])?.map((r: any) => <SelectItem key={r.id} value={r.id}>{nm(r)}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>

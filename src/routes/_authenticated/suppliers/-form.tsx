@@ -1,10 +1,9 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useMutation } from "@tanstack/react-query";
 import { useI18n } from "@/lib/i18n";
-import { useCountries, useCities, useCurrencies } from "@/lib/lookups";
+import { useCountries, useCities, useCurrencies, useSupplierTypes } from "@/lib/lookups";
 import { Card, CardContent } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -12,89 +11,73 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-
-const STYPES = ["hotel_supplier", "dmc", "direct_hotel", "wholesaler", "other"] as const;
+import { useCreateSupplierMutation, useUpdateSupplierMutation } from "@/store/services/suppliers/suppliersService";
 
 const schema = z.object({
   name_en: z.string().trim().min(1).max(200),
   name_ar: z.string().trim().min(1).max(200),
-  legal_name: z.string().trim().max(200).optional().or(z.literal("")),
-  supplier_type: z.enum(STYPES),
-  status: z.enum(["active", "inactive", "archived"]),
+  supplier_type_id: z.coerce.number().int().positive(),
+  status: z.coerce.number().int().min(0).max(1),
   tax_number: z.string().trim().max(80).optional().or(z.literal("")),
-  commercial_registration: z.string().trim().max(80).optional().or(z.literal("")),
-  preferred_currency: z.string().trim().max(3).optional().or(z.literal("")),
-  credit_days: z.coerce.number().int().min(0).max(365),
-  payment_terms: z.string().trim().max(300).optional().or(z.literal("")),
-  country_code: z.string().length(2).optional().or(z.literal("")),
-  city_id: z.string().uuid().optional().or(z.literal("")),
-  address_line1: z.string().trim().max(200).optional().or(z.literal("")),
-  address_line2: z.string().trim().max(200).optional().or(z.literal("")),
+  commercial_register: z.string().trim().max(80).optional().or(z.literal("")),
+  currency_id: z.coerce.number().int().positive(),
+  country_id: z.coerce.number().int().positive(),
+  city_id: z.coerce.number().int().positive(),
+  address_1: z.string().trim().max(200).optional().or(z.literal("")),
+  address_2: z.string().trim().max(200).optional().or(z.literal("")),
   phone: z.string().trim().max(40).optional().or(z.literal("")),
-  mobile: z.string().trim().max(40).optional().or(z.literal("")),
   email: z.string().trim().email().max(255).optional().or(z.literal("")),
   website: z.string().trim().max(200).optional().or(z.literal("")),
   notes: z.string().trim().max(4000).optional().or(z.literal("")),
-  tags: z.string().trim().max(500).optional().or(z.literal("")),
 });
 
 type FormVals = z.input<typeof schema>;
 
-export function SupplierForm({ initial, onSaved }: { initial?: any; onSaved: (id: string) => void }) {
+export function SupplierForm({ initial, onSaved }: { initial?: any; onSaved: (id: number) => void }) {
   const { t, lang } = useI18n();
-  const qc = useQueryClient();
   const countries = useCountries();
   const currencies = useCurrencies();
+  const supplierTypes = useSupplierTypes();
+  const [createSupplier] = useCreateSupplierMutation();
+  const [updateSupplier] = useUpdateSupplierMutation();
 
   const form = useForm<FormVals>({
     resolver: zodResolver(schema),
     defaultValues: {
       name_en: initial?.name_en ?? "",
       name_ar: initial?.name_ar ?? "",
-      legal_name: initial?.legal_name ?? "",
-      supplier_type: initial?.supplier_type ?? "hotel_supplier",
-      status: initial?.status ?? "active",
+      supplier_type_id: initial?.supplier_type_id ?? 1,
+      status: initial?.status === true ? 1 : (initial?.status === false ? 0 : 1),
       tax_number: initial?.tax_number ?? "",
-      commercial_registration: initial?.commercial_registration ?? "",
-      preferred_currency: initial?.preferred_currency ?? "",
-      credit_days: initial?.credit_days ?? 0,
-      payment_terms: initial?.payment_terms ?? "",
-      country_code: initial?.country_code ?? "",
-      city_id: initial?.city_id ?? "",
-      address_line1: initial?.address_line1 ?? "",
-      address_line2: initial?.address_line2 ?? "",
+      commercial_register: initial?.commercial_register ?? "",
+      currency_id: initial?.currency_id ?? 1,
+      country_id: initial?.country_id ?? 1,
+      city_id: initial?.city_id ?? 1,
+      address_1: initial?.address_1 ?? "",
+      address_2: initial?.address_2 ?? "",
       phone: initial?.phone ?? "",
-      mobile: initial?.mobile ?? "",
       email: initial?.email ?? "",
       website: initial?.website ?? "",
       notes: initial?.notes ?? "",
-      tags: Array.isArray(initial?.tags) ? initial.tags.join(", ") : "",
     },
   });
 
-  const country = form.watch("country_code");
-  const cities = useCities(country || null);
+  const countryId = form.watch("country_id");
+  const cities = useCities(countryId ? countryId.toString() : null);
 
   const mut = useMutation({
     mutationFn: async (vals: FormVals) => {
       const clean: any = { ...vals };
       Object.keys(clean).forEach((k) => { if (clean[k] === "") clean[k] = null; });
-      clean.tags = typeof vals.tags === "string" && vals.tags.trim()
-        ? vals.tags.split(",").map((s) => s.trim()).filter(Boolean) : null;
       if (initial?.id) {
-        const { error } = await supabase.from("suppliers").update(clean).eq("id", initial.id);
-        if (error) throw error;
-        return initial.id as string;
+        const result = await updateSupplier({ id: initial.id, body: clean }).unwrap();
+        return initial.id as number;
       }
-      const { data, error } = await supabase.from("suppliers").insert(clean).select("id").single();
-      if (error) throw error;
-      return (data as any).id as string;
+      const result = await createSupplier(clean).unwrap();
+      return result.id;
     },
     onSuccess: (id) => {
       toast.success(t("toast.saved"));
-      qc.invalidateQueries({ queryKey: ["suppliers"] });
-      qc.invalidateQueries({ queryKey: ["supplier", id] });
-      qc.invalidateQueries({ queryKey: ["lookup", "suppliers-lite"] });
       onSaved(id);
     },
     onError: (e: any) => toast.error(e.message ?? t("toast.error")),
@@ -111,19 +94,24 @@ export function SupplierForm({ initial, onSaved }: { initial?: any; onSaved: (id
             <FormItem><FormLabel>{t("label.name_ar")} *</FormLabel><FormControl><Input dir="rtl" {...field} /></FormControl><FormMessage /></FormItem>
           )} />
 
-          <FormField control={form.control} name="supplier_type" render={({ field }) => (
+          <FormField control={form.control} name="supplier_type_id" render={({ field }) => (
             <FormItem><FormLabel>{t("filter.type")} *</FormLabel>
-              <Select value={field.value} onValueChange={field.onChange}>
+              <Select value={field.value?.toString()} onValueChange={(v) => field.onChange(Number(v))}>
                 <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                <SelectContent>{STYPES.map((s) => <SelectItem key={s} value={s}>{t(`stype.${s}`)}</SelectItem>)}</SelectContent>
+                <SelectContent>
+                  {(Array.isArray(supplierTypes.data) ? supplierTypes.data : Array.isArray(supplierTypes.data?.data) ? supplierTypes.data.data : [])?.map((st: any) => (
+                    <SelectItem key={st.id} value={st.id.toString()}>{lang === "ar" ? st.name_ar : st.name_en}</SelectItem>
+                  ))}
+                </SelectContent>
               </Select><FormMessage /></FormItem>
           )} />
           <FormField control={form.control} name="status" render={({ field }) => (
             <FormItem><FormLabel>{t("label.status")} *</FormLabel>
-              <Select value={field.value} onValueChange={field.onChange}>
+              <Select value={field.value?.toString()} onValueChange={(v) => field.onChange(Number(v))}>
                 <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                 <SelectContent>
-                  {(["active", "inactive", "archived"] as const).map((s) => <SelectItem key={s} value={s}>{t(`status.${s}`)}</SelectItem>)}
+                  <SelectItem value="1">{t("status.active")}</SelectItem>
+                  <SelectItem value="0">{t("status.inactive")}</SelectItem>
                 </SelectContent>
               </Select><FormMessage /></FormItem>
           )} />
@@ -135,14 +123,14 @@ export function SupplierForm({ initial, onSaved }: { initial?: any; onSaved: (id
           <FormField control={form.control} name="tax_number" render={({ field }) => (
             <FormItem><FormLabel>{t("label.tax_number")}</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
           )} />
-          <FormField control={form.control} name="commercial_registration" render={({ field }) => (
+          <FormField control={form.control} name="commercial_register" render={({ field }) => (
             <FormItem><FormLabel>{t("label.cr")}</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
           )} />
-          <FormField control={form.control} name="preferred_currency" render={({ field }) => (
+          <FormField control={form.control} name="currency_id" render={({ field }) => (
             <FormItem><FormLabel>{t("label.currency")}</FormLabel>
-              <Select value={field.value || ""} onValueChange={field.onChange}>
+              <Select value={field.value?.toString()} onValueChange={(v) => field.onChange(Number(v))}>
                 <FormControl><SelectTrigger><SelectValue placeholder="—" /></SelectTrigger></FormControl>
-                <SelectContent>{currencies.data?.map((c) => <SelectItem key={c.code} value={c.code}>{c.code} — {lang === "ar" ? c.name_ar : c.name_en}</SelectItem>)}</SelectContent>
+                <SelectContent>{(Array.isArray(currencies.data) ? currencies.data : Array.isArray(currencies.data?.data) ? currencies.data.data : [])?.map((c: any) => <SelectItem key={c.id} value={c.id.toString()}>{c.code} — {lang === "ar" ? c.name_ar : c.name_en}</SelectItem>)}</SelectContent>
               </Select><FormMessage /></FormItem>
           )} />
 
@@ -150,24 +138,24 @@ export function SupplierForm({ initial, onSaved }: { initial?: any; onSaved: (id
 
         <Card><CardContent className="grid gap-4 p-6 md:grid-cols-2">
           <div className="md:col-span-3 text-sm font-medium text-muted-foreground">{t("suppliers.address")}</div>
-          <FormField control={form.control} name="country_code" render={({ field }) => (
+          <FormField control={form.control} name="country_id" render={({ field }) => (
             <FormItem><FormLabel>{t("label.country")}</FormLabel>
-              <Select value={field.value || ""} onValueChange={(v) => { field.onChange(v); form.setValue("city_id", ""); }}>
+              <Select value={field.value?.toString()} onValueChange={(v) => { field.onChange(Number(v)); form.setValue("city_id", 1); }}>
                 <FormControl><SelectTrigger><SelectValue placeholder="—" /></SelectTrigger></FormControl>
-                <SelectContent>{countries.data?.map((c) => <SelectItem key={c.code} value={c.code}>{lang === "ar" ? c.name_ar : c.name_en}</SelectItem>)}</SelectContent>
+                <SelectContent>{(Array.isArray(countries.data) ? countries.data : Array.isArray(countries.data?.data) ? countries.data.data : [])?.map((c: any) => <SelectItem key={c.id} value={c.id.toString()}>{lang === "ar" ? c.name_ar : c.name_en}</SelectItem>)}</SelectContent>
               </Select><FormMessage /></FormItem>
           )} />
           <FormField control={form.control} name="city_id" render={({ field }) => (
             <FormItem><FormLabel>{t("label.city")}</FormLabel>
-              <Select value={field.value || ""} onValueChange={field.onChange} disabled={!country}>
+              <Select value={field.value?.toString()} onValueChange={(v) => field.onChange(Number(v))} disabled={!countryId}>
                 <FormControl><SelectTrigger><SelectValue placeholder="—" /></SelectTrigger></FormControl>
-                <SelectContent>{cities.data?.map((c) => <SelectItem key={c.id} value={c.id}>{lang === "ar" ? c.name_ar : c.name_en}</SelectItem>)}</SelectContent>
+                <SelectContent>{(Array.isArray(cities.data) ? cities.data : Array.isArray(cities.data?.data) ? cities.data.data : [])?.map((c: any) => <SelectItem key={c.id} value={c.id.toString()}>{lang === "ar" ? c.name_ar : c.name_en}</SelectItem>)}</SelectContent>
               </Select><FormMessage /></FormItem>
           )} />
-          <FormField control={form.control} name="address_line1" render={({ field }) => (
+          <FormField control={form.control} name="address_1" render={({ field }) => (
             <FormItem className="md:col-span-3"><FormLabel>{t("label.address")} 1</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
           )} />
-          <FormField control={form.control} name="address_line2" render={({ field }) => (
+          <FormField control={form.control} name="address_2" render={({ field }) => (
             <FormItem className="md:col-span-3"><FormLabel>{t("label.address")} 2</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
           )} />
           <FormField control={form.control} name="phone" render={({ field }) => (

@@ -1,7 +1,8 @@
 // Reports & Dashboards hub — role-gated dashboard tabs (Section 17).
-import { createFileRoute } from "@tanstack/react-router";
 import { useI18n } from "@/lib/i18n";
-import { useAuth } from "@/hooks/use-auth";
+import { useSelector } from "react-redux";
+import { selectAuth } from "@/store/features/authSlice";
+import { hasRole, hasAnyRole, isAdmin, canAccessModule } from "@/lib/auth-utils";
 import { PageHeader } from "@/components/page-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
@@ -11,10 +12,6 @@ import type { AppRole } from "@/hooks/use-auth";
 import {
   BookingDashboard, ExecutiveDashboard, ProfitDashboard, ReceivablesDashboard, SalesDashboard, SupplierDashboard,
 } from "./-dashboards";
-
-export const Route = createFileRoute("/_authenticated/reports/")({
-  component: ReportsHub,
-});
 
 type DashTab = { key: string; labelKey: string; roles: AppRole[]; Comp: React.ComponentType };
 
@@ -27,10 +24,10 @@ const TABS: DashTab[] = [
   { key: "profit", labelKey: "rpt.tab_profit", roles: FINANCE_ROLES, Comp: ProfitDashboard },
 ];
 
-function ReportsHub() {
+export default function ReportsHub() {
   const { t } = useI18n();
-  const auth = useAuth();
-  const visible = TABS.filter((tab) => auth.hasAnyRole(tab.roles));
+  const auth = useSelector(selectAuth);
+  const visible = TABS.filter((tab) => hasAnyRole(auth, tab.roles));
 
   return (
     <>
@@ -62,3 +59,5 @@ function ReportsHub() {
     </>
   );
 }
+
+export { ReportsHub as Component };

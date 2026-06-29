@@ -1,12 +1,15 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { Link } from "react-router-dom";
+import { db } from "@/lib/api/db";
+import { apiClient } from "@/lib/api/api-client";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/page-header";
 import { useI18n } from "@/lib/i18n";
-import { useAuth } from "@/hooks/use-auth";
+import { useSelector } from "react-redux";
+import { selectAuth } from "@/store/features/authSlice";
+import { hasRole, hasAnyRole, isAdmin, canAccessModule } from "@/lib/auth-utils";
 import { useDebounce } from "@/lib/use-debounce";
-import { useHotelsLite } from "@/lib/lookups";
+import { useHotels } from "@/lib/lookups";
 import { dbErrorMessage } from "@/lib/db-errors";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -23,17 +26,13 @@ import { Plus, Search, Eye, Pencil, Archive, RotateCcw, Trash2 } from "lucide-re
 import { formatDate } from "@/lib/format";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/_authenticated/taxes/")({
-  component: TaxesList,
-});
-
 const PAGE_SIZE = 20;
 
-function TaxesList() {
+export default function TaxesList() {
   const { t, lang } = useI18n();
-  const auth = useAuth();
+  const auth = useSelector(selectAuth);
   const qc = useQueryClient();
-  const canWrite = auth.hasAnyRole(["super_admin", "admin", "operations_manager", "operations_agent", "finance_manager", "finance_agent"]);
+  const canWrite = hasAnyRole(auth, ["super_admin", "admin", "operations_manager", "operations_agent", "finance_manager", "finance_agent"]);
 
   const [search, setSearch] = useState("");
   const [hotel, setHotel] = useState("all");
@@ -46,12 +45,12 @@ function TaxesList() {
   const [confirm, setConfirm] = useState<{ id: string; action: "archive" | "restore" | "delete" } | null>(null);
 
   const dSearch = useDebounce(search, 300);
-  const hotels = useHotelsLite();
+  const hotels = useHotels();
 
   const list = useQuery({
     queryKey: ["taxes", { dSearch, hotel, type, method, active, showArchived, page }],
     queryFn: async () => {
-      let q = supabase.from("hotel_taxes").select(
+      let q: any = db.from("hotel_taxes").select(
         "*, hotel:hotels(name_en,name_ar)",
         { count: "exact" },
       );
@@ -75,14 +74,12 @@ function TaxesList() {
   const archiveMut = useMutation({
     mutationFn: async ({ id, action }: { id: string; action: "archive" | "restore" | "delete" }) => {
       if (action === "delete") {
-        const { error } = await supabase.from("hotel_taxes").delete().eq("id", id);
-        if (error) throw error;
+        await apiClient.hotelTaxes.delete(id);
       } else if (action === "archive") {
-        const { error } = await supabase.from("hotel_taxes").update({ deleted_at: new Date().toISOString(), is_active: false }).eq("id", id);
+        const { error } = await db.from("hotel_taxes").update({ deleted_at: new Date().toISOString(), is_active: false }).eq("id", id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("hotel_taxes").update({ deleted_at: null, is_active: true }).eq("id", id);
-        if (error) throw error;
+        await apiClient.hotelTaxes.update(id, { deleted_at: null, is_active: true });
       }
     },
     onSuccess: (_d, v) => {
@@ -90,7 +87,7 @@ function TaxesList() {
       qc.invalidateQueries({ queryKey: ["taxes"] });
       setConfirm(null);
     },
-    onError: (e: any) => { toast.error(dbErrorMessage(e, t)); setConfirm(null); },
+    onError: (e: any) => { toast.error(dbErrorMessage(e)); setConfirm(null); },
   });
 
   const total = list.data?.count ?? 0;
@@ -123,7 +120,7 @@ function TaxesList() {
                 <SelectTrigger className="w-full"><SelectValue placeholder={t("filter.hotel")} /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t("filter.all")}</SelectItem>
-                  {hotels.data?.map((h) => <SelectItem key={h.id} value={h.id}>{lang === "ar" ? (h.name_ar || h.name_en) : (h.name_en || h.name_ar)}</SelectItem>)}
+                  {(Array.isArray(hotels.data) ? hotels.data : Array.isArray(hotels.data?.data) ? hotels.data.data : [])?.map((h: any) => <SelectItem key={h.id} value={h.id}>{lang === "ar" ? (h.name_ar || h.name_en) : (h.name_en || h.name_ar)}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -193,7 +190,7 @@ function TaxesList() {
                   <TableRow key={x.id} className={x.deleted_at ? "opacity-60" : ""}>
                     <TableCell className="font-mono text-xs">{x.code}</TableCell>
                     <TableCell className="font-medium">
-                      <Link to="/taxes/$id" params={{ id: x.id }} className="hover:underline">
+                      <Link to={`/taxes/${x.id}`} className="hover:underline">
                         {lang === "ar" ? (x.name_ar || x.name_en) : (x.name_en || x.name_ar)}
                       </Link>
                     </TableCell>
@@ -211,18 +208,18 @@ function TaxesList() {
                     <TableCell className="text-end">
                       <div className="flex justify-end gap-1">
                         <Button asChild variant="ghost" size="icon" title={t("actions.view")}>
-                          <Link to="/taxes/$id" params={{ id: x.id }}><Eye className="h-4 w-4" /></Link>
+                          <Link to={`/taxes/${x.id}`}><Eye className="h-4 w-4" /></Link>
                         </Button>
                         {canWrite && !x.deleted_at && (
                           <Button variant="ghost" size="icon" title={t("actions.edit")} onClick={() => setDialog({ open: true, initial: x })}>
                             <Pencil className="h-4 w-4" />
                           </Button>
                         )}
-                        {auth.isAdmin && (x.deleted_at
+                        {isAdmin(auth) && (x.deleted_at
                           ? <Button variant="ghost" size="icon" title={t("actions.restore")} onClick={() => setConfirm({ id: x.id, action: "restore" })}><RotateCcw className="h-4 w-4" /></Button>
                           : <Button variant="ghost" size="icon" title={t("actions.archive")} onClick={() => setConfirm({ id: x.id, action: "archive" })}><Archive className="h-4 w-4" /></Button>
                         )}
-                        {auth.isAdmin && x.deleted_at && (
+                        {isAdmin(auth) && x.deleted_at && (
                           <Button variant="ghost" size="icon" title={t("actions.delete")} onClick={() => setConfirm({ id: x.id, action: "delete" })}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                         )}
                       </div>
@@ -249,3 +246,5 @@ function TaxesList() {
     </>
   );
 }
+
+export { TaxesList as Component };

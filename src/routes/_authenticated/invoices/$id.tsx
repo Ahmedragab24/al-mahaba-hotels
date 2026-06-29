@@ -1,10 +1,13 @@
 // Invoice detail — Section 15 (BR-INV). Items, status workflow, payments, sharing, history.
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useNavigate, useParams } from "react-router-dom";
+import { db } from "@/lib/api/db";
+import { apiClient } from "@/lib/api/api-client";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
-import { useAuth } from "@/hooks/use-auth";
+import { useSelector } from "react-redux";
+import { selectAuth } from "@/store/features/authSlice";
+import { hasRole, hasAnyRole, isAdmin, canAccessModule } from "@/lib/auth-utils";
 import { PageHeader } from "@/components/page-header";
 import { EntityHistory } from "@/components/entity-history";
 import { EntityAttachments } from "@/components/entity-attachments";
@@ -22,10 +25,6 @@ import { dbErrorMessage } from "@/lib/db-errors";
 import { toast } from "sonner";
 import { InvStatusBadge, FINANCE_WRITE } from "./index";
 
-export const Route = createFileRoute("/_authenticated/invoices/$id")({
-  component: InvoiceDetail,
-});
-
 function KV({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="space-y-0.5">
@@ -35,13 +34,13 @@ function KV({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-function InvoiceDetail() {
-  const { id } = Route.useParams();
+export default function InvoiceDetail() {
+  const { id } = useParams<{ id: string }>();
   const { t, lang, dir } = useI18n();
-  const auth = useAuth();
+  const auth = useSelector(selectAuth);
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const canWrite = auth.hasAnyRole([...FINANCE_WRITE]);
+  const canWrite = hasAnyRole(auth, [...FINANCE_WRITE]);
 
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
@@ -58,9 +57,9 @@ function InvoiceDetail() {
     queryKey: ["invoice", id],
     queryFn: async () => {
       const [{ data: inv, error }, { data: items }, { data: allocs }] = await Promise.all([
-        supabase.from("invoices").select("*, customer:customers(name_en,name_ar,email,phone), booking:bookings(booking_no)").eq("id", id).maybeSingle(),
-        supabase.from("invoice_items").select("*").eq("invoice_id", id).order("created_at"),
-        supabase.from("receipt_allocations").select("*, receipt:receipts(receipt_no,receipt_date,payment_method,status)").eq("invoice_id", id).order("created_at"),
+        db.from("invoices").select("*, customer:customers(name_en,name_ar,email,phone), booking:bookings(booking_no)").eq("id", id).maybeSingle(),
+        db.from("invoice_items").select("*").eq("invoice_id", id).order("created_at"),
+        db.from("receipt_allocations").select("*, receipt:receipts(receipt_no,receipt_date,payment_method,status)").eq("invoice_id", id).order("created_at"),
       ]);
       if (error) throw error;
       return { inv, items: items ?? [], allocs: allocs ?? [] };
@@ -72,33 +71,31 @@ function InvoiceDetail() {
   const setStatus = async (status: string, extra?: Record<string, unknown>) => {
     setBusy(true);
     try {
-      const { error } = await supabase.from("invoices").update({ status, ...extra }).eq("id", id);
-      if (error) throw error;
+      await apiClient.invoices.update(id || "", { status, ...extra });
       toast.success(t("label.saved", "Saved"));
       setCancelOpen(false);
       refresh();
-    } catch (e) { toast.error(dbErrorMessage(e, t)); } finally { setBusy(false); }
+    } catch (e) { toast.error(dbErrorMessage(e)); } finally { setBusy(false); }
   };
 
   const addItem = async () => {
     setBusy(true);
     try {
-      const { error } = await supabase.from("invoice_items").insert({
-        invoice_id: id, description_en: descEn, description_ar: descAr || null,
+      const { error } = await db.from("invoice_items").insert({
+        invoice_id: id || "", description_en: descEn, description_ar: descAr || null,
         quantity: Number(qty), unit_price: Number(price), taxes: Number(taxes), fees: Number(fees),
       });
       if (error) throw error;
       setItemOpen(false); setDescEn(""); setDescAr(""); setQty("1"); setPrice(""); setTaxes("0"); setFees("0");
       refresh();
-    } catch (e) { toast.error(dbErrorMessage(e, t)); } finally { setBusy(false); }
+    } catch (e) { toast.error(dbErrorMessage(e)); } finally { setBusy(false); }
   };
 
   const removeItem = async (itemId: string) => {
     try {
-      const { error } = await supabase.from("invoice_items").delete().eq("id", itemId);
-      if (error) throw error;
+      await apiClient.invoiceItems.delete(itemId);
       refresh();
-    } catch (e) { toast.error(dbErrorMessage(e, t)); }
+    } catch (e) { toast.error(dbErrorMessage(e)); }
   };
 
   if (q.isLoading) return <div className="p-6 text-muted-foreground">{t("label.loading")}</div>;
@@ -140,7 +137,7 @@ function InvoiceDetail() {
         subtitle={`${custName} · ${formatMoney(Number(x.total_amount), x.currency, lang)}`}
         children={
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => navigate({ to: "/invoices" })}>
+            <Button variant="outline" size="sm" onClick={() => navigate("/invoices")}>
               <ArrowLeft className="h-4 w-4 rtl:rotate-180" />{t("actions.back")}
             </Button>
             <Button variant="outline" size="sm" onClick={printInvoice}><Printer className="h-4 w-4" />{t("inv.pdf")}</Button>
@@ -248,11 +245,11 @@ function InvoiceDetail() {
           </TabsContent>
 
           <TabsContent value="attachments">
-            <EntityAttachments entityType="invoice" entityId={id} />
+            <EntityAttachments entityType="invoice" entityId={id || ""} />
           </TabsContent>
 
           <TabsContent value="history">
-            <EntityHistory entityType="invoices" entityId={id} />
+            <EntityHistory entityType="invoices" entityId={id || ""} />
           </TabsContent>
         </Tabs>
       </div>

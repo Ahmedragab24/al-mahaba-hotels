@@ -1,8 +1,10 @@
 import { useState } from "react";
+import { db } from "@/lib/api/db";
+import { getCurrentUserId } from "@/lib/api/base";
+import { apiClient } from "@/lib/api/api-client";
 import { useMutation } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
-import { useHotelsLite, useCurrencies } from "@/lib/lookups";
+import { useHotels, useCurrencies } from "@/lib/lookups";
 import { dbErrorMessage } from "@/lib/db-errors";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -23,7 +25,7 @@ export function TaxDialog({ open, onOpenChange, initial, onSaved }: {
   open: boolean; onOpenChange: (v: boolean) => void; initial?: any; onSaved: () => void;
 }) {
   const { t, lang } = useI18n();
-  const hotels = useHotelsLite();
+  const hotels = useHotels();
   const currencies = useCurrencies();
   const [v, setV] = useState<any>({});
   const isEdit = !!initial?.id;
@@ -51,17 +53,17 @@ export function TaxDialog({ open, onOpenChange, initial, onSaved }: {
         notes: v.notes?.trim() || null,
       };
       if (isEdit) {
-        const { error } = await (supabase.from("hotel_taxes") as any).update(payload).eq("id", initial.id);
+        const { error } = await (db.from("hotel_taxes") as any).update(payload).eq("id", initial.id);
         if (error) throw error;
       } else {
-        const { data: u } = await supabase.auth.getUser();
-        payload.created_by = u.user?.id ?? null;
-        const { error } = await (supabase.from("hotel_taxes") as any).insert(payload);
+        const data = { user: { id: getCurrentUserId() } };
+        payload.created_by = data?.user?.id ?? null;
+        const { error } = await (db.from("hotel_taxes") as any).insert(payload);
         if (error) throw error;
       }
     },
     onSuccess: () => { toast.success(t("toast.saved")); onSaved(); onOpenChange(false); },
-    onError: (e: any) => toast.error(dbErrorMessage(e, t)),
+    onError: (e: any) => toast.error(dbErrorMessage(e)),
   });
 
   return (
@@ -73,7 +75,7 @@ export function TaxDialog({ open, onOpenChange, initial, onSaved }: {
             <Select value={v.hotel_id ?? ""} onValueChange={(x) => setV({ ...v, hotel_id: x })} disabled={isEdit}>
               <SelectTrigger><SelectValue placeholder={t("filter.hotel")} /></SelectTrigger>
               <SelectContent>
-                {hotels.data?.map((h) => <SelectItem key={h.id} value={h.id}>{lang === "ar" ? (h.name_ar || h.name_en) : (h.name_en || h.name_ar)}</SelectItem>)}
+                {(Array.isArray(hotels.data) ? hotels.data : Array.isArray(hotels.data?.data) ? hotels.data.data : [])?.map((h: any) => <SelectItem key={h.id} value={h.id}>{lang === "ar" ? (h.name_ar || h.name_en) : (h.name_en || h.name_ar)}</SelectItem>)}
               </SelectContent>
             </Select>
           </Field>
@@ -102,7 +104,7 @@ export function TaxDialog({ open, onOpenChange, initial, onSaved }: {
               <Select value={v.currency ?? ""} onValueChange={(x) => setV({ ...v, currency: x })}>
                 <SelectTrigger><SelectValue placeholder={t("label.currency")} /></SelectTrigger>
                 <SelectContent>
-                  {currencies.data?.map((c) => <SelectItem key={c.code} value={c.code}>{c.code}</SelectItem>)}
+                  {(Array.isArray(currencies.data) ? currencies.data : Array.isArray(currencies.data?.data) ? currencies.data.data : [])?.map((c: any) => <SelectItem key={c.code} value={c.code}>{c.code}</SelectItem>)}
                 </SelectContent>
               </Select>
             </Field>

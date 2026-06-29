@@ -1,8 +1,11 @@
 import { useRef, useState } from "react";
+import { db } from "@/lib/api/db";
+import { apiClient } from "@/lib/api/api-client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
-import { useAuth } from "@/hooks/use-auth";
+import { useSelector } from "react-redux";
+import { selectAuth } from "@/store/features/authSlice";
+import { hasRole, hasAnyRole, isAdmin, canAccessModule } from "@/lib/auth-utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -47,20 +50,20 @@ function FileIcon({ mime }: { mime: string }) {
 
 export function EntityAttachments({ entityType, entityId }: { entityType: AttachmentEntityType; entityId: string }) {
   const { t, lang } = useI18n();
-  const auth = useAuth();
+  const auth = useSelector(selectAuth);
   const qc = useQueryClient();
   const inputRef = useRef<HTMLInputElement>(null);
   const [showArchived, setShowArchived] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [archiveId, setArchiveId] = useState<string | null>(null);
 
-  const canUpload = auth.hasAnyRole([...UPLOAD_ROLES]);
-  const canManage = auth.hasAnyRole([...MANAGE_ROLES]);
+  const canUpload = hasAnyRole(auth, [...UPLOAD_ROLES]);
+  const canManage = hasAnyRole(auth, [...MANAGE_ROLES]);
 
   const list = useQuery({
     queryKey: ["attachments", entityType, entityId, showArchived],
     queryFn: async () => {
-      let q = supabase
+      let q = db
         .from("attachments")
         .select("*")
         .eq("entity_type", entityType)
@@ -82,9 +85,11 @@ export function EntityAttachments({ entityType, entityId }: { entityType: Attach
     try {
       const storageName = `${crypto.randomUUID()}.${ext}`;
       const path = `${entityType}/${entityId}/${storageName}`;
-      const { error: upErr } = await supabase.storage.from("attachments").upload(path, file, { contentType: mime });
-      if (upErr) throw upErr;
-      const { error: insErr } = await supabase.from("attachments").insert({
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("path", path);
+      await apiClient.attachments.upload(formData);
+      const { error: insErr } = await apiClient.attachments.create({
         entity_type: entityType,
         entity_id: entityId,
         file_name: storageName,
@@ -95,7 +100,7 @@ export function EntityAttachments({ entityType, entityId }: { entityType: Attach
         uploaded_by: auth.user?.id ?? null,
       });
       if (insErr) {
-        await supabase.storage.from("attachments").remove([path]);
+        await apiClient.attachments.delete(path);
         throw insErr;
       }
       toast.success(t("attach.uploaded"));
@@ -109,7 +114,7 @@ export function EntityAttachments({ entityType, entityId }: { entityType: Attach
   }
 
   async function signedUrl(path: string, download?: string) {
-    const { data, error } = await supabase.storage
+    const { data, error } = await db.storage
       .from("attachments")
       .createSignedUrl(path, 300, download ? { download } : undefined);
     if (error || !data?.signedUrl) { toast.error(t("toast.error")); return null; }
@@ -135,7 +140,7 @@ export function EntityAttachments({ entityType, entityId }: { entityType: Attach
 
   const archiveMut = useMutation({
     mutationFn: async ({ id, restore }: { id: string; restore: boolean }) => {
-      const { error } = await supabase
+      const { error } = await db
         .from("attachments")
         .update({ deleted_at: restore ? null : new Date().toISOString() })
         .eq("id", id);
@@ -193,7 +198,7 @@ export function EntityAttachments({ entityType, entityId }: { entityType: Attach
             {!list.isLoading && (list.data?.length ?? 0) === 0 && (
               <TableRow><TableCell colSpan={5} className="py-8 text-center text-muted-foreground">{t("attach.empty")}</TableCell></TableRow>
             )}
-            {list.data?.map((row: any) => (
+            {(Array.isArray(list.data) ? list.data : Array.isArray(list.data?.data) ? list.data.data : [])?.map((row: any) => (
               <TableRow key={row.id} className={row.deleted_at ? "opacity-60" : ""}>
                 <TableCell>
                   <div className="flex items-center gap-2">

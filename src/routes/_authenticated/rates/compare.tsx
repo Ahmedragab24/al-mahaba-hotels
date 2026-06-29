@@ -1,7 +1,8 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { Link } from "react-router-dom";
+import { db } from "@/lib/api/db";
+import { apiClient } from "@/lib/api/api-client";
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/page-header";
 import { useI18n } from "@/lib/i18n";
 import { useHotelsLite, useHotelRoomTypes } from "@/lib/lookups";
@@ -16,11 +17,7 @@ import { StatusPill } from "@/components/status-pill";
 import { Trophy, Eye, Building2 } from "lucide-react";
 import { formatDate, formatDateTime } from "@/lib/format";
 
-export const Route = createFileRoute("/_authenticated/rates/compare")({
-  component: CompareRates,
-});
-
-function CompareRates() {
+export default function CompareRates() {
   const { t, lang } = useI18n();
   const hotels = useHotelsLite();
 
@@ -35,7 +32,7 @@ function CompareRates() {
     queryKey: ["rates-compare", { hotelId, roomTypeId, checkIn, checkOut }],
     enabled: !!hotelId,
     queryFn: async () => {
-      let q = supabase.from("rates").select(
+      let q = db.from("rates").select(
         "id,code,hotel_id,supplier_id,room_type_id,meal_plan,currency,valid_from,valid_to,cost_per_night,selling_price,status,is_direct,version,created_at,created_by,supplier:suppliers(name_en,name_ar),room_type:hotel_room_types(name_en,name_ar),hotel:hotels(name_en,name_ar)"
       )
         .eq("hotel_id", hotelId)
@@ -64,7 +61,7 @@ function CompareRates() {
               <Select value={hotelId} onValueChange={(v) => { setHotelId(v); setRoomTypeId("all"); }}>
                 <SelectTrigger className="w-full"><SelectValue placeholder={t("rates.hotel")} /></SelectTrigger>
                 <SelectContent>
-                  {hotels.data?.map((h) => (
+                  {(Array.isArray(hotels.data) ? hotels.data : Array.isArray(hotels.data?.data) ? hotels.data.data : [])?.map((h: any) => (
                     <SelectItem key={h.id} value={h.id}>{lang === "ar" ? (h.name_ar || h.name_en) : (h.name_en || h.name_ar)}</SelectItem>
                   ))}
                 </SelectContent>
@@ -77,7 +74,7 @@ function CompareRates() {
                 <SelectTrigger className="w-full"><SelectValue placeholder={t("rates.room_type")} /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t("filter.all")}</SelectItem>
-                  {roomTypes.data?.map((r) => (
+                  {(Array.isArray(roomTypes.data) ? roomTypes.data : Array.isArray(roomTypes.data?.data) ? roomTypes.data.data : [])?.map((r: any) => (
                     <SelectItem key={r.id} value={r.id}>{lang === "ar" ? (r.name_ar || r.name_en) : (r.name_en || r.name_ar)}</SelectItem>
                   ))}
                 </SelectContent>
@@ -157,7 +154,7 @@ function CompareRates() {
                       <TableCell className="text-xs">{enteredBy}</TableCell>
                       <TableCell className="text-end">
                         <Button asChild variant="ghost" size="icon" title={t("actions.view")}>
-                          <Link to="/rates/$id" params={{ id: r.id }}><Eye className="h-4 w-4" /></Link>
+                          <Link to={`/rates/${r.id}`}><Eye className="h-4 w-4" /></Link>
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -171,3 +168,5 @@ function CompareRates() {
     </>
   );
 }
+
+export { CompareRates as Component };

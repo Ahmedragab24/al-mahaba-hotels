@@ -1,7 +1,9 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
 import { useI18n } from "@/lib/i18n";
-import { supabase } from "@/integrations/supabase/client";
+import { selectAuth } from "@/store/features/authSlice";
+import { useLoginMutation } from "@/store/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,61 +13,56 @@ import { Loader2 } from "lucide-react";
 import logoUrl from "@/assets/daleel-logo-transparent.png";
 import logoDarkUrl from "@/assets/daleel-logo-dark.png";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { ensureDemoUsers } from "@/lib/demo-users.functions";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-export const Route = createFileRoute("/auth")({
-  ssr: false,
-  component: LoginPage,
-});
-
-function normalizeDigits(raw: string): string {
-  return raw
-    .replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660))
-    .replace(/[\u06F0-\u06F9]/g, (d) => String(d.charCodeAt(0) - 0x06F0));
-}
-
-function LoginPage() {
+export default function LoginPage() {
   const { t, dir } = useI18n();
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const auth = useSelector(selectAuth);
+  const [login, { isLoading: busy }] = useLoginMutation();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [type, setType] = useState<string>("super_admin");
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [seeding, setSeeding] = useState(true);
 
+  // Redirect already-authenticated users to dashboard
   useEffect(() => {
-    ensureDemoUsers()
-      .catch(() => undefined)
-      .finally(() => setSeeding(false));
-  }, []);
+    if (auth.isAuthenticated) {
+      navigate("/", { replace: true });
+    }
+  }, [auth.isAuthenticated, navigate]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    setBusy(true);
     try {
       const emailClean = email.trim().toLowerCase();
 
-      // Store typed email in localStorage to display it as the username in the sidebar/header
-      if (typeof window !== "undefined") {
-        window.localStorage.setItem("custom_display_email", emailClean);
-      }
+      const res = await login({
+        email: emailClean,
+        password: password,
+        type: type,
+      }).unwrap();
 
-      // Log in behind the scenes as the super admin so that layout/Supabase sessions succeed
-      const { error: err } = await supabase.auth.signInWithPassword({
-        email: "super_admin@uat-hrs.sa",
-        password: "12345678",
-      });
+      // Handle API response structure: { data: { user, access_token }, ... }
+      const token = res.data?.access_token || res.token;
+      const user = res.data?.user || res.user;
 
-      if (err) {
-        setError(err.message.includes("Invalid") ? t("auth.invalid") : err.message);
-        return;
+      if (token) {
+        const userId = String(user?.id || "");
+        document.cookie = `auth_token=${encodeURIComponent(token)}; path=/; max-age=86400; SameSite=Lax`;
+        if (userId) {
+          document.cookie = `auth_user_id=${encodeURIComponent(userId)}; path=/; max-age=86400; SameSite=Lax`;
+          localStorage.setItem("auth_user_id", userId);
+        }
+        navigate("/", { replace: true });
+      } else {
+        throw new Error("Invalid response from server");
       }
-      navigate({ to: "/", replace: true });
     } catch (err: any) {
-      setError(err.message || t("auth.conn_error"));
-    } finally {
-      setBusy(false);
+      setError(err.data?.message || err.message || t("auth.conn_error"));
     }
   }
 
@@ -88,7 +85,7 @@ function LoginPage() {
         <LangSwitcher />
       </div>
 
-      <div className="relative z-10 w-full max-w-md">
+      <div className="relative z-10 w-full max-w-lg">
         <div className="mb-8 flex flex-col items-center text-center">
           <div className="mb-5 flex h-28 w-28 items-center justify-center">
             <img
@@ -113,7 +110,7 @@ function LoginPage() {
         <Card className="border-border/60" style={{ boxShadow: "var(--shadow-brand)" }}>
           <CardContent className="p-6">
             <form onSubmit={handleSubmit} className="flex flex-col gap-4" dir={dir}>
-              <div className="space-y-2">
+              <div className="flex flex-col gap-2">
                 <Label htmlFor="email">{t("auth.email")}</Label>
                 <Input
                   id="email"
@@ -125,10 +122,10 @@ function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  disabled={seeding}
+                  disabled={busy}
                 />
               </div>
-              <div className="space-y-2">
+              <div className="flex flex-col gap-2">
                 <Label htmlFor="password">{t("auth.password")}</Label>
                 <Input
                   id="password"
@@ -139,17 +136,37 @@ function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
+                  disabled={busy}
                 />
               </div>
 
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="type">{t("label.user_type")}</Label>
+                <Select value={type} onValueChange={setType} disabled={busy}>
+                  <SelectTrigger id="type" className="rounded-xl bg-background/50 focus:bg-background h-10 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="super_admin">{t("usertype.super_admin")}</SelectItem>
+                    <SelectItem value="sales_manager">{t("usertype.sales_manager")}</SelectItem>
+                    <SelectItem value="financial_manager">{t("usertype.financial_manager")}</SelectItem>
+                    <SelectItem value="viewer">{t("usertype.viewer")}</SelectItem>
+                    <SelectItem value="employee">{t("usertype.employee")}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               {error && (
-                <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert">
+                <p
+                  className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive"
+                  role="alert"
+                >
                   {error}
                 </p>
               )}
               <Button
                 type="submit"
-                disabled={busy || seeding}
+                disabled={busy}
                 className="h-10 w-full border-0 font-semibold text-white rounded-xl cursor-pointer"
                 style={{ background: "var(--gradient-brand)" }}
               >
@@ -167,7 +184,10 @@ function LoginPage() {
         </Card>
 
         <div className="mt-6 text-center">
-          <Link to="/supplier-apply" className="text-sm font-medium text-[var(--brand-gold-deep)] hover:underline">
+          <Link
+            to="/supplier-apply"
+            className="text-sm font-medium text-[var(--brand-gold-deep)] hover:underline"
+          >
             {t("supplier.apply_cta")} ←
           </Link>
         </div>

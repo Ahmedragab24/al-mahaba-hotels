@@ -1,10 +1,14 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useLocation, useParams, useSearchParams, useNavigate } from "react-router-dom";
+import { db } from "@/lib/api/db";
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
-import { useAuth } from "@/hooks/use-auth";
+import { useSelector } from "react-redux";
+import { selectAuth } from "@/store/features/authSlice";
+import { hasRole, hasAnyRole, isAdmin, canAccessModule } from "@/lib/auth-utils";
 import { useFacilities, useSuppliersLite, useHotelViews } from "@/lib/lookups";
+import { useGetRoomsQuery } from "@/store/services/rooms/roomsService";
+import { useGetHotelImagesQuery, useUploadHotelImagesMutation, useSetImageAsCoverMutation, useDeleteHotelImageMutation } from "@/store/services/hotels/hotelsService";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -20,56 +24,48 @@ import { HotelForm } from "./-form";
 import { HotelShareActions } from "./-share-actions";
 import { StatusPill } from "@/components/status-pill";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import { ArrowLeft, Pencil, Plus, Trash2, Star } from "lucide-react";
+import { ArrowLeft, Eye, Pencil, Plus, Trash2, Star, Shield } from "lucide-react";
 import { formatDateTime } from "@/lib/format";
 import { toast } from "sonner";
 import { RoomTypeDialog } from "../room-types/-dialog";
 import { MealPlanSelector, MEAL_PLANS } from "@/components/meal-plan-selector";
 import { MealPlanConfigurator } from "@/components/meal-plan-configurator";
-import { useLocation } from "@tanstack/react-router";
+import { apiClient } from "@/lib/api/api-client";
+const CONTRACT_STATUSES = ["draft", "active", "expired", "terminated"] as const;
 
-export const Route = createFileRoute("/_authenticated/hotels/$id")({
-  validateSearch: (s: Record<string, unknown>) =>
-    ({ edit: s.edit ? 1 : undefined, customer: typeof s.customer === "string" ? s.customer : undefined }) as { edit?: 1; customer?: string },
-  component: HotelDetail,
-});
-
-const BOARDS = ["RO", "BB", "HB", "FB", "AI", "UAI"] as const;
-
-function HotelDetail() {
-  const { id } = Route.useParams();
-  const search = Route.useSearch();
+export default function HotelDetail() {
+  const { id } = useParams();
+  const [searchParams] = useSearchParams();
+  const search = Object.fromEntries(searchParams.entries());
   const { t, lang } = useI18n();
-  const auth = useAuth();
+  const auth = useSelector(selectAuth);
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const canWrite = auth.hasAnyRole(["super_admin", "admin", "operations_manager", "operations_agent"]);
+  const canWrite = hasAnyRole(auth, ["super_admin", "admin", "operations_manager", "operations_agent"]);
   const [editing, setEditing] = useState(!!search.edit);
 
   const hotel = useQuery({
     queryKey: ["hotel", id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("hotels")
-        .select("*, country:countries(name_en,name_ar), city:cities(name_en,name_ar)")
-        .eq("id", id).maybeSingle();
-      if (error) throw error;
-      return data as any;
+      return await apiClient.hotels.getById(Number(id), { lang });
+
     },
   });
 
   const counts = useQuery({
     queryKey: ["hotel-counts", id],
     queryFn: async () => {
-      const tables = ["hotel_room_types", "hotel_views", "hotel_meal_plans", "hotel_facilities", "hotel_images", "hotel_contacts", "hotel_suppliers", "rates"] as const;
+      const tables = ["rooms", "hotel_room_types", "hotel_views", "hotel_meal_plans", "hotel_facilities", "hotel_contacts", "hotel_suppliers", "rates"] as const;
       const out: Record<string, number> = {};
       await Promise.all(tables.map(async (tb) => {
-        const { count } = await supabase.from(tb).select("*", { count: "exact", head: true }).eq("hotel_id", id);
+        const { count } = await db.from(tb).select("*", { count: "exact", head: true }).eq("hotel_id", id);
         out[tb] = count ?? 0;
       }));
       return out;
     },
   });
+
+  const hotelImages = useGetHotelImagesQuery({ hotel_id: id });
 
   if (hotel.isLoading) return <div className="p-6 text-muted-foreground">{t("label.loading")}</div>;
   if (!hotel.data) return <div className="p-6 text-muted-foreground">{t("label.no_results")}</div>;
@@ -84,10 +80,10 @@ function HotelDetail() {
         subtitle={`${h.code}${h.brand ? " · " + h.brand : ""}${h.star_rating ? " · " + "★".repeat(h.star_rating) : ""}`}
         children={
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => navigate({ to: "/hotels" })}>
+            <Button variant="outline" size="sm" onClick={() => navigate("/hotels")}>
               <ArrowLeft className="h-4 w-4 rtl:rotate-180" />{t("actions.back")}
             </Button>
-            <HotelShareActions hotelId={id} contextCustomerId={search.customer} />
+            <HotelShareActions hotelId={id as string} contextCustomerId={search.customer} />
             {canWrite && !editing && (
               <Button size="sm" onClick={() => setEditing(true)}><Pencil className="h-4 w-4" />{t("actions.edit")}</Button>
             )}
@@ -99,12 +95,9 @@ function HotelDetail() {
         <Tabs defaultValue="profile" className="space-y-4">
           <TabsList className="flex-wrap h-auto">
             <TabsTrigger value="profile">{t("hotels.profile")}</TabsTrigger>
-            <TabsTrigger value="rooms">{t("hotels.rooms")} ({counts.data?.hotel_room_types ?? 0})</TabsTrigger>
+            <TabsTrigger value="rooms">{t("hotels.rooms")} ({counts.data?.rooms ?? 0})</TabsTrigger>
             <TabsTrigger value="views">{t("hotels.views")} ({counts.data?.hotel_views ?? 0})</TabsTrigger>
-            <TabsTrigger value="meals">{t("hotels.meal_plans")} ({counts.data?.hotel_meal_plans ?? 0})</TabsTrigger>
-            <TabsTrigger value="facilities">{t("hotels.facilities")} ({counts.data?.hotel_facilities ?? 0})</TabsTrigger>
-            <TabsTrigger value="images">{t("hotels.images")} ({counts.data?.hotel_images ?? 0})</TabsTrigger>
-            <TabsTrigger value="contacts">{t("hotels.contacts")} ({counts.data?.hotel_contacts ?? 0})</TabsTrigger>
+            <TabsTrigger value="images">{t("hotels.images")} ({hotelImages.data?.length ?? 0})</TabsTrigger>
             <TabsTrigger value="suppliers">{t("hotels.suppliers")} ({counts.data?.hotel_suppliers ?? 0})</TabsTrigger>
             <TabsTrigger value="rates">{t("hotels.rates_history")} ({counts.data?.rates ?? 0})</TabsTrigger>
             <TabsTrigger value="bookings">{t("hotels.bookings")}</TabsTrigger>
@@ -117,25 +110,25 @@ function HotelDetail() {
               <Card><CardContent className="grid gap-3 p-6 md:grid-cols-3 text-sm">
                 <KV label={t("label.code")} value={h.code} mono />
                 <KV label={t("label.brand")} value={h.brand} />
-                <KV label={t("label.stars")} value={h.star_rating ? "★".repeat(h.star_rating) : ""} />
+                <KV label={t("label.stars")} value={h.stars ? "★".repeat(h.stars) : ""} />
                 <KV label={t("label.name_en")} value={h.name_en} />
                 <KV label={t("label.name_ar")} value={h.name_ar} />
-                <KV label={t("label.status")} value={t(`status.${h.status}`)} />
+                <KV label={t("label.status")} value={h.status ? t("status.active") : t("status.inactive")} />
                 <KV label={t("label.country")} value={h.country ? (lang === "ar" ? h.country.name_ar : h.country.name_en) : ""} />
                 <KV label={t("label.city")} value={h.city ? (lang === "ar" ? h.city.name_ar : h.city.name_en) : ""} />
                 <KV label={t("label.district")} value={h.district} />
-                <KV label={t("label.address")} value={[h.address_line1, h.address_line2, h.postal_code].filter(Boolean).join(", ")} />
+                <KV label={t("label.address")} value={[h.address_1, h.address_2, h.postal_code].filter(Boolean).join(", ")} />
                 <KV
                   label={t("label.location_url")}
                   value={
-                    h.location_url ? (
+                    h.map_link ? (
                       <a
-                        href={h.location_url}
+                        href={h.map_link}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-[var(--brand-gold-deep)] hover:underline truncate max-w-xs block"
                       >
-                        {h.location_url}
+                        {h.map_link}
                       </a>
                     ) : (
                       "—"
@@ -145,29 +138,26 @@ function HotelDetail() {
                 <KV label={t("label.phone")} value={h.phone} />
                 <KV label={t("label.email")} value={h.email} />
                 <KV label={t("label.website")} value={h.website} />
-                <KV label={t("label.checkin")} value={h.check_in_time?.slice(0, 5)} />
-                <KV label={t("label.checkout")} value={h.check_out_time?.slice(0, 5)} />
+                <KV label={t("label.checkin")} value={h.check_in?.slice(0, 5)} />
+                <KV label={t("label.checkout")} value={h.check_out?.slice(0, 5)} />
                 <KV label={t("label.created_at")} value={formatDateTime(h.created_at, lang)} />
                 {(h.description_en || h.description_ar) && (
                   <div className="md:col-span-3 space-y-1"><div className="text-xs text-muted-foreground">{t("label.description")}</div>
                     <div className="whitespace-pre-wrap">{lang === "ar" ? (h.description_ar || h.description_en) : (h.description_en || h.description_ar)}</div></div>
                 )}
                 {(h.policies_en || h.policies_ar) && (
-                  <div className="md:col-span-3 space-y-1"><div className="text-xs text-muted-foreground">Policies</div>
+                  <div className="md:col-span-3 space-y-1"><div className="text-xs text-muted-foreground">{t("hotels.policies")}</div>
                     <div className="whitespace-pre-wrap">{lang === "ar" ? (h.policies_ar || h.policies_en) : (h.policies_en || h.policies_ar)}</div></div>
                 )}
               </CardContent></Card>
             )}
           </TabsContent>
 
-          <TabsContent value="rooms"><RoomsTab hotelId={id} canWrite={canWrite} /></TabsContent>
-          <TabsContent value="views"><ViewsTab hotelId={id} canWrite={canWrite} /></TabsContent>
-          <TabsContent value="meals"><MealsTab hotelId={id} canWrite={canWrite} /></TabsContent>
-          <TabsContent value="facilities"><FacilitiesTab hotelId={id} canWrite={canWrite} /></TabsContent>
-          <TabsContent value="images"><ImagesTab hotelId={id} canWrite={canWrite} /></TabsContent>
-          <TabsContent value="contacts"><ContactsTab hotelId={id} canWrite={canWrite} /></TabsContent>
-          <TabsContent value="suppliers"><SuppliersTab hotelId={id} canWrite={canWrite} /></TabsContent>
-          <TabsContent value="rates"><RatesHistoryTab hotelId={id} /></TabsContent>
+          <TabsContent value="rooms"><RoomsTab hotelId={id as string} canWrite={canWrite} /></TabsContent>
+          <TabsContent value="views"><ViewsTab hotelId={id as string} canWrite={canWrite} /></TabsContent>
+          <TabsContent value="images"><ImagesTab hotelId={id as string} canWrite={canWrite} images={hotelImages.data} /></TabsContent>
+          <TabsContent value="suppliers"><SuppliersTab hotelId={id as string} canWrite={canWrite} /></TabsContent>
+          <TabsContent value="rates"><RatesHistoryTab hotelId={id as string} /></TabsContent>
           <TabsContent value="bookings"><BookingsTab /></TabsContent>
         </Tabs>
       </div>
@@ -192,13 +182,11 @@ function RoomsTab({ hotelId, canWrite }: { hotelId: string; canWrite: boolean })
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [delId, setDelId] = useState<string | null>(null);
-  const q = useQuery({
-    queryKey: ["hotel-rooms", hotelId],
-    queryFn: async () => (await supabase.from("hotel_room_types").select("*").eq("hotel_id", hotelId).order("sort_order")).data ?? [],
-  });
+  const [viewRoom, setViewRoom] = useState<any>(null);
+  const q = useGetRoomsQuery({ hotel_id: hotelId, lang });
   const del = useMutation({
-    mutationFn: async (rid: string) => { const { error } = await supabase.from("hotel_room_types").delete().eq("id", rid); if (error) throw error; },
-    onSuccess: () => { toast.success(t("toast.deleted")); qc.invalidateQueries({ queryKey: ["hotel-rooms", hotelId] }); setDelId(null); },
+    mutationFn: async (rid: string) => { await apiClient.roomTypes.delete(rid); },
+    onSuccess: () => { toast.success(t("toast.deleted")); q.refetch(); setDelId(null); },
     onError: (e: any) => toast.error(e.message),
   });
   return (
@@ -209,35 +197,73 @@ function RoomsTab({ hotelId, canWrite }: { hotelId: string; canWrite: boolean })
       </div>
       <Table>
         <TableHeader><TableRow>
+          <TableHead>{t("label.image")}</TableHead>
           <TableHead>{t("label.code")}</TableHead><TableHead>{t("label.name")}</TableHead>
-          <TableHead>{t("label.max_adults")}</TableHead><TableHead>{t("label.max_children")}</TableHead>
-          <TableHead>{t("label.bed_type")}</TableHead><TableHead>{t("label.size_sqm")}</TableHead>
-          <TableHead>{t("label.is_active")}</TableHead><TableHead></TableHead>
+          <TableHead>{t("hotels.room_type")}</TableHead>
+          <TableHead>{t("hotels.view")}</TableHead>
+          <TableHead>{t("label.status")}</TableHead><TableHead></TableHead>
         </TableRow></TableHeader>
         <TableBody>
-          {q.data?.length === 0 && <TableRow><TableCell colSpan={8} className="py-10 text-center text-muted-foreground">{t("empty.title")}</TableCell></TableRow>}
-          {q.data?.map((r: any) => (
-            <TableRow key={r.id}>
-              <TableCell className="font-mono text-xs">{r.code}</TableCell>
-              <TableCell>{lang === "ar" ? r.name_ar : r.name_en}</TableCell>
-              <TableCell>{r.max_adults}</TableCell>
-              <TableCell>{r.max_children}</TableCell>
-              <TableCell>{r.bed_type}</TableCell>
-              <TableCell>{r.size_sqm}</TableCell>
-              <TableCell>{r.is_active ? <Badge>{t("status.active")}</Badge> : <Badge variant="secondary">{t("status.inactive")}</Badge>}</TableCell>
-              <TableCell className="text-end">
-                {canWrite && <>
-                  <Button variant="ghost" size="icon" onClick={() => { setEditing(r); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
-                  <Button variant="ghost" size="icon" onClick={() => setDelId(r.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                </>}
-              </TableCell>
-            </TableRow>
-          ))}
+          {(() => {
+            const rooms = Array.isArray(q.data) ? q.data : Array.isArray((q.data as any)?.data) ? (q.data as any).data : [];
+            return (
+              <>
+                {rooms.length === 0 && <TableRow><TableCell colSpan={8} className="py-10 text-center text-muted-foreground">{t("empty.title")}</TableCell></TableRow>}
+                {rooms.map((r: any) => (
+                  <TableRow key={r.id}>
+                    <TableCell>
+                      {r.cover_image && (
+                        <img src={r.cover_image} alt={r.name} className="h-12 w-12 rounded-md object-cover" />
+                      )}
+                    </TableCell>
+                    <TableCell className="font-mono text-xs">{r.code}</TableCell>
+                    <TableCell>{lang === "ar" ? r.name_ar : r.name_en}</TableCell>
+                    <TableCell>{r.room_type?.[lang === "ar" ? "name_ar" : "name_en"] || r.room_type?.name || "—"}</TableCell>
+                    <TableCell>{r.view || "—"}</TableCell>
+                    <TableCell>{r.status ? <Badge>{t("status.active")}</Badge> : <Badge variant="secondary">{t("status.inactive")}</Badge>}</TableCell>
+                    <TableCell className="text-end">
+                      <Button variant="ghost" size="icon" onClick={() => setViewRoom(r)}><Eye className="h-4 w-4" /></Button>
+                      {canWrite && <>
+                        <Button variant="ghost" size="icon" onClick={() => { setEditing(r); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" onClick={() => setDelId(r.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                      </>}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </>
+            );
+          })()}
         </TableBody>
       </Table>
       <RoomTypeDialog open={open} onOpenChange={setOpen} fixedHotelId={hotelId} initial={editing}
-        onSaved={() => qc.invalidateQueries({ queryKey: ["hotel-rooms", hotelId] })} />
+        onSaved={() => q.refetch()} />
       <ConfirmDialog open={!!delId} onOpenChange={(v) => !v && setDelId(null)} title={t("actions.delete")} description={t("toast.confirm_delete")} destructive onConfirm={() => delId && del.mutate(delId)} />
+      <Dialog open={!!viewRoom} onOpenChange={(v) => !v && setViewRoom(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader><DialogTitle>{t("hotels.room_details")}</DialogTitle></DialogHeader>
+          {viewRoom && (
+            <div className="grid gap-4">
+              {viewRoom.cover_image && (
+                <img src={viewRoom.cover_image} alt={viewRoom.name} className="w-full h-64 rounded-md object-cover" />
+              )}
+              <div className="grid gap-2 md:grid-cols-2">
+                    <KV label={t("label.code")} value={viewRoom.code} mono />
+                    <KV label={t("label.name")} value={lang === "ar" ? viewRoom.name_ar : viewRoom.name_en} />
+                    <KV label={t("hotels.room_type")} value={viewRoom.room_type?.[lang === "ar" ? "name_ar" : "name_en"] || viewRoom.room_type?.name} />
+                    <KV label={t("hotels.view")} value={viewRoom.view} />
+                    <KV label={t("label.status")} value={viewRoom.status ? t("status.active") : t("status.inactive")} />
+                    <KV label={t("label.is_archived")} value={viewRoom.is_archived ? t("status.yes") : t("status.no")} />
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {t("label.created_at")}: {formatDateTime(viewRoom.created_at, lang)}
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setViewRoom(null)}>{t("actions.close")}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </CardContent></Card>
   );
 }
@@ -252,11 +278,11 @@ function ViewsTab({ hotelId, canWrite }: { hotelId: string; canWrite: boolean })
   const [delId, setDelId] = useState<string | null>(null);
   const q = useQuery({
     queryKey: ["hotel-views", hotelId],
-    queryFn: async () => (await supabase.from("hotel_views").select("*").eq("hotel_id", hotelId).order("name_en")).data ?? [],
+    queryFn: async () => (await db.from("hotel_views").select("*").eq("hotel_id", hotelId).order("name_en")).data ?? [],
   });
   const del = useMutation({
-    mutationFn: async (rid: string) => { const { error } = await supabase.from("hotel_views").delete().eq("id", rid); if (error) throw error; },
-    onSuccess: () => { toast.success(t("toast.deleted")); qc.invalidateQueries({ queryKey: ["hotel-views", hotelId] }); setDelId(null); },
+    mutationFn: async (rid: string) => { await apiClient.hotelViews.delete(rid); },
+    onSuccess: () => { toast.success(t("toast.deleted")); qc.invalidateQueries({ queryKey: ["hotel-views", hotelId] }); qc.invalidateQueries({ queryKey: ["hotel-counts", hotelId] }); qc.invalidateQueries({ queryKey: ["hotel", hotelId] }); setDelId(null); },
   });
   return (
     <Card><CardContent className="p-0">
@@ -271,11 +297,11 @@ function ViewsTab({ hotelId, canWrite }: { hotelId: string; canWrite: boolean })
         </TableRow></TableHeader>
         <TableBody>
           {q.data?.length === 0 && <TableRow><TableCell colSpan={4} className="py-10 text-center text-muted-foreground">{t("empty.title")}</TableCell></TableRow>}
-          {q.data?.map((r: any) => (
+          {(Array.isArray(q.data) ? q.data : Array.isArray(q.data?.data) ? q.data.data : [])?.map((r: any) => (
             <TableRow key={r.id}>
               <TableCell className="font-mono text-xs">{r.code}</TableCell>
               <TableCell>{lang === "ar" ? r.name_ar : r.name_en}</TableCell>
-              <TableCell>{r.is_active ? <Badge>{t("status.active")}</Badge> : <Badge variant="secondary">{t("status.inactive")}</Badge>}</TableCell>
+              <TableCell>{r.status === true || r.status === 1 ? <Badge>{t("status.active")}</Badge> : <Badge variant="secondary">{t("status.inactive")}</Badge>}</TableCell>
               <TableCell className="text-end">
                 {canWrite && <>
                   <Button variant="ghost" size="icon" onClick={() => { setEditing(r); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
@@ -286,7 +312,7 @@ function ViewsTab({ hotelId, canWrite }: { hotelId: string; canWrite: boolean })
           ))}
         </TableBody>
       </Table>
-      <ViewDialog open={open} onOpenChange={setOpen} hotelId={hotelId} initial={editing} onSaved={() => qc.invalidateQueries({ queryKey: ["hotel-views", hotelId] })} />
+      <ViewDialog open={open} onOpenChange={setOpen} hotelId={hotelId} initial={editing} onSaved={() => { qc.invalidateQueries({ queryKey: ["hotel-views", hotelId] }); qc.invalidateQueries({ queryKey: ["hotel-counts", hotelId] }); qc.invalidateQueries({ queryKey: ["hotel", hotelId] }); }} />
       <ConfirmDialog open={!!delId} onOpenChange={(v) => !v && setDelId(null)} title={t("actions.delete")} description={t("toast.confirm_delete")} destructive onConfirm={() => delId && del.mutate(delId)} />
     </CardContent></Card>
   );
@@ -295,25 +321,32 @@ function ViewDialog({ open, onOpenChange, hotelId, initial, onSaved }: any) {
   const { t } = useI18n();
   const [v, setV] = useState<any>({});
   const isEdit = !!initial?.id;
+  
+  useEffect(() => {
+    if (open) {
+      setV(initial ? { ...initial, status: initial.status ? 1 : 0 } : { status: 1 });
+    }
+  }, [open, initial]);
+  
   const save = useMutation({
     mutationFn: async () => {
       if (!v.code?.trim() || !v.name_en?.trim() || !v.name_ar?.trim()) throw new Error(t("label.required"));
-      const payload: any = { hotel_id: hotelId, code: v.code.trim(), name_en: v.name_en.trim(), name_ar: v.name_ar.trim(), is_active: v.is_active ?? true };
-      if (isEdit) { const { error } = await supabase.from("hotel_views").update(payload).eq("id", initial.id); if (error) throw error; }
-      else { const { error } = await supabase.from("hotel_views").insert(payload); if (error) throw error; }
+      const payload: any = { hotel_id: hotelId, code: v.code.trim(), name_en: v.name_en.trim(), name_ar: v.name_ar.trim(), status: v.status ? 1 : 0 };
+      if (isEdit) { await apiClient.hotelViews.update(initial.id, payload); }
+      else { await apiClient.hotelViews.create(payload); }
     },
     onSuccess: () => { toast.success(t("toast.saved")); onSaved(); onOpenChange(false); },
     onError: (e: any) => toast.error(e.message),
   });
   return (
-    <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if (o) setV(initial ?? { is_active: true }); }}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader><DialogTitle>{isEdit ? t("actions.edit") : t("actions.add")} — {t("hotels.views")}</DialogTitle></DialogHeader>
         <div className="grid gap-3">
           <Field label={`${t("label.code")} *`}><Input value={v.code ?? ""} onChange={(e) => setV({ ...v, code: e.target.value })} /></Field>
           <Field label={`${t("label.name_en")} *`}><Input dir="ltr" value={v.name_en ?? ""} onChange={(e) => setV({ ...v, name_en: e.target.value })} /></Field>
           <Field label={`${t("label.name_ar")} *`}><Input dir="rtl" value={v.name_ar ?? ""} onChange={(e) => setV({ ...v, name_ar: e.target.value })} /></Field>
-          <label className="flex items-center gap-2 text-sm"><Checkbox checked={!!v.is_active} onCheckedChange={(x) => setV({ ...v, is_active: !!x })} />{t("label.is_active")}</label>
+          <label className="flex items-center gap-2 text-sm"><Checkbox checked={v.status === 1} onCheckedChange={(x) => setV({ ...v, status: x ? 1 : 0 })} />{t("label.is_active")}</label>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>{t("actions.cancel")}</Button>
@@ -330,7 +363,7 @@ function MealsTab({ hotelId, canWrite }: { hotelId: string; canWrite: boolean })
   const qc = useQueryClient();
   const q = useQuery({
     queryKey: ["hotel-meals", hotelId],
-    queryFn: async () => (await supabase.from("hotel_meal_plans").select("*").eq("hotel_id", hotelId)).data ?? [],
+    queryFn: async () => (await db.from("hotel_meal_plans").select("*").eq("hotel_id", hotelId)).data ?? [],
   });
 
   const [mealsIncluded, setMealsIncluded] = useState(true);
@@ -345,12 +378,12 @@ function MealsTab({ hotelId, canWrite }: { hotelId: string; canWrite: boolean })
 
   const save = useMutation({
     mutationFn: async () => {
-      const currentBoards = q.data?.map((r: any) => r.board) || [];
+      const currentBoards = (Array.isArray(q.data) ? q.data : Array.isArray(q.data?.data) ? q.data.data : [])?.map((r: any) => r.board) || [];
       const toDelete = currentBoards.filter((b: string) => !mealPlanComponents.includes(b));
       const toAdd = mealPlanComponents.filter(b => !currentBoards.includes(b));
 
       if (toDelete.length > 0) {
-        const { error } = await supabase.from("hotel_meal_plans").delete().eq("hotel_id", hotelId).in("board", toDelete);
+        const { error } = await db.from("hotel_meal_plans").delete().eq("hotel_id", hotelId).in("board", toDelete);
         if (error) throw error;
       }
 
@@ -367,13 +400,12 @@ function MealsTab({ hotelId, canWrite }: { hotelId: string; canWrite: boolean })
             is_active: true
           };
         });
-        const { error } = await supabase.from("hotel_meal_plans").insert(payloads);
-        if (error) throw error;
+        await apiClient.hotelMealPlans.create(payloads);
       }
     },
-    onSuccess: () => { 
-      toast.success(t("toast.saved")); 
-      qc.invalidateQueries({ queryKey: ["hotel-meals", hotelId] }); 
+    onSuccess: () => {
+      toast.success(t("toast.saved"));
+      qc.invalidateQueries({ queryKey: ["hotel-meals", hotelId] });
       qc.invalidateQueries({ queryKey: ["hotel-counts", hotelId] });
     },
     onError: (e: any) => toast.error(e.message),
@@ -388,7 +420,7 @@ function MealsTab({ hotelId, canWrite }: { hotelId: string; canWrite: boolean })
         onMealPlanComponentsChange={setMealPlanComponents}
         currency={"USD"}
         prices={{}}
-        onPriceChange={() => {}}
+        onPriceChange={() => { }}
         lang={lang as any}
       />
       {canWrite && (
@@ -409,16 +441,15 @@ function FacilitiesTab({ hotelId, canWrite }: { hotelId: string; canWrite: boole
   const facilities = useFacilities();
   const linked = useQuery({
     queryKey: ["hotel-facilities", hotelId],
-    queryFn: async () => (await supabase.from("hotel_facilities").select("facility_id").eq("hotel_id", hotelId)).data ?? [],
+    queryFn: async () => (await db.from("hotel_facilities").select("facility_id").eq("hotel_id", hotelId)).data ?? [],
   });
   const linkedIds = new Set((linked.data ?? []).map((r: any) => r.facility_id));
   const toggle = useMutation({
     mutationFn: async ({ facilityId, on }: { facilityId: string; on: boolean }) => {
       if (on) {
-        const { error } = await supabase.from("hotel_facilities").insert({ hotel_id: hotelId, facility_id: facilityId });
-        if (error) throw error;
+        await apiClient.hotelFacilities.create({ hotel_id: hotelId, facility_id: facilityId });
       } else {
-        const { error } = await supabase.from("hotel_facilities").delete().eq("hotel_id", hotelId).eq("facility_id", facilityId);
+        const { error } = await db.from("hotel_facilities").delete().eq("hotel_id", hotelId).eq("facility_id", facilityId);
         if (error) throw error;
       }
     },
@@ -449,71 +480,171 @@ function FacilitiesTab({ hotelId, canWrite }: { hotelId: string; canWrite: boole
 }
 
 /* ---------- Images ---------- */
-function ImagesTab({ hotelId, canWrite }: { hotelId: string; canWrite: boolean }) {
+function ImagesTab({ hotelId, canWrite, images }: { hotelId: string; canWrite: boolean; images?: any[] }) {
   const { t } = useI18n();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [v, setV] = useState<any>({});
+  const [previewFiles, setPreviewFiles] = useState<Array<{ file: File; preview: string }>>([]);
   const [delId, setDelId] = useState<string | null>(null);
-  const q = useQuery({
-    queryKey: ["hotel-images", hotelId],
-    queryFn: async () => (await supabase.from("hotel_images").select("*").eq("hotel_id", hotelId).order("sort_order")).data ?? [],
-  });
-  const save = useMutation({
-    mutationFn: async () => {
-      if (!v.file_path?.trim()) throw new Error(t("label.required"));
-      const payload: any = { hotel_id: hotelId, file_path: v.file_path.trim(), caption: v.caption || null, sort_order: Number(v.sort_order ?? 0), is_cover: !!v.is_cover };
-      const { error } = await supabase.from("hotel_images").insert(payload);
-      if (error) throw error;
-    },
-    onSuccess: () => { toast.success(t("toast.saved")); qc.invalidateQueries({ queryKey: ["hotel-images", hotelId] }); setOpen(false); setV({}); },
-    onError: (e: any) => toast.error(e.message),
-  });
-  const del = useMutation({
-    mutationFn: async (rid: string) => { const { error } = await supabase.from("hotel_images").delete().eq("id", rid); if (error) throw error; },
-    onSuccess: () => { toast.success(t("toast.deleted")); qc.invalidateQueries({ queryKey: ["hotel-images", hotelId] }); setDelId(null); },
-  });
+
+  const [upload, { isLoading: isUploading }] = useUploadHotelImagesMutation();
+  const [setCover] = useSetImageAsCoverMutation();
+  const [deleteImage] = useDeleteHotelImageMutation();
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    const newPreviews: Array<{ file: File; preview: string }> = [];
+
+    Array.from(files).forEach((file) => {
+      if (file.type.startsWith("image/")) {
+        const preview = URL.createObjectURL(file);
+        newPreviews.push({ file, preview });
+      }
+    });
+
+    setPreviewFiles((prev) => [...prev, ...newPreviews]);
+  };
+
+  const handleRemovePreview = (index: number) => {
+    setPreviewFiles((prev) => {
+      const newPreviews = [...prev];
+      URL.revokeObjectURL(newPreviews[index].preview);
+      newPreviews.splice(index, 1);
+      return newPreviews;
+    });
+  };
+
+  const handleSave = async () => {
+    if (previewFiles.length === 0) throw new Error(t("label.required"));
+
+    const formData = new FormData();
+    formData.append("hotel_id", hotelId);
+    formData.append("_method", "POST");
+
+    previewFiles.forEach(({ file }) => {
+      formData.append("images[]", file);
+    });
+
+    try {
+      await upload(formData).unwrap();
+      toast.success(t("toast.saved"));
+      setOpen(false);
+      setPreviewFiles([]);
+      qc.invalidateQueries({ queryKey: ["getHotelImages"] });
+    } catch (e: any) {
+      toast.error(e.message || t("toast.error"));
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteImage(id).unwrap();
+      toast.success(t("toast.deleted"));
+      setDelId(null);
+      qc.invalidateQueries({ queryKey: ["getHotelImages"] });
+    } catch (e: any) {
+      toast.error(e.message || t("toast.error"));
+    }
+  };
+
+  const handleSetCover = async (id: string) => {
+    try {
+      await setCover({ id, body: { is_cover: true } as any }).unwrap();
+      toast.success(t("toast.saved"));
+      qc.invalidateQueries({ queryKey: ["getHotelImages"] });
+    } catch (e: any) {
+      toast.error(e.message || t("toast.error"));
+    }
+  };
+
   return (
     <Card><CardContent className="p-0">
       <div className="flex items-center justify-between border-b p-3">
         <h3 className="font-medium">{t("hotels.images")}</h3>
         {canWrite && (
-          <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (o) setV({ is_cover: false, sort_order: 0 }); }}>
+          <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) { setPreviewFiles([]); } }}>
             <DialogTrigger asChild><Button size="sm"><Plus className="h-4 w-4" />{t("actions.add")}</Button></DialogTrigger>
-            <DialogContent>
-              <DialogHeader><DialogTitle>{t("hotels.images")}</DialogTitle></DialogHeader>
-              <div className="grid gap-3">
-                <Field label={`${t("label.file_url")} *`}><Input dir="ltr" value={v.file_path ?? ""} onChange={(e) => setV({ ...v, file_path: e.target.value })} /></Field>
-                <Field label={t("label.caption")}><Input value={v.caption ?? ""} onChange={(e) => setV({ ...v, caption: e.target.value })} /></Field>
-                <Field label={t("label.sort_order")}><Input type="number" value={v.sort_order ?? 0} onChange={(e) => setV({ ...v, sort_order: e.target.value })} /></Field>
-                <label className="flex items-center gap-2 text-sm"><Checkbox checked={!!v.is_cover} onCheckedChange={(x) => setV({ ...v, is_cover: !!x })} />{t("label.is_cover")}</label>
+            <DialogContent className="max-w-3xl">
+              <DialogHeader><DialogTitle>{t("hotels.upload_images")}</DialogTitle></DialogHeader>
+              <div className="space-y-4">
+                <div
+                  className="border-2 border-dashed rounded-lg p-8 text-center hover:bg-muted/50 transition-colors cursor-pointer"
+                  onClick={() => document.getElementById("file-input")?.click()}
+                >
+                  <Input
+                    id="file-input"
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleFileSelect}
+                  />
+                  <div className="flex flex-col items-center gap-2">
+                    <Plus className="h-8 w-8 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">{t("hotels.click_to_upload")}</p>
+                    <p className="text-xs text-muted-foreground">{t("hotels.supported_formats")}</p>
+                  </div>
+                </div>
+
+                {previewFiles.length > 0 && (
+                  <div className="grid gap-3 sm:grid-cols-3 md:grid-cols-4">
+                    {previewFiles.map((item, index) => (
+                      <div key={index} className="relative rounded-md border overflow-hidden group">
+                        <img
+                          src={item.preview}
+                          alt={`Preview ${index + 1}`}
+                          className="aspect-video w-full object-cover bg-muted"
+                        />
+                        <Button
+                          variant="destructive"
+                          size="icon"
+                          className="absolute top-1 end-1 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => handleRemovePreview(index)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setOpen(false)}>{t("actions.cancel")}</Button>
-                <Button onClick={() => save.mutate()} disabled={save.isPending}>{t("actions.save")}</Button>
+                <Button onClick={handleSave} disabled={isUploading || previewFiles.length === 0}>
+                  {isUploading ? t("label.uploading") : t("actions.upload")}
+                </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
         )}
       </div>
       <div className="grid gap-3 p-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-        {q.data?.length === 0 && <div className="col-span-full text-center text-muted-foreground py-10">{t("empty.title")}</div>}
-        {q.data?.map((img: any) => (
+        {(!images || images.length === 0) && <div className="col-span-full text-center text-muted-foreground py-10">{t("empty.title")}</div>}
+        {(images || []).map((img: any) => (
           <div key={img.id} className="relative rounded-md border overflow-hidden group">
-            {/* eslint-disable-next-line jsx-a11y/alt-text */}
-            <img src={img.file_path} className="aspect-video w-full object-cover bg-muted" loading="lazy" />
+            <img src={img.image_url} className="aspect-video w-full object-cover bg-muted" loading="lazy" alt={`Hotel image ${img.id}`} />
             <div className="flex items-center justify-between p-2 text-xs">
               <span className="truncate">{img.caption || "—"}</span>
               {img.is_cover && <Badge>{t("label.is_cover")}</Badge>}
             </div>
             {canWrite && (
-              <Button variant="destructive" size="icon" className="absolute top-1 end-1 h-7 w-7 opacity-0 group-hover:opacity-100"
-                onClick={() => setDelId(img.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+              <div className="absolute top-1 end-1 flex gap-1 opacity-0 group-hover:opacity-100">
+                {!img.is_cover && (
+                  <Button variant="secondary" size="sm" className="h-7 text-xs"
+                    onClick={() => handleSetCover(img.id)}>
+                    {t("label.set_cover")}
+                  </Button>
+                )}
+                <Button variant="destructive" size="icon" className="h-7 w-7"
+                  onClick={() => setDelId(img.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+              </div>
             )}
           </div>
         ))}
       </div>
-      <ConfirmDialog open={!!delId} onOpenChange={(v) => !v && setDelId(null)} title={t("actions.delete")} description={t("toast.confirm_delete")} destructive onConfirm={() => delId && del.mutate(delId)} />
+      <ConfirmDialog open={!!delId} onOpenChange={(v) => !v && setDelId(null)} title={t("actions.delete")} description={t("toast.confirm_delete")} destructive onConfirm={() => delId && handleDelete(delId)} />
     </CardContent></Card>
   );
 }
@@ -527,10 +658,10 @@ function ContactsTab({ hotelId, canWrite }: { hotelId: string; canWrite: boolean
   const [delId, setDelId] = useState<string | null>(null);
   const q = useQuery({
     queryKey: ["hotel-contacts", hotelId],
-    queryFn: async () => (await supabase.from("hotel_contacts").select("*").eq("hotel_id", hotelId).order("is_primary", { ascending: false })).data ?? [],
+    queryFn: async () => (await db.from("hotel_contacts").select("*").eq("hotel_id", hotelId).order("is_primary", { ascending: false })).data ?? [],
   });
   const del = useMutation({
-    mutationFn: async (rid: string) => { const { error } = await supabase.from("hotel_contacts").delete().eq("id", rid); if (error) throw error; },
+    mutationFn: async (rid: string) => { await apiClient.hotelContacts.delete(rid); },
     onSuccess: () => { toast.success(t("toast.deleted")); qc.invalidateQueries({ queryKey: ["hotel-contacts", hotelId] }); setDelId(null); },
   });
   return (
@@ -547,7 +678,7 @@ function ContactsTab({ hotelId, canWrite }: { hotelId: string; canWrite: boolean
         </TableRow></TableHeader>
         <TableBody>
           {q.data?.length === 0 && <TableRow><TableCell colSpan={7} className="py-10 text-center text-muted-foreground">{t("empty.title")}</TableCell></TableRow>}
-          {q.data?.map((c: any) => (
+          {(Array.isArray(q.data) ? q.data : Array.isArray(q.data?.data) ? q.data.data : [])?.map((c: any) => (
             <TableRow key={c.id}>
               <TableCell className="font-medium">{c.full_name}</TableCell>
               <TableCell>{c.title}</TableCell>
@@ -584,8 +715,8 @@ function ContactDialog({ open, onOpenChange, hotelId, initial, onSaved }: any) {
         email: v.email || null, phone: v.phone || null, mobile: v.mobile || null, whatsapp: v.whatsapp || null,
         is_primary: !!v.is_primary, preferred_language: v.preferred_language || "en", notes: v.notes || null,
       };
-      if (isEdit) { const { error } = await supabase.from("hotel_contacts").update(payload).eq("id", initial.id); if (error) throw error; }
-      else { const { error } = await supabase.from("hotel_contacts").insert(payload); if (error) throw error; }
+      if (isEdit) { await apiClient.hotelContacts.update(initial.id, payload); }
+      else { await apiClient.hotelContacts.create(payload); }
     },
     onSuccess: () => { toast.success(t("toast.saved")); onSaved(); onOpenChange(false); },
     onError: (e: any) => toast.error(e.message),
@@ -634,25 +765,24 @@ function SuppliersTab({ hotelId, canWrite }: { hotelId: string; canWrite: boolea
   const [delId, setDelId] = useState<string | null>(null);
   const q = useQuery({
     queryKey: ["hotel-suppliers", hotelId],
-    queryFn: async () => (await supabase.from("hotel_suppliers").select("*, supplier:suppliers(id,code,name_en,name_ar)").eq("hotel_id", hotelId).order("is_preferred", { ascending: false })).data ?? [],
+    queryFn: async () => (await db.from("hotel_suppliers").select("*, supplier:suppliers(id,code,name_en,name_ar)").eq("hotel_id", hotelId).order("is_preferred", { ascending: false })).data ?? [],
   });
   const save = useMutation({
     mutationFn: async () => {
       if (!v.supplier_id) throw new Error(t("label.required"));
-      const { error } = await supabase.from("hotel_suppliers").insert({ hotel_id: hotelId, supplier_id: v.supplier_id, is_preferred: !!v.is_preferred, notes: v.notes || null });
-      if (error) throw error;
+      await apiClient.hotelSuppliers.create({ hotel_id: hotelId, supplier_id: v.supplier_id, is_preferred: !!v.is_preferred, notes: v.notes || null });
     },
     onSuccess: () => { toast.success(t("toast.saved")); qc.invalidateQueries({ queryKey: ["hotel-suppliers", hotelId] }); setOpen(false); setV({}); },
     onError: (e: any) => toast.error(e.message),
   });
   const togglePref = useMutation({
     mutationFn: async ({ rid, on }: { rid: string; on: boolean }) => {
-      const { error } = await supabase.from("hotel_suppliers").update({ is_preferred: on }).eq("id", rid); if (error) throw error;
+      await apiClient.hotelSuppliers.update(rid, { is_preferred: on });
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["hotel-suppliers", hotelId] }),
   });
   const del = useMutation({
-    mutationFn: async (rid: string) => { const { error } = await supabase.from("hotel_suppliers").delete().eq("id", rid); if (error) throw error; },
+    mutationFn: async (rid: string) => { await apiClient.hotelSuppliers.delete(rid); },
     onSuccess: () => { toast.success(t("toast.deleted")); qc.invalidateQueries({ queryKey: ["hotel-suppliers", hotelId] }); setDelId(null); },
   });
   const linkedIds = new Set((q.data ?? []).map((r: any) => r.supplier_id));
@@ -693,7 +823,7 @@ function SuppliersTab({ hotelId, canWrite }: { hotelId: string; canWrite: boolea
         </TableRow></TableHeader>
         <TableBody>
           {q.data?.length === 0 && <TableRow><TableCell colSpan={5} className="py-10 text-center text-muted-foreground">{t("empty.title")}</TableCell></TableRow>}
-          {q.data?.map((r: any) => (
+          {(Array.isArray(q.data) ? q.data : Array.isArray(q.data?.data) ? q.data.data : [])?.map((r: any) => (
             <TableRow key={r.id}>
               <TableCell className="font-mono text-xs">{r.supplier?.code}</TableCell>
               <TableCell>{lang === "ar" ? r.supplier?.name_ar : r.supplier?.name_en}</TableCell>
@@ -720,7 +850,7 @@ function RatesHistoryTab({ hotelId }: { hotelId: string }) {
   const { t, lang } = useI18n();
   const q = useQuery({
     queryKey: ["hotel-rates", hotelId],
-    queryFn: async () => (await supabase.from("rates")
+    queryFn: async () => (await db.from("rates")
       .select("id,code,supplier:suppliers(name_en,name_ar),room_type:hotel_room_types(name_en,name_ar),meal_plan,currency,valid_from,valid_to,cost_per_night,selling_price,status,created_at")
       .eq("hotel_id", hotelId).is("deleted_at", null).order("valid_from", { ascending: false })).data ?? [],
   });
@@ -736,7 +866,7 @@ function RatesHistoryTab({ hotelId }: { hotelId: string }) {
         </TableRow></TableHeader>
         <TableBody>
           {q.data?.length === 0 && <TableRow><TableCell colSpan={9} className="py-10 text-center text-muted-foreground">{t("hotels.no_rates")}</TableCell></TableRow>}
-          {q.data?.map((r: any) => (
+          {(Array.isArray(q.data) ? q.data : Array.isArray(q.data?.data) ? q.data.data : [])?.map((r: any) => (
             <TableRow key={r.id}>
               <TableCell className="font-mono text-xs">{r.code}</TableCell>
               <TableCell>{lang === "ar" ? r.supplier?.name_ar : r.supplier?.name_en}</TableCell>
@@ -763,3 +893,5 @@ function BookingsTab() {
     </CardContent></Card>
   );
 }
+
+export { HotelDetail as Component };

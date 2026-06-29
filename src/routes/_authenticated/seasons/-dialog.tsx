@@ -1,6 +1,7 @@
 import { useState } from "react";
+import { getCurrentUserId } from "@/lib/api/base";
+import { apiClient } from "@/lib/api/api-client";
 import { useMutation } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
 import { dbErrorMessage } from "@/lib/db-errors";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -37,17 +38,15 @@ export function SeasonDialog({ open, onOpenChange, initial, onSaved }: {
         notes: v.notes?.trim() || null,
       };
       if (isEdit) {
-        const { error } = await supabase.from("seasons").update(payload).eq("id", initial.id);
-        if (error) throw error;
+        await apiClient.seasons.update(initial.id, payload);
       } else {
-        const { data: u } = await supabase.auth.getUser();
+        const u = { user: { id: getCurrentUserId() } };
         payload.created_by = u.user?.id ?? null;
-        const { error } = await supabase.from("seasons").insert(payload);
-        if (error) throw error;
+        await apiClient.seasons.create(payload);
       }
     },
     onSuccess: () => { toast.success(t("toast.saved")); onSaved(); onOpenChange(false); },
-    onError: (e: any) => toast.error(dbErrorMessage(e, t)),
+    onError: (e: any) => toast.error(dbErrorMessage(e)),
   });
 
   return (

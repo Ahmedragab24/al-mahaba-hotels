@@ -1,15 +1,11 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { useNavigate, Link } from "react-router-dom";
 import { useI18n } from "@/lib/i18n";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { QuotationForm } from "./-form";
 
-export const Route = createFileRoute("/_authenticated/quotations/new")({
-  component: NewQuotation,
-});
-
-function NewQuotation() {
+export default function NewQuotation() {
   const { t } = useI18n();
   const navigate = useNavigate();
   return (
@@ -23,8 +19,10 @@ function NewQuotation() {
         }
       />
       <div className="p-6">
-        <QuotationForm onSaved={(id) => navigate({ to: "/quotations/$id", params: { id } })} />
+        <QuotationForm onSaved={(id) => navigate(`/quotations/${id}`)} />
       </div>
     </>
   );
 }
+
+export { NewQuotation as Component };

@@ -1,11 +1,13 @@
 // Receipts, customer balances & financial adjustments — Section 15 (BR-INV-007..010)
-import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
+import { db } from "@/lib/api/db";
+import { apiClient } from "@/lib/api/api-client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/page-header";
 import { useI18n } from "@/lib/i18n";
-import { useAuth } from "@/hooks/use-auth";
+import { useSelector } from "react-redux";
+import { selectAuth } from "@/store/features/authSlice";
+import { hasRole, hasAnyRole, isAdmin, canAccessModule } from "@/lib/auth-utils";
 import { dbErrorMessage } from "@/lib/db-errors";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -22,21 +24,17 @@ import { Plus, Coins, XCircle, Trash2 } from "lucide-react";
 import { formatDate } from "@/lib/format";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/_authenticated/receipts/")({
-  component: ReceiptsPage,
-});
-
 const PAGE_SIZE = 20;
 const FINANCE_WRITE = ["super_admin", "admin", "finance_manager", "finance_agent"] as const;
 const ADJ_WRITE = ["super_admin", "admin", "finance_manager"] as const;
 const METHODS = ["cash", "bank_transfer", "cheque", "card", "online"] as const;
 
-function ReceiptsPage() {
+export default function ReceiptsPage() {
   const { t, lang, dir } = useI18n();
-  const auth = useAuth();
+  const auth = useSelector(selectAuth);
   const qc = useQueryClient();
-  const canWrite = auth.hasAnyRole([...FINANCE_WRITE]);
-  const canAdjust = auth.hasAnyRole([...ADJ_WRITE]);
+  const canWrite = hasAnyRole(auth, [...FINANCE_WRITE]);
+  const canAdjust = hasAnyRole(auth, [...ADJ_WRITE]);
 
   const fmt = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 2 });
   const name = (c: any) => (c ? (lang === "ar" ? c.name_ar || c.name_en : c.name_en || c.name_ar) : "—");
@@ -44,11 +42,11 @@ function ReceiptsPage() {
   // ---------- shared lookups ----------
   const customers = useQuery({
     queryKey: ["lookup-customers"],
-    queryFn: async () => (await supabase.from("customers").select("id,name_en,name_ar").is("deleted_at", null).order("name_en")).data ?? [],
+    queryFn: async () => (await apiClient.customers.getAll()) ?? [],
   });
   const currencies = useQuery({
     queryKey: ["lookup-currencies"],
-    queryFn: async () => (await supabase.from("currencies").select("code").order("code")).data ?? [],
+    queryFn: async () => (await apiClient.currencies.getAll()) ?? [],
   });
 
   // ---------- receipts list ----------
@@ -59,7 +57,7 @@ function ReceiptsPage() {
   const list = useQuery({
     queryKey: ["receipts", { fCustomer, fStatus, page }],
     queryFn: async () => {
-      let q = supabase.from("receipts").select(
+      let q = db.from("receipts").select(
         "id,receipt_no,status,receipt_date,payment_method,reference_no,currency,amount,allocated_amount,customer_id,customer:customers(name_en,name_ar)",
         { count: "exact" },
       ).is("deleted_at", null);
@@ -94,7 +92,7 @@ function ReceiptsPage() {
   const createReceipt = async () => {
     setBusy(true);
     try {
-      const { error } = await supabase.from("receipts").insert({
+      const { error } = await db.from("receipts").insert({
         customer_id: nCustomer, receipt_date: nDate, payment_method: nMethod,
         reference_no: nRef || null, currency: nCurrency,
         exchange_rate: Number(nRate) || 1, amount: Number(nAmount), notes: nNotes || null,
@@ -103,7 +101,7 @@ function ReceiptsPage() {
       toast.success(t("label.saved", "Saved"));
       setOpenNew(false); setNCustomer(""); setNAmount(""); setNRef(""); setNNotes("");
       refresh();
-    } catch (e) { toast.error(dbErrorMessage(e, t)); } finally { setBusy(false); }
+    } catch (e) { toast.error(dbErrorMessage(e)); } finally { setBusy(false); }
   };
 
   // ---------- allocation ----------
@@ -115,7 +113,7 @@ function ReceiptsPage() {
     queryKey: ["rct-open-invoices", allocFor?.customer_id, allocFor?.currency],
     enabled: !!allocFor,
     queryFn: async () =>
-      (await supabase.from("invoices")
+      (await db.from("invoices")
         .select("id,invoice_no,total_amount,paid_amount,currency,status")
         .eq("customer_id", allocFor.customer_id).eq("currency", allocFor.currency)
         .in("status", ["issued", "sent", "partially_paid"]).is("deleted_at", null)
@@ -125,7 +123,7 @@ function ReceiptsPage() {
     queryKey: ["rct-allocs", allocFor?.id],
     enabled: !!allocFor,
     queryFn: async () =>
-      (await supabase.from("receipt_allocations")
+      (await db.from("receipt_allocations")
         .select("id,amount,invoice:invoices(invoice_no)")
         .eq("receipt_id", allocFor.id).order("created_at")).data ?? [],
   });
@@ -133,7 +131,7 @@ function ReceiptsPage() {
   const addAllocation = async () => {
     setBusy(true);
     try {
-      const { error } = await supabase.from("receipt_allocations").insert({
+      const { error } = await db.from("receipt_allocations").insert({
         receipt_id: allocFor.id, invoice_id: allocInvoice, amount: Number(allocAmount),
       });
       if (error) throw error;
@@ -142,15 +140,14 @@ function ReceiptsPage() {
       qc.invalidateQueries({ queryKey: ["rct-allocs"] });
       qc.invalidateQueries({ queryKey: ["rct-open-invoices"] });
       refresh();
-    } catch (e) { toast.error(dbErrorMessage(e, t)); } finally { setBusy(false); }
+    } catch (e) { toast.error(dbErrorMessage(e)); } finally { setBusy(false); }
   };
   const removeAllocation = async (id: string) => {
     try {
-      const { error } = await supabase.from("receipt_allocations").delete().eq("id", id);
-      if (error) throw error;
+      await apiClient.receiptAllocations.delete(id);
       qc.invalidateQueries({ queryKey: ["rct-allocs"] });
       refresh();
-    } catch (e) { toast.error(dbErrorMessage(e, t)); }
+    } catch (e) { toast.error(dbErrorMessage(e)); }
   };
 
   // ---------- cancel ----------
@@ -159,14 +156,14 @@ function ReceiptsPage() {
   const cancelReceipt = async () => {
     setBusy(true);
     try {
-      const { error } = await supabase.from("receipts")
+      const { error } = await db.from("receipts")
         .update({ status: "cancelled", cancellation_reason: cancelReason })
         .eq("id", cancelFor.id);
       if (error) throw error;
       toast.success(t("label.saved", "Saved"));
       setCancelFor(null); setCancelReason("");
       refresh();
-    } catch (e) { toast.error(dbErrorMessage(e, t)); } finally { setBusy(false); }
+    } catch (e) { toast.error(dbErrorMessage(e)); } finally { setBusy(false); }
   };
 
   // ---------- balances ----------
@@ -174,9 +171,9 @@ function ReceiptsPage() {
     queryKey: ["rct-balances"],
     queryFn: async () => {
       const [inv, rct, adj] = await Promise.all([
-        supabase.from("invoices").select("customer_id,total_amount,exchange_rate,status").is("deleted_at", null),
-        supabase.from("receipts").select("customer_id,amount,exchange_rate,status").is("deleted_at", null),
-        supabase.from("customer_adjustments").select("customer_id,amount,exchange_rate,adjustment_type"),
+        db.from("invoices").select("customer_id,total_amount,exchange_rate,status").is("deleted_at", null),
+        db.from("receipts").select("customer_id,amount,exchange_rate,status").is("deleted_at", null),
+        db.from("customer_adjustments").select("customer_id,amount,exchange_rate,adjustment_type"),
       ]);
       const map: Record<string, { invoiced: number; received: number; adj: number }> = {};
       const get = (id: string) => (map[id] ??= { invoiced: 0, received: 0, adj: 0 });
@@ -191,7 +188,7 @@ function ReceiptsPage() {
   const adjList = useQuery({
     queryKey: ["rct-adjustments"],
     queryFn: async () =>
-      (await supabase.from("customer_adjustments")
+      (await db.from("customer_adjustments")
         .select("id,adjustment_no,adjustment_type,amount,currency,reason,created_at,customer:customers(name_en,name_ar),invoice:invoices(invoice_no)")
         .order("created_at", { ascending: false }).limit(100)).data ?? [],
   });
@@ -205,7 +202,7 @@ function ReceiptsPage() {
   const createAdjustment = async () => {
     setBusy(true);
     try {
-      const { error } = await supabase.from("customer_adjustments").insert({
+      const { error } = await db.from("customer_adjustments").insert({
         customer_id: aCustomer, adjustment_type: aType, amount: Number(aAmount),
         currency: aCurrency, reason: aReason,
       });
@@ -214,7 +211,7 @@ function ReceiptsPage() {
       setOpenAdj(false); setACustomer(""); setAAmount(""); setAReason("");
       qc.invalidateQueries({ queryKey: ["rct-adjustments"] });
       qc.invalidateQueries({ queryKey: ["rct-balances"] });
-    } catch (e) { toast.error(dbErrorMessage(e, t)); } finally { setBusy(false); }
+    } catch (e) { toast.error(dbErrorMessage(e)); } finally { setBusy(false); }
   };
 
   const total = list.data?.count ?? 0;
@@ -238,7 +235,7 @@ function ReceiptsPage() {
                   <SelectTrigger className="w-full"><SelectValue placeholder={t("inv.customer")} /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">{t("filter.all")}</SelectItem>
-                    {customers.data?.map((c: any) => <SelectItem key={c.id} value={c.id}>{name(c)}</SelectItem>)}
+                    {(Array.isArray(customers.data) ? customers.data : Array.isArray(customers.data?.data) ? customers.data.data : [])?.map((c: any) => <SelectItem key={c.id} value={c.id}>{name(c)}</SelectItem>)}
                   </SelectContent>
                 </Select>
                 <Select value={fStatus} onValueChange={(v) => { setFStatus(v); setPage(1); }}>
@@ -355,7 +352,7 @@ function ReceiptsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {adjList.data?.map((r: any) => (
+                    {(Array.isArray(adjList.data) ? adjList.data : Array.isArray(adjList.data?.data) ? adjList.data.data : [])?.map((r: any) => (
                       <TableRow key={r.id} className="whitespace-nowrap">
                         <TableCell className="font-mono text-xs">{r.adjustment_no}</TableCell>
                         <TableCell className="text-sm">{name(r.customer)}</TableCell>
@@ -385,7 +382,7 @@ function ReceiptsPage() {
               <Label>{t("inv.customer")}</Label>
               <Select value={nCustomer} onValueChange={setNCustomer}>
                 <SelectTrigger dir={dir}><SelectValue /></SelectTrigger>
-                <SelectContent>{customers.data?.map((c: any) => <SelectItem key={c.id} value={c.id}>{name(c)}</SelectItem>)}</SelectContent>
+                <SelectContent>{(Array.isArray(customers.data) ? customers.data : Array.isArray(customers.data?.data) ? customers.data.data : [])?.map((c: any) => <SelectItem key={c.id} value={c.id}>{name(c)}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="space-y-2"><Label>{t("rct.date")}</Label><Input type="date" value={nDate} onChange={(e) => setNDate(e.target.value)} /></div>
@@ -400,7 +397,7 @@ function ReceiptsPage() {
               <Label>{t("inv.currency")}</Label>
               <Select value={nCurrency} onValueChange={setNCurrency}>
                 <SelectTrigger dir={dir}><SelectValue /></SelectTrigger>
-                <SelectContent>{currencies.data?.map((c: any) => <SelectItem key={c.code} value={c.code}>{c.code}</SelectItem>)}</SelectContent>
+                <SelectContent>{(Array.isArray(currencies.data) ? currencies.data : Array.isArray(currencies.data?.data) ? currencies.data.data : [])?.map((c: any) => <SelectItem key={c.code} value={c.code}>{c.code}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="space-y-2"><Label>{t("rates.exchange_rate", "Exchange Rate")}</Label><Input type="number" step="0.000001" value={nRate} onChange={(e) => setNRate(e.target.value)} /></div>
@@ -443,7 +440,7 @@ function ReceiptsPage() {
                 <Select value={allocInvoice} onValueChange={setAllocInvoice}>
                   <SelectTrigger dir={dir}><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {openInvoices.data?.map((i: any) => (
+                    {(Array.isArray(openInvoices.data) ? openInvoices.data : Array.isArray(openInvoices.data?.data) ? openInvoices.data.data : [])?.map((i: any) => (
                       <SelectItem key={i.id} value={i.id}>{i.invoice_no} · {fmt(Number(i.total_amount) - Number(i.paid_amount))} {i.currency}</SelectItem>
                     ))}
                   </SelectContent>
@@ -483,7 +480,7 @@ function ReceiptsPage() {
               <Label>{t("inv.customer")}</Label>
               <Select value={aCustomer} onValueChange={setACustomer}>
                 <SelectTrigger dir={dir}><SelectValue /></SelectTrigger>
-                <SelectContent>{customers.data?.map((c: any) => <SelectItem key={c.id} value={c.id}>{name(c)}</SelectItem>)}</SelectContent>
+                <SelectContent>{(Array.isArray(customers.data) ? customers.data : Array.isArray(customers.data?.data) ? customers.data.data : [])?.map((c: any) => <SelectItem key={c.id} value={c.id}>{name(c)}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
@@ -500,7 +497,7 @@ function ReceiptsPage() {
               <Label>{t("inv.currency")}</Label>
               <Select value={aCurrency} onValueChange={setACurrency}>
                 <SelectTrigger dir={dir}><SelectValue /></SelectTrigger>
-                <SelectContent>{currencies.data?.map((c: any) => <SelectItem key={c.code} value={c.code}>{c.code}</SelectItem>)}</SelectContent>
+                <SelectContent>{(Array.isArray(currencies.data) ? currencies.data : Array.isArray(currencies.data?.data) ? currencies.data.data : [])?.map((c: any) => <SelectItem key={c.code} value={c.code}>{c.code}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="space-y-2"><Label>{t("rct.amount")}</Label><Input type="number" step="0.01" value={aAmount} onChange={(e) => setAAmount(e.target.value)} /></div>
@@ -515,3 +512,5 @@ function ReceiptsPage() {
     </>
   );
 }
+
+export { ReceiptsPage as Component };

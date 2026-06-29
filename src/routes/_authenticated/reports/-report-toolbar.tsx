@@ -1,5 +1,7 @@
 // Shared report toolbar — export buttons (CSV / Excel / PDF) + save-as-template.
 import { useState } from "react";
+import { db } from "@/lib/api/db";
+import { apiClient } from "@/lib/api/api-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,9 +11,10 @@ import {
 } from "@/components/ui/dialog";
 import { FileText, FileSpreadsheet, FileDown, Save } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
-import { useAuth } from "@/hooks/use-auth";
+import { useSelector } from "react-redux";
+import { selectAuth } from "@/store/features/authSlice";
+import { hasRole, hasAnyRole, isAdmin, canAccessModule } from "@/lib/auth-utils";
 import { exportCSV, exportExcel, exportPDF, type ReportColumn, type ReportRow } from "@/lib/report-export";
 
 export function ReportToolbar({
@@ -32,7 +35,7 @@ export function ReportToolbar({
   config?: Record<string, unknown>;
 }) {
   const { t, dir, lang } = useI18n();
-  const auth = useAuth();
+  const auth = useSelector(selectAuth);
   const [open, setOpen] = useState(false);
   const [nameAr, setNameAr] = useState("");
   const [nameEn, setNameEn] = useState("");
@@ -44,7 +47,7 @@ export function ReportToolbar({
   const saveTemplate = async () => {
     if (!nameAr.trim() || !nameEn.trim()) return;
     setSaving(true);
-    const { error } = await supabase.from("report_templates").insert({
+    const { error } = await db.from("report_templates").insert({
       name_ar: nameAr.trim(),
       name_en: nameEn.trim(),
       report_key: reportKey,

@@ -1,21 +1,40 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useState } from "react";
+import { db } from "@/lib/api/db";
+import { apiClient } from "@/lib/api/api-client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/page-header";
 import { useI18n } from "@/lib/i18n";
 import { useCurrencies } from "@/lib/lookups";
 import { dbErrorMessage } from "@/lib/db-errors";
 import { Card, CardContent } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -33,30 +52,19 @@ type Threshold = {
   is_active: boolean;
 };
 
-export const Route = createFileRoute("/_authenticated/approval-thresholds")({
-  beforeLoad: async () => {
-    const { data } = await supabase.auth.getUser();
-    if (!data.user) throw redirect({ to: "/auth" });
-    const { data: ok } = await supabase.rpc("has_any_role", {
-      _user_id: data.user.id,
-      _roles: ["super_admin", "admin", "finance_manager"],
-    });
-    if (!ok) throw redirect({ to: "/" });
-  },
-  component: ApprovalThresholdsPage,
-});
-
-function ApprovalThresholdsPage() {
+export default function ApprovalThresholdsPage() {
   const { t } = useI18n();
   const qc = useQueryClient();
   const currencies = useCurrencies();
-  const [dialog, setDialog] = useState<{ open: boolean; initial?: Partial<Threshold> }>({ open: false });
+  const [dialog, setDialog] = useState<{ open: boolean; initial?: Partial<Threshold> }>({
+    open: false,
+  });
   const [confirm, setConfirm] = useState<string | null>(null);
 
   const list = useQuery({
     queryKey: ["approval_thresholds"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from("approval_thresholds")
         .select("*")
         .order("entity_type")
@@ -68,15 +76,17 @@ function ApprovalThresholdsPage() {
 
   const del = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("approval_thresholds").delete().eq("id", id);
-      if (error) throw error;
+      await apiClient.approvalThresholds.delete(id);
     },
     onSuccess: () => {
       toast.success(t("toast.deleted"));
       qc.invalidateQueries({ queryKey: ["approval_thresholds"] });
       setConfirm(null);
     },
-    onError: (e: any) => { toast.error(dbErrorMessage(e, t)); setConfirm(null); },
+    onError: (e: any) => {
+      toast.error(dbErrorMessage(e, t));
+      setConfirm(null);
+    },
   });
 
   return (
@@ -106,31 +116,53 @@ function ApprovalThresholdsPage() {
               </TableHeader>
               <TableBody>
                 {list.isLoading && (
-                  <TableRow><TableCell colSpan={6} className="py-10 text-center text-muted-foreground">{t("label.loading")}</TableCell></TableRow>
+                  <TableRow>
+                    <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
+                      {t("label.loading")}
+                    </TableCell>
+                  </TableRow>
                 )}
                 {!list.isLoading && (list.data?.length ?? 0) === 0 && (
-                  <TableRow><TableCell colSpan={6} className="py-10 text-center text-muted-foreground">{t("label.no_results")}</TableCell></TableRow>
+                  <TableRow>
+                    <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
+                      {t("label.no_results")}
+                    </TableCell>
+                  </TableRow>
                 )}
-                {list.data?.map((row) => (
+                {(Array.isArray(list.data) ? list.data : Array.isArray(list.data?.data) ? list.data.data : [])?.map((row: any) => (
                   <TableRow key={row.id}>
                     <TableCell>
                       <Badge variant="outline">{t(`thresholds.entity.${row.entity_type}`)}</Badge>
                     </TableCell>
                     <TableCell className="font-mono text-xs">{row.currency}</TableCell>
-                    <TableCell className="text-end font-mono">{Number(row.amount).toLocaleString()}</TableCell>
-                    <TableCell>
-                      {row.requires_second_approver
-                        ? <Badge className="bg-amber-100 text-amber-900 border-transparent">{t("label.yes")}</Badge>
-                        : <Badge variant="secondary">{t("label.no")}</Badge>}
+                    <TableCell className="text-end font-mono">
+                      {Number(row.amount).toLocaleString()}
                     </TableCell>
                     <TableCell>
-                      {row.is_active
-                        ? <Badge className="bg-emerald-100 text-emerald-800 border-transparent">{t("status.active")}</Badge>
-                        : <Badge variant="secondary">{t("status.inactive")}</Badge>}
+                      {row.requires_second_approver ? (
+                        <Badge className="bg-amber-100 text-amber-900 border-transparent">
+                          {t("label.yes")}
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary">{t("label.no")}</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {row.is_active ? (
+                        <Badge className="bg-emerald-100 text-emerald-800 border-transparent">
+                          {t("status.active")}
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary">{t("status.inactive")}</Badge>
+                      )}
                     </TableCell>
                     <TableCell className="text-end">
                       <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => setDialog({ open: true, initial: row })}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setDialog({ open: true, initial: row })}
+                        >
                           <Pencil className="h-4 w-4" />
                         </Button>
                         <Button variant="ghost" size="icon" onClick={() => setConfirm(row.id)}>
@@ -166,7 +198,11 @@ function ApprovalThresholdsPage() {
 }
 
 function ThresholdDialog({
-  open, onOpenChange, initial, currencies, onSaved,
+  open,
+  onOpenChange,
+  initial,
+  currencies,
+  onSaved,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
@@ -190,11 +226,9 @@ function ThresholdDialog({
         is_active: form.is_active ?? true,
       };
       if (isEdit) {
-        const { error } = await supabase.from("approval_thresholds").update(payload).eq("id", initial!.id!);
-        if (error) throw error;
+        await apiClient.approvalThresholds.update(initial!.id!, payload);
       } else {
-        const { error } = await supabase.from("approval_thresholds").insert(payload);
-        if (error) throw error;
+        await apiClient.approvalThresholds.create(payload);
       }
     },
     onSuccess: () => {
@@ -206,7 +240,13 @@ function ThresholdDialog({
   });
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { onOpenChange(v); if (v) setForm(initial ?? {}); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        onOpenChange(v);
+        if (v) setForm(initial ?? {});
+      }}
+    >
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{isEdit ? t("actions.edit") : t("actions.new")}</DialogTitle>
@@ -214,11 +254,18 @@ function ThresholdDialog({
         <div className="grid gap-4 py-2">
           <div className="grid gap-2">
             <Label>{t("thresholds.entity_type")}</Label>
-            <Select value={form.entity_type ?? ""} onValueChange={(v) => setForm((f) => ({ ...f, entity_type: v as EntityType }))}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+            <Select
+              value={form.entity_type ?? ""}
+              onValueChange={(v) => setForm((f) => ({ ...f, entity_type: v as EntityType }))}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 {ENTITY_TYPES.map((e) => (
-                  <SelectItem key={e} value={e}>{t(`thresholds.entity.${e}`)}</SelectItem>
+                  <SelectItem key={e} value={e}>
+                    {t(`thresholds.entity.${e}`)}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -226,10 +273,19 @@ function ThresholdDialog({
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-2">
               <Label>{t("label.currency")}</Label>
-              <Select value={form.currency ?? ""} onValueChange={(v) => setForm((f) => ({ ...f, currency: v }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+              <Select
+                value={form.currency ?? ""}
+                onValueChange={(v) => setForm((f) => ({ ...f, currency: v }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
-                  {currencies.map((c) => <SelectItem key={c.code} value={c.code}>{c.code}</SelectItem>)}
+                  {currencies.map((c) => (
+                    <SelectItem key={c.code} value={c.code}>
+                      {c.code}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -268,10 +324,16 @@ function ThresholdDialog({
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>{t("actions.cancel")}</Button>
-          <Button onClick={() => save.mutate()} disabled={save.isPending}>{t("actions.save")}</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            {t("actions.cancel")}
+          </Button>
+          <Button onClick={() => save.mutate()} disabled={save.isPending}>
+            {t("actions.save")}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
+
+export { ApprovalThresholdsPage as Component };

@@ -1,9 +1,12 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useNavigate, useParams } from "react-router-dom";
+import { db } from "@/lib/api/db";
+import { apiClient } from "@/lib/api/api-client";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
-import { useAuth } from "@/hooks/use-auth";
+import { useSelector } from "react-redux";
+import { selectAuth } from "@/store/features/authSlice";
+import { hasRole, hasAnyRole, isAdmin, canAccessModule } from "@/lib/auth-utils";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -15,44 +18,51 @@ import { toast } from "sonner";
 import { dbErrorMessage } from "@/lib/db-errors";
 import { RfqForm } from "./-form";
 import { RfqItemsTab } from "./-items";
-import { RfqSuppliersTab, RfqResponsesTab, RfqComparisonTab, CreateQuotationButton } from "./-suppliers";
+import {
+  RfqSuppliersTab,
+  RfqResponsesTab,
+  RfqComparisonTab,
+  CreateQuotationButton,
+} from "./-suppliers";
 import { EntityAttachments } from "@/components/entity-attachments";
 import { ApprovalWorkflow } from "@/components/approval-workflow";
 import { EntityHistory } from "@/components/entity-history";
 import { RStatusBadge } from "./index";
 
-export const Route = createFileRoute("/_authenticated/rfqs/$id")({
-  component: RfqDetail,
-});
-
-function RfqDetail() {
-  const { id } = Route.useParams();
+export default function RfqDetail() {
+  const { id } = useParams() as { id: string };
   const { t, lang } = useI18n();
-  const auth = useAuth();
+  const auth = useSelector(selectAuth);
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const canWrite = auth.hasAnyRole(["super_admin", "admin", "sales_manager", "sales_agent", "operations_manager", "operations_agent"]);
-  const canApprove = auth.hasAnyRole(["super_admin", "admin", "sales_manager", "operations_manager"]);
+  const canWrite = hasAnyRole(auth, [
+    "super_admin",
+    "admin",
+    "sales_manager",
+    "sales_agent",
+    "operations_manager",
+    "operations_agent",
+  ]);
+  const canApprove = hasAnyRole(auth, [
+    "super_admin",
+    "admin",
+    "sales_manager",
+    "operations_manager",
+  ]);
   const [editing, setEditing] = useState(false);
   const [confirmStatus, setConfirmStatus] = useState<string | null>(null);
 
   const q = useQuery({
     queryKey: ["rfq", id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("rfqs")
-        .select("*")
-        .eq("id", id).maybeSingle();
-      if (error) throw error;
-      return data as any;
+      return (await apiClient.rfqs.getById(id)) as any;
     },
   });
-
 
   const history = useQuery({
     queryKey: ["rfq-status-history", id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from("rfq_status_history")
         .select("*")
         .eq("rfq_id", id)
@@ -64,8 +74,7 @@ function RfqDetail() {
 
   const statusMut = useMutation({
     mutationFn: async (status: string) => {
-      const { error } = await supabase.from("rfqs").update({ status }).eq("id", id);
-      if (error) throw error;
+      await apiClient.rfqs.update(id, { status });
     },
     onSuccess: () => {
       toast.success(t("toast.saved"));
@@ -76,7 +85,10 @@ function RfqDetail() {
       qc.invalidateQueries({ queryKey: ["rfq-metrics"] });
       qc.invalidateQueries({ queryKey: ["approval-requests", "rfq", id] });
     },
-    onError: (e: any) => { setConfirmStatus(null); toast.error(dbErrorMessage(e, t)); },
+    onError: (e: any) => {
+      setConfirmStatus(null);
+      toast.error(dbErrorMessage(e));
+    },
   });
 
   if (q.isLoading) return <div className="p-6 text-muted-foreground">{t("label.loading")}</div>;
@@ -85,15 +97,67 @@ function RfqDetail() {
   const r = q.data;
   const editable = canWrite && r.status === "draft" && !r.deleted_at;
 
-
-  const actions: { key: string; label: string; status: string; icon: React.ComponentType<{ className?: string }>; variant?: "destructive" | "outline"; show: boolean }[] = [
-    { key: "send", label: t("rfq.send"), status: "sent", icon: Send, show: canWrite && r.status === "draft" },
-    { key: "complete", label: t("rfq.complete"), status: "completed", icon: CheckCheck, show: canWrite && ["sent", "partial"].includes(r.status) },
-    { key: "approve", label: t("actions.approve"), status: "approved", icon: Check, show: canApprove && r.status === "completed" },
-    { key: "reject", label: t("actions.reject"), status: "rejected", icon: X, variant: "destructive", show: canApprove && r.status === "completed" },
-    { key: "expire", label: t("rfq.expire_action"), status: "expired", icon: Clock, variant: "outline", show: canWrite && ["sent", "partial", "completed"].includes(r.status) },
-    { key: "reopen", label: t("rfq.reopen"), status: "draft", icon: RotateCcw, variant: "outline", show: canWrite && r.status === "rejected" },
-    { key: "cancel", label: t("rfq.cancel"), status: "cancelled", icon: Ban, variant: "destructive", show: canWrite && ["draft", "sent", "partial", "rejected"].includes(r.status) },
+  const actions: {
+    key: string;
+    label: string;
+    status: string;
+    icon: React.ComponentType<{ className?: string }>;
+    variant?: "destructive" | "outline";
+    show: boolean;
+  }[] = [
+    {
+      key: "send",
+      label: t("rfq.send"),
+      status: "sent",
+      icon: Send,
+      show: canWrite && r.status === "draft",
+    },
+    {
+      key: "complete",
+      label: t("rfq.complete"),
+      status: "completed",
+      icon: CheckCheck,
+      show: canWrite && ["sent", "partial"].includes(r.status),
+    },
+    {
+      key: "approve",
+      label: t("actions.approve"),
+      status: "approved",
+      icon: Check,
+      show: canApprove && r.status === "completed",
+    },
+    {
+      key: "reject",
+      label: t("actions.reject"),
+      status: "rejected",
+      icon: X,
+      variant: "destructive",
+      show: canApprove && r.status === "completed",
+    },
+    {
+      key: "expire",
+      label: t("rfq.expire_action"),
+      status: "expired",
+      icon: Clock,
+      variant: "outline",
+      show: canWrite && ["sent", "partial", "completed"].includes(r.status),
+    },
+    {
+      key: "reopen",
+      label: t("rfq.reopen"),
+      status: "draft",
+      icon: RotateCcw,
+      variant: "outline",
+      show: canWrite && r.status === "rejected",
+    },
+    {
+      key: "cancel",
+      label: t("rfq.cancel"),
+      status: "cancelled",
+      icon: Ban,
+      variant: "destructive",
+      show: canWrite && ["draft", "sent", "partial", "rejected"].includes(r.status),
+    },
   ];
 
   return (
@@ -101,24 +165,33 @@ function RfqDetail() {
       <PageHeader
         title={`${r.rfq_no}${r.destination ? " — " + r.destination : ""}`}
         subtitle={`${formatDate(r.travel_start)} → ${formatDate(r.travel_end)} · ${r.currency}`}
-
         children={
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => navigate({ to: "/rfqs" })}>
-              <ArrowLeft className="h-4 w-4 rtl:rotate-180" />{t("actions.back")}
+            <Button variant="outline" size="sm" onClick={() => navigate("/rfqs")}>
+              <ArrowLeft className="h-4 w-4 rtl:rotate-180" />
+              {t("actions.back")}
             </Button>
             <RStatusBadge status={r.status} t={t} />
             {editable && !editing && (
               <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
-                <Pencil className="h-4 w-4" />{t("actions.edit")}
+                <Pencil className="h-4 w-4" />
+                {t("actions.edit")}
               </Button>
             )}
             <CreateQuotationButton rfq={r} />
-            {actions.filter((a) => a.show).map((a) => (
-              <Button key={a.key} size="sm" variant={(a.variant as any) ?? "default"} onClick={() => setConfirmStatus(a.status)}>
-                <a.icon className="h-4 w-4" />{a.label}
-              </Button>
-            ))}
+            {actions
+              .filter((a) => a.show)
+              .map((a) => (
+                <Button
+                  key={a.key}
+                  size="sm"
+                  variant={(a.variant as any) ?? "default"}
+                  onClick={() => setConfirmStatus(a.status)}
+                >
+                  <a.icon className="h-4 w-4" />
+                  {a.label}
+                </Button>
+              ))}
           </div>
         }
       />
@@ -138,7 +211,13 @@ function RfqDetail() {
 
           <TabsContent value="general">
             {editing ? (
-              <RfqForm initial={r} onSaved={() => { setEditing(false); qc.invalidateQueries({ queryKey: ["rfq", id] }); }} />
+              <RfqForm
+                initial={r}
+                onSaved={() => {
+                  setEditing(false);
+                  qc.invalidateQueries({ queryKey: ["rfq", id] });
+                }}
+              />
             ) : (
               <Card>
                 <CardContent className="grid gap-x-8 p-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -155,28 +234,47 @@ function RfqDetail() {
             )}
           </TabsContent>
 
-          <TabsContent value="items"><RfqItemsTab rfqId={id} editable={editable} /></TabsContent>
-          <TabsContent value="suppliers"><RfqSuppliersTab rfqId={id} editable={editable} /></TabsContent>
-          <TabsContent value="responses"><RfqResponsesTab rfqId={id} rfqStatus={r.status} currency={r.currency} /></TabsContent>
-          <TabsContent value="comparison"><RfqComparisonTab rfqId={id} /></TabsContent>
-          <TabsContent value="attachments"><EntityAttachments entityType="rfq" entityId={id} /></TabsContent>
-          <TabsContent value="approval"><ApprovalWorkflow entityType="rfq" entityId={id} /></TabsContent>
+          <TabsContent value="items">
+            <RfqItemsTab rfqId={id} editable={editable} />
+          </TabsContent>
+          <TabsContent value="suppliers">
+            <RfqSuppliersTab rfqId={id} editable={editable} />
+          </TabsContent>
+          <TabsContent value="responses">
+            <RfqResponsesTab rfqId={id} rfqStatus={r.status} currency={r.currency} />
+          </TabsContent>
+          <TabsContent value="comparison">
+            <RfqComparisonTab rfqId={id} />
+          </TabsContent>
+          <TabsContent value="attachments">
+            <EntityAttachments entityType="rfq" entityId={id} />
+          </TabsContent>
+          <TabsContent value="approval">
+            <ApprovalWorkflow entityType="rfq" entityId={id} />
+          </TabsContent>
           <TabsContent value="history">
             <div className="space-y-4">
               <Card>
-                <CardHeader className="pb-2"><CardTitle className="text-sm">{t("rfq.status_history")}</CardTitle></CardHeader>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">{t("rfq.status_history")}</CardTitle>
+                </CardHeader>
                 <CardContent>
                   {(history.data?.length ?? 0) === 0 ? (
                     <p className="text-sm text-muted-foreground">{t("label.no_results")}</p>
                   ) : (
                     <ul className="divide-y">
                       {history.data!.map((h: any) => (
-                        <li key={h.id} className="flex items-center justify-between gap-3 py-2 text-sm">
+                        <li
+                          key={h.id}
+                          className="flex items-center justify-between gap-3 py-2 text-sm"
+                        >
                           <span>
                             {h.from_status ? <>{t(`rstatus.${h.from_status}`)} ← </> : null}
                             <span className="font-medium">{t(`rstatus.${h.to_status}`)}</span>
                           </span>
-                          <span dir="ltr" className="text-xs text-muted-foreground">{formatDateTime(h.changed_at, lang)}</span>
+                          <span dir="ltr" className="text-xs text-muted-foreground">
+                            {formatDateTime(h.changed_at, lang)}
+                          </span>
                         </li>
                       ))}
                     </ul>
@@ -208,3 +306,5 @@ function KV({ k, v }: { k: string; v: React.ReactNode }) {
     </div>
   );
 }
+
+export { RfqDetail as Component };

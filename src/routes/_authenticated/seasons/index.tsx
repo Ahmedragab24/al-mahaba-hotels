@@ -1,10 +1,13 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { Link } from "react-router-dom";
+import { db } from "@/lib/api/db";
+import { apiClient } from "@/lib/api/api-client";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/page-header";
 import { useI18n } from "@/lib/i18n";
-import { useAuth } from "@/hooks/use-auth";
+import { useSelector } from "react-redux";
+import { selectAuth } from "@/store/features/authSlice";
+import { hasRole, hasAnyRole, isAdmin, canAccessModule } from "@/lib/auth-utils";
 import { useDebounce } from "@/lib/use-debounce";
 import { dbErrorMessage } from "@/lib/db-errors";
 import { Card, CardContent } from "@/components/ui/card";
@@ -21,17 +24,13 @@ import { Plus, Search, Eye, Pencil, Archive, RotateCcw, Trash2 } from "lucide-re
 import { formatDate } from "@/lib/format";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/_authenticated/seasons/")({
-  component: SeasonsList,
-});
-
 const PAGE_SIZE = 20;
 
-function SeasonsList() {
+export default function SeasonsList() {
   const { t, lang } = useI18n();
-  const auth = useAuth();
+  const auth = useSelector(selectAuth);
   const qc = useQueryClient();
-  const canWrite = auth.hasAnyRole(["super_admin", "admin", "operations_manager", "operations_agent"]);
+  const canWrite = hasAnyRole(auth, ["super_admin", "admin", "operations_manager", "operations_agent"]);
 
   const [search, setSearch] = useState("");
   const [type, setType] = useState("all");
@@ -46,7 +45,7 @@ function SeasonsList() {
   const list = useQuery({
     queryKey: ["seasons", { dSearch, type, active, showArchived, page }],
     queryFn: async () => {
-      let q = supabase.from("seasons").select("*", { count: "exact" });
+      let q = db.from("seasons").select("*", { count: "exact" });
       if (!showArchived) q = q.is("deleted_at", null);
       if (type !== "all") q = q.eq("season_type", type);
       if (active !== "all") q = q.eq("is_active", active === "active");
@@ -65,14 +64,12 @@ function SeasonsList() {
   const archiveMut = useMutation({
     mutationFn: async ({ id, action }: { id: string; action: "archive" | "restore" | "delete" }) => {
       if (action === "delete") {
-        const { error } = await supabase.from("seasons").delete().eq("id", id);
-        if (error) throw error;
+        await apiClient.seasons.delete(id);
       } else if (action === "archive") {
-        const { error } = await supabase.from("seasons").update({ deleted_at: new Date().toISOString(), is_active: false }).eq("id", id);
+        const { error } = await db.from("seasons").update({ deleted_at: new Date().toISOString(), is_active: false }).eq("id", id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("seasons").update({ deleted_at: null, is_active: true }).eq("id", id);
-        if (error) throw error;
+        await apiClient.seasons.update(id, { deleted_at: null, is_active: true });
       }
     },
     onSuccess: (_d, v) => {
@@ -80,7 +77,7 @@ function SeasonsList() {
       qc.invalidateQueries({ queryKey: ["seasons"] });
       setConfirm(null);
     },
-    onError: (e: any) => { toast.error(dbErrorMessage(e, t)); setConfirm(null); },
+    onError: (e: any) => { toast.error(dbErrorMessage(e)); setConfirm(null); },
   });
 
   const total = list.data?.count ?? 0;
@@ -146,7 +143,7 @@ function SeasonsList() {
                   <TableRow key={s.id} className={s.deleted_at ? "opacity-60" : ""}>
                     <TableCell className="font-mono text-xs">{s.code}</TableCell>
                     <TableCell className="font-medium">
-                      <Link to="/seasons/$id" params={{ id: s.id }} className="hover:underline">
+                      <Link to={`/seasons/${s.id}`} className="hover:underline">
                         {lang === "ar" ? (s.name_ar || s.name_en) : (s.name_en || s.name_ar)}
                       </Link>
                     </TableCell>
@@ -162,18 +159,18 @@ function SeasonsList() {
                     <TableCell className="text-end">
                       <div className="flex justify-end gap-1">
                         <Button asChild variant="ghost" size="icon" title={t("actions.view")}>
-                          <Link to="/seasons/$id" params={{ id: s.id }}><Eye className="h-4 w-4" /></Link>
+                          <Link to={`/seasons/${s.id}`}><Eye className="h-4 w-4" /></Link>
                         </Button>
                         {canWrite && !s.deleted_at && (
                           <Button variant="ghost" size="icon" title={t("actions.edit")} onClick={() => setDialog({ open: true, initial: s })}>
                             <Pencil className="h-4 w-4" />
                           </Button>
                         )}
-                        {auth.isAdmin && (s.deleted_at
+                        {isAdmin(auth) && (s.deleted_at
                           ? <Button variant="ghost" size="icon" title={t("actions.restore")} onClick={() => setConfirm({ id: s.id, action: "restore" })}><RotateCcw className="h-4 w-4" /></Button>
                           : <Button variant="ghost" size="icon" title={t("actions.archive")} onClick={() => setConfirm({ id: s.id, action: "archive" })}><Archive className="h-4 w-4" /></Button>
                         )}
-                        {auth.isAdmin && s.deleted_at && (
+                        {isAdmin(auth) && s.deleted_at && (
                           <Button variant="ghost" size="icon" title={t("actions.delete")} onClick={() => setConfirm({ id: s.id, action: "delete" })}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                         )}
                       </div>
@@ -200,3 +197,5 @@ function SeasonsList() {
     </>
   );
 }
+
+export { SeasonsList as Component };

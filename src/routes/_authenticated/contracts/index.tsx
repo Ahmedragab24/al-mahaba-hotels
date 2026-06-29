@@ -1,10 +1,13 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "react-router-dom";
+import { db } from "@/lib/api/db";
+import { apiClient } from "@/lib/api/api-client";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/page-header";
 import { useI18n } from "@/lib/i18n";
-import { useAuth } from "@/hooks/use-auth";
+import { useSelector } from "react-redux";
+import { selectAuth } from "@/store/features/authSlice";
+import { hasRole, hasAnyRole, isAdmin } from "@/lib/auth-utils";
 import { useDebounce } from "@/lib/use-debounce";
 import { useHotelsLite, useSuppliersLite } from "@/lib/lookups";
 import { dbErrorMessage } from "@/lib/db-errors";
@@ -22,20 +25,16 @@ import { Plus, Search, Eye, Pencil, Archive, RotateCcw, Trash2, FileSignature, C
 import { formatDate } from "@/lib/format";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/_authenticated/contracts/")({
-  component: ContractsList,
-});
-
 const PAGE_SIZE = 20;
 const STATUSES = ["draft", "active", "suspended", "expired", "terminated", "closed"] as const;
 const TYPES = ["allotment", "free_sale", "on_request", "commitment", "other"] as const;
 
-function ContractsList() {
+export default function ContractsList() {
   const { t, lang } = useI18n();
-  const auth = useAuth();
+  const auth = useSelector(selectAuth);
   const qc = useQueryClient();
   const navigate = useNavigate();
-  const canWrite = auth.hasAnyRole(["super_admin", "admin", "operations_manager", "operations_agent"]);
+  const canWrite = hasAnyRole(auth, ["super_admin", "admin", "operations_manager", "operations_agent"]);
 
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
@@ -54,19 +53,19 @@ function ContractsList() {
   const metrics = useQuery({
     queryKey: ["contracts-metrics"],
     queryFn: async () => {
-      const { data } = await supabase.from("supplier_contracts").select("status,end_date,deleted_at");
+      const data = await apiClient.supplierContracts.getAll();
       const rows = data ?? [];
       const today = new Date().toISOString().slice(0, 10);
       const in30 = new Date(); in30.setDate(in30.getDate() + 30);
       const in30Str = in30.toISOString().slice(0, 10);
-      const live = rows.filter(r => !r.deleted_at);
+      const live = rows.filter((r: any) => !r.deleted_at);
       return {
         total: live.length,
-        active: live.filter(r => r.status === "active").length,
-        draft: live.filter(r => r.status === "draft").length,
-        expiringSoon: live.filter(r => r.status === "active" && r.end_date && r.end_date >= today && r.end_date <= in30Str).length,
-        expired: live.filter(r => r.status === "expired" || (r.end_date && r.end_date < today && r.status !== "draft")).length,
-        archived: rows.filter(r => r.deleted_at).length,
+        active: live.filter((r: any) => r.status === "active").length,
+        draft: live.filter((r: any) => r.status === "draft").length,
+        expiringSoon: live.filter((r: any) => r.status === "active" && r.end_date && r.end_date >= today && r.end_date <= in30Str).length,
+        expired: live.filter((r: any) => r.status === "expired" || (r.end_date && r.end_date < today && r.status !== "draft")).length,
+        archived: rows.filter((r: any) => r.deleted_at).length,
       };
     },
   });
@@ -74,7 +73,7 @@ function ContractsList() {
   const list = useQuery({
     queryKey: ["contracts", { dSearch, status, supplier, hotel, type, expiring, showArchived, page }],
     queryFn: async () => {
-      let q = supabase.from("supplier_contracts").select(
+      let q = db.from("supplier_contracts").select(
         "id,contract_number,title,contract_type,status,start_date,end_date,currency,commission_pct,deleted_at,created_at,supplier:suppliers(name_en,name_ar),hotel:hotels(name_en,name_ar)",
         { count: "exact" },
       );
@@ -103,14 +102,12 @@ function ContractsList() {
   const archiveMut = useMutation({
     mutationFn: async ({ id, action }: { id: string; action: "archive" | "restore" | "delete" }) => {
       if (action === "delete") {
-        const { error } = await supabase.from("supplier_contracts").delete().eq("id", id);
-        if (error) throw error;
+        await apiClient.supplierContracts.delete(id);
       } else if (action === "archive") {
-        const { error } = await supabase.from("supplier_contracts").update({ deleted_at: new Date().toISOString() }).eq("id", id);
+        const { error } = await db.from("supplier_contracts").update({ deleted_at: new Date().toISOString() }).eq("id", id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("supplier_contracts").update({ deleted_at: null }).eq("id", id);
-        if (error) throw error;
+        await apiClient.supplierContracts.update(id, { deleted_at: null });
       }
     },
     onSuccess: (_d, v) => {
@@ -129,7 +126,7 @@ function ContractsList() {
         title={t("contracts.title")}
         subtitle={`${total} ${t("label.total")}`}
         actions={canWrite && (
-          <Button size="sm" onClick={() => navigate({ to: "/contracts/new" })}>
+          <Button size="sm" onClick={() => navigate("/contracts/new")}>
             <Plus className="h-4 w-4" /> {t("contracts.new")}
           </Button>
         )}
@@ -174,14 +171,14 @@ function ContractsList() {
               <SelectTrigger className="w-[180px]"><SelectValue placeholder={t("filter.supplier")} /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{t("filter.all")}</SelectItem>
-                {suppliers.data?.map((s) => <SelectItem key={s.id} value={s.id}>{lang === "ar" ? (s.name_ar || s.name_en) : (s.name_en || s.name_ar)}</SelectItem>)}
+                {(Array.isArray(suppliers.data) ? suppliers.data : Array.isArray(suppliers.data?.data) ? suppliers.data.data : [])?.map((s: any) => <SelectItem key={s.id} value={s.id}>{lang === "ar" ? (s.name_ar || s.name_en) : (s.name_en || s.name_ar)}</SelectItem>)}
               </SelectContent>
             </Select>
             <Select value={hotel} onValueChange={(v) => { setHotel(v); setPage(1); }}>
               <SelectTrigger className="w-[180px]"><SelectValue placeholder={t("filter.hotel")} /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{t("filter.all")}</SelectItem>
-                {hotels.data?.map((h) => <SelectItem key={h.id} value={h.id}>{lang === "ar" ? (h.name_ar || h.name_en) : (h.name_en || h.name_ar)}</SelectItem>)}
+                {(Array.isArray(hotels.data) ? hotels.data : Array.isArray(hotels.data?.data) ? hotels.data.data : [])?.map((h: any) => <SelectItem key={h.id} value={h.id}>{lang === "ar" ? (h.name_ar || h.name_en) : (h.name_en || h.name_ar)}</SelectItem>)}
               </SelectContent>
             </Select>
             <Select value={type} onValueChange={(v) => { setType(v); setPage(1); }}>
@@ -224,51 +221,51 @@ function ContractsList() {
                   const isExpiringSoon = c.status === "active" && daysLeft !== null && daysLeft >= 0 && daysLeft <= 30;
                   const isExpired = daysLeft !== null && daysLeft < 0;
                   return (
-                  <TableRow key={c.id} className={`${c.deleted_at ? "opacity-60" : ""} ${isExpiringSoon ? "bg-amber-500/5" : ""}`}>
-                    <TableCell className="font-mono text-xs">
-                      <Link to="/contracts/$id" params={{ id: c.id }} className="hover:underline">{c.contract_number}</Link>
-                    </TableCell>
-                    <TableCell className="text-sm font-medium">{c.title ?? "—"}</TableCell>
-                    <TableCell className="text-sm">{c.supplier ? (lang === "ar" ? (c.supplier.name_ar || c.supplier.name_en) : (c.supplier.name_en || c.supplier.name_ar)) : "—"}</TableCell>
-                    <TableCell className="text-sm">{c.hotel ? (lang === "ar" ? (c.hotel.name_ar || c.hotel.name_en) : (c.hotel.name_en || c.hotel.name_ar)) : "—"}</TableCell>
-                    <TableCell className="text-xs">{t(`ctrtype.${c.contract_type}`)}</TableCell>
-                    <TableCell dir="ltr" className="text-xs whitespace-nowrap">
-                      <div className="flex items-center gap-2">
-                        <span>{formatDate(c.start_date, lang)} → {formatDate(c.end_date, lang)}</span>
-                        {isExpiringSoon && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-400">
-                            <Clock className="h-3 w-3" />{daysLeft}d
-                          </span>
-                        )}
-                        {isExpired && c.status !== "draft" && !c.deleted_at && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-destructive/15 px-2 py-0.5 text-[10px] font-semibold text-destructive">
-                            <XCircle className="h-3 w-3" />{t("kpi.expired")}
-                          </span>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-xs">{c.currency ?? "—"}</TableCell>
-                    <TableCell><StatusBadge status={c.status} /></TableCell>
-                    <TableCell className="text-end">
-                      <div className="flex justify-end gap-1">
-                        <Button asChild variant="ghost" size="icon" title={t("actions.view")}>
-                          <Link to="/contracts/$id" params={{ id: c.id }}><Eye className="h-4 w-4" /></Link>
-                        </Button>
-                        {canWrite && !c.deleted_at && c.status === "draft" && (
-                          <Button asChild variant="ghost" size="icon" title={t("actions.edit")}>
-                            <Link to="/contracts/$id" params={{ id: c.id }} search={{ edit: 1 } as any}><Pencil className="h-4 w-4" /></Link>
+                    <TableRow key={c.id} className={`${c.deleted_at ? "opacity-60" : ""} ${isExpiringSoon ? "bg-amber-500/5" : ""}`}>
+                      <TableCell className="font-mono text-xs">
+                        <Link to={`/contracts/${c.id}`} className="hover:underline">{c.contract_number}</Link>
+                      </TableCell>
+                      <TableCell className="text-sm font-medium">{c.title ?? "—"}</TableCell>
+                      <TableCell className="text-sm">{c.supplier ? (lang === "ar" ? (c.supplier.name_ar || c.supplier.name_en) : (c.supplier.name_en || c.supplier.name_ar)) : "—"}</TableCell>
+                      <TableCell className="text-sm">{c.hotel ? (lang === "ar" ? (c.hotel.name_ar || c.hotel.name_en) : (c.hotel.name_en || c.hotel.name_ar)) : "—"}</TableCell>
+                      <TableCell className="text-xs">{t(`ctrtype.${c.contract_type}`)}</TableCell>
+                      <TableCell dir="ltr" className="text-xs whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <span>{formatDate(c.start_date, lang)} → {formatDate(c.end_date, lang)}</span>
+                          {isExpiringSoon && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-400">
+                              <Clock className="h-3 w-3" />{daysLeft}d
+                            </span>
+                          )}
+                          {isExpired && c.status !== "draft" && !c.deleted_at && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-destructive/15 px-2 py-0.5 text-[10px] font-semibold text-destructive">
+                              <XCircle className="h-3 w-3" />{t("kpi.expired")}
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-xs">{c.currency ?? "—"}</TableCell>
+                      <TableCell><StatusBadge status={c.status} /></TableCell>
+                      <TableCell className="text-end">
+                        <div className="flex justify-end gap-1">
+                          <Button asChild variant="ghost" size="icon" title={t("actions.view")}>
+                            <Link to={`/contracts/${c.id}`}><Eye className="h-4 w-4" /></Link>
                           </Button>
-                        )}
-                        {auth.isAdmin && (c.deleted_at
-                          ? <Button variant="ghost" size="icon" title={t("actions.restore")} onClick={() => setConfirm({ id: c.id, action: "restore" })}><RotateCcw className="h-4 w-4" /></Button>
-                          : <Button variant="ghost" size="icon" title={t("actions.archive")} onClick={() => setConfirm({ id: c.id, action: "archive" })}><Archive className="h-4 w-4" /></Button>
-                        )}
-                        {auth.isAdmin && c.deleted_at && (
-                          <Button variant="ghost" size="icon" title={t("actions.delete")} onClick={() => setConfirm({ id: c.id, action: "delete" })}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
+                          {canWrite && !c.deleted_at && c.status === "draft" && (
+                            <Button asChild variant="ghost" size="icon" title={t("actions.edit")}>
+                              <Link to={`/contracts/${c.id}?edit=1`}><Pencil className="h-4 w-4" /></Link>
+                            </Button>
+                          )}
+                          {isAdmin(auth) && (c.deleted_at
+                            ? <Button variant="ghost" size="icon" title={t("actions.restore")} onClick={() => setConfirm({ id: c.id, action: "restore" })}><RotateCcw className="h-4 w-4" /></Button>
+                            : <Button variant="ghost" size="icon" title={t("actions.archive")} onClick={() => setConfirm({ id: c.id, action: "archive" })}><Archive className="h-4 w-4" /></Button>
+                          )}
+                          {isAdmin(auth) && c.deleted_at && (
+                            <Button variant="ghost" size="icon" title={t("actions.delete")} onClick={() => setConfirm({ id: c.id, action: "delete" })}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
                   );
                 })}
               </TableBody>

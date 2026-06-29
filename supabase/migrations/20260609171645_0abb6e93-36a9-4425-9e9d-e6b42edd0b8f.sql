@@ -1,9 +1,0 @@
-REVOKE EXECUTE ON FUNCTION public.tg_room_type_code() FROM PUBLIC, anon;
-REVOKE EXECUTE ON FUNCTION public.tg_room_type_validate() FROM PUBLIC, anon;
-REVOKE EXECUTE ON FUNCTION public.tg_contract_code() FROM PUBLIC, anon;
-REVOKE EXECUTE ON FUNCTION public.tg_contract_no_overlap() FROM PUBLIC, anon;
-REVOKE EXECUTE ON FUNCTION public.tg_rate_requires_active_contract() FROM PUBLIC, anon;
-REVOKE EXECUTE ON FUNCTION public.tg_season_code() FROM PUBLIC, anon;
-REVOKE EXECUTE ON FUNCTION public.tg_season_validate() FROM PUBLIC, anon;
-REVOKE EXECUTE ON FUNCTION public.tg_hotel_tax_code() FROM PUBLIC, anon;
-REVOKE EXECUTE ON FUNCTION public.tg_hotel_tax_validate() FROM PUBLIC, anon;

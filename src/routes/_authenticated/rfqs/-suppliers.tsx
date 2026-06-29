@@ -1,9 +1,12 @@
 import { useState } from "react";
+import { db } from "@/lib/api/db";
+import { apiClient } from "@/lib/api/api-client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
-import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 import { useI18n } from "@/lib/i18n";
-import { useAuth } from "@/hooks/use-auth";
+import { useSelector } from "react-redux";
+import { selectAuth } from "@/store/features/authSlice";
+import { hasRole, hasAnyRole, isAdmin, canAccessModule } from "@/lib/auth-utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -29,7 +32,7 @@ export function useRfqResponses(rfqId: string) {
   return useQuery({
     queryKey: ["rfq-responses", rfqId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from("rfq_supplier_responses")
         .select("*, supplier:suppliers(name_en,name_ar), item:rfq_items(*, hotel:hotels(name_en,name_ar), room_type:hotel_room_types(name_en,name_ar))")
         .eq("rfq_id", rfqId)
@@ -51,7 +54,7 @@ export function RfqSuppliersTab({ rfqId, editable }: { rfqId: string; editable: 
   const requests = useQuery({
     queryKey: ["rfq-sreqs", rfqId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from("rfq_supplier_requests")
         .select("*, supplier:suppliers(name_en,name_ar)")
         .eq("rfq_id", rfqId)
@@ -63,32 +66,30 @@ export function RfqSuppliersTab({ rfqId, editable }: { rfqId: string; editable: 
 
   const suppliers = useQuery({
     queryKey: ["lookup-suppliers"],
-    queryFn: async () => (await supabase.from("suppliers").select("id,name_en,name_ar").is("deleted_at", null).order("name_en")).data ?? [],
+    queryFn: async () => (await apiClient.suppliers.getAll()) ?? [],
   });
 
   const addMut = useMutation({
     mutationFn: async () => {
       if (!supplierId) throw new Error(t("rfq.resp.supplier") + " *");
-      const { error } = await supabase.from("rfq_supplier_requests").insert({
+      await apiClient.rfqSupplierRequests.create({
         rfq_id: rfqId, supplier_id: supplierId, response_due_date: due || null,
       });
-      if (error) throw error;
     },
     onSuccess: () => {
       toast.success(t("toast.saved"));
       setOpen(false); setSupplierId(""); setDue("");
       qc.invalidateQueries({ queryKey: ["rfq-sreqs", rfqId] });
     },
-    onError: (e: any) => toast.error(dbErrorMessage(e, t)),
+    onError: (e: any) => toast.error(dbErrorMessage(e)),
   });
 
   const removeMut = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("rfq_supplier_requests").delete().eq("id", id);
-      if (error) throw error;
+      await apiClient.rfqSupplierRequests.delete(id);
     },
     onSuccess: () => { toast.success(t("toast.saved")); qc.invalidateQueries({ queryKey: ["rfq-sreqs", rfqId] }); },
-    onError: (e: any) => toast.error(dbErrorMessage(e, t)),
+    onError: (e: any) => toast.error(dbErrorMessage(e)),
   });
 
   const today = new Date().toISOString().slice(0, 10);
@@ -115,7 +116,7 @@ export function RfqSuppliersTab({ rfqId, editable }: { rfqId: string; editable: 
               {(requests.data?.length ?? 0) === 0 && (
                 <TableRow><TableCell colSpan={5} className="py-10 text-center text-muted-foreground">{t("rfq.sup.empty")}</TableCell></TableRow>
               )}
-              {requests.data?.map((r: any) => {
+              {(Array.isArray(requests.data) ? requests.data : Array.isArray(requests.data?.data) ? requests.data.data : [])?.map((r: any) => {
                 const overdue = r.status === "sent" && r.response_due_date && r.response_due_date < today;
                 return (
                   <TableRow key={r.id} className="whitespace-nowrap">
@@ -148,7 +149,7 @@ export function RfqSuppliersTab({ rfqId, editable }: { rfqId: string; editable: 
               <Select value={supplierId} onValueChange={setSupplierId}>
                 <SelectTrigger className="w-full"><SelectValue placeholder={t("rfq.resp.supplier")} /></SelectTrigger>
                 <SelectContent>
-                  {suppliers.data?.map((s: any) => <SelectItem key={s.id} value={s.id}>{nmOf(s, lang)}</SelectItem>)}
+                  {(Array.isArray(suppliers.data) ? suppliers.data : Array.isArray(suppliers.data?.data) ? suppliers.data.data : [])?.map((s: any) => <SelectItem key={s.id} value={s.id}>{nmOf(s, lang)}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -170,10 +171,10 @@ export function RfqSuppliersTab({ rfqId, editable }: { rfqId: string; editable: 
 // ---------------- Supplier Responses ----------------
 export function RfqResponsesTab({ rfqId, rfqStatus, currency }: { rfqId: string; rfqStatus: string; currency: string }) {
   const { t, lang } = useI18n();
-  const auth = useAuth();
+  const auth = useSelector(selectAuth);
   const qc = useQueryClient();
   const currencies = useCurrencies();
-  const canApprove = auth.hasAnyRole([...APPROVER_ROLES]);
+  const canApprove = hasAnyRole(auth, [...APPROVER_ROLES]);
   const canRespond = ["sent", "partial"].includes(rfqStatus);
   const [open, setOpen] = useState(false);
   const empty = { request_id: "", rfq_item_id: "", availability: "available", available_rooms: "", cost_price: "", currency, cancellation_policy: "", release_days: "", remarks: "" };
@@ -185,7 +186,7 @@ export function RfqResponsesTab({ rfqId, rfqStatus, currency }: { rfqId: string;
   const requests = useQuery({
     queryKey: ["rfq-sreqs", rfqId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from("rfq_supplier_requests")
         .select("*, supplier:suppliers(name_en,name_ar)")
         .eq("rfq_id", rfqId)
@@ -200,7 +201,7 @@ export function RfqResponsesTab({ rfqId, rfqStatus, currency }: { rfqId: string;
       if (!form.request_id || !form.rfq_item_id) throw new Error(t("toast.error"));
       const supplierId = (requests.data as any[] | undefined)?.find((r: any) => r.id === form.request_id)?.supplier_id as string | undefined;
       if (!supplierId) throw new Error(t("rfq.err_no_supplier"));
-      const { error } = await supabase.from("rfq_supplier_responses").insert({
+      const { error } = await db.from("rfq_supplier_responses").insert({
         rfq_id: rfqId,
         request_id: form.request_id,
         rfq_item_id: form.rfq_item_id,
@@ -222,16 +223,15 @@ export function RfqResponsesTab({ rfqId, rfqStatus, currency }: { rfqId: string;
       qc.invalidateQueries({ queryKey: ["rfq-sreqs", rfqId] });
       qc.invalidateQueries({ queryKey: ["rfq", rfqId] });
     },
-    onError: (e: any) => toast.error(dbErrorMessage(e, t)),
+    onError: (e: any) => toast.error(dbErrorMessage(e)),
   });
 
   const statusMut = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const { error } = await supabase.from("rfq_supplier_responses").update({ status }).eq("id", id);
-      if (error) throw error;
+      await apiClient.rfqSupplierResponses.update(id, { status });
     },
     onSuccess: () => { toast.success(t("toast.saved")); qc.invalidateQueries({ queryKey: ["rfq-responses", rfqId] }); },
-    onError: (e: any) => toast.error(dbErrorMessage(e, t)),
+    onError: (e: any) => toast.error(dbErrorMessage(e)),
   });
 
   const respBadge = (s: string) => (
@@ -265,7 +265,7 @@ export function RfqResponsesTab({ rfqId, rfqStatus, currency }: { rfqId: string;
               {(responses.data?.length ?? 0) === 0 && (
                 <TableRow><TableCell colSpan={8} className="py-10 text-center text-muted-foreground">{t("rfq.resp.empty")}</TableCell></TableRow>
               )}
-              {responses.data?.map((r: any) => (
+              {(Array.isArray(responses.data) ? responses.data : Array.isArray(responses.data?.data) ? responses.data.data : [])?.map((r: any) => (
                 <TableRow key={r.id} className="whitespace-nowrap">
                   <TableCell>{nmOf(r.supplier, lang)}</TableCell>
                   <TableCell className="max-w-[280px] truncate text-xs">{r.item ? rfqItemLabel(r.item, lang) : "—"}</TableCell>
@@ -313,7 +313,7 @@ export function RfqResponsesTab({ rfqId, rfqStatus, currency }: { rfqId: string;
               <Select value={form.rfq_item_id} onValueChange={(v) => set("rfq_item_id", v)}>
                 <SelectTrigger className="w-full"><SelectValue placeholder={t("rfq.resp.item")} /></SelectTrigger>
                 <SelectContent>
-                  {items.data?.map((i: any) => <SelectItem key={i.id} value={i.id}>{rfqItemLabel(i, lang)}</SelectItem>)}
+                  {(Array.isArray(items.data) ? items.data : Array.isArray(items.data?.data) ? items.data.data : [])?.map((i: any) => <SelectItem key={i.id} value={i.id}>{rfqItemLabel(i, lang)}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -339,7 +339,7 @@ export function RfqResponsesTab({ rfqId, rfqStatus, currency }: { rfqId: string;
               <Select value={form.currency} onValueChange={(val) => set("currency", val)}>
                 <SelectTrigger className="w-full"><SelectValue placeholder={t("label.currency")} /></SelectTrigger>
                 <SelectContent>
-                  {currencies.data?.map((c) => (
+                  {(Array.isArray(currencies.data) ? currencies.data : Array.isArray(currencies.data?.data) ? currencies.data.data : [])?.map((c: any) => (
                     <SelectItem key={c.code} value={c.code}>
                       {c.code}
                     </SelectItem>
@@ -382,7 +382,7 @@ export function RfqComparisonTab({ rfqId }: { rfqId: string }) {
 
   return (
     <div className="space-y-6">
-      {items.data?.map((item: any) => {
+      {(Array.isArray(items.data) ? items.data : Array.isArray(items.data?.data) ? items.data.data : [])?.map((item: any) => {
         const rows = (responses.data ?? []).filter((r: any) => r.rfq_item_id === item.id);
         if (rows.length === 0) return null;
         const avail = rows.filter((r: any) => r.availability === "available" && r.cost_price != null);
@@ -443,7 +443,7 @@ export function RfqComparisonTab({ rfqId }: { rfqId: string }) {
 // ---------------- Create Quotation from approved responses ----------------
 export function CreateQuotationButton({ rfq }: { rfq: any }) {
   const { t, lang } = useI18n();
-  const auth = useAuth();
+  const auth = useSelector(selectAuth);
   const navigate = useNavigate();
   const responses = useRfqResponses(rfq.id);
   const [open, setOpen] = useState(false);
@@ -451,11 +451,11 @@ export function CreateQuotationButton({ rfq }: { rfq: any }) {
   const [customerId, setCustomerId] = useState<string>("");
   const plus7 = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
   const [expiry, setExpiry] = useState(plus7);
-  const canWrite = auth.hasAnyRole(["super_admin","admin","sales_manager","sales_agent"]);
+  const canWrite = hasAnyRole(auth, ["super_admin","admin","sales_manager","sales_agent"]);
 
   const customers = useQuery({
     queryKey: ["lookup-customers"],
-    queryFn: async () => (await supabase.from("customers").select("id,name_en,name_ar").is("deleted_at", null).order("name_en")).data ?? [],
+    queryFn: async () => (await apiClient.customers.getAll()) ?? [],
     enabled: open,
   });
 
@@ -472,7 +472,7 @@ export function CreateQuotationButton({ rfq }: { rfq: any }) {
     mutationFn: async () => {
       if (!customerId) throw new Error(t("rfq.customer") + " *");
       const m = Math.max(0, Number(markup) || 0);
-      const { data: quote, error } = await supabase.from("quotations").insert({
+      const { data: quote, error } = await db.from("quotations").insert({
         customer_id: customerId,
         currency: rfq.currency,
         quotation_date: new Date().toISOString().slice(0, 10),
@@ -494,12 +494,12 @@ export function CreateQuotationButton({ rfq }: { rfq: any }) {
         selling_price: Math.round(Number(r.cost_price) * (1 + m / 100) * 100) / 100,
         rfq_response_id: r.id,
       }));
-      const { error: e2 } = await supabase.from("quotation_items").insert(items);
+      const { error: e2 } = await apiClient.quotationItems.create(items);
       if (e2) throw e2;
       return quote.id as string;
     },
-    onSuccess: (id) => { toast.success(t("rfq.to_quote_ok")); setOpen(false); navigate({ to: "/quotations/$id", params: { id } }); },
-    onError: (e: any) => toast.error(dbErrorMessage(e, t)),
+    onSuccess: (id) => { toast.success(t("rfq.to_quote_ok")); setOpen(false); navigate(`/quotations/${id}`); },
+    onError: (e: any) => toast.error(dbErrorMessage(e)),
   });
 
   return (
@@ -515,7 +515,7 @@ export function CreateQuotationButton({ rfq }: { rfq: any }) {
               <Select value={customerId} onValueChange={setCustomerId}>
                 <SelectTrigger className="w-full"><SelectValue placeholder={t("rfq.customer")} /></SelectTrigger>
                 <SelectContent>
-                  {customers.data?.map((c: any) => (
+                  {(Array.isArray(customers.data) ? customers.data : Array.isArray(customers.data?.data) ? customers.data.data : [])?.map((c: any) => (
                     <SelectItem key={c.id} value={c.id}>{lang === "ar" ? (c.name_ar || c.name_en) : (c.name_en || c.name_ar)}</SelectItem>
                   ))}
                 </SelectContent>

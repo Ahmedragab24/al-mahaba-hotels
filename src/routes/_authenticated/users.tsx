@@ -837,218 +837,176 @@ export default function UsersPage() {
 
             {editingUser && (
               <form onSubmit={handleEditSubmit} className="flex-1 flex flex-col overflow-hidden mt-4">
-                <Tabs defaultValue="account" className="flex-1 flex flex-col overflow-hidden">
-                  <TabsList className="grid w-full grid-cols-2 rounded-lg bg-muted p-1 mb-4">
-                    <TabsTrigger value="account" className="rounded-md text-xs font-semibold py-2">
-                      {lang === "ar" ? "بيانات الحساب" : "Account Info"}
-                    </TabsTrigger>
-                    <TabsTrigger value="permissions" className="rounded-md text-xs font-semibold py-2">
-                      {lang === "ar" ? "صلاحيات الوصول" : "Access Permissions"}
-                    </TabsTrigger>
-                  </TabsList>
-
-                  {/* Account Details Tab */}
-                  <TabsContent value="account" className="flex-1 overflow-y-auto px-4 space-y-5">
-                    {/* Personal Information */}
+                <div className="flex-1 overflow-y-auto px-4 space-y-5">
+                  {/* Personal Information */}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 pb-2 border-b">
+                      <div className="w-1 h-4 bg-primary rounded-full"></div>
+                      <Label className="text-sm font-bold text-foreground">{lang === "ar" ? "المعلومات الشخصية" : "Personal Information"}</Label>
+                    </div>
                     <div className="space-y-3">
-                      <div className="flex items-center gap-2 pb-2 border-b">
-                        <div className="w-1 h-4 bg-primary rounded-full"></div>
-                        <Label className="text-sm font-bold text-foreground">{lang === "ar" ? "المعلومات الشخصية" : "Personal Information"}</Label>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="edit_name" className="text-xs font-medium text-muted-foreground">{lang === "ar" ? "الاسم" : "Name"}</Label>
+                        <Input
+                          id="edit_name"
+                          required
+                          placeholder={lang === "ar" ? "الاسم الكامل" : "Full Name"}
+                          className="rounded-lg bg-background border-border h-9 text-sm"
+                          value={editingUser.name || editingUser.full_name_en || editingUser.full_name_ar || ""}
+                          onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })}
+                        />
                       </div>
-                      <div className="space-y-3">
+
+                      <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-1.5">
-                          <Label htmlFor="edit_name" className="text-xs font-medium text-muted-foreground">{lang === "ar" ? "الاسم" : "Name"}</Label>
+                          <Label htmlFor="edit_phone" className="text-xs font-medium text-muted-foreground">{lang === "ar" ? "رقم الهاتف" : "Phone"}</Label>
                           <Input
-                            id="edit_name"
+                            id="edit_phone"
                             required
-                            placeholder={lang === "ar" ? "الاسم الكامل" : "Full Name"}
+                            placeholder="+966500000000"
+                            pattern="^\+[1-9]\d{1,14}$"
                             className="rounded-lg bg-background border-border h-9 text-sm"
-                            value={editingUser.name || editingUser.full_name_en || editingUser.full_name_ar || ""}
-                            onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })}
+                            value={editingUser.phone || ""}
+                            onChange={(e) => setEditingUser({ ...editingUser, phone: e.target.value })}
+                            dir="ltr"
                           />
                         </div>
-
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="space-y-1.5">
-                            <Label htmlFor="edit_phone" className="text-xs font-medium text-muted-foreground">{lang === "ar" ? "رقم الهاتف" : "Phone"}</Label>
-                            <Input
-                              id="edit_phone"
-                              required
-                              placeholder="+966500000000"
-                              pattern="^\+[1-9]\d{1,14}$"
-                              className="rounded-lg bg-background border-border h-9 text-sm"
-                              value={editingUser.phone || ""}
-                              onChange={(e) => setEditingUser({ ...editingUser, phone: e.target.value })}
-                              dir="ltr"
-                            />
-                          </div>
-                          <div className="space-y-1.5">
-                            <Label htmlFor="edit_email" className="text-xs font-medium text-muted-foreground">{lang === "ar" ? "البريد الإلكتروني" : "Email"}</Label>
-                            <Input
-                              id="edit_email"
-                              type="email"
-                              required
-                              placeholder="email@example.com"
-                              className="rounded-lg bg-background border-border h-9 text-sm"
-                              value={editingUser.email}
-                              onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
-                              dir="ltr"
-                            />
-                          </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="edit_email" className="text-xs font-medium text-muted-foreground">{lang === "ar" ? "البريد الإلكتروني" : "Email"}</Label>
+                          <Input
+                            id="edit_email"
+                            type="email"
+                            required
+                            placeholder="email@example.com"
+                            className="rounded-lg bg-background border-border h-9 text-sm"
+                            value={editingUser.email}
+                            onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
+                            dir="ltr"
+                          />
                         </div>
                       </div>
                     </div>
+                  </div>
 
-                    {/* Account Information */}
+                  {/* Account Information */}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 pb-2 border-b">
+                      <div className="w-1 h-4 bg-primary rounded-full"></div>
+                      <Label className="text-sm font-bold text-foreground">{lang === "ar" ? "معلومات الحساب" : "Account Information"}</Label>
+                    </div>
                     <div className="space-y-3">
-                      <div className="flex items-center gap-2 pb-2 border-b">
-                        <div className="w-1 h-4 bg-primary rounded-full"></div>
-                        <Label className="text-sm font-bold text-foreground">{lang === "ar" ? "معلومات الحساب" : "Account Information"}</Label>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="edit_user_type" className="text-xs font-medium text-muted-foreground">{t("label.user_type")}</Label>
+                        <Select
+                          value={editingUser.type}
+                          onValueChange={(val) => setEditingUser({ ...editingUser, type: val as import("@/hooks/use-auth").AppRole })}
+                        >
+                          <SelectTrigger id="edit_user_type" className="rounded-lg bg-background border-border h-9 text-sm">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="super_admin">{t("role.super_admin")}</SelectItem>
+                            <SelectItem value="financial_manager">{t("role.financial_manager")}</SelectItem>
+                            <SelectItem value="sales_manager">{t("role.sales_manager")}</SelectItem>
+                            <SelectItem value="employee">{t("role.employee")}</SelectItem>
+                            <SelectItem value="viewer">{t("role.viewer")}</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
-                      <div className="space-y-3">
+
+                      <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-1.5">
-                          <Label htmlFor="edit_user_type" className="text-xs font-medium text-muted-foreground">{t("label.user_type")}</Label>
+                          <Label htmlFor="edit_country_id" className="text-xs font-medium text-muted-foreground">{lang === "ar" ? "البلد" : "Country"}</Label>
                           <Select
-                            value={editingUser.type}
-                            onValueChange={(val) => setEditingUser({ ...editingUser, type: val as import("@/hooks/use-auth").AppRole })}
+                            value={String(editingUser.country_id || "")}
+                            onValueChange={(val) => setEditingUser({ ...editingUser, country_id: val, city_id: "" })}
                           >
-                            <SelectTrigger id="edit_user_type" className="rounded-lg bg-background border-border h-9 text-sm">
-                              <SelectValue />
+                            <SelectTrigger id="edit_country_id" className="rounded-lg bg-background border-border h-9 text-sm">
+                              <SelectValue placeholder={lang === "ar" ? "اختر البلد" : "Select Country"} />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="super_admin">{t("role.super_admin")}</SelectItem>
-                              <SelectItem value="financial_manager">{t("role.financial_manager")}</SelectItem>
-                              <SelectItem value="sales_manager">{t("role.sales_manager")}</SelectItem>
-                              <SelectItem value="employee">{t("role.employee")}</SelectItem>
-                              <SelectItem value="viewer">{t("role.viewer")}</SelectItem>
+                              {countriesArray.map((c: any) => (
+                                <SelectItem key={c.id} value={String(c.id)}>
+                                  {lang === "ar" ? (c.name_ar || c.name_en || c.name) : (c.name_en || c.name_ar || c.name)}
+                                </SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                         </div>
-
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="space-y-1.5">
-                            <Label htmlFor="edit_country_id" className="text-xs font-medium text-muted-foreground">{lang === "ar" ? "البلد" : "Country"}</Label>
-                            <Select
-                              value={String(editingUser.country_id || "")}
-                              onValueChange={(val) => setEditingUser({ ...editingUser, country_id: val, city_id: "" })}
-                            >
-                              <SelectTrigger id="edit_country_id" className="rounded-lg bg-background border-border h-9 text-sm">
-                                <SelectValue placeholder={lang === "ar" ? "اختر البلد" : "Select Country"} />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {countriesArray.map((c: any) => (
-                                  <SelectItem key={c.id} value={String(c.id)}>
-                                    {lang === "ar" ? (c.name_ar || c.name_en || c.name) : (c.name_en || c.name_ar || c.name)}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="space-y-1.5">
-                            <Label htmlFor="edit_city_id" className="text-xs font-medium text-muted-foreground">{lang === "ar" ? "المدينة" : "City"}</Label>
-                            <Select
-                              value={String(editingUser.city_id || "")}
-                              onValueChange={(val) => setEditingUser({ ...editingUser, city_id: val })}
-                              disabled={!editingUser.country_id}
-                            >
-                              <SelectTrigger id="edit_city_id" className="rounded-lg bg-background border-border h-9 text-sm">
-                                <SelectValue placeholder={lang === "ar" ? "اختر المدينة" : "Select City"} />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {editCitiesArray.map((c: any) => (
-                                  <SelectItem key={c.id} value={String(c.id)}>
-                                    {lang === "ar" ? (c.name_ar || c.name_en || c.name) : (c.name_en || c.name_ar || c.name)}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="edit_city_id" className="text-xs font-medium text-muted-foreground">{lang === "ar" ? "المدينة" : "City"}</Label>
+                          <Select
+                            value={String(editingUser.city_id || "")}
+                            onValueChange={(val) => setEditingUser({ ...editingUser, city_id: val })}
+                            disabled={!editingUser.country_id}
+                          >
+                            <SelectTrigger id="edit_city_id" className="rounded-lg bg-background border-border h-9 text-sm">
+                              <SelectValue placeholder={lang === "ar" ? "اختر المدينة" : "Select City"} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {editCitiesArray.map((c: any) => (
+                                <SelectItem key={c.id} value={String(c.id)}>
+                                  {lang === "ar" ? (c.name_ar || c.name_en || c.name) : (c.name_en || c.name_ar || c.name)}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
+                      </div>
 
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="space-y-1.5">
-                            <Label htmlFor="edit_status" className="text-xs font-medium text-muted-foreground">{lang === "ar" ? "الحالة" : "Status"}</Label>
-                            <Select
-                              value={String(editingUser.status || "1")}
-                              onValueChange={(val) => setEditingUser({ ...editingUser, status: val })}
-                            >
-                              <SelectTrigger id="edit_status" className="rounded-lg bg-background border-border h-9 text-sm">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="1">{lang === "ar" ? "نشط" : "Active"}</SelectItem>
-                                <SelectItem value="0">{lang === "ar" ? "غير نشط" : "Inactive"}</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="space-y-1.5">
-                            <Label htmlFor="edit_image" className="text-xs font-medium text-muted-foreground">{lang === "ar" ? "الصورة الشخصية" : "Profile Picture"}</Label>
-                            <div className="flex items-center gap-2">
-                              {editingUser.image ? (
-                                typeof editingUser.image === 'string' ? (
-                                  <img
-                                    src={editingUser.image}
-                                    alt="Current profile"
-                                    className="w-8 h-8 rounded-full object-cover border border-border"
-                                  />
-                                ) : (
-                                  <img
-                                    src={URL.createObjectURL(editingUser.image)}
-                                    alt="New profile"
-                                    className="w-8 h-8 rounded-full object-cover border border-border"
-                                  />
-                                )
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                          <Label htmlFor="edit_status" className="text-xs font-medium text-muted-foreground">{lang === "ar" ? "الحالة" : "Status"}</Label>
+                          <Select
+                            value={String(editingUser.status || "1")}
+                            onValueChange={(val) => setEditingUser({ ...editingUser, status: val })}
+                          >
+                            <SelectTrigger id="edit_status" className="rounded-lg bg-background border-border h-9 text-sm">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="1">{lang === "ar" ? "نشط" : "Active"}</SelectItem>
+                              <SelectItem value="0">{lang === "ar" ? "غير نشط" : "Inactive"}</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="edit_image" className="text-xs font-medium text-muted-foreground">{lang === "ar" ? "الصورة الشخصية" : "Profile Picture"}</Label>
+                          <div className="flex items-center gap-2">
+                            {editingUser.image ? (
+                              typeof editingUser.image === 'string' ? (
+                                <img
+                                  src={editingUser.image}
+                                  alt="Current profile"
+                                  className="w-8 h-8 rounded-full object-cover border border-border"
+                                />
                               ) : (
-                                <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center border border-border">
-                                  <span className="text-xs font-bold text-muted-foreground">
-                                    {(editingUser.name || editingUser.email || "U").charAt(0).toUpperCase()}
-                                  </span>
-                                </div>
-                              )}
-                              <Input
-                                id="edit_image"
-                                type="file"
-                                accept="image/*"
-                                className="rounded-lg bg-background border-border h-9 text-sm pt-1.5 flex-1"
-                                onChange={(e) => setEditingUser({ ...editingUser, image: e.target.files?.[0] || null })}
-                              />
-                            </div>
+                                <img
+                                  src={URL.createObjectURL(editingUser.image)}
+                                  alt="New profile"
+                                  className="w-8 h-8 rounded-full object-cover border border-border"
+                                />
+                              )
+                            ) : (
+                              <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center border border-border">
+                                <span className="text-xs font-bold text-muted-foreground">
+                                  {(editingUser.name || editingUser.email || "U").charAt(0).toUpperCase()}
+                                </span>
+                              </div>
+                            )}
+                            <Input
+                              id="edit_image"
+                              type="file"
+                              accept="image/*"
+                              className="rounded-lg bg-background border-border h-9 text-sm pt-1.5 flex-1"
+                              onChange={(e) => setEditingUser({ ...editingUser, image: e.target.files?.[0] || null })}
+                            />
                           </div>
                         </div>
                       </div>
                     </div>
-                  </TabsContent>
-
-                  {/* Permissions Details Tab */}
-                  <TabsContent value="permissions" className="flex-1 overflow-y-auto px-4 space-y-4">
-                    <div className="flex items-center gap-2 pb-2 border-b">
-                      <div className="w-1 h-4 bg-primary rounded-full"></div>
-                      <Label className="text-sm font-bold text-foreground">{lang === "ar" ? "صلاحيات الوصول" : "Access Permissions"}</Label>
-                    </div>
-                    <div className="space-y-2">
-                      {MODULES.map((m: any) => (
-                        <div
-                          key={m.key}
-                          className="flex items-center justify-between rounded-xl border p-2.5 bg-background/30 hover:bg-background/50 transition-all text-xs"
-                        >
-                          <div className="font-semibold text-foreground">{t(m.labelKey)}</div>
-                          <div className="flex items-center gap-2">
-                            <span
-                              className={`text-[10px] font-bold ${!!visibleModules[m.key] ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"
-                                }`}
-                            >
-                              {!!visibleModules[m.key] ? (lang === "ar" ? "مسموح" : "Allowed") : (lang === "ar" ? "محجوب" : "Blocked")}
-                            </span>
-                            <Switch
-                              checked={!!visibleModules[m.key]}
-                              onCheckedChange={(checked) => setVisibleModules(prev => ({ ...prev, [m.key]: checked }))}
-                            />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </TabsContent>
-                </Tabs>
+                  </div>
+                </div>
 
                 <DialogFooter className="pt-4 border-t flex sm:justify-end gap-2">
                   <Button

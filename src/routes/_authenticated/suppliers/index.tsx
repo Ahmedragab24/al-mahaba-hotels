@@ -44,7 +44,12 @@ export default function SuppliersList() {
 
   const dSearch = useDebounce(search, 300);
   const countries = useCountries();
-  const { data: supplierTypes = [] } = useGetSupplierTypesQuery({ lang });
+  const { data: supplierTypesData } = useGetSupplierTypesQuery({ lang });
+  const supplierTypes = useMemo(() => {
+    if (Array.isArray(supplierTypesData)) return supplierTypesData;
+    if (Array.isArray((supplierTypesData as any)?.data)) return (supplierTypesData as any).data;
+    return [];
+  }, [supplierTypesData]);
 
   const { data: suppliersData, isLoading } = useGetSuppliersQuery(
     { 

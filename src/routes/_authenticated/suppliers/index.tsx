@@ -138,14 +138,6 @@ export default function SuppliersList() {
           <KpiCard icon={Calendar} tone="info" label={t("kpi.this_month")} value={statistics?.this_month ?? "—"} />
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <StatusPill label={t("filter.all")} tone="primary" active={stype === "all"} onClick={() => { setStype("all"); setPage(1); }} />
-          <StatusPill label="DMC" tone="info" active={stype === "1"} onClick={() => { setStype("1"); setPage(1); }} />
-          <StatusPill label="Hotel Supplier" tone="info" active={stype === "2"} onClick={() => { setStype("2"); setPage(1); }} />
-          <StatusPill label="Direct Hotel" tone="info" active={stype === "3"} onClick={() => { setStype("3"); setPage(1); }} />
-          <StatusPill label="Wholesaler" tone="info" active={stype === "4"} onClick={() => { setStype("4"); setPage(1); }} />
-          <StatusPill label="Other" tone="info" active={stype === "5"} onClick={() => { setStype("5"); setPage(1); }} />
-        </div>
 
         <Card>
           <CardContent className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">

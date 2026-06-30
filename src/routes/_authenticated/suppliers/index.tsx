@@ -79,19 +79,32 @@ export default function SuppliersList() {
       } catch (e: any) {
         toast.error(e.message ?? t("toast.error"));
       }
-    } else if (action === "archive") {
+    } else {
+      const s = suppliers.find((x: any) => x.id === id);
+      if (!s) return;
+
+      const body = {
+        name_en: s.name_en,
+        name_ar: s.name_ar,
+        supplier_type_id: s.supplier_type_id || s.supplier_type?.id,
+        status: s.status ? 1 : 0,
+        tax_number: s.tax_number || null,
+        commercial_register: s.commercial_register || null,
+        currency_id: s.currency_id || s.currency?.id,
+        country_id: s.country_id || s.country?.id,
+        city_id: s.city_id || s.city?.id,
+        address_1: s.address_1 || null,
+        address_2: s.address_2 || null,
+        phone: s.phone || null,
+        email: s.email || null,
+        website: s.website || null,
+        notes: s.notes || null,
+        is_archived: action === "archive" ? 1 : 0,
+      };
+
       try {
-        await updateSupplier({ id, body: { is_archived: 1 } }).unwrap();
-        toast.success(t("toast.archived"));
-        qc.invalidateQueries({ queryKey: ["Suppliers"] });
-        setConfirm(null);
-      } catch (e: any) {
-        toast.error(e.message ?? t("toast.error"));
-      }
-    } else if (action === "restore") {
-      try {
-        await updateSupplier({ id, body: { is_archived: 0 } }).unwrap();
-        toast.success(t("toast.restored"));
+        await updateSupplier({ id, body }).unwrap();
+        toast.success(action === "archive" ? t("toast.archived") : t("toast.restored"));
         qc.invalidateQueries({ queryKey: ["Suppliers"] });
         setConfirm(null);
       } catch (e: any) {

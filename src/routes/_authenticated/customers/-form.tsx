@@ -21,7 +21,7 @@ const schema = z.object({
   name_en: z.string().trim().max(200).optional().or(z.literal("")),
   name_ar: z.string().trim().min(1).max(200),
   email: z.string().trim().email().max(255).optional().or(z.literal("")),
-  phone: z.string().trim().max(40).optional().or(z.literal("")),
+  phone: z.string().trim().max(40).regex(/^\+[1-9]\d{1,14}$/, { message: "يجب أن يبدأ رقم الهاتف بـ + ومفتاح الدولة (مثال: +966500000000) / Phone must start with + and country code (e.g., +966500000000)" }).optional().or(z.literal("")),
   country_id: z.coerce.number().int().min(1, "مطلوب").or(z.literal("")),
   legal_name: z.string().trim().max(200).optional().or(z.literal("")),
   tax_number: z.string().trim().max(50).optional().or(z.literal("")),
@@ -197,7 +197,7 @@ export function CustomerForm({ initial, onSaved }: { initial?: Partial<Customer>
             <FormField control={form.control} name="phone" render={({ field }) => (
               <FormItem>
                 <FormLabel>{t("label.mobile")} / {t("label.phone")}</FormLabel>
-                <FormControl><Input dir="ltr" {...field} /></FormControl>
+                <FormControl><Input dir="ltr" placeholder="+966500000000" {...field} /></FormControl>
                 <FormMessage />
               </FormItem>
             )} />

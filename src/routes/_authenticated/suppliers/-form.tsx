@@ -25,7 +25,7 @@ const schema = z.object({
   city_id: z.coerce.number().int().positive(),
   address_1: z.string().trim().max(200).optional().or(z.literal("")),
   address_2: z.string().trim().max(200).optional().or(z.literal("")),
-  phone: z.string().trim().max(40).optional().or(z.literal("")),
+  phone: z.string().trim().max(40).regex(/^\+[1-9]\d{1,14}$/, { message: "يجب أن يبدأ رقم الهاتف بـ + ومفتاح الدولة (مثال: +966500000000) / Phone must start with + and country code (e.g., +966500000000)" }).optional().or(z.literal("")),
   email: z.string().trim().email().max(255).optional().or(z.literal("")),
   website: z.string().trim().max(200).optional().or(z.literal("")),
   notes: z.string().trim().max(4000).optional().or(z.literal("")),
@@ -159,7 +159,7 @@ export function SupplierForm({ initial, onSaved }: { initial?: any; onSaved: (id
             <FormItem className="md:col-span-3"><FormLabel>{t("label.address")} 2</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
           )} />
           <FormField control={form.control} name="phone" render={({ field }) => (
-            <FormItem><FormLabel>{t("label.phone")}</FormLabel><FormControl><Input dir="ltr" {...field} /></FormControl><FormMessage /></FormItem>
+            <FormItem><FormLabel>{t("label.phone")}</FormLabel><FormControl><Input dir="ltr" placeholder="+966500000000" {...field} /></FormControl><FormMessage /></FormItem>
           )} />
 
           <FormField control={form.control} name="email" render={({ field }) => (

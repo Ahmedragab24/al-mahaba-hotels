@@ -86,6 +86,7 @@ export default function RatesList() {
     }
   };
 
+  const rates = Array.isArray(list.data?.data) ? list.data.data : [];
   const total = list.data?.total ?? 0;
 
   const actions = useMemo(() => (
@@ -209,10 +210,10 @@ export default function RatesList() {
                 {list.isLoading && (
                   <TableRow><TableCell colSpan={12} className="text-center text-muted-foreground py-10">{t("label.loading")}</TableCell></TableRow>
                 )}
-                {!list.isLoading && (list.data?.data.length ?? 0) === 0 && (
+                {!list.isLoading && rates.length === 0 && (
                   <TableRow><TableCell colSpan={12} className="text-center text-muted-foreground py-10">{t("label.no_results")}</TableCell></TableRow>
                 )}
-                {list.data?.data.map((r: any) => {
+                {rates.map((r: any) => {
                   const h = r.hotel ?? {}; const s = r.supplier ?? {}; const rm = r.room ?? {};
                   return (
                     <TableRow key={r.id} className={r.is_archived ? "opacity-60" : ""}>

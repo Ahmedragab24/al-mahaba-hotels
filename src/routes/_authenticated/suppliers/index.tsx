@@ -67,7 +67,13 @@ export default function SuppliersList() {
   console.log('[SuppliersList] suppliersData:', suppliersData);
   console.log('[SuppliersList] isLoading:', isLoading);
 
-  const suppliers = suppliersData?.data ?? [];
+  const suppliers = useMemo(() => {
+    let list = suppliersData?.data ?? [];
+    if (stype !== "all") {
+      list = list.filter((s: any) => String(s.supplier_type_id || s.supplier_type?.id) === stype);
+    }
+    return list;
+  }, [suppliersData, stype]);
   const statistics = suppliersData?.statistics;
 
   console.log('[SuppliersList] suppliers:', suppliers);
@@ -145,18 +151,6 @@ export default function SuppliersList() {
           <KpiCard icon={Calendar} tone="info" label={t("kpi.this_month")} value={statistics?.this_month ?? "—"} />
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <StatusPill label={t("filter.all")} tone="primary" active={stype === "all"} onClick={() => { setStype("all"); setPage(1); }} />
-          {supplierTypes?.map((st: any) => (
-            <StatusPill
-              key={st.id}
-              label={lang === "ar" ? st.name_ar : st.name_en}
-              tone="info"
-              active={stype === String(st.id)}
-              onClick={() => { setStype(String(st.id)); setPage(1); }}
-            />
-          ))}
-        </div>
 
         <Card>
           <CardContent className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -227,7 +221,6 @@ export default function SuppliersList() {
                   <TableHead>{t("label.country")}</TableHead>
                   <TableHead>{t("label.phone")}</TableHead>
                   <TableHead>{t("label.currency")}</TableHead>
-                  <TableHead>{t("label.rating")}</TableHead>
                   <TableHead>{t("label.status")}</TableHead>
                   <TableHead className="text-end">{t("label.actions")}</TableHead>
                 </TableRow>
@@ -251,7 +244,7 @@ export default function SuppliersList() {
                     <TableCell className="text-xs">{s.country?.name ?? "—"}</TableCell>
                     <TableCell dir="ltr" className="text-xs">{s.phone ?? "—"}</TableCell>
                     <TableCell className="text-xs font-mono">{s.currency?.code ?? "—"}</TableCell>
-                    <TableCell>{s.rating ? <span className="flex items-center gap-0.5 text-amber-500"><Star className="h-3 w-3 fill-current" />{Number(s.rating).toFixed(1)}</span> : <span className="text-muted-foreground">—</span>}</TableCell>
+                    {/* <TableCell>{s.rating ? <span className="flex items-center gap-0.5 text-amber-500"><Star className="h-3 w-3 fill-current" />{Number(s.rating).toFixed(1)}</span> : <span className="text-muted-foreground">—</span>}</TableCell> */}
                     <TableCell><StatusBadge status={s.status ? "active" : "inactive"} /></TableCell>
                     <TableCell className="text-end">
                       <div className="flex justify-end gap-1">

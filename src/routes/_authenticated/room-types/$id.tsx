@@ -52,7 +52,7 @@ export default function RoomTypeDetail() {
       }
     },
     onSuccess: (_d, action) => {
-      toast.success(action === "restore" ? t("toast.restored") : t("toast.deleted"));
+      toast.success(action === "restore" ? t("toast.restored") : action === "archive" ? t("toast.archived") : t("toast.deleted"));
       if (action === "delete") {
         navigate("/room-types");
       } else {

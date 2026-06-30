@@ -124,12 +124,23 @@ export default function HotelsList() {
 
   const handleArchive = async ({ id, action }: { id: string; action: "archive" | "restore" | "delete" }) => {
     try {
-      if (action === "delete" || action === "archive") {
+      if (action === "delete") {
         await deleteHotel(id).unwrap();
+        toast.success(t("toast.deleted"));
       } else {
-        await updateHotel({ id, body: { status: "1" } as any }).unwrap();
+        const h = hotelsList.find((x: any) => String(x.id) === String(id));
+        const body = h ? {
+          name_en: h.name_en,
+          name_ar: h.name_ar,
+          stars: h.stars,
+          city_id: h.city_id,
+          country_id: h.country_id,
+          is_archived: action === "archive" ? 1 : 0
+        } : { is_archived: action === "archive" ? 1 : 0 };
+        
+        await updateHotel({ id, body: body as any }).unwrap();
+        toast.success(action === "archive" ? t("toast.archived") : t("toast.restored"));
       }
-      toast.success(action === "restore" ? t("toast.restored") : t("toast.deleted"));
       setConfirm(null);
     } catch (e: any) {
       toast.error(e.data?.message || e.message || t("toast.error"));

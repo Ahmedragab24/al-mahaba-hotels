@@ -73,7 +73,7 @@ export default function SeasonsList() {
       }
     },
     onSuccess: (_d, v) => {
-      toast.success(v.action === "restore" ? t("toast.restored") : t("toast.deleted"));
+      toast.success(v.action === "restore" ? t("toast.restored") : v.action === "archive" ? t("toast.archived") : t("toast.deleted"));
       qc.invalidateQueries({ queryKey: ["seasons"] });
       setConfirm(null);
     },

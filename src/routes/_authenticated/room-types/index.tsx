@@ -78,7 +78,7 @@ export default function RoomTypesList() {
       }
     },
     onSuccess: (_d, v) => {
-      toast.success(v.action === "restore" ? t("toast.restored") : t("toast.deleted"));
+      toast.success(v.action === "restore" ? t("toast.restored") : v.action === "archive" ? t("toast.archived") : t("toast.deleted"));
       list.refetch();
       qc.invalidateQueries({ queryKey: ["rooms"] });
       qc.invalidateQueries({ queryKey: ["lookup", "room-types"] });

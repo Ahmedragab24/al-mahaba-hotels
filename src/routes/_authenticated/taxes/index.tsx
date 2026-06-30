@@ -83,7 +83,7 @@ export default function TaxesList() {
       }
     },
     onSuccess: (_d, v) => {
-      toast.success(v.action === "restore" ? t("toast.restored") : t("toast.deleted"));
+      toast.success(v.action === "restore" ? t("toast.restored") : v.action === "archive" ? t("toast.archived") : t("toast.deleted"));
       qc.invalidateQueries({ queryKey: ["taxes"] });
       setConfirm(null);
     },

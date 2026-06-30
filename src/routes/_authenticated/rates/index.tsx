@@ -8,7 +8,7 @@ import { selectAuth } from "@/store/features/authSlice";
 import { hasRole, hasAnyRole, isAdmin, canAccessModule } from "@/lib/auth-utils";
 import { useDebounce } from "@/lib/use-debounce";
 import { useHotelsLite, useSuppliersLite } from "@/lib/lookups";
-import { useGetPricesQuery, useDeletePriceMutation } from "@/store/services/pricing/pricingService";
+import { useGetPricesQuery, useDeletePriceMutation, useUpdatePriceMutation } from "@/store/services/pricing/pricingService";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
@@ -64,6 +64,7 @@ export default function RatesList() {
   });
 
   const [deleteMutation, { isLoading: isDeleting }] = useDeletePriceMutation();
+  const [updateMutation] = useUpdatePriceMutation();
 
   const handleAction = async ({ id, action }: { id: string; action: "archive" | "restore" | "delete" }) => {
     if (action === "delete") {
@@ -75,14 +76,30 @@ export default function RatesList() {
       } catch (e: any) {
         toast.error(e?.data?.message || e?.message || t("toast.error"));
       }
-    } else if (action === "archive") {
-      // Archive functionality - may need to be implemented in API
-      toast.success(t("toast.archived"));
-      setConfirm(null);
     } else {
-      // Restore functionality - may need to be implemented in API
-      toast.success(t("toast.restored"));
-      setConfirm(null);
+      try {
+        const r = rates.find((x: any) => String(x.id) === String(id));
+        const body = r ? {
+          hotel_id: r.hotel_id,
+          room_id: r.room_id,
+          supplier_id: r.supplier_id,
+          currency_id: r.currency_id,
+          valid_from: r.valid_from,
+          valid_to: r.valid_to,
+          cost_per_night: r.cost_per_night,
+          selling_price: r.selling_price,
+          meal_plan_type: r.meal_plan_type,
+          status: r.status,
+          is_archived: action === "archive" ? 1 : 0
+        } : { is_archived: action === "archive" ? 1 : 0 };
+
+        await updateMutation({ id, body: body as any, lang }).unwrap();
+        toast.success(action === "archive" ? t("toast.archived") : t("toast.restored"));
+        qc.invalidateQueries({ queryKey: ["getPrices"] });
+        setConfirm(null);
+      } catch (e: any) {
+        toast.error(e?.data?.message || e?.message || t("toast.error"));
+      }
     }
   };
 

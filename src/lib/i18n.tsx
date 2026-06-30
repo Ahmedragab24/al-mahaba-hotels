@@ -72,6 +72,7 @@ export const dict: Dict = {
   "actions.delete": { ar: "حذف", en: "Delete" },
   "actions.archive": { ar: "أرشفة", en: "Archive" },
   "actions.restore": { ar: "استعادة", en: "Restore" },
+  "actions.confirm": { ar: "تأكيد", en: "Confirm" },
   "actions.search": { ar: "بحث...", en: "Search..." },
   "actions.filter": { ar: "تصفية", en: "Filter" },
   "actions.refresh": { ar: "تحديث", en: "Refresh" },

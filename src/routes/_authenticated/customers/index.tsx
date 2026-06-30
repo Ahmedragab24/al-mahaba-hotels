@@ -95,7 +95,7 @@ function CustomersList() {
       } else {
         await updateCustomer({ id, body: { is_archived: false, status: true } }).unwrap();
       }
-      toast.success(action === "delete" ? t("toast.deleted") : action === "archive" ? t("toast.deleted") : t("toast.restored"));
+      toast.success(action === "delete" ? t("toast.deleted") : action === "archive" ? t("toast.archived") : t("toast.restored"));
       setConfirmId(null);
     } catch (e: any) {
       toast.error(e?.data?.message || e?.message || t("toast.error"));

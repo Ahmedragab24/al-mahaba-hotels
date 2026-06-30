@@ -15,7 +15,6 @@ export type PermissionKey =
   | "transactions"
   | "room_types"
   | "currencies"
-  | "contracts"
   | "users"
   | "settings"
   | "reports"
@@ -58,13 +57,13 @@ export const ROLE_DEFAULT_PERMISSIONS: Record<UserRole, PermissionKey[]> = {
     "dashboard", "hotels", "rooms", "suppliers", "supplier_applications",
     "rates", "quotations", "bookings", "customers", "invoices", "transactions",
     "room_types", "currencies",
-    "contracts", "users", "settings", "reports", "tasks"
+    "users", "settings", "reports", "tasks"
   ],
   admin: [
     "dashboard", "hotels", "rooms", "suppliers", "supplier_applications",
     "rates", "quotations", "bookings", "customers", "invoices", "transactions",
     "room_types", "currencies",
-    "contracts", "users", "settings", "reports", "tasks"
+    "users", "settings", "reports", "tasks"
   ],
   sales_manager: [
     "dashboard", "hotels", "rooms", "suppliers", "supplier_applications",
@@ -80,31 +79,31 @@ export const ROLE_DEFAULT_PERMISSIONS: Record<UserRole, PermissionKey[]> = {
     "dashboard", "hotels", "rooms", "suppliers", "supplier_applications",
     "rates", "quotations", "bookings", "customers", "invoices", "transactions",
     "room_types", "currencies",
-    "contracts", "reports", "tasks"
+    "reports", "tasks"
   ],
   operations_agent: [
     "dashboard", "hotels", "rooms", "suppliers", "supplier_applications",
     "rates", "quotations", "bookings", "customers", "invoices", "transactions",
     "room_types", "currencies",
-    "contracts", "reports", "tasks"
+    "reports", "tasks"
   ],
   finance_manager: [
     "dashboard", "hotels", "rooms", "suppliers", "supplier_applications",
     "rates", "quotations", "bookings", "customers", "invoices", "transactions",
     "room_types", "currencies",
-    "contracts", "reports", "tasks"
+    "reports", "tasks"
   ],
   finance_agent: [
     "dashboard", "hotels", "rooms", "suppliers", "supplier_applications",
     "rates", "quotations", "bookings", "customers", "invoices", "transactions",
     "room_types", "currencies",
-    "contracts", "reports", "tasks"
+    "reports", "tasks"
   ],
   viewer: [
     "dashboard", "hotels", "rooms", "suppliers", "supplier_applications",
     "rates", "quotations", "bookings", "customers", "invoices", "transactions",
     "room_types", "currencies",
-    "contracts", "reports", "tasks"
+    "reports", "tasks"
   ],
   employee: [
     "dashboard", "hotels", "rooms", "suppliers", "supplier_applications",
@@ -112,7 +111,7 @@ export const ROLE_DEFAULT_PERMISSIONS: Record<UserRole, PermissionKey[]> = {
     "reports", "tasks"
   ],
   supplier: [
-    "rates", "contracts", "bookings", "quotations", "tasks"
+    "rates", "bookings", "quotations", "tasks"
   ]
 };
 

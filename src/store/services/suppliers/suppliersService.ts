@@ -14,12 +14,10 @@ export const suppliersApi = api.injectEndpoints({
     createSupplier: build.mutation<Supplier, Partial<Supplier>>({
       query: (body) => ({ url: "/suppliers", method: "POST", body }),
       invalidatesTags: ["Suppliers"],
-      transformResponse: (response: ApiResponse<Supplier>) => response.data,
     }),
     updateSupplier: build.mutation<Supplier, { id: string | number; body: Partial<Supplier> }>({
       query: ({ id, body }) => ({ url: `/suppliers/${id}`, method: "PUT", body }),
       invalidatesTags: ["Suppliers"],
-      transformResponse: (response: ApiResponse<Supplier>) => response.data,
     }),
     deleteSupplier: build.mutation<void, string | number>({
       query: (id) => ({ url: `/suppliers/${id}`, method: "DELETE" }),

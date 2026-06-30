@@ -29,11 +29,7 @@ export function ConfirmDialog({
             onClick={onConfirm}
             className={destructive ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}
           >
-            {confirmLabel ?? (
-              (title.includes("أرشفة") || title.toLowerCase().includes("archive"))
-                ? t("actions.confirm")
-                : t("actions.delete")
-            )}
+            {confirmLabel ?? t("actions.confirm")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

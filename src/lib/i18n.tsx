@@ -101,6 +101,7 @@ export const dict: Dict = {
   "label.city": { ar: "المدينة", en: "City" },
   "label.address": { ar: "العنوان", en: "Address" },
   "label.status": { ar: "الحالة", en: "Status" },
+  "label.room": { ar: "الغرفة", en: "Room" },
   "label.is_archived": { ar: "مؤرشف", en: "Archived" },
   "label.currency": { ar: "العملة", en: "Currency" },
   "label.language": { ar: "اللغة", en: "Language" },
@@ -138,6 +139,8 @@ export const dict: Dict = {
   "status.approved": { ar: "معتمد", en: "Approved" },
   "status.rejected": { ar: "مرفوض", en: "Rejected" },
   "status.expired": { ar: "منتهي", en: "Expired" },
+  "status.yes": { ar: "نعم", en: "Yes" },
+  "status.no": { ar: "لا", en: "No" },
 
   // User roles
   "role.super_admin": { ar: "مدير النظام", en: "Super Admin" },
@@ -246,6 +249,7 @@ export const dict: Dict = {
   "supplier.applications.status_pending": { ar: "قيد الانتظار", en: "Pending" },
   "supplier.applications.status_under_review": { ar: "قيد المراجعة", en: "Under review" },
   "supplier.applications.status_approved": { ar: "مقبول", en: "Approved" },
+  "supplier.applications.status_accepted": { ar: "مقبول", en: "Accepted" },
   "supplier.applications.status_rejected": { ar: "مرفوض", en: "Rejected" },
   "supplier.applications.approved": { ar: "تمت الموافقة وإنشاء الحساب", en: "Approved and account created" },
   "supplier.applications.rejected": { ar: "تم رفض الطلب", en: "Application rejected" },
@@ -342,6 +346,8 @@ export const dict: Dict = {
   "rates.hotel": { ar: "الفندق", en: "Hotel" },
   "rates.supplier": { ar: "المورد", en: "Supplier" },
   "rates.room_type": { ar: "نوع الغرفة", en: "Room Type" },
+  "rates.room": { ar: "الغرفة", en: "Room" },
+  "label.room_type": { ar: "نوع الغرفة", en: "Room Type" },
   "rates.view": { ar: "الإطلالة", en: "View" },
   "rates.meal_plan": { ar: "خطة الوجبة", en: "Meal Plan" },
   "rates.valid_from": { ar: "صالح من", en: "Valid from" },
@@ -1417,6 +1423,43 @@ export const dict: Dict = {
   // Rates Form
   "rates.profit_margin": { ar: "هامش الربح", en: "Profit Margin" },
   "rates.tax_rate": { ar: "نسبة الضريبة", en: "Tax Rate" },
+
+  // Validation messages
+  "val.required": { ar: "هذا الحقل مطلوب", en: "This field is required" },
+  "val.required_hotel": { ar: "الفندق مطلوب", en: "Hotel is required" },
+  "val.required_room": { ar: "الغرفة مطلوبة", en: "Room is required" },
+  "val.required_supplier": { ar: "المورد مطلوب عند عدم التحديد المباشر", en: "Supplier is required unless the rate is direct" },
+  "val.required_currency": { ar: "العملة مطلوبة", en: "Currency is required" },
+  "val.required_date_from": { ar: "تاريخ البداية مطلوب", en: "Start date is required" },
+  "val.required_date_to": { ar: "تاريخ النهاية مطلوب", en: "End date is required" },
+  "val.required_cost": { ar: "سعر التكلفة مطلوب", en: "Cost price is required" },
+  "val.date_range": { ar: "تاريخ النهاية يجب أن يكون مساوياً لتاريخ البداية أو بعده", en: "End date must be on or after the start date" },
+  "val.nonnegative": { ar: "يجب أن تكون القيمة صفراً أو أكثر", en: "Value must be zero or greater" },
+  "val.max_2000": { ar: "الحد الأقصى 2000 حرف", en: "Maximum 2000 characters allowed" },
+  "val.max_4000": { ar: "الحد الأقصى 4000 حرف", en: "Maximum 4000 characters allowed" },
+
+  // Supplier Applications
+  "supplier.applications.title": { ar: "طلبات الانضمام", en: "Supplier Applications" },
+  "supplier.applications.subtitle": { ar: "مراجعة واعتماد طلبات انضمام الموردين الجدد", en: "Review and approve new supplier onboarding requests" },
+  "supplier.applications.tab_all": { ar: "الكل", en: "All" },
+  "supplier.applications.tab_pending": { ar: "قيد المراجعة", en: "Pending" },
+  "supplier.applications.tab_approved": { ar: "مقبول", en: "Approved" },
+  "supplier.applications.tab_rejected": { ar: "مرفوض", en: "Rejected" },
+  "supplier.applications.empty": { ar: "لا توجد طلبات", en: "No applications" },
+  "supplier.applications.approved": { ar: "تم قبول الطلب", en: "Application approved" },
+  "supplier.applications.rejected": { ar: "تم رفض الطلب", en: "Application rejected" },
+  "supplier.applications.reject_title": { ar: "رفض الطلب", en: "Reject Application" },
+  "supplier.applications.reject_desc": { ar: "يرجى ذكر سبب الرفض", en: "Please provide a reason for rejection" },
+  "supplier.applications.reason_placeholder": { ar: "سبب الرفض...", en: "Rejection reason..." },
+  "supplier.applications.rejection_reason": { ar: "سبب الرفض", en: "Rejection Reason" },
+  "supplier.applications.status_pending": { ar: "قيد المراجعة", en: "Pending" },
+  "supplier.applications.status_under_review": { ar: "تحت المراجعة", en: "Under Review" },
+  "supplier.applications.status_accepted": { ar: "مقبول", en: "Accepted" },
+  "supplier.applications.status_approved": { ar: "مقبول", en: "Approved" },
+  "supplier.applications.status_rejected": { ar: "مرفوض", en: "Rejected" },
+  "supplier.apply.type": { ar: "نوع المورد", en: "Supplier Type" },
+  "supplier.apply.contact_name": { ar: "اسم جهة الاتصال", en: "Contact Name" },
+  "supplier.apply.contact_position": { ar: "المنصب", en: "Position" },
 };
 
 type I18nCtx = {

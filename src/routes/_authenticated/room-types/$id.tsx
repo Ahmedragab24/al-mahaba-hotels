@@ -114,7 +114,6 @@ export default function RoomTypeDetail() {
 
           {/* Room Type Info */}
           <KV label={lang === "ar" ? "نوع الغرفة" : "Room Type"} value={r.room_type ? (lang === "ar" ? r.room_type.name_ar : r.room_type.name_en) : ""} />
-          <KV label={lang === "ar" ? "كود نوع الغرفة" : "Room Type Code"} value={r.room_type?.code} mono />
 
           {/* Optional Spec Values (Hidden if empty) */}
           <KV label={t("label.max_adults")} value={r.room_type?.max_adults} />

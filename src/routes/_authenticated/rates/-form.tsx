@@ -1,11 +1,11 @@
-import { useEffect } from "react";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useMemo } from "react";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQueryClient } from "@tanstack/react-query";
 import { useI18n } from "@/lib/i18n";
 import {
-  useHotelsLite, useMealPlans, useCurrencies, useSuppliersLite, useHotelViewsScoped
+  useHotelsLite, useMealPlans, useCurrencies, useSuppliersLite,
 } from "@/lib/lookups";
 import { useGetRoomsQuery } from "@/store/services/rooms/roomsService";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,50 +13,54 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
 import { useCreatePriceMutation, useUpdatePriceMutation } from "@/store/services/pricing/pricingService";
 import { MealPlanConfigurator } from "@/components/meal-plan-configurator";
 
+function buildSchema(t: (k: string) => string) {
+  return z.object({
+    hotel_id: z.coerce.string().min(1, t("val.required_hotel")),
+    is_direct: z.boolean().default(false),
+    supplier_id: z.coerce.string().optional().or(z.literal("")),
+    room_id: z.coerce.string().min(1, t("val.required_room")),
+    hotel_view_id: z.coerce.string().optional().or(z.literal("")),
+    currency_id: z.coerce.string().min(1, t("val.required_currency")),
+    valid_from: z.string().min(1, t("val.required_date_from")),
+    valid_to: z.string().min(1, t("val.required_date_to")),
 
+    meal_plan_type: z.enum(["inclusive", "exclusive"]).default("inclusive"),
+    meal_plan_inclusive_details: z.array(z.number()).default([]),
+    meal_plan_exclusive_prices: z.record(z.string(), z.coerce.number()).default({}),
 
-const schema = z.object({
-  hotel_id: z.coerce.string(),
-  is_direct: z.boolean().default(false),
-  supplier_id: z.coerce.string().optional().or(z.literal("")),
-  room_id: z.coerce.string(),
-  hotel_view_id: z.coerce.string().optional().or(z.literal("")),
-  currency_id: z.coerce.string(),
-  valid_from: z.string().min(1),
-  valid_to: z.string().min(1),
+    cost_per_night: z.coerce
+      .number({ invalid_type_error: t("val.required_cost") })
+      .nonnegative(t("val.nonnegative")),
+    selling_price: z.coerce.number().nonnegative(t("val.nonnegative")).optional().or(z.literal("")),
+    profit_margin: z.coerce.number().optional().or(z.literal("")),
 
-  meal_plan_type: z.enum(["inclusive", "exclusive"]).default("inclusive"),
-  meal_plan_inclusive_details: z.array(z.number()).default([]),
-  meal_plan_exclusive_prices: z.record(z.string(), z.coerce.number()).default({}),
+    tax_type: z.enum(["inclusive_tax", "exclusive_tax"]).default("inclusive_tax"),
+    tax_rate: z.coerce.number().nonnegative(t("val.nonnegative")).default(15),
 
-  cost_per_night: z.coerce.number().nonnegative(),
-  selling_price: z.coerce.number().nonnegative().optional().or(z.literal("")),
-  profit_margin: z.coerce.number().optional().or(z.literal("")),
+    status: z.string().default("approved"),
 
-  tax_type: z.enum(["inclusive_tax", "exclusive_tax"]).default("inclusive_tax"),
-  tax_rate: z.coerce.number().nonnegative().default(15),
+    notes_en: z.string().max(2000, t("val.max_2000")).optional().or(z.literal("")),
+    notes_ar: z.string().max(2000, t("val.max_2000")).optional().or(z.literal("")),
+    cancellation_policy_en: z.string().max(4000, t("val.max_4000")).optional().or(z.literal("")),
+    cancellation_policy_ar: z.string().max(4000, t("val.max_4000")).optional().or(z.literal("")),
+  })
+    .refine((v) => !v.valid_from || !v.valid_to || new Date(v.valid_to) >= new Date(v.valid_from), {
+      path: ["valid_to"],
+      message: t("val.date_range"),
+    })
+    .refine((v) => v.is_direct || (v.supplier_id && v.supplier_id.toString().length > 0), {
+      path: ["supplier_id"],
+      message: t("val.required_supplier"),
+    });
+}
 
-  status: z.string().default("approved"),
-
-  notes_en: z.string().max(2000).optional().or(z.literal("")),
-  notes_ar: z.string().max(2000).optional().or(z.literal("")),
-  cancellation_policy_en: z.string().max(4000).optional().or(z.literal("")),
-  cancellation_policy_ar: z.string().max(4000).optional().or(z.literal("")),
-}).refine((v) => new Date(v.valid_to) >= new Date(v.valid_from), {
-  path: ["valid_to"], message: "valid_to >= valid_from",
-}).refine((v) => v.is_direct || (v.supplier_id && v.supplier_id.toString().length > 0), {
-  path: ["supplier_id"], message: "supplier required unless direct",
-});
-
-type FormVals = z.input<typeof schema>;
+type FormVals = z.input<ReturnType<typeof buildSchema>>;
 
 export function RateForm({ initial, onSaved }: { initial?: any; onSaved: (id: string) => void }) {
   const { t, lang } = useI18n();
@@ -70,6 +74,8 @@ export function RateForm({ initial, onSaved }: { initial?: any; onSaved: (id: st
   const [createPrice, { isLoading: isCreating }] = useCreatePriceMutation();
   const [updatePrice, { isLoading: isUpdating }] = useUpdatePriceMutation();
   const isPending = isCreating || isUpdating;
+
+  const schema = useMemo(() => buildSchema(t), [lang]);
 
   const form = useForm<FormVals>({
     resolver: zodResolver(schema),
@@ -103,7 +109,6 @@ export function RateForm({ initial, onSaved }: { initial?: any; onSaved: (id: st
   const mealPlanType = form.watch("meal_plan_type");
 
   const roomsQuery = useGetRoomsQuery({ hotel_id: hotelId });
-  const views = useHotelViewsScoped(hotelId);
 
   const selectedHotel = Array.isArray(hotels.data)
     ? hotels.data.find((h: any) => h.id == hotelId)
@@ -184,12 +189,12 @@ export function RateForm({ initial, onSaved }: { initial?: any; onSaved: (id: st
               </div>
             </div>
 
-            {/* Column 1: Right Column */}
+  {/* Column 1: Right Column */}
             <div className="space-y-4">
               <FormField control={form.control} name="hotel_id" render={({ field }) => (
                 <FormItem>
                   <FormLabel>{t("rates.hotel")} *</FormLabel>
-                  <Select value={field.value} onValueChange={(v) => { field.onChange(v); form.setValue("room_id", ""); form.setValue("hotel_view_id", ""); }}>
+                  <Select value={field.value} onValueChange={(v) => { field.onChange(v); form.setValue("room_id", ""); }}>
                     <FormControl><SelectTrigger><SelectValue placeholder="—" /></SelectTrigger></FormControl>
                     <SelectContent>
                       {(Array.isArray(hotels.data) ? hotels.data : Array.isArray(hotels.data?.data) ? hotels.data.data : [])?.map((h: any) => (
@@ -201,20 +206,49 @@ export function RateForm({ initial, onSaved }: { initial?: any; onSaved: (id: st
                 </FormItem>
               )} />
 
-              <FormField control={form.control} name="room_id" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("rates.room_type")} *</FormLabel>
-                  <Select value={field.value} onValueChange={field.onChange} disabled={!hotelId}>
-                    <FormControl><SelectTrigger><SelectValue placeholder="—" /></SelectTrigger></FormControl>
-                    <SelectContent>
-                      {(Array.isArray(roomsQuery.data) ? roomsQuery.data : Array.isArray((roomsQuery.data as any)?.data) ? (roomsQuery.data as any).data : [])?.map((r: any) => (
-                        <SelectItem key={r.id} value={r.id.toString()}>{lang === "ar" ? (r.name_ar || r.name_en) : (r.name_en || r.name_ar)}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )} />
+              <FormField control={form.control} name="room_id" render={({ field }) => {
+                const roomsList = Array.isArray(roomsQuery.data) ? roomsQuery.data : Array.isArray((roomsQuery.data as any)?.data) ? (roomsQuery.data as any).data : [];
+                const selectedRoom = roomsList.find((r: any) => r.id.toString() === field.value);
+                const roomTypeName = selectedRoom?.room_type
+                  ? (lang === "ar" ? (selectedRoom.room_type.name_ar || selectedRoom.room_type.name_en) : (selectedRoom.room_type.name_en || selectedRoom.room_type.name_ar))
+                  : null;
+                // Support hotel_view as object (name_ar/name_en), or view as string
+                const viewObj = selectedRoom?.hotel_view || selectedRoom?.hotelView;
+                const roomView = viewObj
+                  ? (lang === "ar" ? (viewObj.name_ar || viewObj.name_en) : (viewObj.name_en || viewObj.name_ar))
+                  : (typeof selectedRoom?.view === "string" ? selectedRoom.view : null);
+                return (
+                  <FormItem>
+                    <FormLabel>{t("rates.room")} *</FormLabel>
+                    <Select value={field.value} onValueChange={field.onChange} disabled={!hotelId}>
+                      <FormControl><SelectTrigger><SelectValue placeholder="—" /></SelectTrigger></FormControl>
+                      <SelectContent>
+                        {roomsList.map((r: any) => (
+                          <SelectItem key={r.id} value={r.id.toString()}>{lang === "ar" ? (r.name_ar || r.name_en) : (r.name_en || r.name_ar)}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                    {/* Auto-populated room info */}
+                    {selectedRoom && (
+                      <div className="mt-2 rounded-md border bg-muted/40 px-3 py-2 text-xs space-y-1">
+                        {roomTypeName && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground font-medium">{t("label.room_type")}:</span>
+                            <span className="font-semibold">{roomTypeName}</span>
+                          </div>
+                        )}
+                        {roomView && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground font-medium">{t("rates.view")}:</span>
+                            <span className="font-semibold">{roomView}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </FormItem>
+                );
+              }} />
             </div>
 
             {/* Column 2: Middle Column */}
@@ -227,22 +261,6 @@ export function RateForm({ initial, onSaved }: { initial?: any; onSaved: (id: st
                     <SelectContent>
                       {(Array.isArray(suppliers.data) ? suppliers.data : Array.isArray((suppliers.data as any)?.data) ? (suppliers.data as any).data : [])?.map((s: any) => (
                         <SelectItem key={s.id} value={s.id.toString()}>{lang === "ar" ? (s.name_ar || s.name_en) : (s.name_en || s.name_ar)}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )} />
-
-              <FormField control={form.control} name="hotel_view_id" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("rates.view")}</FormLabel>
-                  <Select value={field.value || "none"} onValueChange={(x) => field.onChange(x === "none" ? "" : x)} disabled={!hotelId}>
-                    <FormControl><SelectTrigger><SelectValue placeholder="—" /></SelectTrigger></FormControl>
-                    <SelectContent>
-                      <SelectItem value="none">—</SelectItem>
-                      {(Array.isArray(views.data) ? views.data : Array.isArray((views.data as any)?.data) ? (views.data as any).data : [])?.map((v: any) => (
-                        <SelectItem key={v.id} value={v.id.toString()}>{lang === "ar" ? (v.name_ar || v.name_en) : (v.name_en || v.name_ar)}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>

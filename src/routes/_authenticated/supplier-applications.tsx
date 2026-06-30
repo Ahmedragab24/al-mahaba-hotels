@@ -60,9 +60,12 @@ export default function SupplierApplicationsPage() {
         if (tab !== "all") params.status = tab;
         if (search) params.search = search;
         const apps = await apiClient.supplierRequests.getAll(params);
+        const appsArray = Array.isArray(apps) 
+          ? apps 
+          : (Array.isArray(apps?.data) ? apps.data : []);
         // Format to match standard App structure
         return {
-          rows: apps.map((a: any) => ({
+          rows: appsArray.map((a: any) => ({
             id: a.id,
             company_name_ar: a.company_name_ar || a.name_ar || "",
             company_name_en: a.company_name_en || a.name_en || "",
@@ -80,9 +83,9 @@ export default function SupplierApplicationsPage() {
             status: a.status || "pending",
             submitted_at: a.created_at || new Date().toISOString(),
             rejection_reason: a.rejection_reason || null,
-            country_name: a.country?.name || "",
-            city_name: a.city?.name || "",
-            supplier_type_name: a.supplier_type?.name || "",
+            country_name: lang === "ar" ? (a.country?.name_ar || a.country?.name || "") : (a.country?.name_en || a.country?.name || ""),
+            city_name: lang === "ar" ? (a.city?.name_ar || a.city?.name || "") : (a.city?.name_en || a.city?.name || ""),
+            supplier_type_name: lang === "ar" ? (a.supplier_type?.name_ar || a.supplier_type?.name || "") : (a.supplier_type?.name_en || a.supplier_type?.name || ""),
           }))
         };
       } catch (err) {

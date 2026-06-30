@@ -154,7 +154,7 @@ function ProfileView({ r, lang, t }: any) {
       <KV k={t("label.code")} v={<span className="font-mono">{r.code}</span>} />
       <KV k={t("rates.hotel")} v={lang === "ar" ? (r.hotel?.name_ar || r.hotel?.name_en) : (r.hotel?.name_en || r.hotel?.name_ar)} />
       <KV k={t("rates.supplier")} v={lang === "ar" ? (r.supplier?.name_ar || r.supplier?.name_en) : (r.supplier?.name_en || r.supplier?.name_ar)} />
-      <KV k={t("rates.room_type")} v={lang === "ar" ? (r.room?.name_ar || r.room?.name_en) : (r.room?.name_en || r.room?.name_ar)} />
+      <KV k={t("rates.room")} v={lang === "ar" ? (r.room?.name_ar || r.room?.name_en) : (r.room?.name_en || r.room?.name_ar)} />
       <KV k={t("rates.view")} v={r.hotel_view ? (lang === "ar" ? (r.hotel_view.name_ar || r.hotel_view.name_en) : (r.hotel_view.name_en || r.hotel_view.name_ar)) : null} />
       <KV k={t("rates.meal_plan")} v={r.meal_plan_type} />
       <KV k={t("label.currency")} v={<span className="font-mono">{r.currency?.code || ""}</span>} />

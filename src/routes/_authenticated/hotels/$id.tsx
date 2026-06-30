@@ -390,6 +390,8 @@ function ImagesTab({ hotelId, canWrite, images }: { hotelId: string; canWrite: b
   const [open, setOpen] = useState(false);
   const [previewFiles, setPreviewFiles] = useState<Array<{ file: File; preview: string }>>([]);
   const [delId, setDelId] = useState<string | null>(null);
+  const [lightboxImg, setLightboxImg] = useState<string | null>(null);
+  const [lightboxIdx, setLightboxIdx] = useState<number>(0);
 
   const [upload, { isLoading: isUploading }] = useUploadHotelImagesMutation();
   const [setCover] = useSetImageAsCoverMutation();
@@ -526,9 +528,15 @@ function ImagesTab({ hotelId, canWrite, images }: { hotelId: string; canWrite: b
       </div>
       <div className="grid gap-3 p-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
         {(!images || images.length === 0) && <div className="col-span-full text-center text-muted-foreground py-10">{t("empty.title")}</div>}
-        {(images || []).map((img: any) => (
+        {(images || []).map((img: any, idx: number) => (
           <div key={img.id} className="relative rounded-md border overflow-hidden group">
-            <img src={img.image_url} className="aspect-video w-full object-cover bg-muted" loading="lazy" alt={`Hotel image ${img.id}`} />
+            <button
+              type="button"
+              className="w-full p-0 border-0 bg-transparent cursor-zoom-in focus:outline-none"
+              onClick={() => { setLightboxIdx(idx); setLightboxImg(img.image_url); }}
+            >
+              <img src={img.image_url} className="aspect-video w-full object-cover bg-muted" loading="lazy" alt={`Hotel image ${img.id}`} />
+            </button>
             <div className="flex items-center justify-between p-2 text-xs">
               <span className="truncate">{img.caption || "—"}</span>
               {img.is_cover && <Badge>{t("label.is_cover")}</Badge>}
@@ -549,6 +557,54 @@ function ImagesTab({ hotelId, canWrite, images }: { hotelId: string; canWrite: b
         ))}
       </div>
       <ConfirmDialog open={!!delId} onOpenChange={(v) => !v && setDelId(null)} title={t("actions.delete")} description={t("toast.confirm_delete")} destructive onConfirm={() => delId && handleDelete(delId)} />
+
+      {/* Lightbox */}
+      <Dialog open={!!lightboxImg} onOpenChange={(v) => !v && setLightboxImg(null)}>
+        <DialogContent className="max-w-5xl p-0 bg-black/90 border-none overflow-hidden">
+          <div className="relative flex items-center justify-center min-h-[60vh]">
+            {lightboxImg && (
+              <img
+                src={lightboxImg}
+                alt="Hotel image"
+                className="max-h-[80vh] max-w-full object-contain"
+              />
+            )}
+            {/* Prev */}
+            {(images || []).length > 1 && (
+              <>
+                <button
+                  type="button"
+                  className="absolute start-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/80 text-white rounded-full p-2 transition-colors"
+                  onClick={() => {
+                    const list = images || [];
+                    const prev = (lightboxIdx - 1 + list.length) % list.length;
+                    setLightboxIdx(prev);
+                    setLightboxImg(list[prev].image_url);
+                  }}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                </button>
+                <button
+                  type="button"
+                  className="absolute end-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/80 text-white rounded-full p-2 transition-colors"
+                  onClick={() => {
+                    const list = images || [];
+                    const next = (lightboxIdx + 1) % list.length;
+                    setLightboxIdx(next);
+                    setLightboxImg(list[next].image_url);
+                  }}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                </button>
+              </>
+            )}
+            {/* Counter */}
+            <span className="absolute bottom-2 left-1/2 -translate-x-1/2 text-white/80 text-xs bg-black/50 px-3 py-1 rounded-full">
+              {lightboxIdx + 1} / {(images || []).length}
+            </span>
+          </div>
+        </DialogContent>
+      </Dialog>
     </CardContent></Card>
   );
 }

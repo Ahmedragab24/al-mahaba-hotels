@@ -3,7 +3,7 @@ import type { Supplier, SuppliersListResponse, ApiResponse } from "@/types/api";
 
 export const suppliersApi = api.injectEndpoints({
   endpoints: (build) => ({
-    getSuppliers: build.query<SuppliersListResponse, { lang?: string; search?: string; supplier_type_id?: number | string; status?: number; country_id?: number | string; all?: number | string; is_archived?: boolean } | void>({
+    getSuppliers: build.query<SuppliersListResponse, { lang?: string; search?: string; supplier_type_id?: number | string; status?: number; country_id?: number | string; all?: number | string; is_archived?: boolean; hotel_id?: number | string } | void>({
       query: (params) => ({ url: "/suppliers", params: params || undefined }),
       providesTags: ["Suppliers"],
     }),

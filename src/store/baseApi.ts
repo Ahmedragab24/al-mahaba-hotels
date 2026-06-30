@@ -26,6 +26,8 @@ export const api = createApi({
     "Bookings",
     "Notifications",
     "Languages",
+    "Invoices",
+    "PlatformTransactions",
   ],
   endpoints: () => ({}),
 });

@@ -20,6 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { NotificationsPopover } from "@/components/notifications-popover";
 
 export default function AuthenticatedLayout() {
   const { lang, t, dir } = useI18n();
@@ -110,6 +111,7 @@ export default function AuthenticatedLayout() {
             <SidebarTrigger />
             <div className="flex-1" />
             <ThemeToggle />
+            <NotificationsPopover />
             <LangSwitcher />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

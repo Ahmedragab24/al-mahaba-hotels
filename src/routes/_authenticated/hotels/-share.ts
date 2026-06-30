@@ -50,7 +50,7 @@ const HARAM = {
 
 /** Derive Haram distance / Near-Haram flag from hotel coordinates (no schema change). */
 export function haramInfo(h: any): { near: boolean; meters: number | null } {
-  const cityEn = String(h?.city?.name_en ?? "").toLowerCase();
+  const cityEn = String(h?.city?.name_en ?? h?.city?.name ?? (typeof h?.city === "string" ? h.city : "") ?? "").toLowerCase();
   const target = /makkah|mecca/.test(cityEn) ? HARAM.makkah : /madinah|medina/.test(cityEn) ? HARAM.madinah : null;
   const lat = h?.latitude == null ? null : Number(h.latitude);
   const lng = h?.longitude == null ? null : Number(h.longitude);
@@ -74,82 +74,125 @@ export function buildHotelInfoHtml(lang: DocLang, data: HotelShareData): string 
   const rtl = dir === "rtl";
   const h = data.hotel;
   if (!h) return null;
-  const nm = (o: any) => (rtl ? o?.name_ar || o?.name_en : o?.name_en || o?.name_ar) ?? "—";
+
+  // Robust name selector with string and object fallbacks
+  const nm = (o: any) => {
+    if (!o) return "—";
+    if (typeof o === "string") return o;
+    return (rtl ? o.name_ar || o.name_en || o.name : o.name_en || o.name_ar || o.name) ?? "—";
+  };
+
   const haram = haramInfo(h);
 
   const meta = (k: string, v: unknown, ltr = false) =>
     `<div class="box"><div class="k">${esc(k)}</div><div class="v"${ltr ? ' dir="ltr"' : ""}>${esc(v || "—")}</div></div>`;
 
-  const imgGrid = data.images.length
-    ? `<h2>${esc(s.images)}</h2><div class="imgs">${data.images
-        .map((i: any) => `<figure><img src="${esc(i.file_path)}" alt="${esc(i.caption ?? nm(h))}" />${i.caption ? `<figcaption>${esc(i.caption)}</figcaption>` : ""}</figure>`)
+  // Fallbacks for related data (from API response h.* if Supabase data.* is empty)
+  const hotelRooms = (data.rooms && data.rooms.length) ? data.rooms : (h.rooms ?? h.room_types ?? []);
+  const hotelViews = (data.views && data.views.length) ? data.views : (h.views ?? []);
+  const hotelMeals = (data.meals && data.meals.length) ? data.meals : (h.meals ?? h.meal_plans ?? []);
+  const hotelFacilities = (data.facilities && data.facilities.length) ? data.facilities : (h.facilities ?? []);
+  const hotelContacts = (data.contacts && data.contacts.length) ? data.contacts : (h.contacts ?? []);
+  const hotelImages = ((data.images && data.images.length) ? data.images : (h.images ?? [])).slice(0, 6);
+
+  const imgGrid = hotelImages.length
+    ? `<h2>${esc(s.images)}</h2><div class="imgs">${hotelImages
+        .map((i: any) => `<figure><img src="${esc(i.image_url ?? i.file_path)}" alt="${esc(i.caption ?? nm(h))}" />${i.caption ? `<figcaption>${esc(i.caption)}</figcaption>` : ""}</figure>`)
         .join("")}</div>`
     : "";
 
-  const roomRows = data.rooms
+  const roomRows = hotelRooms
     .map((r: any) => `<tr><td>${esc(nm(r))}</td><td class="c">${esc(r.max_adults ?? "—")}</td><td class="c">${esc(r.max_children ?? "—")}</td><td>${esc(r.bed_type ?? "—")}</td></tr>`)
     .join("");
-  const roomsTable = data.rooms.length
+  const roomsTable = hotelRooms.length
     ? `<h2>${esc(s.room_types)}</h2><table><thead><tr><th>${esc(s.name)}</th><th>${esc(s.max_adults)}</th><th>${esc(s.max_children)}</th><th>${esc(s.bed_type)}</th></tr></thead><tbody>${roomRows}</tbody></table>`
     : "";
 
-  const viewsList = data.views.length
-    ? `<h2>${esc(s.views)}</h2><div class="chips">${data.views.map((v: any) => `<span class="chip">${esc(nm(v))}</span>`).join("")}</div>`
+  const getViewName = (v: any) => {
+    if (typeof v === "string") return v;
+    return nm(v);
+  };
+  const viewsList = hotelViews.length
+    ? `<h2>${esc(s.views)}</h2><div class="chips">${hotelViews.map((v: any) => `<span class="chip">${esc(getViewName(v))}</span>`).join("")}</div>`
     : "";
 
-  const mealRows = data.meals
-    .map((m: any) => `<tr><td class="c">${esc(m.board)}</td><td>${esc(nm(m))}</td><td>${esc((rtl ? m.description_ar || m.description_en : m.description_en || m.description_ar) ?? "")}</td></tr>`)
+  const mealRows = hotelMeals
+    .map((m: any) => `<tr><td class="c">${esc(m.board ?? m.code ?? "—")}</td><td>${esc(nm(m))}</td><td>${esc((rtl ? m.description_ar || m.description_en || m.description : m.description_en || m.description_ar || m.description) ?? "")}</td></tr>`)
     .join("");
-  const mealsTable = data.meals.length
+  const mealsTable = hotelMeals.length
     ? `<h2>${esc(s.meal_plans)}</h2><table><thead><tr><th>${esc(s.board)}</th><th>${esc(s.name)}</th><th>${esc(s.description)}</th></tr></thead><tbody>${mealRows}</tbody></table>`
     : "";
 
-  const facChips = data.facilities.length
-    ? `<h2>${esc(s.facilities)}</h2><div class="chips">${data.facilities.map((f: any) => `<span class="chip">${esc(nm(f))}</span>`).join("")}</div>`
+  const getFacilityName = (f: any) => {
+    if (typeof f === "string") return f;
+    return nm(f);
+  };
+  const facChips = hotelFacilities.length
+    ? `<h2>${esc(s.facilities)}</h2><div class="chips">${hotelFacilities.map((f: any) => `<span class="chip">${esc(getFacilityName(f))}</span>`).join("")}</div>`
     : "";
 
-  const contactRows = data.contacts
-    .map((c: any) => `<tr><td>${esc(c.full_name)}${c.is_primary ? " ★" : ""}</td><td>${esc(c.title ?? "—")}</td><td dir="ltr">${esc(c.phone || c.mobile || "—")}</td><td dir="ltr">${esc(c.email ?? "—")}</td><td dir="ltr">${esc(c.whatsapp ?? "—")}</td></tr>`)
+  const contactRows = hotelContacts
+    .map((c: any) => `<tr><td>${esc(c.full_name || c.name || "—")}${c.is_primary ? " ★" : ""}</td><td>${esc(c.title ?? c.job_title ?? "—")}</td><td dir="ltr">${esc(c.phone || c.mobile || "—")}</td><td dir="ltr">${esc(c.email ?? "—")}</td><td dir="ltr">${esc(c.whatsapp ?? "—")}</td></tr>`)
     .join("");
-  const contactsTable = data.contacts.length
+  const contactsTable = hotelContacts.length
     ? `<h2>${esc(s.contacts)}</h2><table><thead><tr><th>${esc(s.name)}</th><th>${esc(s.job_title)}</th><th>${esc(s.phone)}</th><th>${esc(s.email)}</th><th>WhatsApp</th></tr></thead><tbody>${contactRows}</tbody></table>`
     : "";
 
-  const desc = rtl ? h.description_ar || h.description_en : h.description_en || h.description_ar;
+  const desc = rtl ? h.description_ar || h.description || h.description_en : h.description_en || h.description || h.description_ar;
+  const policies = rtl ? h.policies_ar || h.policies || h.policies_en : h.policies_en || h.policies || h.policies_ar;
+
+  const starsCount = Number(h.stars ?? h.star_rating ?? 0);
+  const coverImage = h.cover_image ?? h.cover_image_path;
 
   return `<!doctype html>
 <html lang="${lang}" dir="${dir}">
 <head>
 <meta charset="utf-8" />
 <title>${esc(s.title)} — ${esc(nm(h))}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; color: #1a1a2e; padding: 32px; font-size: 13px; }
+  body { font-family: 'Cairo', 'Inter', 'Segoe UI', Tahoma, Arial, sans-serif; color: #1e293b; padding: 32px; font-size: 13px; background: #fff; line-height: 1.5; }
   .head { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #14532d; padding-bottom: 16px; }
-  .head img { height: 64px; }
+  .head img { height: 60px; object-fit: contain; }
   .head .t { text-align: ${rtl ? "left" : "right"}; }
-  .head h1 { font-size: 24px; color: #14532d; }
-  .head .no { font-size: 14px; color: #555; margin-top: 4px; }
+  .head h1 { font-size: 22px; color: #14532d; font-weight: 700; }
+  .head .no { font-size: 13px; color: #64748b; margin-top: 4px; font-weight: 600; }
+  .hero { margin: 20px 0; border-radius: 12px; overflow: hidden; height: 280px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05); }
+  .hero img { width: 100%; height: 100%; object-fit: cover; }
   .meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 20px 0; }
-  .box { border: 1px solid #ddd; border-radius: 8px; padding: 10px 14px; }
-  .box .k { font-size: 11px; color: #777; }
-  .box .v { font-weight: 600; margin-top: 2px; }
-  h2 { font-size: 15px; color: #14532d; margin: 18px 0 8px; }
-  table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
-  th, td { border: 1px solid #ddd; padding: 7px 8px; text-align: ${rtl ? "right" : "left"}; }
-  th { background: #14532d; color: #fff; font-size: 11px; }
+  .box { border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; background: #f8fafc; }
+  .box .k { font-size: 11px; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  .box .v { font-weight: 600; margin-top: 3px; color: #0f172a; }
+  h2 { font-size: 15px; color: #14532d; margin: 24px 0 10px; font-weight: 700; border-bottom: 1px solid #f0fdf4; padding-bottom: 4px; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 12px; border-radius: 8px; overflow: hidden; border: 1px solid #e2e8f0; }
+  th, td { padding: 9px 12px; text-align: ${rtl ? "right" : "left"}; border-bottom: 1px solid #e2e8f0; }
+  th { background: #14532d; color: #fff; font-size: 12px; font-weight: 600; }
+  tr:last-child td { border-bottom: none; }
   td.c { text-align: center; }
   .chips { display: flex; flex-wrap: wrap; gap: 6px; }
-  .chip { border: 1px solid #cdd; background: #f3faf5; border-radius: 999px; padding: 4px 12px; font-size: 12px; }
-  .imgs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-  .imgs img { width: 100%; aspect-ratio: 16/10; object-fit: cover; border-radius: 8px; border: 1px solid #ddd; }
-  .imgs figcaption { font-size: 11px; color: #777; margin-top: 3px; }
-  .desc { border: 1px solid #eee; border-radius: 8px; padding: 12px 16px; background: #fafafa; line-height: 1.7; white-space: pre-wrap; }
-  .stars { color: #b8860b; letter-spacing: 2px; }
-  .foot { margin-top: 28px; text-align: center; color: #777; font-size: 11px; border-top: 1px solid #eee; padding-top: 12px; }
-  @media print { body { padding: 12px; } .noprint { display: none; } }
-  .noprint { position: fixed; top: 12px; ${rtl ? "left" : "right"}: 12px; }
-  .noprint button { background: #14532d; color: #fff; border: 0; border-radius: 6px; padding: 10px 18px; font-size: 14px; cursor: pointer; }
+  .chip { border: 1px solid #bbf7d0; background: #f0fdf4; color: #166534; border-radius: 999px; padding: 5px 14px; font-size: 12px; font-weight: 500; }
+  .imgs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 10px; }
+  .imgs figure { margin: 0; }
+  .imgs img { width: 100%; aspect-ratio: 16/10; object-fit: cover; border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: 0 2px 4px 0 rgb(0 0 0 / 0.05); }
+  .imgs figcaption { font-size: 11px; color: #64748b; margin-top: 4px; text-align: center; }
+  .desc { border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px 18px; background: #f8fafc; line-height: 1.7; white-space: pre-wrap; color: #334155; }
+  .stars { color: #eab308; letter-spacing: 2px; }
+  .foot { margin-top: 36px; text-align: center; color: #64748b; font-size: 11px; border-top: 1px solid #e2e8f0; padding-top: 16px; font-weight: 500; }
+  @media print { 
+    body { padding: 0; font-size: 12px; } 
+    .noprint { display: none; } 
+    .box { background: #fff !important; border-color: #ddd !important; }
+    .chip { background: #fff !important; border-color: #ddd !important; color: #333 !important; }
+    .desc { background: #fff !important; border-color: #ddd !important; }
+    table { border-color: #ddd !important; }
+    th { background: #14532d !important; color: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+  .noprint { position: fixed; top: 12px; ${rtl ? "left" : "right"}: 12px; z-index: 9999; }
+  .noprint button { background: #166534; color: #fff; border: 0; border-radius: 6px; padding: 10px 18px; font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); transition: background 0.2s; }
+  .noprint button:hover { background: #14532d; }
 </style>
 </head>
 <body>
@@ -161,20 +204,23 @@ export function buildHotelInfoHtml(lang: DocLang, data: HotelShareData): string 
     </div>
     <div class="t">
       <h1>${esc(s.title)}</h1>
-      <div class="no">${esc(nm(h))} <span class="stars">${(h.stars ?? h.star_rating) ? "★".repeat(h.stars ?? h.star_rating) : ""}</span></div>
+      <div class="no">${esc(nm(h))} <span class="stars">${starsCount > 0 ? "★".repeat(starsCount) : ""}</span></div>
     </div>
   </div>
 
+  ${coverImage ? `<div class="hero"><img src="${esc(coverImage)}" alt="${esc(nm(h))}" /></div>` : ""}
+
   <div class="meta">
     ${meta(s.code, h.code, true)}
-    ${meta(s.rating, (h.stars ?? h.star_rating) ? "★".repeat(h.stars ?? h.star_rating) : "—")}
+    ${meta(s.brand, h.brand)}
+    ${meta(s.rating, starsCount > 0 ? "★".repeat(starsCount) : "—")}
     ${meta(s.country, nm(h.country))}
     ${meta(s.city, nm(h.city))}
     ${meta(s.district, h.district)}
-    ${meta(s.address, [h.address_1 ?? h.address_line1, h.postal_code].filter(Boolean).join(", "))}
+    ${meta(s.address, [h.address_1 ?? h.address_line1 ?? h.address, h.address_2 ?? h.address_line2, h.postal_code].filter(Boolean).join(", "))}
     ${meta(s.near_haram, haram.meters == null ? "—" : haram.near ? s.yes : s.no)}
     ${meta(s.distance, haram.meters == null ? "—" : haram.meters.toLocaleString("en-US"), true)}
-    ${(h.map_link ?? h.location_url) ? `<div class="box"><div class="k">${esc(s.maps)}</div><div class="v"><a href="${esc(h.map_link ?? h.location_url)}" target="_blank" style="color:#14532d;text-decoration:underline">${esc(s.maps)}</a></div></div>` : ""}
+    ${(h.map_link ?? h.location_url) ? `<div class="box"><div class="k">${esc(s.maps)}</div><div class="v"><a href="${esc(h.map_link ?? h.location_url)}" target="_blank" style="color:#14532d;text-decoration:underline;font-weight:600">${esc(s.maps)}</a></div></div>` : ""}
     ${meta(s.phone, h.phone, true)}
     ${meta(s.email, h.email, true)}
     ${meta(s.website, h.website, true)}
@@ -182,6 +228,7 @@ export function buildHotelInfoHtml(lang: DocLang, data: HotelShareData): string 
   </div>
 
   ${desc ? `<h2>${esc(s.description)}</h2><div class="desc">${esc(desc)}</div>` : ""}
+  ${policies ? `<h2>${esc(s.policies)}</h2><div class="desc">${esc(policies)}</div>` : ""}
   ${imgGrid}
   ${roomsTable}
   ${viewsList}

@@ -3,23 +3,24 @@ import { useNavigate, useParams } from "react-router-dom";
 import { db } from "@/lib/api/db";
 import { apiClient } from "@/lib/api/api-client";
 import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
+import { useGetInvoiceByIdQuery, useUpdateInvoiceMutation, useRecordInvoicePaymentMutation } from "@/store/api";
+import type { InvoiceStatus } from "@/types/api";
 import { useI18n } from "@/lib/i18n";
 import { useSelector } from "react-redux";
 import { selectAuth } from "@/store/features/authSlice";
-import { hasRole, hasAnyRole, isAdmin, canAccessModule } from "@/lib/auth-utils";
+import { hasAnyRole } from "@/lib/auth-utils";
 import { PageHeader } from "@/components/page-header";
-import { EntityHistory } from "@/components/entity-history";
-import { EntityAttachments } from "@/components/entity-attachments";
 import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import logoUrl from "@/assets/daleel-logo-transparent.png";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ArrowLeft, Printer, Mail, MessageCircle, Plus, Trash2, Send, BadgeCheck, Ban } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ArrowLeft, Printer, Mail, MessageCircle, Send, BadgeCheck, CreditCard } from "lucide-react";
 import { formatDate, formatMoney } from "@/lib/format";
 import { dbErrorMessage } from "@/lib/db-errors";
 import { toast } from "sonner";
@@ -39,7 +40,6 @@ export default function InvoiceDetail() {
   const { t, lang, dir } = useI18n();
   const auth = useSelector(selectAuth);
   const navigate = useNavigate();
-  const qc = useQueryClient();
   const canWrite = hasAnyRole(auth, [...FINANCE_WRITE]);
 
   const [cancelOpen, setCancelOpen] = useState(false);
@@ -53,29 +53,75 @@ export default function InvoiceDetail() {
   const [fees, setFees] = useState("0");
   const [busy, setBusy] = useState(false);
 
-  const q = useQuery({
-    queryKey: ["invoice", id],
+  // Payment dialog state
+  const [payOpen, setPayOpen] = useState(false);
+  const [payDate, setPayDate] = useState(new Date().toISOString().slice(0, 10));
+  const [payAmount, setPayAmount] = useState("");
+  const [payMethod, setPayMethod] = useState<"cash" | "bank_transfer" | "credit_card" | "cheque" | "other">("bank_transfer");
+  const [payRef, setPayRef] = useState("");
+  const [payNotes, setPayNotes] = useState("");
+
+  const { data: invoiceData, isLoading: isInvoiceLoading, refetch: refetchInvoice } = useGetInvoiceByIdQuery({ id: id || "", lang });
+  const [updateInvoiceMutation] = useUpdateInvoiceMutation();
+  const [recordPayment] = useRecordInvoicePaymentMutation();
+
+  const allocsQuery = useQuery({
+    queryKey: ["invoice-allocations", id],
     queryFn: async () => {
-      const [{ data: inv, error }, { data: items }, { data: allocs }] = await Promise.all([
-        db.from("invoices").select("*, customer:customers(name_en,name_ar,email,phone), booking:bookings(booking_no)").eq("id", id).maybeSingle(),
-        db.from("invoice_items").select("*").eq("invoice_id", id).order("created_at"),
-        db.from("receipt_allocations").select("*, receipt:receipts(receipt_no,receipt_date,payment_method,status)").eq("invoice_id", id).order("created_at"),
-      ]);
-      if (error) throw error;
-      return { inv, items: items ?? [], allocs: allocs ?? [] };
-    },
+      const { data } = await db.from("receipt_allocations").select("*, receipt:receipts(receipt_no,receipt_date,payment_method,status)").eq("invoice_id", id || "").order("created_at");
+      return data ?? [];
+    }
   });
 
-  const refresh = () => { qc.invalidateQueries({ queryKey: ["invoice", id] }); qc.invalidateQueries({ queryKey: ["invoices"] }); };
+  const refresh = () => {
+    refetchInvoice();
+    allocsQuery.refetch();
+  };
 
-  const setStatus = async (status: string, extra?: Record<string, unknown>) => {
+  const setStatus = async (status: InvoiceStatus, extra?: Record<string, unknown>) => {
     setBusy(true);
     try {
-      await apiClient.invoices.update(id || "", { status, ...extra });
+      await updateInvoiceMutation({ id: id || "", body: { status, ...extra } }).unwrap();
       toast.success(t("label.saved", "Saved"));
       setCancelOpen(false);
       refresh();
-    } catch (e) { toast.error(dbErrorMessage(e)); } finally { setBusy(false); }
+    } catch (e: any) {
+      toast.error(e.message || t("label.error", "Error"));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleRecordPayment = async () => {
+    if (!payAmount || Number(payAmount) <= 0) {
+      toast.error(lang === "ar" ? "يرجى إدخال مبلغ صحيح" : "Please enter a valid amount");
+      return;
+    }
+    setBusy(true);
+    try {
+      await recordPayment({
+        id: id || "",
+        body: {
+          payment_date: payDate,
+          amount: Number(payAmount),
+          payment_method: payMethod,
+          transaction_reference: payRef || undefined,
+          notes: payNotes || undefined,
+        }
+      }).unwrap();
+      toast.success(lang === "ar" ? "تم تسجيل الدفعة بنجاح" : "Payment recorded successfully");
+      setPayOpen(false);
+      setPayAmount("");
+      setPayRef("");
+      setPayNotes("");
+      setPayMethod("bank_transfer");
+      setPayDate(new Date().toISOString().slice(0, 10));
+      refetchInvoice();
+    } catch (e: any) {
+      toast.error(e.message || t("label.error", "Error"));
+    } finally {
+      setBusy(false);
+    }
   };
 
   const addItem = async () => {
@@ -91,50 +137,413 @@ export default function InvoiceDetail() {
     } catch (e) { toast.error(dbErrorMessage(e)); } finally { setBusy(false); }
   };
 
-  const removeItem = async (itemId: string) => {
+  const removeItem = async (itemId?: string | number) => {
+    if (!itemId) return;
     try {
       await apiClient.invoiceItems.delete(itemId);
       refresh();
     } catch (e) { toast.error(dbErrorMessage(e)); }
   };
 
-  if (q.isLoading) return <div className="p-6 text-muted-foreground">{t("label.loading")}</div>;
-  const x = q.data?.inv as any;
+  if (isInvoiceLoading) return <div className="p-6 text-muted-foreground">{t("label.loading")}</div>;
+  const x = invoiceData;
   if (!x) return <div className="p-6 text-muted-foreground">{t("label.no_results")}</div>;
-  const items = q.data!.items as any[];
-  const allocs = q.data!.allocs as any[];
+  const items = invoiceData?.items ?? [];
+  const allocs = allocsQuery.data ?? [];
   const custName = x.customer ? (lang === "ar" ? x.customer.name_ar || x.customer.name_en : x.customer.name_en || x.customer.name_ar) : "—";
   const balance = Number(x.total_amount) - Number(x.paid_amount);
   const isDraft = x.status === "draft";
+  const currencyCode = typeof x.currency === "object" ? x.currency?.code : (x.currency ?? "SAR");
+
+  const ar = (a: string, e: string) => (lang === "ar" ? a : e);
 
   const printInvoice = () => {
-    const rows = items.map((i) => `<tr><td>${lang === "ar" ? i.description_ar || i.description_en : i.description_en}</td><td>${i.quantity}</td><td>${Number(i.unit_price).toLocaleString()}</td><td>${Number(i.taxes).toLocaleString()}</td><td>${Number(i.fees).toLocaleString()}</td><td>${Number(i.line_total).toLocaleString()}</td></tr>`).join("");
+    const logoSrc = window.location.origin + logoUrl;
+    let itemsListHtml = "";
+    if (items.length > 0) {
+      itemsListHtml = items.map((i, index) => {
+        const desc = lang === "ar" ? i.description_ar || i.description_en || i.description : i.description_en || i.description_ar || i.description;
+        const taxesVal = i.taxes ?? 0;
+        const totalVal = i.line_total ?? i.total_price ?? (Number(i.quantity) * Number(i.unit_price));
+        return `<tr>
+          <td>${index + 1}</td>
+          <td>${desc || "—"}</td>
+          <td style="text-align: end;">${i.quantity}</td>
+          <td style="text-align: end;">${Number(i.unit_price).toLocaleString()}</td>
+          <td style="text-align: end;">${x.tax_percent ? `${x.tax_percent}%` : "—"}</td>
+          <td style="text-align: end;">${Number(taxesVal).toLocaleString()}</td>
+          <td style="text-align: end; font-weight: 600;">${Number(totalVal).toLocaleString()} ${currencyCode}</td>
+        </tr>`;
+      }).join("");
+    } else {
+      itemsListHtml = `<tr>
+        <td>1</td>
+        <td>${ar("حجز خدمات عامة / فندقية", "General Services / Hotel Booking")} - ${x.invoice_number || x.invoice_no}</td>
+        <td style="text-align: end;">1</td>
+        <td style="text-align: end;">${Number(x.subtotal ?? x.sub_total).toLocaleString()}</td>
+        <td style="text-align: end;">${x.tax_percent ? `${x.tax_percent}%` : "—"}</td>
+        <td style="text-align: end;">${Number(x.tax_amount ?? x.taxes).toLocaleString()}</td>
+        <td style="text-align: end; font-weight: 600;">${Number(x.total_amount).toLocaleString()} ${currencyCode}</td>
+      </tr>`;
+    }
+
     const w = window.open("", "_blank");
     if (!w) return;
-    w.document.write(`<!doctype html><html dir="${dir}"><head><meta charset="utf-8"><title>${x.invoice_no}</title>
-<style>body{font-family:system-ui;padding:32px;color:#111}h1{font-size:20px}table{width:100%;border-collapse:collapse;margin-top:16px}td,th{border:1px solid #ddd;padding:8px;font-size:12px;text-align:start}tfoot td{font-weight:700}</style></head><body>
-<h1>${t("inv.title")} · ${x.invoice_no}</h1>
-<p>${t("inv.customer")}: ${custName}<br/>${t("inv.date")}: ${x.invoice_date} · ${t("inv.due_date")}: ${x.due_date}<br/>${t("label.status")}: ${t(`invstatus.${x.status}`)}</p>
-<table><thead><tr><th>${t("inv.item_desc")}</th><th>${t("inv.qty")}</th><th>${t("inv.unit_price")}</th><th>${t("inv.taxes")}</th><th>${t("inv.fees")}</th><th>${t("inv.line_total")}</th></tr></thead>
-<tbody>${rows}</tbody>
-<tfoot><tr><td colspan="5">${t("inv.subtotal")}</td><td>${Number(x.subtotal).toLocaleString()}</td></tr>
-<tr><td colspan="5">${t("inv.discount")}</td><td>${Number(x.discount).toLocaleString()}</td></tr>
-<tr><td colspan="5">${t("inv.total")} (${x.currency})</td><td>${Number(x.total_amount).toLocaleString()}</td></tr>
-<tr><td colspan="5">${t("inv.paid")}</td><td>${Number(x.paid_amount).toLocaleString()}</td></tr>
-<tr><td colspan="5">${t("inv.balance")}</td><td>${balance.toLocaleString()}</td></tr></tfoot></table>
-<script>window.print()</script></body></html>`);
+    w.document.write(`<!doctype html>
+<html dir="${dir}">
+<head>
+  <meta charset="utf-8">
+  <title>${x.invoice_number || x.invoice_no}</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Inter:wght@400;600;700&display=swap');
+    
+    body {
+      font-family: 'Cairo', 'Inter', system-ui, sans-serif;
+      margin: 0;
+      padding: 40px;
+      color: #1f2937;
+      background-color: #ffffff;
+      line-height: 1.5;
+    }
+    
+    .invoice-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 2px solid #e5e7eb;
+      padding-bottom: 20px;
+      margin-bottom: 30px;
+    }
+    
+    .company-logo {
+      font-size: 24px;
+      font-weight: 700;
+      color: #047857;
+    }
+    
+    .invoice-title {
+      font-size: 28px;
+      font-weight: 700;
+      color: #111827;
+      text-transform: uppercase;
+    }
+    
+    .invoice-details {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+      margin-bottom: 40px;
+    }
+    
+    .details-block h3 {
+      font-size: 14px;
+      text-transform: uppercase;
+      color: #6b7280;
+      margin: 0 0 10px 0;
+      border-bottom: 1px solid #e5e7eb;
+      padding-bottom: 5px;
+      font-weight: 600;
+    }
+    
+    .details-block p {
+      margin: 4px 0;
+      font-size: 14px;
+    }
+    
+    .details-block .strong {
+      font-weight: 600;
+      color: #111827;
+    }
+    
+    table.items-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 30px;
+    }
+    
+    table.items-table th {
+      background-color: #f3f4f6;
+      color: #374151;
+      font-weight: 600;
+      text-align: start;
+      padding: 12px;
+      font-size: 13px;
+      border-bottom: 2px solid #d1d5db;
+    }
+    
+    table.items-table td {
+      padding: 12px;
+      font-size: 13px;
+      border-bottom: 1px solid #e5e7eb;
+      color: #4b5563;
+    }
+    
+    table.items-table tr:last-child td {
+      border-bottom: 2px solid #d1d5db;
+    }
+    
+    .summary-section {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 40px;
+    }
+    
+    .notes-block {
+      flex: 1;
+      background-color: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      padding: 15px;
+      font-size: 13px;
+      color: #4b5563;
+      max-width: 50%;
+    }
+    
+    .notes-block h4 {
+      margin: 0 0 8px 0;
+      font-size: 13px;
+      font-weight: 600;
+      color: #374151;
+    }
+    
+    .totals-block {
+      width: 300px;
+    }
+    
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      font-size: 14px;
+      border-bottom: 1px dashed #e5e7eb;
+    }
+    
+    .total-row:last-child {
+      border-bottom: none;
+    }
+    
+    .total-row.grand-total {
+      font-size: 18px;
+      font-weight: 700;
+      color: #111827;
+      border-top: 2px solid #111827;
+      border-bottom: 2px solid #111827;
+      padding: 10px 0;
+      margin-top: 5px;
+    }
+    
+    .total-row.balance-due {
+      font-size: 16px;
+      font-weight: 700;
+      color: #b91c1c;
+      padding: 8px 0;
+    }
+    
+    .footer {
+      margin-top: 60px;
+      text-align: center;
+      font-size: 12px;
+      color: #9ca3af;
+      border-top: 1px solid #e5e7eb;
+      padding-top: 20px;
+    }
+    
+    @media print {
+      body {
+        padding: 20px;
+      }
+      .no-print {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="invoice-header">
+    <div style="display: flex; align-items: center; gap: 15px;">
+      <img src="${logoSrc}" alt="logo" style="height: 60px; object-fit: contain;" />
+      <div>
+        <div class="company-logo" style="color: #bf9f53;">${ar("شركة دليل المعالم", "Daleel Elm3alem")}</div>
+        <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">
+          ${ar("الرقم الضريبي: 300123456700003", "Tax Registration: 300123456700003")}
+        </div>
+      </div>
+    </div>
+    <div style="text-align: end;">
+      <div class="invoice-title">${ar("فاتورة ضريبية", "Tax Invoice")}</div>
+      <div style="font-weight: 600; font-size: 16px; margin-top: 5px;">${x.invoice_number || x.invoice_no}</div>
+    </div>
+  </div>
+
+  <div class="invoice-details">
+    <div class="details-block">
+      <h3>${ar("العميل", "Bill To")}</h3>
+      <p><span class="strong">${custName}</span></p>
+      ${x.customer?.email ? `<p>${ar("البريد الإلكتروني", "Email")}: ${x.customer.email}</p>` : ""}
+      ${x.customer?.phone ? `<p>${ar("رقم الهاتف", "Phone")}: ${x.customer.phone}</p>` : ""}
+    </div>
+    <div class="details-block" style="${dir === "rtl" ? "text-align: left;" : "text-align: right;"}">
+      <h3>${ar("تفاصيل الفاتورة", "Invoice Details")}</h3>
+      <p><span class="strong">${ar("تاريخ الإصدار", "Issue Date")}:</span> ${formatDate(x.invoice_date, lang)}</p>
+      <p><span class="strong">${ar("تاريخ الاستحقاق", "Due Date")}:</span> ${formatDate(x.due_date, lang)}</p>
+      <p><span class="strong">${ar("رقم الحجز", "Booking Reference")}:</span> ${x.booking?.booking_no || x.booking_id || "—"}</p>
+      <p><span class="strong">${ar("العملة", "Currency")}:</span> ${currencyCode}</p>
+      <p><span class="strong">${ar("الحالة", "Status")}:</span> ${x.status_text || x.status}</p>
+    </div>
+  </div>
+
+  <table class="items-table">
+    <thead>
+      <tr>
+        <th style="width: 50px;">#</th>
+        <th>${t("inv.item_desc")}</th>
+        <th style="text-align: end; width: 80px;">${t("inv.qty")}</th>
+        <th style="text-align: end; width: 120px;">${t("inv.unit_price")}</th>
+        <th style="text-align: end; width: 100px;">${ar("نسبة الضريبة", "Tax %")}</th>
+        <th style="text-align: end; width: 120px;">${t("inv.taxes")}</th>
+        <th style="text-align: end; width: 140px;">${t("inv.line_total")}</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${itemsListHtml}
+    </tbody>
+  </table>
+
+  <div class="summary-section">
+    <div class="notes-block">
+      <h4>${ar("ملاحظات وشروط الدفع", "Notes & Terms")}</h4>
+      <p style="margin: 0; white-space: pre-wrap;">${x.notes || ar("شكراً لتعاملكم معنا.", "Thank you for your business.")}</p>
+    </div>
+    <div class="totals-block">
+      <div class="total-row">
+        <span>${t("inv.subtotal")}</span>
+        <span>${formatMoney(Number(x.subtotal ?? x.sub_total), currencyCode, lang)}</span>
+      </div>
+      <div class="total-row">
+        <span>${ar("خصم مباشر", "Discount")}</span>
+        <span>${formatMoney(Number(x.discount), currencyCode, lang)}</span>
+      </div>
+      <div class="total-row">
+        <span>${ar("ضريبة القيمة المضافة", "VAT")}${x.tax_percent ? ` (${x.tax_percent}%)` : ""}</span>
+        <span>${formatMoney(Number(x.tax_amount ?? x.taxes), currencyCode, lang)}</span>
+      </div>
+      <div class="total-row grand-total">
+        <span>${ar("الإجمالي", "Grand Total")}</span>
+        <span>${formatMoney(Number(x.total_amount), currencyCode, lang)}</span>
+      </div>
+      ${x.total_amount_sar ? `
+      <div class="total-row" style="color: #4b5563; font-size: 13px;">
+        <span>${ar("الإجمالي بالريال", "Total (SAR)")}</span>
+        <span>${formatMoney(Number(x.total_amount_sar), "SAR", lang)}</span>
+      </div>
+      ` : ""}
+      <div class="total-row">
+        <span>${ar("المبلغ المدفوع", "Paid Amount")}</span>
+        <span>${formatMoney(Number(x.paid_amount), currencyCode, lang)}</span>
+      </div>
+      <div class="total-row balance-due">
+        <span>${ar("المبلغ المتبقي", "Balance Due")}</span>
+        <span>${formatMoney(Number(x.remaining_amount ?? balance), currencyCode, lang)}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <p>${ar("هذه فاتورة ضريبية معتمدة تم إنشاؤها تلقائياً.", "This is a certified tax invoice generated automatically.")}</p>
+    <p style="margin-top: 4px; font-size: 10px;">${ar("مجموعة فنادق دليل المعلم - جميع الحقوق محفوظة © 2026", "Daleel Elm3alem Hotels Group - All Rights Reserved © 2026")}</p>
+  </div>
+
+  <script>
+    window.onload = function() {
+      window.print();
+    }
+  </script>
+</body>
+</html>`);
     w.document.close();
   };
 
-  const shareText = `${t("inv.email_subject")} ${x.invoice_no} — ${formatMoney(Number(x.total_amount), x.currency, lang)}`;
-  const emailHref = `mailto:${x.customer?.email ?? ""}?subject=${encodeURIComponent(`${t("inv.email_subject")} ${x.invoice_no}`)}&body=${encodeURIComponent(`${t("inv.email_body")}\n${shareText}`)}`;
-  const waHref = `https://wa.me/${String(x.customer?.phone ?? "").replace(/[^0-9]/g, "")}?text=${encodeURIComponent(shareText)}`;
+  const invoiceNo = x.invoice_number || x.invoice_no;
+  const totalStr = formatMoney(Number(x.total_amount), currencyCode, lang);
+  const remainingStr = formatMoney(Number(x.remaining_amount ?? balance), currencyCode, lang);
+  const dateStr = formatDate(x.invoice_date, lang);
+  const dueDateStr = formatDate(x.due_date, lang);
+  const statusStr = x.status_text || t(`invstatus.${x.status}`, x.status);
+
+  // WhatsApp Message
+  const waMessage = ar(
+    `*فاتورة ضريبية - شركة دليل المعالم*
+
+*رقم الفاتورة:* ${invoiceNo}
+*العميل:* ${custName}
+*تاريخ الفاتورة:* ${dateStr}
+*تاريخ الاستحقاق:* ${dueDateStr}
+*إجمالي المبلغ:* ${totalStr}
+*المبلغ المدفوع:* ${formatMoney(Number(x.paid_amount), currencyCode, lang)}
+*المبلغ المتبقي:* ${remainingStr}
+*حالة السداد:* ${statusStr}
+
+شكراً لتعاملكم معنا.`,
+    `*Tax Invoice - Daleel Elm3alem*
+
+*Invoice No:* ${invoiceNo}
+*Customer:* ${custName}
+*Invoice Date:* ${dateStr}
+*Due Date:* ${dueDateStr}
+*Total Amount:* ${totalStr}
+*Paid Amount:* ${formatMoney(Number(x.paid_amount), currencyCode, lang)}
+*Balance Due:* ${remainingStr}
+*Payment Status:* ${statusStr}
+
+Thank you for your business.`
+  );
+
+  // Email Message
+  const emailSubject = ar(
+    `فاتورة ضريبية رقم ${invoiceNo} - شركة دليل المعالم`,
+    `Tax Invoice #${invoiceNo} - Daleel Elm3alem`
+  );
+
+  const emailBody = ar(
+    `تحية طيبة،
+
+مرفق تفاصيل الفاتورة الضريبية الصادرة لكم من شركة دليل المعالم:
+
+- رقم الفاتورة: ${invoiceNo}
+- تاريخ الإصدار: ${dateStr}
+- تاريخ الاستحقاق: ${dueDateStr}
+- إجمالي قيمة الفاتورة: ${totalStr}
+- المبلغ المدفوع: ${formatMoney(Number(x.paid_amount), currencyCode, lang)}
+- المبلغ المتبقي: ${remainingStr}
+- حالة السداد: ${statusStr}
+
+شكراً لتعاملكم معنا.
+شركة دليل المعالم`,
+    `Dear Customer,
+
+Please find the details of the tax invoice issued to you by Daleel Elm3alem:
+
+- Invoice Number: ${invoiceNo}
+- Issue Date: ${dateStr}
+- Due Date: ${dueDateStr}
+- Total Amount: ${totalStr}
+- Paid Amount: ${formatMoney(Number(x.paid_amount), currencyCode, lang)}
+- Balance Due: ${remainingStr}
+- Payment Status: ${statusStr}
+
+Thank you for your business.
+Daleel Elm3alem`
+  );
+
+  const emailHref = `mailto:${x.customer?.email ?? ""}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
+  const waHref = `https://wa.me/${String(x.customer?.phone ?? "").replace(/[^0-9]/g, "")}?text=${encodeURIComponent(waMessage)}`;
 
   return (
     <>
       <PageHeader
         title={x.invoice_no}
-        subtitle={`${custName} · ${formatMoney(Number(x.total_amount), x.currency, lang)}`}
+        subtitle={`${custName} · ${formatMoney(Number(x.total_amount), currencyCode, lang)}`}
         children={
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => navigate("/invoices")}>
@@ -145,113 +554,73 @@ export default function InvoiceDetail() {
             <Button asChild variant="outline" size="sm"><a href={waHref} target="_blank" rel="noreferrer"><MessageCircle className="h-4 w-4" />{t("inv.send_whatsapp")}</a></Button>
             {canWrite && isDraft && <Button size="sm" disabled={busy} onClick={() => setStatus("issued")}><BadgeCheck className="h-4 w-4" />{t("inv.issue")}</Button>}
             {canWrite && x.status === "issued" && <Button size="sm" disabled={busy} onClick={() => setStatus("sent")}><Send className="h-4 w-4" />{t("inv.mark_sent")}</Button>}
-            {canWrite && !["paid", "cancelled"].includes(x.status) && (
-              <Button variant="destructive" size="sm" onClick={() => setCancelOpen(true)}><Ban className="h-4 w-4" />{t("inv.cancel")}</Button>
+            {canWrite && !(["paid", "cancelled"].includes(x.status)) && Number(x.remaining_amount ?? balance) > 0 && (
+              <Button size="sm" variant="outline" className="border-green-500 text-green-600 hover:bg-green-50 dark:hover:bg-green-950" onClick={() => { setPayAmount(String(Number(x.remaining_amount ?? balance))); setPayOpen(true); }}>
+                <CreditCard className="h-4 w-4" />
+                {lang === "ar" ? "تسجيل دفعة" : "Record Payment"}
+              </Button>
             )}
             <InvStatusBadge status={x.status} t={t} />
           </div>
         }
       />
       <div className="p-6">
-        <Tabs defaultValue="general" className="space-y-4">
-          <TabsList className="flex-wrap">
-            <TabsTrigger value="general">{t("inv.general")}</TabsTrigger>
-            <TabsTrigger value="items">{t("inv.items")}</TabsTrigger>
-            <TabsTrigger value="payments">{t("inv.payments")}</TabsTrigger>
-            <TabsTrigger value="attachments">{t("inv.attachments")}</TabsTrigger>
-            <TabsTrigger value="history">{t("inv.history")}</TabsTrigger>
-          </TabsList>
+        <Card>
+          <CardContent className="grid gap-5 p-6 md:grid-cols-3">
+            <KV label={ar("رقم الفاتورة", "Invoice Number")} value={x.invoice_number || x.invoice_no} />
+            <KV label={t("inv.customer")} value={custName} />
+            <KV label={ar("البريد الإلكتروني للعميل", "Customer Email")} value={x.customer?.email} />
+            <KV label={ar("هاتف العميل", "Customer Phone")} value={x.customer?.phone} />
+            <KV label={t("inv.booking")} value={x.booking?.booking_no || x.booking_id} />
+            <KV label={t("inv.date")} value={formatDate(x.invoice_date, lang)} />
+            <KV label={t("inv.due_date")} value={formatDate(x.due_date, lang)} />
+            <KV label={t("inv.currency")} value={currencyCode} />
+            <KV label={t("inv.exchange_rate")} value={x.exchange_rate} />
 
-          <TabsContent value="general">
-            <Card><CardContent className="grid gap-4 p-6 md:grid-cols-3">
-              <KV label={t("inv.customer")} value={custName} />
-              <KV label={t("inv.booking")} value={x.booking?.booking_no} />
-              <KV label={t("inv.date")} value={formatDate(x.invoice_date, lang)} />
-              <KV label={t("inv.due_date")} value={formatDate(x.due_date, lang)} />
-              <KV label={t("inv.currency")} value={x.currency} />
-              <KV label={t("inv.exchange_rate")} value={x.exchange_rate} />
-              <KV label={t("inv.subtotal")} value={formatMoney(Number(x.subtotal), x.currency, lang)} />
-              <KV label={t("inv.taxes")} value={formatMoney(Number(x.taxes), x.currency, lang)} />
-              <KV label={t("inv.fees")} value={formatMoney(Number(x.fees), x.currency, lang)} />
-              <KV label={t("inv.discount")} value={formatMoney(Number(x.discount), x.currency, lang)} />
-              <KV label={t("inv.total")} value={<span className="font-bold">{formatMoney(Number(x.total_amount), x.currency, lang)}</span>} />
-              <KV label={t("inv.paid")} value={formatMoney(Number(x.paid_amount), x.currency, lang)} />
-              <KV label={t("inv.balance")} value={<span className="font-bold">{formatMoney(balance, x.currency, lang)}</span>} />
-              {x.cancellation_reason && <KV label={t("inv.cancel_reason")} value={x.cancellation_reason} />}
-              {x.notes && <div className="md:col-span-3"><KV label={t("label.notes")} value={<span className="whitespace-pre-wrap">{x.notes}</span>} /></div>}
-            </CardContent></Card>
-          </TabsContent>
+            <KV label={t("inv.subtotal")} value={formatMoney(Number(x.subtotal ?? x.sub_total), currencyCode, lang)} />
+            <KV label={ar("نسبة الضريبة", "Tax Percent")} value={x.tax_percent ? `${x.tax_percent}%` : "0%"} />
+            <KV label={t("inv.taxes")} value={formatMoney(Number(x.tax_amount ?? x.taxes), currencyCode, lang)} />
+            <KV label={t("inv.discount")} value={formatMoney(Number(x.discount), currencyCode, lang)} />
+            <KV label={t("inv.total")} value={<span className="font-bold">{formatMoney(Number(x.total_amount), currencyCode, lang)}</span>} />
+            <KV label={ar("الإجمالي بالريال السعودي", "Total Amount (SAR)")} value={formatMoney(Number(x.total_amount_sar ?? 0), "SAR", lang)} />
+            <KV label={t("inv.paid")} value={formatMoney(Number(x.paid_amount), currencyCode, lang)} />
+            <KV label={t("inv.balance")} value={<span className="font-bold text-destructive">{formatMoney(Number(x.remaining_amount ?? balance), currencyCode, lang)}</span>} />
 
-          <TabsContent value="items">
-            <Card><CardContent className="p-0">
-              <div className="flex items-center justify-between p-4">
-                <div className="text-sm font-medium">{t("inv.items")} ({items.length})</div>
-                {canWrite && isDraft && <Button size="sm" onClick={() => setItemOpen(true)}><Plus className="h-4 w-4" />{t("inv.add_item")}</Button>}
+            <KV label={t("label.status")} value={<InvStatusBadge status={x.status} t={t} />} />
+            <KV label={ar("حالة الدفع", "Payment Status")} value={x.status_text || x.status} />
+            <KV label={ar("بواسطة", "Created By")} value={x.creator?.name || "—"} />
+            {x.cancellation_reason && <KV label={t("inv.cancel_reason")} value={x.cancellation_reason} />}
+            {x.notes && <div className="md:col-span-3"><KV label={t("label.notes")} value={<span className="whitespace-pre-wrap">{x.notes}</span>} /></div>}
+
+            {items && items.length > 0 && (
+              <div className="md:col-span-3 border-t pt-5 mt-2 space-y-3">
+                <h3 className="font-semibold text-sm text-foreground">{ar("بنود الفاتورة", "Invoice Items")}</h3>
+                <div className="border rounded-md overflow-hidden bg-background">
+                  <Table>
+                    <TableHeader className="bg-muted/30">
+                      <TableRow>
+                        <TableHead>{ar("البيان", "Description")}</TableHead>
+                        <TableHead className="text-end" style={{ width: "80px" }}>{ar("الكمية", "Qty")}</TableHead>
+                        <TableHead className="text-end" style={{ width: "120px" }}>{ar("سعر الوحدة", "Unit Price")}</TableHead>
+                        <TableHead className="text-end" style={{ width: "140px" }}>{ar("الإجمالي الفرعي", "Subtotal")}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {items.map((i: any) => (
+                        <TableRow key={i.id}>
+                          <TableCell className="text-sm font-medium">{lang === "ar" ? i.description_ar || i.description_en || i.description : i.description_en || i.description_ar || i.description}</TableCell>
+                          <TableCell className="text-end tabular-nums">{Number(i.quantity)}</TableCell>
+                          <TableCell className="text-end tabular-nums">{Number(i.unit_price).toLocaleString()} {currencyCode}</TableCell>
+                          <TableCell className="text-end font-semibold tabular-nums">{Number(i.subtotal ?? (Number(i.quantity) * Number(i.unit_price))).toLocaleString()} {currencyCode}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
-              <Table>
-                <TableHeader><TableRow>
-                  <TableHead>{t("inv.item_desc")}</TableHead>
-                  <TableHead className="text-end">{t("inv.qty")}</TableHead>
-                  <TableHead className="text-end">{t("inv.unit_price")}</TableHead>
-                  <TableHead className="text-end">{t("inv.taxes")}</TableHead>
-                  <TableHead className="text-end">{t("inv.fees")}</TableHead>
-                  <TableHead className="text-end">{t("inv.line_total")}</TableHead>
-                  {canWrite && isDraft && <TableHead />}
-                </TableRow></TableHeader>
-                <TableBody>
-                  {items.length === 0 && <TableRow><TableCell colSpan={7} className="py-8 text-center text-muted-foreground">{t("label.no_results")}</TableCell></TableRow>}
-                  {items.map((i) => (
-                    <TableRow key={i.id}>
-                      <TableCell className="text-sm">{lang === "ar" ? i.description_ar || i.description_en : i.description_en}</TableCell>
-                      <TableCell className="text-end tabular-nums">{Number(i.quantity)}</TableCell>
-                      <TableCell className="text-end tabular-nums">{Number(i.unit_price).toLocaleString()}</TableCell>
-                      <TableCell className="text-end tabular-nums">{Number(i.taxes).toLocaleString()}</TableCell>
-                      <TableCell className="text-end tabular-nums">{Number(i.fees).toLocaleString()}</TableCell>
-                      <TableCell className="text-end font-medium tabular-nums">{Number(i.line_total).toLocaleString()}</TableCell>
-                      {canWrite && isDraft && (
-                        <TableCell className="text-end">
-                          <Button variant="ghost" size="icon" onClick={() => removeItem(i.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                        </TableCell>
-                      )}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent></Card>
-          </TabsContent>
-
-          <TabsContent value="payments">
-            <Card><CardContent className="p-0">
-              <Table>
-                <TableHeader><TableRow>
-                  <TableHead>{t("rct.number")}</TableHead>
-                  <TableHead>{t("rct.date")}</TableHead>
-                  <TableHead>{t("rct.method")}</TableHead>
-                  <TableHead className="text-end">{t("rct.amount")}</TableHead>
-                </TableRow></TableHeader>
-                <TableBody>
-                  {allocs.length === 0 && <TableRow><TableCell colSpan={4} className="py-8 text-center text-muted-foreground">{t("label.no_results")}</TableCell></TableRow>}
-                  {allocs.map((a) => (
-                    <TableRow key={a.id}>
-                      <TableCell className="font-mono text-xs">{a.receipt?.receipt_no}</TableCell>
-                      <TableCell className="text-xs">{formatDate(a.receipt?.receipt_date, lang)}</TableCell>
-                      <TableCell className="text-xs">{a.receipt ? t(`pm.${a.receipt.payment_method}`, a.receipt.payment_method) : "—"}</TableCell>
-                      <TableCell className="text-end tabular-nums">{Number(a.amount).toLocaleString()} {x.currency}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent></Card>
-          </TabsContent>
-
-          <TabsContent value="attachments">
-            <EntityAttachments entityType="invoice" entityId={id || ""} />
-          </TabsContent>
-
-          <TabsContent value="history">
-            <EntityHistory entityType="invoices" entityId={id || ""} />
-          </TabsContent>
-        </Tabs>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       <Dialog open={cancelOpen} onOpenChange={setCancelOpen}>
@@ -282,6 +651,80 @@ export default function InvoiceDetail() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setItemOpen(false)}>{t("actions.cancel")}</Button>
             <Button onClick={addItem} disabled={busy || !descEn.trim() || !price}>{t("actions.save")}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Record Payment Dialog */}
+      <Dialog open={payOpen} onOpenChange={setPayOpen}>
+        <DialogContent className="max-w-md" dir={dir}>
+          <DialogHeader>
+            <DialogTitle>
+              {lang === "ar" ? "تسجيل عملية دفع" : "Record Payment"}
+              {" "}·{" "}
+              <span className="text-muted-foreground font-normal text-sm">{x.invoice_number || x.invoice_no}</span>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3 p-3 bg-muted/30 rounded-md text-xs">
+              <div>
+                <div className="text-muted-foreground mb-0.5">{lang === "ar" ? "إجمالي الفاتورة" : "Invoice Total"}</div>
+                <div className="font-semibold">{formatMoney(Number(x.total_amount), currencyCode, lang)}</div>
+              </div>
+              <div>
+                <div className="text-muted-foreground mb-0.5">{lang === "ar" ? "المتبقي للسداد" : "Remaining Balance"}</div>
+                <div className="font-semibold text-destructive">{formatMoney(Number(x.remaining_amount ?? balance), currencyCode, lang)}</div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>{lang === "ar" ? "تاريخ الدفع" : "Payment Date"}</Label>
+              <Input type="date" value={payDate} onChange={(e) => setPayDate(e.target.value)} />
+            </div>
+
+            <div className="space-y-2">
+              <Label>{lang === "ar" ? "المبلغ المدفوع" : "Amount"} ({currencyCode})</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0.01"
+                max={Number(x.remaining_amount ?? balance)}
+                value={payAmount}
+                onChange={(e) => setPayAmount(e.target.value)}
+                placeholder={`0.00 ${currencyCode}`}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>{lang === "ar" ? "طريقة الدفع" : "Payment Method"}</Label>
+              <Select value={payMethod} onValueChange={(v) => setPayMethod(v as typeof payMethod)}>
+                <SelectTrigger dir={dir}><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cash">{lang === "ar" ? "نقداً" : "Cash"}</SelectItem>
+                  <SelectItem value="bank_transfer">{lang === "ar" ? "تحويل بنكي" : "Bank Transfer"}</SelectItem>
+                  <SelectItem value="credit_card">{lang === "ar" ? "بطاقة ائتمان" : "Credit Card"}</SelectItem>
+                  <SelectItem value="cheque">{lang === "ar" ? "شيك" : "Cheque"}</SelectItem>
+                  <SelectItem value="other">{lang === "ar" ? "أخرى" : "Other"}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>{lang === "ar" ? "رقم المعاملة / المرجع" : "Transaction Reference"} <span className="text-muted-foreground text-xs">({lang === "ar" ? "اختياري" : "Optional"})</span></Label>
+              <Input value={payRef} onChange={(e) => setPayRef(e.target.value)} placeholder="REF-BANK-0000" />
+            </div>
+
+            <div className="space-y-2">
+              <Label>{lang === "ar" ? "ملاحظات" : "Notes"} <span className="text-muted-foreground text-xs">({lang === "ar" ? "اختياري" : "Optional"})</span></Label>
+              <Textarea value={payNotes} onChange={(e) => setPayNotes(e.target.value)} rows={2} placeholder={lang === "ar" ? "ملاحظات الدفعة..." : "Payment notes..."} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPayOpen(false)}>{t("actions.cancel")}</Button>
+            <Button onClick={handleRecordPayment} disabled={busy || !payAmount || Number(payAmount) <= 0} className="bg-green-600 hover:bg-green-700 text-white">
+              <CreditCard className="h-4 w-4" />
+              {lang === "ar" ? "تسجيل الدفعة" : "Record Payment"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

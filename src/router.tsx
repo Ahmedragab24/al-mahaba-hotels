@@ -11,6 +11,8 @@ const SettingsPage = () => import("@/routes/_authenticated/settings").then((m) =
 const CurrenciesPage = () => import("@/routes/_authenticated/currencies").then((m) => ({ Component: m.default }));
 const SupplierApplicationsPage = () => import("@/routes/_authenticated/supplier-applications").then((m) => ({ Component: m.default }));
 const TasksIndex = () => import("@/routes/_authenticated/tasks/index").then((m) => ({ Component: m.default }));
+const NotificationsIndex = () => import("@/routes/_authenticated/notifications/index").then((m) => ({ Component: m.default }));
+const PlatformTransactionsIndex = () => import("@/routes/_authenticated/platform-transactions/index").then((m) => ({ Component: m.default }));
 
 // Hotels
 const HotelsIndex = () => import("@/routes/_authenticated/hotels/index").then((m) => ({ Component: m.default }));
@@ -55,8 +57,6 @@ const RoomTypeDetail = () => import("@/routes/_authenticated/room-types/$id").th
 // Financial
 const InvoicesIndex = () => import("@/routes/_authenticated/invoices/index").then((m) => ({ Component: m.default }));
 const InvoiceDetail = () => import("@/routes/_authenticated/invoices/$id").then((m) => ({ Component: m.default }));
-const PaymentsIndex = () => import("@/routes/_authenticated/payments/index").then((m) => ({ Component: m.default }));
-const ReceivablesIndex = () => import("@/routes/_authenticated/receivables/index").then((m) => ({ Component: m.default }));
 
 // Reports
 const ReportsIndex = () => import("@/routes/_authenticated/reports/index").then((m) => ({ Component: m.default }));
@@ -80,6 +80,7 @@ export const router = createBrowserRouter([
           { path: "users", lazy: UsersPage },
           { path: "settings", lazy: SettingsPage },
           { path: "currencies", lazy: CurrenciesPage },
+          { path: "notifications", lazy: NotificationsIndex },
           { path: "supplier-applications", lazy: SupplierApplicationsPage },
           { path: "tasks", lazy: TasksIndex },
           // Hotels
@@ -117,8 +118,7 @@ export const router = createBrowserRouter([
           // Financial
           { path: "invoices", lazy: InvoicesIndex },
           { path: "invoices/:id", lazy: InvoiceDetail },
-          { path: "payments", lazy: PaymentsIndex },
-          { path: "receivables", lazy: ReceivablesIndex },
+          { path: "platform-transactions", lazy: PlatformTransactionsIndex },
           // Reports
           { path: "reports", lazy: ReportsIndex },
         ],

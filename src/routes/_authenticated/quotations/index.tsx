@@ -138,7 +138,7 @@ export default function QuotationsList() {
                 <SelectTrigger><SelectValue placeholder={t("filter.all")} /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t("filter.all")}</SelectItem>
-                  {customers.data?.map((c: any) => (
+                  {(Array.isArray(customers.data) ? customers.data : Array.isArray(customers.data?.data) ? customers.data.data : []).map((c: any) => (
                     <SelectItem key={c.id} value={String(c.id)}>{lang === "ar" ? (c.name_ar || c.name_en) : (c.name_en || c.name_ar)}</SelectItem>
                   ))}
                 </SelectContent>
@@ -150,7 +150,7 @@ export default function QuotationsList() {
                 <SelectTrigger><SelectValue placeholder={t("filter.all")} /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t("filter.all")}</SelectItem>
-                  {hotels.data?.map((h: any) => (
+                  {(Array.isArray(hotels.data) ? hotels.data : Array.isArray(hotels.data?.data) ? hotels.data.data : []).map((h: any) => (
                     <SelectItem key={h.id} value={String(h.id)}>{lang === "ar" ? (h.name_ar || h.name_en) : (h.name_en || h.name_ar)}</SelectItem>
                   ))}
                 </SelectContent>

@@ -30,7 +30,7 @@ import { KpiCard, StatusPill, type KpiTone } from "@/components/list-toolkit";
 
 
 const PAGE_SIZE = 20;
-export const BK_STATUSES = ["draft", "pending_confirmation", "confirmed", "checked_in", "checked_out", "cancelled", "no_show"] as const;
+export const BK_STATUSES = ["draft", "pending_supplier_confirmation", "confirmed", "checked_in", "checked_out", "cancelled", "no_show"] as const;
 export const BK_WRITE_ROLES = ["super_admin", "admin", "sales_manager", "sales_agent", "operations_manager", "operations_agent"] as const;
 
 export function BkStatusBadge({ status, t }: { status: string; t: (k: string, f?: string) => string }) {
@@ -75,6 +75,22 @@ export default function BookingsList() {
     },
   });
 
+  const customerList = useMemo(() => {
+    if (!customers.data) return [];
+    if (Array.isArray(customers.data)) return customers.data;
+    const cData = customers.data as any;
+    if (Array.isArray(cData.data)) return cData.data;
+    return [];
+  }, [customers.data]);
+
+  const hotelList = useMemo(() => {
+    if (!hotels.data) return [];
+    if (Array.isArray(hotels.data)) return hotels.data;
+    const hData = hotels.data as any;
+    if (Array.isArray(hData.data)) return hData.data;
+    return [];
+  }, [hotels.data]);
+
   const { data: rawBookings, isLoading: isLoadingBookings, refetch } = useGetBookingsQuery();
   const [deleteBooking, { isLoading: isDeleting }] = useDeleteBookingMutation();
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -109,12 +125,13 @@ export default function BookingsList() {
         data: {
           total: backendStats.total_bookings_count,
           draft: by("draft"),
-          pending: by("pending_confirmation"),
+          pending: by("pending_supplier_confirmation"),
           confirmed: backendStats.confirmed_count,
           inHouse: backendStats.checked_in_count,
           completed: backendStats.checked_out_count,
           cancelled: backendStats.cancelled_no_show_count || by("cancelled", "no_show"),
           value: backendStats.total_sales_sar,
+          remaining: backendStats.total_remaining_sar,
         },
         isLoading: isLoadingBookings,
       };
@@ -122,16 +139,18 @@ export default function BookingsList() {
 
     const sum = allBookings.reduce((a: number, r: any) => a + (r.total_amount !== undefined ? Number(r.total_amount) : (r.rooms ?? []).reduce((x: number, i: any) => x + Number(i.total_selling), 0)), 0);
     const by = (...s: string[]) => allBookings.filter((r: any) => s.includes(r.status)).length;
+    const remainingSum = allBookings.reduce((a: number, r: any) => a + (r.remaining_amount !== undefined ? Number(r.remaining_amount) : 0), 0);
     return {
       data: {
         total: allBookings.length,
         draft: by("draft"),
-        pending: by("pending_confirmation"),
+        pending: by("pending_supplier_confirmation"),
         confirmed: by("confirmed"),
         inHouse: by("checked_in"),
         completed: by("checked_out"),
         cancelled: by("cancelled", "no_show"),
         value: sum,
+        remaining: remainingSum,
       },
       isLoading: isLoadingBookings,
     };
@@ -157,7 +176,7 @@ export default function BookingsList() {
     if (dSearch.trim()) {
       rows = rows.filter((b: any) => (b.code || b.booking_no)?.toLowerCase().includes(dSearch.trim().toLowerCase()));
     }
-    
+
     const count = rows.length;
     const f = (page - 1) * PAGE_SIZE;
     return {
@@ -182,7 +201,7 @@ export default function BookingsList() {
   const quickFilters: { key: string; label: string; count?: number; tone: KpiTone }[] = [
     { key: "all", label: t("filter.all"), count: metrics.data?.total, tone: "primary" },
     { key: "draft", label: t("bkstatus.draft"), count: metrics.data?.draft, tone: "muted" },
-    { key: "pending_confirmation", label: t("bkstatus.pending_confirmation"), count: metrics.data?.pending, tone: "warning" },
+    { key: "pending_supplier_confirmation", label: t("bkstatus.pending_supplier_confirmation"), count: metrics.data?.pending, tone: "warning" },
     { key: "confirmed", label: t("bkstatus.confirmed"), count: metrics.data?.confirmed, tone: "success" },
     { key: "checked_in", label: t("bkstatus.checked_in"), count: metrics.data?.inHouse, tone: "info" },
     { key: "checked_out", label: t("bkstatus.checked_out"), count: metrics.data?.completed, tone: "muted" },
@@ -198,13 +217,14 @@ export default function BookingsList() {
       />
       <div className="space-y-5 p-4 sm:p-6">
         {/* KPI cards */}
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-7">
           <KpiCard icon={ClipboardList} tone="primary" label={t("bk.kpi.total")} value={metrics.data?.total} active={status === "all"} onClick={() => setStatusAndReset("all")} />
           <KpiCard icon={CheckCircle2} tone="success" label={t("bk.kpi.confirmed")} value={metrics.data?.confirmed} active={status === "confirmed"} onClick={() => setStatusAndReset("confirmed")} />
           <KpiCard icon={LogIn} tone="info" label={t("bk.kpi.in_house")} value={metrics.data?.inHouse} active={status === "checked_in"} onClick={() => setStatusAndReset("checked_in")} />
           <KpiCard icon={CheckCheck} tone="muted" label={t("bk.kpi.completed")} value={metrics.data?.completed} active={status === "checked_out"} onClick={() => setStatusAndReset("checked_out")} />
           <KpiCard icon={XCircle} tone="destructive" label={t("bk.kpi.cancelled")} value={metrics.data?.cancelled} active={status === "cancelled"} onClick={() => setStatusAndReset("cancelled")} />
           <KpiCard icon={DollarSign} tone="warning" label={t("bk.kpi.value")} value={metrics.data ? fmt(metrics.data.value) : undefined} />
+          <KpiCard icon={DollarSign} tone="destructive" label={t("bk.kpi.remaining")} value={metrics.data ? fmt(metrics.data.remaining) : undefined} />
         </div>
 
         {/* Quick status pills */}
@@ -225,29 +245,29 @@ export default function BookingsList() {
                 <Input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder={t("bk.number")} className="ps-8 w-full" />
               </div>
             </div>
-            
+
             <div className="flex flex-col gap-1.5">
               <Label className="text-muted-foreground">{t("bk.customer")}</Label>
               <Select value={customer} onValueChange={(v) => { setCustomer(v); setPage(1); }}>
                 <SelectTrigger className="w-full"><SelectValue placeholder={t("bk.customer")} /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t("filter.all")}</SelectItem>
-                  {customers.data?.map((c: any) => <SelectItem key={c.id} value={c.id}>{lang === "ar" ? (c.name_ar || c.name_en) : (c.name_en || c.name_ar)}</SelectItem>)}
+                  {customerList.map((c: any) => <SelectItem key={c.id} value={c.id}>{lang === "ar" ? (c.name_ar || c.name_en) : (c.name_en || c.name_ar)}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="flex flex-col gap-1.5">
               <Label className="text-muted-foreground">{t("filter.hotel")}</Label>
               <Select value={hotel} onValueChange={(v) => { setHotel(v); setPage(1); }}>
                 <SelectTrigger className="w-full"><SelectValue placeholder={t("quotes.items.hotel")} /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t("filter.all")}</SelectItem>
-                  {hotels.data?.map((h: any) => <SelectItem key={h.id} value={h.id}>{lang === "ar" ? (h.name_ar || h.name_en) : (h.name_en || h.name_ar)}</SelectItem>)}
+                  {hotelList.map((h: any) => <SelectItem key={h.id} value={h.id}>{lang === "ar" ? (h.name_ar || h.name_en) : (h.name_en || h.name_ar)}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="grid grid-cols-2 gap-2 sm:col-span-2 xl:col-span-1">
               <div className="flex flex-col gap-1.5">
                 <Label className="text-muted-foreground">{t("filter.from")}</Label>
@@ -258,7 +278,7 @@ export default function BookingsList() {
                 <Input className="w-full justify-center" type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} />
               </div>
             </div>
-            
+
             {filtersActive && (
               <div className="sm:col-span-2 xl:col-span-4 flex justify-end">
                 <Button variant="ghost" size="sm" onClick={resetAll}>
@@ -281,7 +301,7 @@ export default function BookingsList() {
                   <TableHead>{t("bk.col.checkin")}</TableHead>
                   <TableHead className="text-center">{t("bk.col.nights")}</TableHead>
                   <TableHead>{t("bk.source")}</TableHead>
-                  <TableHead className="text-end">{t("bk.value")}</TableHead>
+                  <TableHead >{t("bk.value")}</TableHead>
                   <TableHead>{t("label.status")}</TableHead>
                   <TableHead className="text-end">{t("label.actions")}</TableHead>
                 </TableRow>
@@ -322,7 +342,7 @@ export default function BookingsList() {
                   const nights = b.nights || (earliestCheckIn && latestCheckOut
                     ? Math.max(0, Math.round((new Date(latestCheckOut).getTime() - new Date(earliestCheckIn).getTime()) / 86400000))
                     : null);
-                  
+
                   let hotelNames: string[] = [];
                   if (b.hotel) {
                     const hName = lang === "ar" ? (b.hotel.name_ar || b.hotel.name_en) : (b.hotel.name_en || b.hotel.name_ar);

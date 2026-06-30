@@ -28,6 +28,7 @@ import {
   ClipboardList,
   Landmark,
   DollarSign,
+  Wallet,
 } from "lucide-react";
 import logoUrl from "@/assets/daleel-logo-transparent.png";
 import logoDarkUrl from "@/assets/daleel-logo-dark.png";
@@ -108,14 +109,10 @@ const finance: NavItem[] = [
     icon: ReceiptText,
   },
   {
-    to: "/receivables",
-    labelKey: "nav.receivables",
-    icon: Landmark,
-  },
-  {
-    to: "/payments",
-    labelKey: "nav.payments",
-    icon: Landmark,
+    to: "/platform-transactions",
+    labelKey: "nav.platform_transactions",
+    icon: Wallet,
+    permission: "transactions",
   },
   {
     to: "/currencies",

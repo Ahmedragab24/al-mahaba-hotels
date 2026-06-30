@@ -223,7 +223,7 @@ export const HOTEL_RES: Record<DocLang, Record<string, string>> = {
     company: "دليل المعالم", print: "طباعة / حفظ PDF",
     views: "الإطلالات", contacts: "جهات الاتصال", name: "الاسم", board: "نظام الوجبات",
     max_adults: "أقصى عدد للبالغين", max_children: "أقصى عدد للأطفال", images: "الصور", bed_type: "نوع السرير",
-    job_title: "المسمى الوظيفي",
+    job_title: "المسمى الوظيفي", brand: "العلامة التجارية", policies: "السياسات",
   },
   en: {
     title: "Hotel Information", code: "Hotel Code", rating: "Rating", country: "Country", city: "City",
@@ -235,7 +235,7 @@ export const HOTEL_RES: Record<DocLang, Record<string, string>> = {
     company: "Dalil Al-Maalem", print: "Print / Save PDF",
     views: "Views", contacts: "Contacts", name: "Name", board: "Board",
     max_adults: "Max Adults", max_children: "Max Children", images: "Images", bed_type: "Bed Type",
-    job_title: "Job Title",
+    job_title: "Job Title", brand: "Brand", policies: "Policies",
   },
   id: {
     title: "Informasi Hotel", code: "Kode Hotel", rating: "Peringkat", country: "Negara", city: "Kota",
@@ -247,7 +247,7 @@ export const HOTEL_RES: Record<DocLang, Record<string, string>> = {
     company: "Dalil Al-Maalem", print: "Cetak / Simpan PDF",
     views: "Pemandangan", contacts: "Kontak", name: "Nama", board: "Paket",
     max_adults: "Maks. Dewasa", max_children: "Maks. Anak", images: "Gambar", bed_type: "Tipe Tempat Tidur",
-    job_title: "Jabatan",
+    job_title: "Jabatan", brand: "Merek", policies: "Kebijakan",
   },
   ur: {
     title: "ہوٹل کی معلومات", code: "ہوٹل کوڈ", rating: "درجہ بندی", country: "ملک", city: "شہر",
@@ -259,7 +259,7 @@ export const HOTEL_RES: Record<DocLang, Record<string, string>> = {
     company: "دلیل المعالم", print: "پرنٹ / PDF محفوظ کریں",
     views: "مناظر", contacts: "رابطے", name: "نام", board: "بورڈ",
     max_adults: "زیادہ سے زیادہ بالغ", max_children: "زیادہ سے زیادہ بچے", images: "تصاویر", bed_type: "بستر کی قسم",
-    job_title: "عہدہ",
+    job_title: "عہدہ", brand: "برانڈ", policies: "پالیسیاں",
   },
 };
 

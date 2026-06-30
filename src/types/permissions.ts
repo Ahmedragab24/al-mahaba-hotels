@@ -12,8 +12,7 @@ export type PermissionKey =
   | "bookings"
   | "customers"
   | "invoices"
-  | "payments"
-  | "receivables"
+  | "transactions"
   | "room_types"
   | "currencies"
   | "contracts"
@@ -57,14 +56,14 @@ export interface UserProfile {
 export const ROLE_DEFAULT_PERMISSIONS: Record<UserRole, PermissionKey[]> = {
   super_admin: [
     "dashboard", "hotels", "rooms", "suppliers", "supplier_applications",
-    "rates", "quotations", "bookings", "customers", "invoices", "payments",
-    "receivables", "room_types", "currencies",
+    "rates", "quotations", "bookings", "customers", "invoices", "transactions",
+    "room_types", "currencies",
     "contracts", "users", "settings", "reports", "tasks"
   ],
   admin: [
     "dashboard", "hotels", "rooms", "suppliers", "supplier_applications",
-    "rates", "quotations", "bookings", "customers", "invoices", "payments",
-    "receivables", "room_types", "currencies",
+    "rates", "quotations", "bookings", "customers", "invoices", "transactions",
+    "room_types", "currencies",
     "contracts", "users", "settings", "reports", "tasks"
   ],
   sales_manager: [
@@ -79,32 +78,32 @@ export const ROLE_DEFAULT_PERMISSIONS: Record<UserRole, PermissionKey[]> = {
   ],
   operations_manager: [
     "dashboard", "hotels", "rooms", "suppliers", "supplier_applications",
-    "rates", "quotations", "bookings", "customers", "invoices", "payments",
-    "receivables", "room_types", "currencies",
+    "rates", "quotations", "bookings", "customers", "invoices", "transactions",
+    "room_types", "currencies",
     "contracts", "reports", "tasks"
   ],
   operations_agent: [
     "dashboard", "hotels", "rooms", "suppliers", "supplier_applications",
-    "rates", "quotations", "bookings", "customers", "invoices", "payments",
-    "receivables", "room_types", "currencies",
+    "rates", "quotations", "bookings", "customers", "invoices", "transactions",
+    "room_types", "currencies",
     "contracts", "reports", "tasks"
   ],
   finance_manager: [
     "dashboard", "hotels", "rooms", "suppliers", "supplier_applications",
-    "rates", "quotations", "bookings", "customers", "invoices", "payments",
-    "receivables", "room_types", "currencies",
+    "rates", "quotations", "bookings", "customers", "invoices", "transactions",
+    "room_types", "currencies",
     "contracts", "reports", "tasks"
   ],
   finance_agent: [
     "dashboard", "hotels", "rooms", "suppliers", "supplier_applications",
-    "rates", "quotations", "bookings", "customers", "invoices", "payments",
-    "receivables", "room_types", "currencies",
+    "rates", "quotations", "bookings", "customers", "invoices", "transactions",
+    "room_types", "currencies",
     "contracts", "reports", "tasks"
   ],
   viewer: [
     "dashboard", "hotels", "rooms", "suppliers", "supplier_applications",
-    "rates", "quotations", "bookings", "customers", "invoices", "payments",
-    "receivables", "room_types", "currencies",
+    "rates", "quotations", "bookings", "customers", "invoices", "transactions",
+    "room_types", "currencies",
     "contracts", "reports", "tasks"
   ],
   employee: [

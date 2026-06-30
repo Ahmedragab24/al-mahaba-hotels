@@ -181,7 +181,7 @@ export default function ApprovalThresholdsPage() {
       <ThresholdDialog
         open={dialog.open}
         initial={dialog.initial}
-        currencies={currencies.data ?? []}
+        currencies={Array.isArray(currencies.data) ? currencies.data : (Array.isArray(currencies.data?.data) ? currencies.data.data : [])}
         onOpenChange={(v) => setDialog({ open: v, initial: v ? dialog.initial : undefined })}
         onSaved={() => qc.invalidateQueries({ queryKey: ["approval_thresholds"] })}
       />

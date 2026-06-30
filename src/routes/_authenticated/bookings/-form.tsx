@@ -248,7 +248,17 @@ export function BookingForm({
     total_amount: initial?.total_amount ?? "",
     amount_paid: initial?.amount_paid ?? "",
     payment_mode: initial?.payment_method ?? "full",
-    second_payment_date: initial?.second_payment_due_date ?? initial?.deferred_payment_due_date ?? "",
+    second_payment_date: (() => {
+      const dStr = initial?.second_payment_due_date ?? initial?.deferred_payment_due_date;
+      if (!dStr) return "";
+      try {
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dStr)) return dStr;
+        const d = new Date(dStr);
+        return isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10);
+      } catch {
+        return "";
+      }
+    })(),
 
     special_requests: initial?.special_requests ?? "",
     notes: initial?.notes ?? "",
@@ -281,7 +291,17 @@ export function BookingForm({
         total_amount: initial.total_amount ?? f.total_amount,
         amount_paid: initial.amount_paid ?? f.amount_paid,
         payment_mode: initial.payment_method ?? f.payment_mode,
-        second_payment_date: initial.second_payment_due_date ?? initial.deferred_payment_due_date ?? f.second_payment_date,
+        second_payment_date: (() => {
+          const dStr = initial.second_payment_due_date ?? initial.deferred_payment_due_date;
+          if (!dStr) return f.second_payment_date;
+          try {
+            if (/^\d{4}-\d{2}-\d{2}$/.test(dStr)) return dStr;
+            const d = new Date(dStr);
+            return isNaN(d.getTime()) ? f.second_payment_date : d.toISOString().slice(0, 10);
+          } catch {
+            return f.second_payment_date;
+          }
+        })(),
         special_requests: initial.special_requests ?? f.special_requests,
         notes: initial.notes ?? f.notes,
       }));
@@ -402,7 +422,7 @@ export function BookingForm({
       const totalRoomsCount = selectedItems.reduce((sum, item) => sum + (item.rooms || 0), 0);
       const roomTotalRate = selectedItems.reduce((sum, item) => sum + (Number(item.selling_price) || 0) * (item.rooms || 1), 0);
       const autoTotal = roomTotalRate * nights;
-      
+
       setForm((f) => ({
         ...f,
         rooms: totalRoomsCount,
@@ -664,12 +684,18 @@ export function BookingForm({
                     <SelectValue placeholder={ar("اختر الفندق", "Select hotel")} />
                   </SelectTrigger>
                   <SelectContent>
-                    {filteredHotels.map((h: any) => (
-                      <SelectItem key={h.id} value={String(h.id)}>
-                        {lang === "ar" ? (h.name_ar || h.name_en) : (h.name_en || h.name_ar)}
-                        {h.star_rating || h.stars ? " " + "★".repeat(h.star_rating || h.stars) : ""}
+                    {filteredHotels.length === 0 ? (
+                      <SelectItem value="none" disabled>
+                        {ar("لا يتوفر فنادق في هذه المدينة", "No hotels available in this city")}
                       </SelectItem>
-                    ))}
+                    ) : (
+                      filteredHotels.map((h: any) => (
+                        <SelectItem key={h.id} value={String(h.id)}>
+                          {lang === "ar" ? (h.name_ar || h.name_en) : (h.name_en || h.name_ar)}
+                          {h.star_rating || h.stars ? " " + "★".repeat(h.star_rating || h.stars) : ""}
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               </FormField>

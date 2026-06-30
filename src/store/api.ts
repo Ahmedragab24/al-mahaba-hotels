@@ -13,4 +13,6 @@ export * from "./services/tasks/tasksService";
 export * from "./services/quotations/quotationsService";
 export * from "./services/bookings/bookingsService";
 export * from "./services/notifications";
+export * from "./services/invoices/invoicesService";
+export * from "./services/platform-transactions/platformTransactionsService";
 

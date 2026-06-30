@@ -17,7 +17,7 @@ const TABLE_TO_SERVICE: Record<string, string> = {
   rooms: "rooms",
   quotations: "quotations",
   pricing: "pricing",
-  rates: "rates",
+  rates: "prices",
   seasons: "seasons",
   contracts: "contracts",
   invoices: "invoices",

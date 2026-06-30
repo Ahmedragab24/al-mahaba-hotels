@@ -291,8 +291,8 @@ export default function PayablesPage() {
   const total = payables.data?.count ?? 0;
   const orderRemaining = manageOrder
     ? Number(manageOrder.total_amount) - (payments.data ?? [])
-        .filter((p: any) => p.order?.order_no === manageOrder.order_no && p.status === "confirmed")
-        .reduce((a: number, p: any) => a + Number(p.amount), 0)
+      .filter((p: any) => p.order?.order_no === manageOrder.order_no && p.status === "confirmed")
+      .reduce((a: number, p: any) => a + Number(p.amount), 0)
     : 0;
 
   return (

@@ -9,6 +9,10 @@ import { hasRole, hasAnyRole, isAdmin, canAccessModule } from "@/lib/auth-utils"
 import { useFacilities, useSuppliersLite, useHotelViews } from "@/lib/lookups";
 import { useGetRoomsQuery } from "@/store/services/rooms/roomsService";
 import { useGetHotelImagesQuery, useUploadHotelImagesMutation, useSetImageAsCoverMutation, useDeleteHotelImageMutation } from "@/store/services/hotels/hotelsService";
+import { useGetSuppliersQuery } from "@/store/services/suppliers/suppliersService";
+import { useGetBookingsQuery } from "@/store/services/bookings/bookingsService";
+import { useGetQuotationsQuery } from "@/store/services/quotations/quotationsService";
+import { useGetPricesQuery } from "@/store/services/pricing/pricingService";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -55,17 +59,28 @@ export default function HotelDetail() {
   const counts = useQuery({
     queryKey: ["hotel-counts", id],
     queryFn: async () => {
-      const tables = ["rooms", "hotel_room_types", "hotel_views", "hotel_meal_plans", "hotel_facilities", "hotel_contacts", "hotel_suppliers", "rates"] as const;
+      const tables = ["rooms", "hotel_room_types", "hotel_views", "hotel_meal_plans", "hotel_facilities", "hotel_contacts", "hotel_suppliers", "rates", "bookings", "quotations"] as const;
       const out: Record<string, number> = {};
       await Promise.all(tables.map(async (tb) => {
-        const { count } = await db.from(tb).select("*", { count: "exact", head: true }).eq("hotel_id", id);
-        out[tb] = count ?? 0;
+        try {
+          const { count } = await db.from(tb).select("*", { count: "exact", head: true }).eq("hotel_id", id);
+          out[tb] = count ?? 0;
+        } catch {
+          out[tb] = 0;
+        }
       }));
       return out;
     },
   });
 
   const hotelImages = useGetHotelImagesQuery({ hotel_id: id });
+  const { data: linkedSuppliersData } = useGetSuppliersQuery({ hotel_id: id as string });
+  const linkedSuppliersList = Array.isArray(linkedSuppliersData)
+    ? linkedSuppliersData
+    : (Array.isArray((linkedSuppliersData as any)?.data) ? (linkedSuppliersData as any).data : []);
+  const suppliersCount = Array.isArray(linkedSuppliersData)
+    ? linkedSuppliersData.length
+    : (linkedSuppliersData?.statistics?.total ?? linkedSuppliersList.length);
 
   if (hotel.isLoading) return <div className="p-6 text-muted-foreground">{t("label.loading")}</div>;
   if (!hotel.data) return <div className="p-6 text-muted-foreground">{t("label.no_results")}</div>;
@@ -98,9 +113,10 @@ export default function HotelDetail() {
             <TabsTrigger value="rooms">{t("hotels.rooms")} ({counts.data?.rooms ?? 0})</TabsTrigger>
             <TabsTrigger value="views">{t("hotels.views")} ({counts.data?.hotel_views ?? 0})</TabsTrigger>
             <TabsTrigger value="images">{t("hotels.images")} ({hotelImages.data?.length ?? 0})</TabsTrigger>
-            <TabsTrigger value="suppliers">{t("hotels.suppliers")} ({counts.data?.hotel_suppliers ?? 0})</TabsTrigger>
+            <TabsTrigger value="suppliers">{t("hotels.suppliers")} ({suppliersCount})</TabsTrigger>
             <TabsTrigger value="rates">{t("hotels.rates_history")} ({counts.data?.rates ?? 0})</TabsTrigger>
-            <TabsTrigger value="bookings">{t("hotels.bookings")}</TabsTrigger>
+            <TabsTrigger value="bookings">{t("hotels.bookings")} ({counts.data?.bookings ?? 0})</TabsTrigger>
+            <TabsTrigger value="quotations">{t("nav.quotations")} ({counts.data?.quotations ?? 0})</TabsTrigger>
           </TabsList>
 
           <TabsContent value="profile">
@@ -110,7 +126,7 @@ export default function HotelDetail() {
               <Card><CardContent className="grid gap-3 p-6 md:grid-cols-3 text-sm">
                 <KV label={t("label.code")} value={h.code} mono />
                 <KV label={t("label.brand")} value={h.brand} />
-                <KV label={t("label.stars")} value={h.stars ? "★".repeat(h.stars) : ""} />
+                <KV label={t("label.stars")} value={h.stars ? <span className="text-[var(--brand-gold-deep)] text-lg">{"★".repeat(h.stars)}</span> : ""} />
                 <KV label={t("label.name_en")} value={h.name_en} />
                 <KV label={t("label.name_ar")} value={h.name_ar} />
                 <KV label={t("label.status")} value={h.status ? t("status.active") : t("status.inactive")} />
@@ -135,9 +151,18 @@ export default function HotelDetail() {
                     )
                   }
                 />
-                <KV label={t("label.phone")} value={h.phone} />
+                <KV label={t("label.phone")} value={h.phone ? <div dir="ltr" className="w-fit">{h.phone}</div> : ""} />
                 <KV label={t("label.email")} value={h.email} />
-                <KV label={t("label.website")} value={h.website} />
+                <KV
+                  label={t("label.website")}
+                  value={
+                    h.website ? (
+                      <a href={h.website.startsWith('http') ? h.website : `https://${h.website}`} target="_blank" rel="noopener noreferrer" className="text-[var(--brand-gold-deep)] hover:underline truncate block">
+                        {h.website}
+                      </a>
+                    ) : ""
+                  }
+                />
                 <KV label={t("label.checkin")} value={h.check_in?.slice(0, 5)} />
                 <KV label={t("label.checkout")} value={h.check_out?.slice(0, 5)} />
                 <KV label={t("label.created_at")} value={formatDateTime(h.created_at, lang)} />
@@ -156,9 +181,10 @@ export default function HotelDetail() {
           <TabsContent value="rooms"><RoomsTab hotelId={id as string} canWrite={canWrite} /></TabsContent>
           <TabsContent value="views"><ViewsTab hotelId={id as string} canWrite={canWrite} /></TabsContent>
           <TabsContent value="images"><ImagesTab hotelId={id as string} canWrite={canWrite} images={hotelImages.data} /></TabsContent>
-          <TabsContent value="suppliers"><SuppliersTab hotelId={id as string} canWrite={canWrite} /></TabsContent>
+          <TabsContent value="suppliers"><SuppliersTab hotelId={id as string} /></TabsContent>
           <TabsContent value="rates"><RatesHistoryTab hotelId={id as string} /></TabsContent>
-          <TabsContent value="bookings"><BookingsTab /></TabsContent>
+          <TabsContent value="bookings"><BookingsTab hotelId={id as string} /></TabsContent>
+          <TabsContent value="quotations"><QuotationsTab hotelId={id as string} /></TabsContent>
         </Tabs>
       </div>
     </>
@@ -247,12 +273,12 @@ function RoomsTab({ hotelId, canWrite }: { hotelId: string; canWrite: boolean })
                 <img src={viewRoom.cover_image} alt={viewRoom.name} className="w-full h-64 rounded-md object-cover" />
               )}
               <div className="grid gap-2 md:grid-cols-2">
-                    <KV label={t("label.code")} value={viewRoom.code} mono />
-                    <KV label={t("label.name")} value={lang === "ar" ? viewRoom.name_ar : viewRoom.name_en} />
-                    <KV label={t("hotels.room_type")} value={viewRoom.room_type?.[lang === "ar" ? "name_ar" : "name_en"] || viewRoom.room_type?.name} />
-                    <KV label={t("hotels.view")} value={viewRoom.view} />
-                    <KV label={t("label.status")} value={viewRoom.status ? t("status.active") : t("status.inactive")} />
-                    <KV label={t("label.is_archived")} value={viewRoom.is_archived ? t("status.yes") : t("status.no")} />
+                <KV label={t("label.code")} value={viewRoom.code} mono />
+                <KV label={t("label.name")} value={lang === "ar" ? viewRoom.name_ar : viewRoom.name_en} />
+                <KV label={t("hotels.room_type")} value={viewRoom.room_type?.[lang === "ar" ? "name_ar" : "name_en"] || viewRoom.room_type?.name} />
+                <KV label={t("hotels.view")} value={viewRoom.view} />
+                <KV label={t("label.status")} value={viewRoom.status ? t("status.active") : t("status.inactive")} />
+                <KV label={t("label.is_archived")} value={viewRoom.is_archived ? t("status.yes") : t("status.no")} />
               </div>
               <div className="text-xs text-muted-foreground">
                 {t("label.created_at")}: {formatDateTime(viewRoom.created_at, lang)}
@@ -321,13 +347,13 @@ function ViewDialog({ open, onOpenChange, hotelId, initial, onSaved }: any) {
   const { t } = useI18n();
   const [v, setV] = useState<any>({});
   const isEdit = !!initial?.id;
-  
+
   useEffect(() => {
     if (open) {
       setV(initial ? { ...initial, status: initial.status ? 1 : 0 } : { status: 1 });
     }
   }, [open, initial]);
-  
+
   const save = useMutation({
     mutationFn: async () => {
       if (!v.code?.trim() || !v.name_en?.trim() || !v.name_ar?.trim()) throw new Error(t("label.required"));
@@ -354,128 +380,6 @@ function ViewDialog({ open, onOpenChange, hotelId, initial, onSaved }: any) {
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
-}
-
-/* ---------- Meal Plans ---------- */
-function MealsTab({ hotelId, canWrite }: { hotelId: string; canWrite: boolean }) {
-  const { t, lang } = useI18n();
-  const qc = useQueryClient();
-  const q = useQuery({
-    queryKey: ["hotel-meals", hotelId],
-    queryFn: async () => (await db.from("hotel_meal_plans").select("*").eq("hotel_id", hotelId)).data ?? [],
-  });
-
-  const [mealsIncluded, setMealsIncluded] = useState(true);
-  const [mealPlanComponents, setMealPlanComponents] = useState<string[]>([]);
-
-  // Initialize mealPlanComponents from query data
-  useEffect(() => {
-    if (q.data) {
-      setMealPlanComponents(q.data.map((r: any) => r.board));
-    }
-  }, [q.data]);
-
-  const save = useMutation({
-    mutationFn: async () => {
-      const currentBoards = (Array.isArray(q.data) ? q.data : Array.isArray(q.data?.data) ? q.data.data : [])?.map((r: any) => r.board) || [];
-      const toDelete = currentBoards.filter((b: string) => !mealPlanComponents.includes(b));
-      const toAdd = mealPlanComponents.filter(b => !currentBoards.includes(b));
-
-      if (toDelete.length > 0) {
-        const { error } = await db.from("hotel_meal_plans").delete().eq("hotel_id", hotelId).in("board", toDelete);
-        if (error) throw error;
-      }
-
-      if (toAdd.length > 0) {
-        const payloads = toAdd.map(b => {
-          const mealDef = MEAL_PLANS.find(m => m.id === b);
-          return {
-            hotel_id: hotelId,
-            board: b as "RO" | "BB" | "HB" | "FB" | "AI" | "UAI",
-            name_en: mealDef?.label_en || b,
-            name_ar: mealDef?.label_ar || b,
-            description_en: "",
-            description_ar: "",
-            is_active: true
-          };
-        });
-        await apiClient.hotelMealPlans.create(payloads);
-      }
-    },
-    onSuccess: () => {
-      toast.success(t("toast.saved"));
-      qc.invalidateQueries({ queryKey: ["hotel-meals", hotelId] });
-      qc.invalidateQueries({ queryKey: ["hotel-counts", hotelId] });
-    },
-    onError: (e: any) => toast.error(e.message),
-  });
-
-  return (
-    <Card><CardContent className="p-6">
-      <MealPlanConfigurator
-        mealsIncluded={mealsIncluded}
-        onMealsIncludedChange={setMealsIncluded}
-        mealPlanComponents={mealPlanComponents}
-        onMealPlanComponentsChange={setMealPlanComponents}
-        currency={"USD"}
-        prices={{}}
-        onPriceChange={() => { }}
-        lang={lang as any}
-      />
-      {canWrite && (
-        <div className="mt-8 flex justify-end">
-          <Button onClick={() => save.mutate()} disabled={save.isPending}>
-            {t("actions.save")}
-          </Button>
-        </div>
-      )}
-    </CardContent></Card>
-  );
-}
-
-/* ---------- Facilities (M2M) ---------- */
-function FacilitiesTab({ hotelId, canWrite }: { hotelId: string; canWrite: boolean }) {
-  const { t, lang } = useI18n();
-  const qc = useQueryClient();
-  const facilities = useFacilities();
-  const linked = useQuery({
-    queryKey: ["hotel-facilities", hotelId],
-    queryFn: async () => (await db.from("hotel_facilities").select("facility_id").eq("hotel_id", hotelId)).data ?? [],
-  });
-  const linkedIds = new Set((linked.data ?? []).map((r: any) => r.facility_id));
-  const toggle = useMutation({
-    mutationFn: async ({ facilityId, on }: { facilityId: string; on: boolean }) => {
-      if (on) {
-        await apiClient.hotelFacilities.create({ hotel_id: hotelId, facility_id: facilityId });
-      } else {
-        const { error } = await db.from("hotel_facilities").delete().eq("hotel_id", hotelId).eq("facility_id", facilityId);
-        if (error) throw error;
-      }
-    },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["hotel-facilities", hotelId] }); qc.invalidateQueries({ queryKey: ["hotel-counts", hotelId] }); },
-    onError: (e: any) => toast.error(e.message),
-  });
-  const byCat: Record<string, any[]> = {};
-  (facilities.data ?? []).forEach((f: any) => { const c = f.category || "other"; (byCat[c] ??= []).push(f); });
-  return (
-    <Card><CardContent className="p-6 space-y-6">
-      {Object.keys(byCat).length === 0 && <div className="text-center text-muted-foreground py-10">{t("empty.title")}</div>}
-      {Object.entries(byCat).map(([cat, items]) => (
-        <div key={cat}>
-          <div className="mb-3 text-sm font-medium text-muted-foreground uppercase">{cat}</div>
-          <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3">
-            {items.map((f: any) => (
-              <label key={f.id} className="flex items-center gap-2 rounded-md border p-2 hover:bg-muted/40">
-                <Checkbox checked={linkedIds.has(f.id)} disabled={!canWrite || toggle.isPending}
-                  onCheckedChange={(v) => toggle.mutate({ facilityId: f.id, on: !!v })} />
-                <span className="text-sm">{lang === "ar" ? f.name_ar : f.name_en}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-      ))}
-    </CardContent></Card>
   );
 }
 
@@ -649,59 +553,6 @@ function ImagesTab({ hotelId, canWrite, images }: { hotelId: string; canWrite: b
   );
 }
 
-/* ---------- Contacts ---------- */
-function ContactsTab({ hotelId, canWrite }: { hotelId: string; canWrite: boolean }) {
-  const { t } = useI18n();
-  const qc = useQueryClient();
-  const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState<any>(null);
-  const [delId, setDelId] = useState<string | null>(null);
-  const q = useQuery({
-    queryKey: ["hotel-contacts", hotelId],
-    queryFn: async () => (await db.from("hotel_contacts").select("*").eq("hotel_id", hotelId).order("is_primary", { ascending: false })).data ?? [],
-  });
-  const del = useMutation({
-    mutationFn: async (rid: string) => { await apiClient.hotelContacts.delete(rid); },
-    onSuccess: () => { toast.success(t("toast.deleted")); qc.invalidateQueries({ queryKey: ["hotel-contacts", hotelId] }); setDelId(null); },
-  });
-  return (
-    <Card><CardContent className="p-0">
-      <div className="flex items-center justify-between border-b p-3">
-        <h3 className="font-medium">{t("hotels.contacts")}</h3>
-        {canWrite && <Button size="sm" onClick={() => { setEditing(null); setOpen(true); }}><Plus className="h-4 w-4" />{t("actions.add")}</Button>}
-      </div>
-      <Table>
-        <TableHeader><TableRow>
-          <TableHead>{t("label.full_name")}</TableHead><TableHead>{t("label.title_position")}</TableHead>
-          <TableHead>{t("label.department")}</TableHead><TableHead>{t("label.email")}</TableHead>
-          <TableHead>{t("label.phone")}</TableHead><TableHead>{t("label.is_primary")}</TableHead><TableHead></TableHead>
-        </TableRow></TableHeader>
-        <TableBody>
-          {q.data?.length === 0 && <TableRow><TableCell colSpan={7} className="py-10 text-center text-muted-foreground">{t("empty.title")}</TableCell></TableRow>}
-          {(Array.isArray(q.data) ? q.data : Array.isArray(q.data?.data) ? q.data.data : [])?.map((c: any) => (
-            <TableRow key={c.id}>
-              <TableCell className="font-medium">{c.full_name}</TableCell>
-              <TableCell>{c.title}</TableCell>
-              <TableCell>{c.department}</TableCell>
-              <TableCell dir="ltr">{c.email}</TableCell>
-              <TableCell dir="ltr">{c.phone || c.mobile}</TableCell>
-              <TableCell>{c.is_primary && <Badge>{t("label.is_primary")}</Badge>}</TableCell>
-              <TableCell className="text-end">
-                {canWrite && <>
-                  <Button variant="ghost" size="icon" onClick={() => { setEditing(c); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
-                  <Button variant="ghost" size="icon" onClick={() => setDelId(c.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                </>}
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-      <ContactDialog open={open} onOpenChange={setOpen} hotelId={hotelId} initial={editing}
-        onSaved={() => qc.invalidateQueries({ queryKey: ["hotel-contacts", hotelId] })} />
-      <ConfirmDialog open={!!delId} onOpenChange={(v) => !v && setDelId(null)} title={t("actions.delete")} description={t("toast.confirm_delete")} destructive onConfirm={() => delId && del.mutate(delId)} />
-    </CardContent></Card>
-  );
-}
 function ContactDialog({ open, onOpenChange, hotelId, initial, onSaved }: any) {
   const { t } = useI18n();
   const [v, setV] = useState<any>({});
@@ -756,91 +607,55 @@ function ContactDialog({ open, onOpenChange, hotelId, initial, onSaved }: any) {
 }
 
 /* ---------- Linked Suppliers ---------- */
-function SuppliersTab({ hotelId, canWrite }: { hotelId: string; canWrite: boolean }) {
+function SuppliersTab({ hotelId }: { hotelId: string }) {
   const { t, lang } = useI18n();
-  const qc = useQueryClient();
-  const suppliers = useSuppliersLite();
-  const [open, setOpen] = useState(false);
-  const [v, setV] = useState<any>({});
-  const [delId, setDelId] = useState<string | null>(null);
-  const q = useQuery({
-    queryKey: ["hotel-suppliers", hotelId],
-    queryFn: async () => (await db.from("hotel_suppliers").select("*, supplier:suppliers(id,code,name_en,name_ar)").eq("hotel_id", hotelId).order("is_preferred", { ascending: false })).data ?? [],
-  });
-  const save = useMutation({
-    mutationFn: async () => {
-      if (!v.supplier_id) throw new Error(t("label.required"));
-      await apiClient.hotelSuppliers.create({ hotel_id: hotelId, supplier_id: v.supplier_id, is_preferred: !!v.is_preferred, notes: v.notes || null });
-    },
-    onSuccess: () => { toast.success(t("toast.saved")); qc.invalidateQueries({ queryKey: ["hotel-suppliers", hotelId] }); setOpen(false); setV({}); },
-    onError: (e: any) => toast.error(e.message),
-  });
-  const togglePref = useMutation({
-    mutationFn: async ({ rid, on }: { rid: string; on: boolean }) => {
-      await apiClient.hotelSuppliers.update(rid, { is_preferred: on });
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["hotel-suppliers", hotelId] }),
-  });
-  const del = useMutation({
-    mutationFn: async (rid: string) => { await apiClient.hotelSuppliers.delete(rid); },
-    onSuccess: () => { toast.success(t("toast.deleted")); qc.invalidateQueries({ queryKey: ["hotel-suppliers", hotelId] }); setDelId(null); },
-  });
-  const linkedIds = new Set((q.data ?? []).map((r: any) => r.supplier_id));
-  const available = (suppliers.data ?? []).filter((s: any) => !linkedIds.has(s.id));
+  const { data: linkedSuppliersData, isLoading } = useGetSuppliersQuery({ hotel_id: hotelId });
+  const list = Array.isArray(linkedSuppliersData)
+    ? linkedSuppliersData
+    : (Array.isArray((linkedSuppliersData as any)?.data) ? (linkedSuppliersData as any).data : []);
+
   return (
     <Card><CardContent className="p-0">
-      <div className="flex items-center justify-between border-b p-3">
-        <h3 className="font-medium">{t("hotels.suppliers")}</h3>
-        {canWrite && (
-          <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (o) setV({ is_preferred: false }); }}>
-            <DialogTrigger asChild><Button size="sm" disabled={available.length === 0}><Plus className="h-4 w-4" />{t("actions.add")}</Button></DialogTrigger>
-            <DialogContent>
-              <DialogHeader><DialogTitle>{t("hotels.suppliers")}</DialogTitle></DialogHeader>
-              <div className="grid gap-3">
-                <Field label={`${t("filter.supplier")} *`}>
-                  <Select value={v.supplier_id ?? ""} onValueChange={(x) => setV({ ...v, supplier_id: x })}>
-                    <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
-                    <SelectContent>
-                      {available.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.code} — {lang === "ar" ? s.name_ar : s.name_en}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </Field>
-                <label className="flex items-center gap-2 text-sm"><Checkbox checked={!!v.is_preferred} onCheckedChange={(x) => setV({ ...v, is_preferred: !!x })} />{t("label.is_preferred")}</label>
-                <Field label={t("label.notes")}><Textarea rows={2} value={v.notes ?? ""} onChange={(e) => setV({ ...v, notes: e.target.value })} /></Field>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setOpen(false)}>{t("actions.cancel")}</Button>
-                <Button onClick={() => save.mutate()} disabled={save.isPending}>{t("actions.save")}</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        )}
-      </div>
       <Table>
         <TableHeader><TableRow>
-          <TableHead>{t("label.code")}</TableHead><TableHead>{t("label.name")}</TableHead>
-          <TableHead>{t("label.is_preferred")}</TableHead><TableHead>{t("label.notes")}</TableHead><TableHead></TableHead>
+          <TableHead>{t("label.code")}</TableHead>
+          <TableHead>{t("label.name")}</TableHead>
+          <TableHead>{t("supplier.apply.type")}</TableHead>
+          <TableHead>{t("label.city")}</TableHead>
+          <TableHead>{t("label.phone")}</TableHead>
+          <TableHead>{t("label.email")}</TableHead>
+          <TableHead>{t("label.rating")}</TableHead>
+          <TableHead>{t("label.is_preferred")}</TableHead>
         </TableRow></TableHeader>
         <TableBody>
-          {q.data?.length === 0 && <TableRow><TableCell colSpan={5} className="py-10 text-center text-muted-foreground">{t("empty.title")}</TableCell></TableRow>}
-          {(Array.isArray(q.data) ? q.data : Array.isArray(q.data?.data) ? q.data.data : [])?.map((r: any) => (
+          {isLoading && <TableRow><TableCell colSpan={8} className="py-10 text-center text-muted-foreground">{t("label.loading")}</TableCell></TableRow>}
+          {!isLoading && list.length === 0 && <TableRow><TableCell colSpan={8} className="py-10 text-center text-muted-foreground">{t("empty.title")}</TableCell></TableRow>}
+          {!isLoading && list.map((r: any) => (
             <TableRow key={r.id}>
-              <TableCell className="font-mono text-xs">{r.supplier?.code}</TableCell>
-              <TableCell>{lang === "ar" ? r.supplier?.name_ar : r.supplier?.name_en}</TableCell>
+              <TableCell className="font-mono text-xs">{r.code}</TableCell>
+              <TableCell className="font-medium">{lang === "ar" ? r.name_ar : r.name_en}</TableCell>
+              <TableCell><Badge variant="outline">{r.supplier_type ? (lang === "ar" ? r.supplier_type.name_ar : r.supplier_type.name_en) : "—"}</Badge></TableCell>
+              <TableCell>{r.city ? (lang === "ar" ? r.city.name_ar : r.city.name_en) : "—"}</TableCell>
+              <TableCell className="text-xs" dir="ltr">{r.phone || "—"}</TableCell>
+              <TableCell className="text-xs">{r.email || "—"}</TableCell>
               <TableCell>
-                {canWrite ? (
-                  <Checkbox checked={!!r.is_preferred} onCheckedChange={(x) => togglePref.mutate({ rid: r.id, on: !!x })} />
-                ) : (r.is_preferred && <Star className="h-4 w-4 text-amber-500" />)}
+                {r.rating ? (
+                  <span className="text-amber-500 font-bold">{"★".repeat(r.rating)}</span>
+                ) : (
+                  "—"
+                )}
               </TableCell>
-              <TableCell className="text-xs text-muted-foreground">{r.notes}</TableCell>
-              <TableCell className="text-end">
-                {canWrite && <Button variant="ghost" size="icon" onClick={() => setDelId(r.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>}
+              <TableCell>
+                {(r.pivot?.is_preferred ?? r.is_preferred) ? (
+                  <Star className="h-4 w-4 fill-amber-500 text-amber-500" />
+                ) : (
+                  "—"
+                )}
               </TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
-      <ConfirmDialog open={!!delId} onOpenChange={(v) => !v && setDelId(null)} title={t("actions.delete")} description={t("toast.confirm_delete")} destructive onConfirm={() => delId && del.mutate(delId)} />
     </CardContent></Card>
   );
 }
@@ -848,12 +663,10 @@ function SuppliersTab({ hotelId, canWrite }: { hotelId: string; canWrite: boolea
 /* ---------- Rates history ---------- */
 function RatesHistoryTab({ hotelId }: { hotelId: string }) {
   const { t, lang } = useI18n();
-  const q = useQuery({
-    queryKey: ["hotel-rates", hotelId],
-    queryFn: async () => (await db.from("rates")
-      .select("id,code,supplier:suppliers(name_en,name_ar),room_type:hotel_room_types(name_en,name_ar),meal_plan,currency,valid_from,valid_to,cost_per_night,selling_price,status,created_at")
-      .eq("hotel_id", hotelId).is("deleted_at", null).order("valid_from", { ascending: false })).data ?? [],
-  });
+  const { data: pricesData, isLoading } = useGetPricesQuery({ hotel_id: hotelId });
+  const list = Array.isArray(pricesData)
+    ? pricesData
+    : (Array.isArray(pricesData?.data) ? pricesData.data : []);
   return (
     <Card><CardContent className="p-0">
       <Table>
@@ -865,17 +678,18 @@ function RatesHistoryTab({ hotelId }: { hotelId: string }) {
           <TableHead>{t("label.status")}</TableHead>
         </TableRow></TableHeader>
         <TableBody>
-          {q.data?.length === 0 && <TableRow><TableCell colSpan={9} className="py-10 text-center text-muted-foreground">{t("hotels.no_rates")}</TableCell></TableRow>}
-          {(Array.isArray(q.data) ? q.data : Array.isArray(q.data?.data) ? q.data.data : [])?.map((r: any) => (
+          {isLoading && <TableRow><TableCell colSpan={9} className="py-10 text-center text-muted-foreground">{t("label.loading")}</TableCell></TableRow>}
+          {!isLoading && list.length === 0 && <TableRow><TableCell colSpan={9} className="py-10 text-center text-muted-foreground">{t("hotels.no_rates")}</TableCell></TableRow>}
+          {!isLoading && list.map((r: any) => (
             <TableRow key={r.id}>
               <TableCell className="font-mono text-xs">{r.code}</TableCell>
               <TableCell>{lang === "ar" ? r.supplier?.name_ar : r.supplier?.name_en}</TableCell>
-              <TableCell>{lang === "ar" ? r.room_type?.name_ar : r.room_type?.name_en}</TableCell>
-              <TableCell><Badge variant="outline">{r.meal_plan}</Badge></TableCell>
+              <TableCell>{lang === "ar" ? r.room?.name_ar : r.room?.name_en}</TableCell>
+              <TableCell><Badge variant="outline">{r.meal_plan_type}</Badge></TableCell>
               <TableCell className="text-xs">{r.valid_from}</TableCell>
               <TableCell className="text-xs">{r.valid_to}</TableCell>
               <TableCell>{Number(r.cost_per_night).toLocaleString()}</TableCell>
-              <TableCell className="text-xs">{r.currency}</TableCell>
+              <TableCell className="text-xs">{r.currency?.code || r.currency}</TableCell>
               <TableCell><StatusPill status={r.status} /></TableCell>
             </TableRow>
           ))}
@@ -885,11 +699,72 @@ function RatesHistoryTab({ hotelId }: { hotelId: string }) {
   );
 }
 
-function BookingsTab() {
+function BookingsTab({ hotelId }: { hotelId: string }) {
   const { t } = useI18n();
+  const { data: bookingsData, isLoading } = useGetBookingsQuery({ hotel_id: hotelId });
+  const list = Array.isArray(bookingsData)
+    ? bookingsData
+    : (Array.isArray((bookingsData as any)?.data) ? (bookingsData as any).data : []);
   return (
-    <Card><CardContent className="p-10 text-center text-muted-foreground">
-      {t("hotels.no_bookings")}
+    <Card><CardContent className="p-0">
+      <Table>
+        <TableHeader><TableRow>
+          <TableHead>{t("label.code")}</TableHead>
+          <TableHead>{t("label.checkin")}</TableHead>
+          <TableHead>{t("label.checkout")}</TableHead>
+          <TableHead>{t("label.status")}</TableHead>
+        </TableRow></TableHeader>
+        <TableBody>
+          {isLoading && <TableRow><TableCell colSpan={4} className="py-10 text-center text-muted-foreground">{t("label.loading")}</TableCell></TableRow>}
+          {!isLoading && list.length === 0 && <TableRow><TableCell colSpan={4} className="py-10 text-center text-muted-foreground">{t("hotels.no_bookings")}</TableCell></TableRow>}
+          {!isLoading && list.map((b: any) => (
+            <TableRow key={b.id}>
+              <TableCell className="font-mono text-xs">{b.code}</TableCell>
+              <TableCell className="text-xs">{b.check_in}</TableCell>
+              <TableCell className="text-xs">{b.check_out}</TableCell>
+              <TableCell><StatusPill status={b.status} /></TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </CardContent></Card>
+  );
+}
+
+function QuotationsTab({ hotelId }: { hotelId: string }) {
+  const { t, lang } = useI18n();
+  const { data: quotesData, isLoading } = useGetQuotationsQuery({ hotel_id: hotelId });
+  const list = Array.isArray(quotesData)
+    ? quotesData
+    : (Array.isArray((quotesData as any)?.data) ? (quotesData as any).data : []);
+  return (
+    <Card><CardContent className="p-0">
+      <Table>
+        <TableHeader><TableRow>
+          <TableHead>{t("quotes.number")}</TableHead>
+          <TableHead>{t("quotes.customer")}</TableHead>
+          <TableHead>{t("quotes.start_date")}</TableHead>
+          <TableHead>{t("quotes.end_date")}</TableHead>
+          <TableHead>{t("label.status")}</TableHead>
+        </TableRow></TableHeader>
+        <TableBody>
+          {isLoading && <TableRow><TableCell colSpan={5} className="py-10 text-center text-muted-foreground">{t("label.loading")}</TableCell></TableRow>}
+          {!isLoading && list.length === 0 && <TableRow><TableCell colSpan={5} className="py-10 text-center text-muted-foreground">{t("label.no_results")}</TableCell></TableRow>}
+          {!isLoading && list.map((q: any) => (
+            <TableRow key={q.id}>
+              <TableCell className="font-mono text-xs">{q.code || q.id}</TableCell>
+              <TableCell className="text-sm font-medium">{q.customer ? (lang === "ar" ? (q.customer.name_ar || q.customer.name_en) : (q.customer.name_en || q.customer.name_ar)) : "—"}</TableCell>
+              <TableCell className="text-xs">{q.start_date}</TableCell>
+              <TableCell className="text-xs">{q.end_date}</TableCell>
+              <TableCell>
+                <Badge variant={q.status === "rejected" || q.status === "cancelled" ? "destructive" : "default"}>
+                  {t(`qstatus.${q.status}`) || q.status}
+                </Badge>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
     </CardContent></Card>
   );
 }

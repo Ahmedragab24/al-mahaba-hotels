@@ -12,6 +12,8 @@ export * from "./tasks";
 export * from "./quotations";
 export * from "./bookings";
 export * from "./notifications";
+export * from "./invoices";
+export * from "./platform-transactions";
 
 // Resolve ambiguity for duplicate exports
 export { ApiResponse } from "./common";

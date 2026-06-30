@@ -468,8 +468,8 @@ export default function BookingDetail() {
 
   const editableHeader = canWrite && r.status === "draft" && !r.deleted_at;
   const editableRooms = canWrite && r.status === "draft" && !r.deleted_at;
-  const confirmableRooms = canWrite && ["draft", "pending_confirmation"].includes(r.status) && !r.deleted_at;
-  const editableGuests = canWrite && ["draft", "pending_confirmation", "confirmed"].includes(r.status) && !r.deleted_at;
+  const confirmableRooms = canWrite && ["draft", "pending_supplier_confirmation"].includes(r.status) && !r.deleted_at;
+  const editableGuests = canWrite && ["draft", "pending_supplier_confirmation", "confirmed"].includes(r.status) && !r.deleted_at;
 
   const total = Number(r.total_amount) || rooms.data?.reduce((s: number, rm: any) => s + Number(rm.total_selling), 0) || 0;
   const paid = Number(r.paid_amount) || Number(r.amount_paid) || 0;
@@ -487,13 +487,13 @@ export default function BookingDetail() {
     show: boolean;
     needsReason?: boolean;
   }[] = [
-      // { key: "submit", label: t("bk.submit"), status: "pending_confirmation", icon: Send, show: canWrite && r.status === "draft" },
-      // { key: "return", label: t("bk.return_draft"), status: "draft", icon: Undo2, variant: "outline", show: canWrite && r.status === "pending_confirmation" },
-      // { key: "confirm", label: t("bk.confirm"), status: "confirmed", icon: Check, show: canManage && r.status === "pending_confirmation" },
+      // { key: "submit", label: t("bk.submit"), status: "pending_supplier_confirmation", icon: Send, show: canWrite && r.status === "draft" },
+      // { key: "return", label: t("bk.return_draft"), status: "draft", icon: Undo2, variant: "outline", show: canWrite && r.status === "pending_supplier_confirmation" },
+      // { key: "confirm", label: t("bk.confirm"), status: "confirmed", icon: Check, show: canManage && r.status === "pending_supplier_confirmation" },
       // { key: "check_in", label: t("bk.check_in"), status: "checked_in", icon: LogIn, show: canWrite && r.status === "confirmed" },
       // { key: "check_out", label: t("bk.check_out"), status: "checked_out", icon: LogOut, show: canWrite && r.status === "checked_in" },
       // { key: "no_show", label: t("bk.no_show_action"), status: "no_show", icon: UserX, variant: "destructive", show: canManage && r.status === "confirmed", needsReason: true },
-      { key: "cancel", label: t("bk.cancel"), status: "cancelled", icon: Ban, variant: "destructive", show: canWrite && ["draft", "pending_confirmation", "confirmed"].includes(r.status), needsReason: true },
+      { key: "cancel", label: t("bk.cancel"), status: "cancelled", icon: Ban, variant: "destructive", show: canWrite && ["draft", "pending_supplier_confirmation", "confirmed"].includes(r.status), needsReason: true },
     ];
 
   return (
@@ -668,11 +668,30 @@ export default function BookingDetail() {
                 <PaymentProgress total={total} paid={paid} currency={currencyCode} lang={lang} />
                 <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4 border-border/40">
                   <div className="space-y-2">
-                    {(r.payment_method || r.payment_mode) && (
+                    {(r.payment_method || r.payment_mode) && (() => {
+                      const payMethod = r.payment_method || r.payment_mode;
+                      return (
+                        <div className="flex justify-between text-sm py-1 border-b border-border/20">
+                          <span className="text-muted-foreground">{ar("طريقة الدفع", "Payment Method")}</span>
+                          <span className="font-semibold text-foreground">
+                            {r.payment_method_text || (payMethod === "full" ? ar("دفع كامل", "Full Payment") : payMethod === "partial" ? ar("دفع جزئي", "Partial Payment") : ar("مؤجل", "Deferred Payment"))}
+                          </span>
+                        </div>
+                      );
+                    })()}
+                    {r.second_payment_due_date && (
                       <div className="flex justify-between text-sm py-1 border-b border-border/20">
-                        <span className="text-muted-foreground">{ar("طريقة الدفع", "Payment Method")}</span>
+                        <span className="text-muted-foreground">{ar("تاريخ الدفعة الثانية", "Second Payment Due Date")}</span>
                         <span className="font-semibold text-foreground">
-                          {r.payment_method_text || (r.payment_mode === "full" ? ar("دفع كامل", "Full Payment") : r.payment_mode === "partial" ? ar("دفع جزئي", "Partial") : ar("مؤجل", "Deferred"))}
+                          {formatDate(r.second_payment_due_date, lang)}
+                        </span>
+                      </div>
+                    )}
+                    {r.deferred_payment_due_date && (
+                      <div className="flex justify-between text-sm py-1 border-b border-border/20">
+                        <span className="text-muted-foreground">{ar("تاريخ الدفعة المؤجلة", "Deferred Payment Due Date")}</span>
+                        <span className="font-semibold text-foreground">
+                          {formatDate(r.deferred_payment_due_date, lang)}
                         </span>
                       </div>
                     )}

@@ -146,13 +146,13 @@
               }
             ],
             "url": {
-              "raw": "{{url}}/users/1?lang=ar",
+              "raw": "{{url}}/users/2?lang=ar",
               "host": [
                 "{{url}}"
               ],
               "path": [
                 "users",
-                "1"
+                "2"
               ],
               "query": [
                 {
@@ -210,15 +210,13 @@
                   "key": "country_id",
                   "value": "1",
                   "type": "text",
-                  "description": "nullable",
-                  "disabled": true
+                  "description": "nullable"
                 },
                 {
                   "key": "city_id",
                   "value": "1",
                   "type": "text",
-                  "description": "nullable",
-                  "disabled": true
+                  "description": "nullable"
                 },
                 {
                   "key": "status",
@@ -229,6 +227,12 @@
                   "key": "permissions[bookings]",
                   "value": "true",
                   "type": "text"
+                },
+                {
+                  "key": "image",
+                  "value": " file   Optional profile picture",
+                  "type": "text",
+                  "description": "Optional profile picture"
                 },
                 {
                   "key": "image",
@@ -296,14 +300,12 @@
                 {
                   "key": "country_id",
                   "value": "1",
-                  "type": "text",
-                  "disabled": true
+                  "type": "text"
                 },
                 {
                   "key": "city_id",
                   "value": "1",
-                  "type": "text",
-                  "disabled": true
+                  "type": "text"
                 },
                 {
                   "key": "permissions[bookings]",
@@ -645,16 +647,19 @@
               "query": [
                 {
                   "key": "lang",
-                  "value": "ar"
+                  "value": "ar",
+                  "type": "text"
                 },
                 {
                   "key": "status",
                   "value": "pending",
-                  "description": "pending - accepted - rejected"
+                  "description": "pending - accepted - rejected",
+                  "type": "text"
                 },
                 {
                   "key": "search",
-                  "value": ""
+                  "value": "",
+                  "type": "text"
                 }
               ]
             }
@@ -2324,7 +2329,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n    \"hotel_id\": 1,\n    \"code\": \"SEA_UPDATED\",\n    \"name_ar\": \"إطلالة بحرية معدلة\",\n    \"name_en\": \"Sea View Updated\",\n    \"status\": 0\n}\n"
+                  "raw": "{\n    \"hotel_id\": 2,\n    \"code\": \"SEA_UPDATED\",\n    \"name_ar\": \"إطلالة بحرية معدلة\",\n    \"name_en\": \"Sea View Updated\",\n    \"status\": 0\n}\n"
                 },
                 "url": {
                   "raw": "{{url}}/hotel-views/1",
@@ -2447,13 +2452,13 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{url}}/hotels/1/images",
+                  "raw": "{{url}}/hotels/2/images",
                   "host": [
                     "{{url}}"
                   ],
                   "path": [
                     "hotels",
-                    "1",
+                    "2",
                     "images"
                   ]
                 },
@@ -2807,13 +2812,13 @@
               }
             ],
             "url": {
-              "raw": "{{url}}/hotels/1",
+              "raw": "{{url}}/hotels/2",
               "host": [
                 "{{url}}"
               ],
               "path": [
                 "hotels",
-                "1"
+                "2"
               ]
             },
             "description": "Get detailed information about a single hotel by its ID."
@@ -3149,13 +3154,13 @@
               }
             ],
             "url": {
-              "raw": "{{url}}/rooms/1",
+              "raw": "{{url}}/rooms/2",
               "host": [
                 "{{url}}"
               ],
               "path": [
                 "rooms",
-                "1"
+                "2"
               ]
             },
             "description": "Show details of a single room."
@@ -3183,7 +3188,7 @@
               }
             ],
             "url": {
-              "raw": "{{url}}/rooms?search=Deluxe&status=1&hotel_id=1&room_type_id=1&per_page=15&lang=ar",
+              "raw": "{{url}}/rooms",
               "host": [
                 "{{url}}"
               ],
@@ -3194,30 +3199,36 @@
                 {
                   "key": "search",
                   "value": "Deluxe",
-                  "description": "Search by room name, code, or view"
+                  "description": "Search by room name, code, or view",
+                  "disabled": true
                 },
                 {
                   "key": "status",
                   "value": "1",
-                  "description": "1 = Active, 0 = Inactive / Archived"
+                  "description": "1 = Active, 0 = Inactive / Archived",
+                  "disabled": true
                 },
                 {
                   "key": "hotel_id",
                   "value": "1",
-                  "description": "Filter by Hotel ID"
+                  "description": "Filter by Hotel ID",
+                  "disabled": true
                 },
                 {
                   "key": "room_type_id",
                   "value": "1",
-                  "description": "Filter by Room Type ID"
+                  "description": "Filter by Room Type ID",
+                  "disabled": true
                 },
                 {
                   "key": "per_page",
-                  "value": "15"
+                  "value": "15",
+                  "disabled": true
                 },
                 {
                   "key": "lang",
-                  "value": "ar"
+                  "value": "ar",
+                  "disabled": true
                 }
               ]
             },
@@ -3335,7 +3346,7 @@
               }
             ],
             "url": {
-              "raw": "{{url}}/prices?search=Hilton&hotel_id=1&supplier_id=1&meal_plan=2&status=approved&valid_from=2026-07-01&valid_to=2026-07-10&latest_only=1&is_archived=0\n&all=1",
+              "raw": "{{url}}/prices",
               "host": [
                 "{{url}}"
               ],
@@ -3345,44 +3356,54 @@
               "query": [
                 {
                   "key": "search",
-                  "value": "Hilton"
+                  "value": "Hilton",
+                  "disabled": true
                 },
                 {
                   "key": "hotel_id",
-                  "value": "1"
+                  "value": "1",
+                  "disabled": true
                 },
                 {
                   "key": "supplier_id",
-                  "value": "1"
+                  "value": "1",
+                  "disabled": true
                 },
                 {
                   "key": "meal_plan",
-                  "value": "2"
+                  "value": "2",
+                  "disabled": true
                 },
                 {
                   "key": "status",
                   "value": "approved",
-                  "description": "draft,pending,approved,rejected,expired"
+                  "description": "draft,pending,approved,rejected,expired",
+                  "disabled": true
                 },
                 {
                   "key": "valid_from",
-                  "value": "2026-07-01"
+                  "value": "2026-07-01",
+                  "disabled": true
                 },
                 {
                   "key": "valid_to",
-                  "value": "2026-07-10"
+                  "value": "2026-07-10",
+                  "disabled": true
                 },
                 {
                   "key": "latest_only",
-                  "value": "1"
+                  "value": "1",
+                  "disabled": true
                 },
                 {
                   "key": "is_archived",
-                  "value": "0\n"
+                  "value": "0\n",
+                  "disabled": true
                 },
                 {
                   "key": "all",
-                  "value": "1"
+                  "value": "1",
+                  "disabled": true
                 }
               ]
             },
@@ -3456,14 +3477,13 @@
               }
             ],
             "url": {
-              "raw": "{{url}}/api/prices/1?lang=ar",
+              "raw": "{{url}}/prices/2?lang=ar",
               "host": [
                 "{{url}}"
               ],
               "path": [
-                "api",
                 "prices",
-                "1"
+                "2"
               ],
               "query": [
                 {
@@ -5677,6 +5697,16 @@
         {
           "name": "Get All Quotations",
           "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "48|qCJchmr3oi8uhhnpu3fYazaFVyy9GI18UuF1vE73bf377560",
+                  "type": "string"
+                }
+              ]
+            },
             "method": "GET",
             "header": [
               {
@@ -5686,7 +5716,7 @@
               }
             ],
             "url": {
-              "raw": "{{url}}/quotations?lang=ar",
+              "raw": "{{url}}/quotations?lang=ar&all=true&status=draft&hotel_id=1&customer_id=1",
               "host": [
                 "{{url}}"
               ],
@@ -5701,26 +5731,22 @@
                 {
                   "key": "all",
                   "value": "true",
-                  "description": "لو true هيرجع كل البيانات بدون Pagination",
-                  "disabled": true
+                  "description": "لو true هيرجع كل البيانات بدون Pagination"
                 },
                 {
                   "key": "status",
                   "value": "draft",
-                  "description": "فلترة بالحالة (draft, pending, approved, sent)",
-                  "disabled": true
+                  "description": "فلترة بالحالة (draft, pending, approved, sent)"
                 },
                 {
                   "key": "hotel_id",
                   "value": "1",
-                  "description": "فلترة برقم الفندق",
-                  "disabled": true
+                  "description": "فلترة برقم الفندق"
                 },
                 {
                   "key": "customer_id",
                   "value": "1",
-                  "description": "فلترة برقم العميل",
-                  "disabled": true
+                  "description": "فلترة برقم العميل"
                 }
               ]
             },
@@ -5780,6 +5806,16 @@
         {
           "name": "Show Quotation",
           "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "48|qCJchmr3oi8uhhnpu3fYazaFVyy9GI18UuF1vE73bf377560",
+                  "type": "string"
+                }
+              ]
+            },
             "method": "GET",
             "header": [
               {
@@ -5997,7 +6033,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"booking_type\": \"direct\",\n  \"booking_source\": \"hotel\",\n  \"customer_id\": 1,\n  \"currency_id\": 1,\n  \"booking_date\": \"2026-06-28\",\n  \"country_id\": 1,\n  \"city_id\": 1,\n  \"hotel_id\": 1,\n  \"check_in\": \"2026-07-10\",\n  \"check_out\": \"2026-07-15\",\n  \"payment_method\": \"partial\",\n  \"paid_amount\": 500.00,\n  \"second_payment_due_date\": \"2026-07-05\",\n  \"special_requests\": \"Haram view room requested.\",\n  \"notes\": \"Deposit paid by customer.\",\n  \"status\": \"confirmed\",\n  \"items\": [\n    {\n      \"price_id\": 1,\n      \"room_count\": 2\n    }\n  ]\n}"
+              "raw": "{\n  \"booking_type\": \"quotation\",\n  \"booking_date\": \"2026-06-28\",\n  \"quotation_id\": 1,\n  \n  // طريقة الدفع والبيانات المالية:\n  \"payment_method\": \"full\", // full (كامل) أو partial (جزئي) أو deferred (مؤجل)\n  \"paid_amount\": 1200.00,\n  \"second_payment_due_date\": null,\n  \"deferred_payment_due_date\": null,\n  \n  // رفع الفاتورة (اختياري):\n// \"invoice_image\": \"image_file_here\", // اختياري (يتم إرساله كملف File في الـ Form Data)\n  \n  \"status\": \"confirmed\"\n}\n\n\n// {\n//   \"booking_type\": \"direct\", // direct (مباشر) أو quotation (من عرض سعر)\n//   \"booking_source\": \"hotel\", // hotel (مباشر من الفندق) أو supplier (عن طريق مورد)\n//   \"customer_id\": 1,\n//   \"currency_id\": 3,\n//   \"booking_date\": \"2026-06-28\",\n//   \"country_id\": 1,\n//   \"city_id\": 1,\n//   \"hotel_id\": 1,\n//   \"check_in\": \"2026-07-10\",\n//   \"check_out\": \"2026-07-15\",\n  \n//   // طريقة الدفع والبيانات المالية:\n//   \"payment_method\": \"partial\", // full (كامل) أو partial (جزئي) أو deferred (مؤجل)\n//   \"paid_amount\": 500.00,\n//   \"second_payment_due_date\": \"2026-07-05\", // مطلوب فقط في حال كانت طريقة الدفع partial\n//   \"deferred_payment_due_date\": null, // مطلوب فقط في حال كانت طريقة الدفع deferred\n  \n//   // رفع الفاتورة (اختياري):\n//  // \"invoice_image\": \"image_file_here\", // اختياري (يتم إرساله كملف File في الـ Form Data)\n  \n//   \"special_requests\": \"Haram view room requested.\",\n//   \"notes\": \"Deposit paid by customer.\",\n//   \"status\": \"confirmed\",\n//   \"items\": [\n//     {\n//       \"price_id\": 1,\n//       \"room_count\": 2\n//     }\n//   ]\n// }\n\n"
             },
             "url": {
               "raw": "{{url}}/bookings",
@@ -6123,6 +6159,673 @@
                 "1"
               ]
             }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Invoices",
+      "item": [
+        {
+          "name": "List Invoices",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{url}}/invoices?search=&customer_id=&status=&invoice_type=&start_date=&end_date=&per_page=15&all=false&lang=ar",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "invoices"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "البحث برقم الفاتورة أو اسم العميل"
+                },
+                {
+                  "key": "customer_id",
+                  "value": "",
+                  "description": "الفلترة بمعرف العميل"
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "description": "حالة الفاتورة (draft, issued, sent, partially_paid, paid, overdue, cancelled)"
+                },
+                {
+                  "key": "invoice_type",
+                  "value": "",
+                  "description": "نوع الفاتورة (manual, from_booking)"
+                },
+                {
+                  "key": "start_date",
+                  "value": "",
+                  "description": "تاريخ البداية للنطاق المالي"
+                },
+                {
+                  "key": "end_date",
+                  "value": "",
+                  "description": "تاريخ النهاية للنطاق المالي"
+                },
+                {
+                  "key": "per_page",
+                  "value": "15"
+                },
+                {
+                  "key": "all",
+                  "value": "false"
+                },
+                {
+                  "key": "lang",
+                  "value": "ar"
+                }
+              ]
+            },
+            "description": "جلب قائمة بجميع الفواتير مع دعم الفلترة والبحث والترقيم الصفحي (Pagination). يدعم هذا الطلب بارامتر lang لتحديد لغة ترجمة الحالات وطرق الدفع (ar أو en)."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Invoice Statistics",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{url}}/invoices/statistics?lang=ar",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "invoices",
+                "statistics"
+              ],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "ar"
+                }
+              ]
+            },
+            "description": "جلب إحصائيات سريعة للفواتير بالريال السعودي (SAR) لبيان المبالغ المحصلة والمتبقية وأعداد الفواتير لكل حالة لعرضها في لوحة التحكم."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Invoice",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"invoice_type\": \"manual\", // نوع الفاتورة: manual لإنشاء فاتورة يدوية للخدمات العامة\n  \"customer_id\": 1,         // معرف العميل المستهدف (مطلوب)\n  \"currency_id\": 3,         // معرف العملة الخاصة بالفاتورة (مطلوب)\n  \"invoice_date\": \"2026-06-28\", // تاريخ إصدار الفاتورة (تنسيق Y-m-d)\n  \"due_date\": \"2026-07-05\",     // تاريخ استحقاق السداد (يجب أن يكون مساوياً أو بعد تاريخ الإصدار)\n  \"tax_percent\": 15.00,     // نسبة الضريبة المضافة (اختياري، افتراضي 0)\n  \"discount\": 50.00,        // قيمة الخصم المباشر الممنوح بالعملة المحددة (اختياري، افتراضي 0)\n  \"notes\": \"تفاصيل الفاتورة اليدوية هنا.\", // ملاحظات إضافية تظهر بالفاتورة (اختياري)\n  \"status\": \"draft\", // يمكنك تمرير: draft, issued, sent, partially_paid, paid, overdue, cancelled\n\n  \"items\": [                // مصفوفة الخدمات والبنود (مطلوبة في الفاتورة اليدوية)\n    {\n      \"description\": \"خدمة توصيل من المطار\", // وصف الخدمة المقدمة للعميل\n      \"quantity\": 1,                      // كمية أو عدد مرات الخدمة (رقم صحيح، 1 على الأقل)\n      \"unit_price\": 150.00                // سعر الوحدة الواحدة بالعملة المحددة\n    },\n    {\n      \"description\": \"ترقية الغرفة لفئة مطلة على الحرم\",\n      \"quantity\": 2,\n      \"unit_price\": 200.00\n    }\n  ]\n}\n//from booking \n// {\n//   \"invoice_type\": \"from_booking\", // نوع الفاتورة: from_booking لسحب البيانات تلقائياً من حجز\n//   \"booking_id\": 42,               // معرف الحجز الفعلي في النظام (مطلوب)\n//   \"invoice_date\": \"2026-06-28\",   // تاريخ إصدار الفاتورة (تنسيق Y-m-d)\n//   \"due_date\": \"2026-07-10\",       // تاريخ استحقاق السداد\n//   \"tax_percent\": 15.00,           // نسبة الضريبة (اختياري)\n//   \"discount\": 0.00,               // الخصم الإضافي (اختياري)\n//   \"notes\": \"تم إصدار الفاتورة تلقائياً من الحجز.\" // ملاحظات إضافية (اختياري)\n// }\n"
+            },
+            "url": {
+              "raw": "{{url}}/invoices?lang=ar",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "invoices"
+              ],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "ar"
+                }
+              ]
+            },
+            "description": "إنشاء فاتورة جديدة (تنشأ كـ draft تلقائياً). يدعم حالتين بناء على invoice_type:\n1. فاتورة يدوية (manual): مرر customer_id, currency_id, items (الوصف، الكمية، السعر).\n2. من حجز قائم (from_booking): مرر booking_id فقط ليقوم النظام بجلب البيانات تلقائياً وتسجيل الدفعة المقدمة."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Invoice Details",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{url}}/invoices/1?lang=ar",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "invoices",
+                "1"
+              ],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "ar"
+                }
+              ]
+            },
+            "description": "جلب تفاصيل فاتورة معينة بالكامل باستخدام معرف الفاتورة (ID). يرجع البنود والمدفوعات وبيانات العميل والعملة والحجز."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Invoice (Details & Statuses)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  // 1. التعديلات المالية والبنود (متاحة الآن بأي حالة):\n  \"invoice_date\": \"2026-06-29\", \n  \"due_date\": \"2026-07-06\",\n  \"tax_percent\": 15.00,\n  \"discount\": 25.00,\n  \"notes\": \"تحديث ملاحظات الفاتورة بعد إصدارها.\",\n  \"items\": [ // إذا تم إرسال البنود، يتم إعادة احتساب الإجماليات وتحديث البنود فوراً\n    {\n      \"description\": \"خدمة توصيل من المطار (محدثة)\",\n      \"quantity\": 1,\n      \"unit_price\": 140.00\n    }\n  ],\n\n  // 2. تحديث الحالة (اختياري):\n  \"status\": \"draft\" // يمكنك تمرير: draft, issued, sent, partially_paid, paid, overdue, cancelled\n}\n"
+            },
+            "url": {
+              "raw": "{{url}}/invoices/1?lang=ar",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "invoices",
+                "1"
+              ],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "ar"
+                }
+              ]
+            },
+            "description": "تحديث الفاتورة وتغيير حالتها. يدعم 4 حالات مدمجة:\n1. تعديل بيانات المسودة: تعديل التواريخ والخصم والضريبة والبنود (متاح فقط عندما تكون الفاتورة draft).\n2. إصدار الفاتورة (Issue): أرسل status: 'issued' لتوليد الرقم التسلسلي وقفل الفاتورة ماليّاً.\n3. إرسال الفاتورة (Send): أرسل status: 'sent' لتعليمها كمرسلة.\n4. إلغاء الفاتورة (Cancel): أرسل status: 'cancelled' لإلغاء الفاتورة ماليّاً."
+          },
+          "response": []
+        },
+        {
+          "name": "Record Payment Transaction",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payment_date\": \"2026-06-29\", // تاريخ الدفع\n  \"amount\": 200.00,             // قيمة المبلغ المدفوع (يجب ألا يتجاوز المتبقي)\n  \"payment_method\": \"bank_transfer\", // الخيارات: cash, bank_transfer, credit_card, cheque, other\n  \"transaction_reference\": \"REF-BANK-9988\", // رقم معاملة البنك أو الشبكة (اختياري)\n  \"notes\": \"دفعة جزئية عبر التحويل البنكي\" // (اختياري)\n}\n"
+            },
+            "url": {
+              "raw": "{{url}}/invoices/1/payments?lang=ar",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "invoices",
+                "1",
+                "payments"
+              ],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "ar"
+                }
+              ]
+            },
+            "description": "تسجيل دفعة مالية مستلمة من العميل. الخيارات المتاحة لـ payment_method هي: (cash, bank_transfer, credit_card, cheque, other). يقوم النظام تلقائياً بتحديث المبلغ المتبقي وحالة الفاتورة (partially_paid أو paid) وتحديث الحسابات بالحجز المرتبط."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Draft Invoice",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{url}}/invoices/1?lang=ar",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "invoices",
+                "1"
+              ],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "ar"
+                }
+              ]
+            },
+            "description": "حذف الفاتورة نهائياً من النظام (متاح فقط عندما تكون الفاتورة في حالة مسودة draft)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Platform Transactions",
+      "item": [
+        {
+          "name": "List Transactions",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{url}}/platform-transactions?type=income&category=electricity&start_date=2026-01-01&end_date=2026-12-31&search=June&per_page=15&all=1",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "platform-transactions"
+              ],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "income",
+                  "description": "income or expense"
+                },
+                {
+                  "key": "category",
+                  "value": "electricity"
+                },
+                {
+                  "key": "start_date",
+                  "value": "2026-01-01"
+                },
+                {
+                  "key": "end_date",
+                  "value": "2026-12-31"
+                },
+                {
+                  "key": "search",
+                  "value": "June",
+                  "description": "Optional: search term matching description or category"
+                },
+                {
+                  "key": "per_page",
+                  "value": "15"
+                },
+                {
+                  "key": "all",
+                  "value": "1",
+                  "description": "Optional: set to 1 to get all records without pagination"
+                }
+              ]
+            },
+            "description": "Retrieve platform transactions list with filtering options."
+          },
+          "response": []
+        },
+        {
+          "name": "Show Transaction",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{url}}/platform-transactions/1",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "platform-transactions",
+                "1"
+              ]
+            },
+            "description": "Get details of a single transaction by ID."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Transaction",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "type",
+                  "value": "expense",
+                  "type": "text",
+                  "description": "expense - income"
+                },
+                {
+                  "key": "category",
+                  "value": "electricity",
+                  "type": "text"
+                },
+                {
+                  "key": "amount",
+                  "value": "250.00",
+                  "type": "text"
+                },
+                {
+                  "key": "currency_id",
+                  "value": "1",
+                  "type": "text"
+                },
+                {
+                  "key": "transaction_date",
+                  "value": "2026-06-29",
+                  "type": "text"
+                },
+                {
+                  "key": "description",
+                  "value": "June Office Electricity Bill payment",
+                  "type": "text"
+                },
+                {
+                  "key": "payment_method",
+                  "value": "cash",
+                  "type": "text",
+                  "description": "cash - bank_transfer - credit_card - cheque - other"
+                },
+                {
+                  "key": "receipt_image",
+                  "type": "file",
+                  "src": "postman-cloud:///1f12f71b-edb0-4270-9eff-58954117aa26"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{url}}/platform-transactions",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "platform-transactions"
+              ]
+            },
+            "description": "Store a new platform transaction."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Transaction",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "_method",
+                  "value": "PUT",
+                  "type": "text",
+                  "description": "Required to spoof PUT request when sending multipart files in Laravel"
+                },
+                {
+                  "key": "amount",
+                  "value": "270.00",
+                  "type": "text"
+                },
+                {
+                  "key": "description",
+                  "value": "Updated June Office Electricity Bill payment",
+                  "type": "text"
+                },
+                {
+                  "key": "receipt_image",
+                  "type": "file",
+                  "description": "Optional: Replace existing receipt image file",
+                  "value": null
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{url}}/platform-transactions/1",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "platform-transactions",
+                "1"
+              ]
+            },
+            "description": "Update an existing transaction. NOTE: Use POST with _method=PUT to support files."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Transaction",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{url}}/platform-transactions/1",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "platform-transactions",
+                "1"
+              ]
+            },
+            "description": "Delete a transaction by ID."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Statistics",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{url}}/platform-transactions/statistics?year=2026",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "platform-transactions",
+                "statistics"
+              ],
+              "query": [
+                {
+                  "key": "year",
+                  "value": "2026",
+                  "description": "Year to aggregate monthly statistics for"
+                }
+              ]
+            },
+            "description": "Retrieve financial statistics including monthly profit/loss net sums and category distributions."
           },
           "response": []
         }

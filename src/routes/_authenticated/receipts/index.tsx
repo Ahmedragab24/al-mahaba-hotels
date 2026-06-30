@@ -310,7 +310,7 @@ export default function ReceiptsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {customers.data?.filter((c: any) => balances.data?.[c.id]).map((c: any) => {
+                    {(Array.isArray(customers.data) ? customers.data : Array.isArray(customers.data?.data) ? customers.data.data : [])?.filter((c: any) => balances.data?.[c.id]).map((c: any) => {
                       const b = balances.data![c.id];
                       const bal = b.invoiced - b.received - b.adj;
                       return (

@@ -48,7 +48,7 @@ export default function PaymentsList() {
     queryKey: ["payments-bookings", { dSearch, customer }],
     queryFn: async () => {
       // Fetch bookings where total_amount > 0 and status is not cancelled/no_show
-            let q = db.from("bookings").select(
+      let q = db.from("bookings").select(
         "id, booking_no, status, currency, booking_date, check_in, total_amount, amount_paid, payment_mode, customer:customers(id, name_en, name_ar, phone)"
       )
         .is("deleted_at", null)
@@ -138,7 +138,7 @@ export default function PaymentsList() {
                 <Input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder={t("bk.number")} className="ps-8 w-full" />
               </div>
             </div>
-            
+
             <div className="flex flex-col gap-1.5">
               <Label className="text-muted-foreground">{t("bk.customer")}</Label>
               <Select value={customer} onValueChange={(v) => { setCustomer(v); setPage(1); }}>
@@ -149,7 +149,7 @@ export default function PaymentsList() {
                 </SelectContent>
               </Select>
             </div>
-            
+
             {filtersActive && (
               <div className="flex items-center self-end pb-1 mt-auto">
                 <Button variant="ghost" size="sm" onClick={resetAll}>

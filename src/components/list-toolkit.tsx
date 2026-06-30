@@ -4,12 +4,12 @@ import { cn } from "@/lib/utils";
 export type KpiTone = "primary" | "warning" | "success" | "info" | "muted" | "destructive";
 
 export const KPI_TONE: Record<KpiTone, { bg: string; fg: string; ring: string; bar: string }> = {
-  primary:     { bg: "bg-primary/10",     fg: "text-primary",                              ring: "ring-primary/30",     bar: "bg-primary" },
-  warning:     { bg: "bg-amber-500/10",   fg: "text-amber-600 dark:text-amber-400",        ring: "ring-amber-500/30",   bar: "bg-amber-500" },
-  success:     { bg: "bg-emerald-500/10", fg: "text-emerald-600 dark:text-emerald-400",    ring: "ring-emerald-500/30", bar: "bg-emerald-500" },
-  info:        { bg: "bg-sky-500/10",     fg: "text-sky-600 dark:text-sky-400",            ring: "ring-sky-500/30",     bar: "bg-sky-500" },
-  muted:       { bg: "bg-muted",          fg: "text-muted-foreground",                     ring: "ring-border",         bar: "bg-muted-foreground/40" },
-  destructive: { bg: "bg-destructive/10", fg: "text-destructive",                          ring: "ring-destructive/30", bar: "bg-destructive" },
+  primary: { bg: "bg-primary/10", fg: "text-primary", ring: "ring-primary/30", bar: "bg-primary" },
+  warning: { bg: "bg-amber-500/10", fg: "text-amber-600 dark:text-amber-400", ring: "ring-amber-500/30", bar: "bg-amber-500" },
+  success: { bg: "bg-emerald-500/10", fg: "text-emerald-600 dark:text-emerald-400", ring: "ring-emerald-500/30", bar: "bg-emerald-500" },
+  info: { bg: "bg-sky-500/10", fg: "text-sky-600 dark:text-sky-400", ring: "ring-sky-500/30", bar: "bg-sky-500" },
+  muted: { bg: "bg-muted", fg: "text-muted-foreground", ring: "ring-border", bar: "bg-muted-foreground/40" },
+  destructive: { bg: "bg-destructive/10", fg: "text-destructive", ring: "ring-destructive/30", bar: "bg-destructive" },
 };
 
 export function KpiCard({
@@ -35,10 +35,10 @@ export function KpiCard({
       )}
     >
       <div className="flex items-center gap-3">
-        <div className={cn("grid h-10 w-10 shrink-0 place-items-center rounded-lg", T.bg, T.fg)}>
-          <Icon className="h-5 w-5" />
+        <div className={cn("grid h-8 w-8 shrink-0 place-items-center rounded-lg", T.bg, T.fg)}>
+          <Icon className="h-4 w-4" />
         </div>
-        <div className="min-w-0">
+        <div className="min-w-0 space-y-1">
           <div className="truncate text-xs font-medium text-muted-foreground">{label}</div>
           <div className="text-xl font-bold leading-tight">{value ?? "—"}</div>
         </div>

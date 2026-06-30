@@ -11,7 +11,7 @@ export interface BookingRoomItem {
 
 export type BookingStatus =
   | "draft"
-  | "pending_confirmation"
+  | "pending_supplier_confirmation"
   | "confirmed"
   | "checked_in"
   | "checked_out"
@@ -34,6 +34,7 @@ export interface Booking {
   payment_method?: string;
   paid_amount?: number | string;
   second_payment_due_date?: string;
+  deferred_payment_due_date?: string;
   special_requests?: string;
   notes?: string;
   status: BookingStatus;

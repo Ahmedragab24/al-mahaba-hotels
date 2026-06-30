@@ -23,6 +23,7 @@ import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Plus, Search, Eye, Pencil, Archive, RotateCcw, Trash2, Star, Building2, CheckCircle2, XCircle, Award, Calendar } from "lucide-react";
 import { toast } from "sonner";
 import { useGetSuppliersQuery, useUpdateSupplierMutation } from "@/store/services/suppliers/suppliersService";
+import { useGetSupplierTypesQuery } from "@/store/services/attributes/supplier-types";
 
 const PAGE_SIZE = 20;
 
@@ -43,6 +44,7 @@ export default function SuppliersList() {
 
   const dSearch = useDebounce(search, 300);
   const countries = useCountries();
+  const { data: supplierTypes = [] } = useGetSupplierTypesQuery({ lang });
 
   const { data: suppliersData, isLoading } = useGetSuppliersQuery(
     { 
@@ -138,6 +140,18 @@ export default function SuppliersList() {
           <KpiCard icon={Calendar} tone="info" label={t("kpi.this_month")} value={statistics?.this_month ?? "—"} />
         </div>
 
+        <div className="flex flex-wrap items-center gap-2">
+          <StatusPill label={t("filter.all")} tone="primary" active={stype === "all"} onClick={() => { setStype("all"); setPage(1); }} />
+          {supplierTypes?.map((st: any) => (
+            <StatusPill
+              key={st.id}
+              label={lang === "ar" ? st.name_ar : st.name_en}
+              tone="info"
+              active={stype === String(st.id)}
+              onClick={() => { setStype(String(st.id)); setPage(1); }}
+            />
+          ))}
+        </div>
 
         <Card>
           <CardContent className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -156,11 +170,11 @@ export default function SuppliersList() {
                 <SelectTrigger className="w-full"><SelectValue placeholder={t("filter.type")} /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t("filter.all")}</SelectItem>
-                  <SelectItem value="1">DMC</SelectItem>
-                  <SelectItem value="2">Hotel Supplier</SelectItem>
-                  <SelectItem value="3">Direct Hotel</SelectItem>
-                  <SelectItem value="4">Wholesaler</SelectItem>
-                  <SelectItem value="5">Other</SelectItem>
+                  {supplierTypes?.map((st: any) => (
+                    <SelectItem key={st.id} value={st.id.toString()}>
+                      {lang === "ar" ? st.name_ar : st.name_en}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

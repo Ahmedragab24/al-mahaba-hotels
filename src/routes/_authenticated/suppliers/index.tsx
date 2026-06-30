@@ -22,7 +22,7 @@ import { DataPagination } from "@/components/data-pagination";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Plus, Search, Eye, Pencil, Archive, RotateCcw, Trash2, Star, Building2, CheckCircle2, XCircle, Award, Calendar } from "lucide-react";
 import { toast } from "sonner";
-import { useGetSuppliersQuery } from "@/store/services/suppliers/suppliersService";
+import { useGetSuppliersQuery, useUpdateSupplierMutation } from "@/store/services/suppliers/suppliersService";
 
 const PAGE_SIZE = 20;
 
@@ -39,7 +39,7 @@ export default function SuppliersList() {
   const [stype, setStype] = useState<string>("all");
   const [showArchived, setShowArchived] = useState(false);
   const [page, setPage] = useState(1);
-  const [confirm, setConfirm] = useState<{ id: number } | null>(null);
+  const [confirm, setConfirm] = useState<{ id: number; action: "archive" | "restore" | "delete" } | null>(null);
 
   const dSearch = useDebounce(search, 300);
   const countries = useCountries();
@@ -66,18 +66,39 @@ export default function SuppliersList() {
   console.log('[SuppliersList] suppliers:', suppliers);
   console.log('[SuppliersList] statistics:', statistics);
 
-  const deleteMut = useMutation({
-    mutationFn: async (id: number) => {
-      console.log('[deleteMut] Calling apiClient.suppliers.delete for id:', id);
-      await apiClient.suppliers.delete(id);
-    },
-    onSuccess: () => {
-      toast.success(t("toast.deleted"));
-      qc.invalidateQueries({ queryKey: ["Suppliers"] });
-      setConfirm(null);
-    },
-    onError: (e: any) => toast.error(e.message ?? t("toast.error")),
-  });
+  const [updateSupplier] = useUpdateSupplierMutation();
+
+  const handleAction = async ({ id, action }: { id: number; action: "archive" | "restore" | "delete" }) => {
+    if (action === "delete") {
+      try {
+        console.log('[handleAction] Calling apiClient.suppliers.delete for id:', id);
+        await apiClient.suppliers.delete(id);
+        toast.success(t("toast.deleted"));
+        qc.invalidateQueries({ queryKey: ["Suppliers"] });
+        setConfirm(null);
+      } catch (e: any) {
+        toast.error(e.message ?? t("toast.error"));
+      }
+    } else if (action === "archive") {
+      try {
+        await updateSupplier({ id, body: { is_archived: 1 } }).unwrap();
+        toast.success(t("toast.archived"));
+        qc.invalidateQueries({ queryKey: ["Suppliers"] });
+        setConfirm(null);
+      } catch (e: any) {
+        toast.error(e.message ?? t("toast.error"));
+      }
+    } else if (action === "restore") {
+      try {
+        await updateSupplier({ id, body: { is_archived: 0 } }).unwrap();
+        toast.success(t("toast.restored"));
+        qc.invalidateQueries({ queryKey: ["Suppliers"] });
+        setConfirm(null);
+      } catch (e: any) {
+        toast.error(e.message ?? t("toast.error"));
+      }
+    }
+  };
 
   const total = suppliers.length;
 
@@ -219,7 +240,11 @@ export default function SuppliersList() {
                           </Button>
                         )}
                         {isAdmin(auth) && (
-                          <Button variant="ghost" size="icon" title={t("actions.delete")} onClick={() => setConfirm({ id: s.id })}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                          <Button variant="ghost" size="icon" title={t("actions.delete")} onClick={() => setConfirm({ id: s.id, action: "delete" })}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                        )}
+                        {isAdmin(auth) && (s.is_archived
+                          ? <Button variant="ghost" size="icon" title={t("actions.restore")} onClick={() => setConfirm({ id: s.id, action: "restore" })}><RotateCcw className="h-4 w-4" /></Button>
+                          : <Button variant="ghost" size="icon" title={t("actions.archive")} onClick={() => setConfirm({ id: s.id, action: "archive" })}><Archive className="h-4 w-4" /></Button>
                         )}
                       </div>
                     </TableCell>
@@ -234,10 +259,10 @@ export default function SuppliersList() {
       <ConfirmDialog
         open={!!confirm}
         onOpenChange={(v) => !v && setConfirm(null)}
-        title={t("actions.delete")}
-        description={t("toast.confirm_delete")}
-        destructive={true}
-        onConfirm={() => confirm && deleteMut.mutate(confirm.id)}
+        title={confirm?.action === "restore" ? t("actions.restore") : confirm?.action === "delete" ? t("actions.delete") : t("actions.archive")}
+        description={confirm?.action === "delete" ? t("toast.confirm_delete") : confirm?.action === "restore" ? "" : t("toast.confirm_archive")}
+        destructive={confirm?.action !== "restore"}
+        onConfirm={() => confirm && handleAction(confirm)}
       />
     </>
   );

@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/api-client";
 import { PageHeader } from "@/components/page-header";
 import { useI18n } from "@/lib/i18n";
@@ -16,9 +16,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DataPagination } from "@/components/data-pagination";
+import { ConfirmDialog } from "@/components/confirm-dialog";
+import { toast } from "sonner";
 import {
   Plus, Search, Eye, X, FileText, Clock, CheckCircle2, ThumbsUp, XCircle, DollarSign,
-  CalendarClock, AlertTriangle, Pencil,
+  CalendarClock, AlertTriangle, Pencil, Trash2,
 } from "lucide-react";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -47,6 +49,21 @@ export default function QuotationsList() {
   const [status, setStatus] = useState("all");
   const [hotel, setHotel] = useState("all");
   const [page, setPage] = useState(1);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+
+  const qc = useQueryClient();
+  const { mutate: deleteQuote } = useMutation({
+    mutationFn: (id: string) => apiClient.quotations.delete(id),
+    onSuccess: () => {
+      toast.success(lang === "ar" ? "تم الحذف بنجاح" : "Deleted successfully");
+      qc.invalidateQueries({ queryKey: ["quotations"] });
+      setConfirmDelete(null);
+    },
+    onError: (e: any) => {
+      toast.error(e?.message || (lang === "ar" ? "حدث خطأ" : "Error occurred"));
+      setConfirmDelete(null);
+    }
+  });
 
   const filtersActive = !!(customer !== "all" || status !== "all" || hotel !== "all");
   const resetAll = () => { setCustomer("all"); setStatus("all"); setHotel("all"); setPage(1); };
@@ -250,6 +267,11 @@ export default function QuotationsList() {
                             <Link to={`/quotations/${q.id}?edit=1`}><Pencil className="h-4 w-4" /></Link>
                           </Button>
                         )}
+                        {canWrite && (
+                          <Button variant="ghost" size="icon" title={t("actions.delete")} onClick={() => setConfirmDelete(String(q.id))}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   );
@@ -260,6 +282,15 @@ export default function QuotationsList() {
           </CardContent>
         </Card>
       </div>
+
+      <ConfirmDialog
+        open={!!confirmDelete}
+        onOpenChange={(v) => !v && setConfirmDelete(null)}
+        title={t("actions.delete")}
+        description={t("toast.confirm_delete", "هل أنت متأكد من الحذف؟")}
+        destructive={true}
+        onConfirm={() => confirmDelete && deleteQuote(confirmDelete)}
+      />
     </>
   );
 }

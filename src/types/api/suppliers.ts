@@ -41,13 +41,15 @@ export interface Supplier {
   name: string;
   supplier_type_id: number;
   supplier_type: SupplierType;
-  status: boolean;
-  is_archived: boolean;
+  status: boolean | number;
+  is_archived: boolean | number;
   tax_number: string | null;
   commercial_register: string | null;
   currency_id: number;
   currency: Currency;
+  country_id?: number | null;
   country: Country;
+  city_id?: number | null;
   city: City;
   address_1: string | null;
   address_2: string | null;

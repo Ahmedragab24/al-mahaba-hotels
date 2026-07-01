@@ -62,7 +62,7 @@ export function MealPlanConfigurator({
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8" dir={lang === "ar" ? "rtl" : "ltr"}>
           <div
-            className={cn("border rounded-xl p-4 sm:p-6 cursor-pointer flex justify-between items-center gap-4 transition-colors", isInclusive ? "border-amber-600 bg-amber-50/10" : "border-border hover:border-amber-600/50")}
+            className={cn("border rounded-xl p-4 sm:p-6 cursor-pointer flex justify-between items-center gap-4 transition-colors", isInclusive ? "border-amber-600 shadow-sm" : "border-border hover:border-amber-600/50")}
             onClick={() => {
               if (formContext) {
                 formContext.setValue("meal_plan_type", "inclusive", { shouldDirty: true });
@@ -71,7 +71,7 @@ export function MealPlanConfigurator({
             }}
           >
             <div>
-              <div className="font-bold text-base sm:text-lg mb-1">{lang === "ar" ? "شامل" : "Included"}</div>
+              <div className={cn("font-bold text-base sm:text-lg mb-1", isInclusive ? "text-amber-700 dark:text-amber-500" : "text-foreground")}>{lang === "ar" ? "شامل" : "Included"}</div>
               <div className="text-xs sm:text-sm text-muted-foreground">
                 {lang === "ar" ? "الوجبات مشمولة في سعر الحجز" : "Meals are included in the booking rate"}
               </div>
@@ -82,7 +82,7 @@ export function MealPlanConfigurator({
           </div>
 
           <div
-            className={cn("border rounded-xl p-4 sm:p-6 cursor-pointer flex justify-between items-center gap-4 transition-colors", !isInclusive ? "border-amber-600 bg-amber-50/10" : "border-border hover:border-amber-600/50")}
+            className={cn("border rounded-xl p-4 sm:p-6 cursor-pointer flex justify-between items-center gap-4 transition-colors", !isInclusive ? "border-amber-600 shadow-sm" : "border-border hover:border-amber-600/50")}
             onClick={() => {
               if (formContext) {
                 formContext.setValue("meal_plan_type", "exclusive", { shouldDirty: true });
@@ -91,7 +91,7 @@ export function MealPlanConfigurator({
             }}
           >
             <div>
-              <div className="font-bold text-base sm:text-lg mb-1">{lang === "ar" ? "غير شامل" : "Not Included"}</div>
+              <div className={cn("font-bold text-base sm:text-lg mb-1", !isInclusive ? "text-amber-700 dark:text-amber-500" : "text-foreground")}>{lang === "ar" ? "غير شامل" : "Not Included"}</div>
               <div className="text-xs sm:text-sm text-muted-foreground">
                 {lang === "ar" ? "الوجبات تُحسب بشكل منفصل" : "Meals are calculated separately"}
               </div>
@@ -103,7 +103,7 @@ export function MealPlanConfigurator({
         </div>
 
         {isInclusive ? (
-          <div dir={lang === "ar" ? "rtl" : "ltr"} className="max-w-2xl mx-auto">
+          <div dir={lang === "ar" ? "rtl" : "ltr"} className="max-w-3xl mx-auto">
             <div className="text-sm font-medium text-muted-foreground mb-4">
               {lang === "ar" ? "مكونات الخطة الشاملة" : "Included Plan Components"}
             </div>
@@ -122,32 +122,38 @@ export function MealPlanConfigurator({
                         formContext.setValue("meal_plan_inclusive_details", Array.from(current), { shouldDirty: true });
                       }
                     }}
-                    className={cn("border rounded-xl px-5 py-2.5 flex items-center gap-3 cursor-pointer transition-colors",
-                      checked ? "border-amber-600 text-amber-700 bg-amber-50/5 dark:text-amber-500" : "border-border text-muted-foreground hover:bg-muted/50"
+                    className={cn("border rounded-full px-5 py-2.5 flex items-center justify-between gap-3 cursor-pointer transition-colors",
+                      checked ? "border-amber-600 bg-transparent text-amber-700 dark:text-amber-500" : "border-gray-200 text-muted-foreground hover:bg-muted/50 dark:border-gray-700"
                     )}
                   >
-                    <div className={cn("w-4 h-4 rounded flex items-center justify-center border shrink-0", checked ? "bg-amber-600 border-amber-600 text-white" : "border-muted-foreground/30 bg-white dark:bg-transparent")}>
+                    <span className="text-sm font-bold">{lang === "ar" ? meal.name_ar : meal.name_en}</span>
+                    <div className={cn("w-4 h-4 rounded flex items-center justify-center border shrink-0 transition-colors", checked ? "bg-amber-600 border-amber-600 text-white" : "border-gray-300 bg-transparent dark:border-gray-600")}>
                       {checked && <Check className="w-3 h-3" />}
                     </div>
-                    <span className="text-sm font-bold">{lang === "ar" ? meal.name_ar : meal.name_en}</span>
                   </div>
                 );
               })}
             </div>
+            <div className="bg-[#f0fbf4] border border-[#e6f7ec] dark:bg-green-950/30 dark:border-green-900 text-[#16a34a] dark:text-green-500 px-6 py-4 rounded-xl flex items-center justify-between">
+               <div className="flex-1 text-center font-bold text-sm">
+                 {lang === "ar" ? "هذه الوجبات مشمولة ضمن سعر الحجز" : "These meals are included in the rate"}
+               </div>
+               <CheckCircle2 className="w-5 h-5 shrink-0" />
+            </div>
           </div>
         ) : (
-          <div className="border rounded-xl overflow-hidden max-w-3xl mx-auto">
-            <div className="bg-amber-50/30 px-6 py-4 hidden sm:flex justify-between items-center border-b text-sm font-bold text-muted-foreground" dir={lang === "ar" ? "rtl" : "ltr"}>
+          <div className="border rounded-xl bg-card overflow-hidden max-w-3xl mx-auto">
+            <div className="bg-muted/30 px-6 py-4 hidden sm:flex justify-between items-center border-b text-xs font-medium text-muted-foreground" dir={lang === "ar" ? "rtl" : "ltr"}>
               <div>{lang === "ar" ? "نوع الوجبة" : "Meal Type"}</div>
-              <div className="w-[200px] text-left" dir="ltr">{lang === "ar" ? "السعر" : "Price"}</div>
+              <div className="w-[300px] text-left" dir="ltr">{lang === "ar" ? "السعر" : "Price"} (SAR)</div>
             </div>
             <div className="divide-y" dir={lang === "ar" ? "rtl" : "ltr"}>
               {meals.map(meal => {
                 const mealId = Number(meal.id);
                 const checked = exclusivePrices[mealId.toString()] !== undefined;
                 return (
-                  <div key={mealId} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-muted/10 transition-colors">
-                    <div className="flex items-center gap-4 w-full sm:w-auto">
+                  <div key={mealId} className="px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors hover:bg-muted/10">
+                    <div className="flex items-center gap-3">
                       <div
                         onClick={() => {
                           if (formContext) {
@@ -160,36 +166,47 @@ export function MealPlanConfigurator({
                             formContext.setValue("meal_plan_exclusive_prices", current, { shouldDirty: true });
                           }
                         }}
-                        className={cn("w-4 h-4 rounded flex items-center justify-center border cursor-pointer shrink-0", checked ? "bg-amber-600 border-amber-600 text-white" : "border-muted-foreground/30 bg-white dark:bg-transparent")}
+                        className={cn("w-4 h-4 rounded flex items-center justify-center border cursor-pointer shrink-0 transition-colors", checked ? "bg-amber-600 border-amber-600 text-white" : "border-gray-300 bg-transparent dark:border-gray-600")}
                       >
                         {checked && <Check className="w-3 h-3" />}
                       </div>
-                      <span className={cn("text-sm font-bold", checked ? "text-foreground" : "text-muted-foreground")}>
+                      <span className={cn("text-sm font-bold cursor-pointer", checked ? "text-foreground" : "text-muted-foreground")}
+                        onClick={() => {
+                          if (formContext) {
+                            const current = { ...exclusivePrices };
+                            if (checked) {
+                              delete current[mealId.toString()];
+                            } else {
+                              current[mealId.toString()] = 0;
+                            }
+                            formContext.setValue("meal_plan_exclusive_prices", current, { shouldDirty: true });
+                          }
+                        }}
+                      >
                         {lang === "ar" ? meal.name_ar : meal.name_en}
                       </span>
                     </div>
-                    <div className={cn("w-full sm:w-[200px]", !checked && "hidden sm:block sm:h-10")} dir="ltr">
-                      {checked ? (
-                        <div className="relative">
-                          <Input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            placeholder="0.00"
-                            className="h-10 text-right pr-3 pl-3 border-amber-200 focus-visible:ring-amber-600 w-full"
-                            value={exclusivePrices[mealId.toString()] || ""}
-                            onChange={(e) => {
-                              if (formContext) {
-                                const current = { ...exclusivePrices };
-                                current[mealId.toString()] = e.target.value === "" ? "" : Number(e.target.value);
-                                formContext.setValue("meal_plan_exclusive_prices", current, { shouldDirty: true });
-                              }
-                            }}
-                          />
-                        </div>
-                      ) : (
-                        <div className="h-10" />
-                      )}
+                    
+                    <div className="w-full sm:w-[300px]" dir="ltr">
+                      <div className={cn("relative flex items-center border rounded-lg overflow-hidden transition-all", checked ? "focus-within:ring-1 focus-within:ring-amber-600 focus-within:border-amber-600 border-amber-600/50" : "border-border opacity-50 bg-muted/10")}>
+                        <span className={cn("px-4 text-xs font-bold border-r py-3 transition-colors", checked ? "text-amber-700 dark:text-amber-500 border-amber-600/50 bg-amber-50/10 dark:bg-amber-950/20" : "text-muted-foreground border-border bg-muted/20")}>SAR</span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder="0.00"
+                          disabled={!checked}
+                          className="flex-1 bg-transparent border-0 focus:ring-0 focus:outline-none text-right pr-4 text-sm w-full h-auto rounded-none"
+                          value={exclusivePrices[mealId.toString()] || ""}
+                          onChange={(e) => {
+                            if (formContext) {
+                              const current = { ...exclusivePrices };
+                              current[mealId.toString()] = e.target.value === "" ? "" : Number(e.target.value);
+                              formContext.setValue("meal_plan_exclusive_prices", current, { shouldDirty: true });
+                            }
+                          }}
+                        />
+                      </div>
                     </div>
                   </div>
                 );

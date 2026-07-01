@@ -11,6 +11,8 @@ export const hotelsApi = api.injectEndpoints({
         country_id?: number | string;
         per_page?: number | string;
         city_id?: number | string;
+        supplier_id?: number | string;
+        is_archived?: number | string;
       } | void
     >({
       query: (params) => ({ url: "/hotels", params: params || undefined }),

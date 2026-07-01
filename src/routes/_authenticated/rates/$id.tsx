@@ -35,7 +35,39 @@ export default function RateDetail() {
 
   const submitMut = useMutation({
     mutationFn: async () => {
-      await updatePrice({ id: id || "", body: { status: "pending" }, lang }).unwrap();
+      const r = rate.data;
+      if (!r) return;
+
+      const body = {
+        hotel_id: Number(r.hotel_id),
+        room_id: Number(r.room_id),
+        hotel_view_id: r.hotel_view_id ? Number(r.hotel_view_id) : null,
+        currency_id: Number(r.currency_id || r.currency),
+        valid_from: r.valid_from ? r.valid_from.split('T')[0] : "",
+        valid_to: r.valid_to ? r.valid_to.split('T')[0] : "",
+        meal_plan_type: r.meal_plan_type || "inclusive",
+        cost_per_night: Number(r.cost_per_night),
+        selling_price: r.selling_price ? Number(r.selling_price) : null,
+        profit_margin: r.profit_margin ? Number(r.profit_margin) : null,
+        tax_type: r.tax_type || "inclusive_tax",
+        tax_rate: r.tax_rate !== undefined && r.tax_rate !== null ? Number(r.tax_rate) : 15,
+        status: "pending",
+        is_direct: !!r.is_direct,
+        supplier_id: !r.is_direct && r.supplier_id ? Number(r.supplier_id) : null,
+        is_archived: r.is_archived ? 1 : 0,
+        notes_ar: r.notes_ar || null,
+        notes_en: r.notes_en || null,
+        cancellation_policy_ar: r.cancellation_policy_ar || null,
+        cancellation_policy_en: r.cancellation_policy_en || null,
+      } as any;
+
+      if (body.meal_plan_type === "inclusive") {
+        body.meal_plan_inclusive_details = r.meal_plan_inclusive_details ?? r.meal_plan_details?.map((d: any) => d.id) ?? [];
+      } else {
+        body.meal_plan_exclusive_prices = r.meal_plan_exclusive_prices ?? r.meal_plan_details?.reduce((acc: any, d: any) => ({ ...acc, [d.id]: d.price }), {}) ?? {};
+      }
+
+      await updatePrice({ id: id || "", body, lang }).unwrap();
     },
     onSuccess: () => { toast.success(t("toast.saved")); qc.invalidateQueries({ queryKey: ["getPriceById"] }); setSubmitConfirm(false); },
     onError: (e: any) => toast.error(e?.data?.message || e?.message || t("toast.error")),
@@ -43,7 +75,39 @@ export default function RateDetail() {
 
   const approveMut = useMutation({
     mutationFn: async () => {
-      await updatePrice({ id: id || "", body: { status: "approved" }, lang }).unwrap();
+      const r = rate.data;
+      if (!r) return;
+
+      const body = {
+        hotel_id: Number(r.hotel_id),
+        room_id: Number(r.room_id),
+        hotel_view_id: r.hotel_view_id ? Number(r.hotel_view_id) : null,
+        currency_id: Number(r.currency_id || r.currency),
+        valid_from: r.valid_from ? r.valid_from.split('T')[0] : "",
+        valid_to: r.valid_to ? r.valid_to.split('T')[0] : "",
+        meal_plan_type: r.meal_plan_type || "inclusive",
+        cost_per_night: Number(r.cost_per_night),
+        selling_price: r.selling_price ? Number(r.selling_price) : null,
+        profit_margin: r.profit_margin ? Number(r.profit_margin) : null,
+        tax_type: r.tax_type || "inclusive_tax",
+        tax_rate: r.tax_rate !== undefined && r.tax_rate !== null ? Number(r.tax_rate) : 15,
+        status: "approved",
+        is_direct: !!r.is_direct,
+        supplier_id: !r.is_direct && r.supplier_id ? Number(r.supplier_id) : null,
+        is_archived: r.is_archived ? 1 : 0,
+        notes_ar: r.notes_ar || null,
+        notes_en: r.notes_en || null,
+        cancellation_policy_ar: r.cancellation_policy_ar || null,
+        cancellation_policy_en: r.cancellation_policy_en || null,
+      } as any;
+
+      if (body.meal_plan_type === "inclusive") {
+        body.meal_plan_inclusive_details = r.meal_plan_inclusive_details ?? r.meal_plan_details?.map((d: any) => d.id) ?? [];
+      } else {
+        body.meal_plan_exclusive_prices = r.meal_plan_exclusive_prices ?? r.meal_plan_details?.reduce((acc: any, d: any) => ({ ...acc, [d.id]: d.price }), {}) ?? {};
+      }
+
+      await updatePrice({ id: id || "", body, lang }).unwrap();
     },
     onSuccess: () => { toast.success(t("toast.saved")); qc.invalidateQueries({ queryKey: ["getPriceById"] }); setApproveConfirm(false); },
     onError: (e: any) => toast.error(e?.data?.message || e?.message || t("toast.error")),
@@ -51,7 +115,40 @@ export default function RateDetail() {
 
   const rejectMut = useMutation({
     mutationFn: async (reason: string) => {
-      await updatePrice({ id: id || "", body: { status: "rejected" }, lang }).unwrap();
+      const r = rate.data;
+      if (!r) return;
+
+      const body = {
+        hotel_id: Number(r.hotel_id),
+        room_id: Number(r.room_id),
+        hotel_view_id: r.hotel_view_id ? Number(r.hotel_view_id) : null,
+        currency_id: Number(r.currency_id || r.currency),
+        valid_from: r.valid_from ? r.valid_from.split('T')[0] : "",
+        valid_to: r.valid_to ? r.valid_to.split('T')[0] : "",
+        meal_plan_type: r.meal_plan_type || "inclusive",
+        cost_per_night: Number(r.cost_per_night),
+        selling_price: r.selling_price ? Number(r.selling_price) : null,
+        profit_margin: r.profit_margin ? Number(r.profit_margin) : null,
+        tax_type: r.tax_type || "inclusive_tax",
+        tax_rate: r.tax_rate !== undefined && r.tax_rate !== null ? Number(r.tax_rate) : 15,
+        status: "rejected",
+        rejection_reason: reason,
+        is_direct: !!r.is_direct,
+        supplier_id: !r.is_direct && r.supplier_id ? Number(r.supplier_id) : null,
+        is_archived: r.is_archived ? 1 : 0,
+        notes_ar: r.notes_ar || null,
+        notes_en: r.notes_en || null,
+        cancellation_policy_ar: r.cancellation_policy_ar || null,
+        cancellation_policy_en: r.cancellation_policy_en || null,
+      } as any;
+
+      if (body.meal_plan_type === "inclusive") {
+        body.meal_plan_inclusive_details = r.meal_plan_inclusive_details ?? r.meal_plan_details?.map((d: any) => d.id) ?? [];
+      } else {
+        body.meal_plan_exclusive_prices = r.meal_plan_exclusive_prices ?? r.meal_plan_details?.reduce((acc: any, d: any) => ({ ...acc, [d.id]: d.price }), {}) ?? {};
+      }
+
+      await updatePrice({ id: id || "", body, lang }).unwrap();
     },
     onSuccess: () => { toast.success(t("toast.saved")); qc.invalidateQueries({ queryKey: ["getPriceById"] }); setRejectOpen(false); setRejectReason(""); },
     onError: (e: any) => toast.error(e?.data?.message || e?.message || t("toast.error")),
@@ -62,7 +159,9 @@ export default function RateDetail() {
 
   const r = rate.data;
   const hotelName = lang === "ar" ? (r.hotel?.name_ar || r.hotel?.name_en) : (r.hotel?.name_en || r.hotel?.name_ar);
-  const supplierName = lang === "ar" ? (r.supplier?.name_ar || r.supplier?.name_en) : (r.supplier?.name_en || r.supplier?.name_ar);
+  const supplierName = r.supplier
+    ? (lang === "ar" ? (r.supplier.name_ar || r.supplier.name_en) : (r.supplier.name_en || r.supplier.name_ar))
+    : t("rates.source.direct", "Direct");
   const editable = canWrite && !r.is_archived;
 
   return (
@@ -155,7 +254,7 @@ function ProfileView({ r, lang, t }: any) {
       <KV k={t("rates.hotel")} v={lang === "ar" ? (r.hotel?.name_ar || r.hotel?.name_en) : (r.hotel?.name_en || r.hotel?.name_ar)} />
       <KV k={t("rates.supplier")} v={lang === "ar" ? (r.supplier?.name_ar || r.supplier?.name_en) : (r.supplier?.name_en || r.supplier?.name_ar)} />
       <KV k={t("rates.room")} v={lang === "ar" ? (r.room?.name_ar || r.room?.name_en) : (r.room?.name_en || r.room?.name_ar)} />
-      <KV k={t("rates.view")} v={r.hotel_view ? (lang === "ar" ? (r.hotel_view.name_ar || r.hotel_view.name_en) : (r.hotel_view.name_en || r.hotel_view.name_ar)) : null} />
+      {/* <KV k={t("rates.view")} v={r.hotel_view ? (lang === "ar" ? (r.hotel_view.name_ar || r.hotel_view.name_en) : (r.hotel_view.name_en || r.hotel_view.name_ar)) : null} /> */}
       <KV k={t("rates.meal_plan")} v={r.meal_plan_type} />
       <KV k={t("label.currency")} v={<span className="font-mono">{r.currency?.code || ""}</span>} />
       <KV k={t("rates.valid_from")} v={formatDate(r.valid_from)} />

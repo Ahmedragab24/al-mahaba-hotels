@@ -869,7 +869,7 @@ export default function TasksPage() {
                   </div>
 
                   {/* Priority, Deadline & Status Fields */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="flex flex-col gap-2">
                       <Label className="text-muted-foreground font-semibold">{lang === "ar" ? "الأولوية" : "Priority"}</Label>
                       <Select value={formPriority} onValueChange={setFormPriority}>
@@ -892,22 +892,6 @@ export default function TasksPage() {
                         onChange={(e) => setFormDeadline(e.target.value)}
                         className="py-5 text-base border"
                       />
-                    </div>
-
-                    <div className="flex flex-col gap-2">
-                      <Label className="text-muted-foreground font-semibold">{lang === "ar" ? "الحالة" : "Status"}</Label>
-                      <Select value={formStatus} onValueChange={setFormStatus}>
-                        <SelectTrigger className="w-full py-5 border">
-                          <SelectValue placeholder="Status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="open">{t.statusOpen}</SelectItem>
-                          <SelectItem value="in_progress">{t.statusInProgress}</SelectItem>
-                          <SelectItem value="awaiting_reply">{t.statusAwaitingReply}</SelectItem>
-                          <SelectItem value="completed">{t.statusCompleted}</SelectItem>
-                          <SelectItem value="closed">{t.statusClosed}</SelectItem>
-                        </SelectContent>
-                      </Select>
                     </div>
                   </div>
 

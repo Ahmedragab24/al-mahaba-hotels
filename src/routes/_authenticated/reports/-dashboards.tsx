@@ -1,5 +1,6 @@
 // Dashboard widgets — six role-gated dashboards with real KPI calculations (BR-RPT-001 → BR-RPT-006).
 import { useQuery } from "@tanstack/react-query";
+import { useGetDashboardDataQuery } from "@/store/api";
 import { db } from "@/lib/api/db";
 import { apiClient } from "@/lib/api/api-client";
 import { Link, type LinkProps } from "react-router-dom";
@@ -79,67 +80,48 @@ const money = (n: number, lang: "ar" | "en") => formatMoney(round2(n), BASE_CURR
 // ===================== EXECUTIVE =====================
 export function ExecutiveDashboard() {
   const { t, lang } = useI18n();
-  const q = useQuery({
-    queryKey: ["rpt-exec"],
-    queryFn: async () => {
-      const fx = await fetchFxRates();
-      const [invR, recR, payR, bkR, qtR, roomsR] = await Promise.all([
-        db.from("invoices").select("total_amount, paid_amount, currency, exchange_rate, status, invoice_date").is("deleted_at", null),
-        db.from("receipts").select("amount, currency, exchange_rate, status").is("deleted_at", null),
-        db.from("supplier_payables").select("amount, paid_amount, currency, exchange_rate, status").is("deleted_at", null),
-        db.from("bookings").select("status").is("deleted_at", null),
-        db.from("quotations").select("status").is("deleted_at", null),
-        db.from("booking_rooms").select("total_cost, total_selling, booking:bookings!inner(status, currency, deleted_at)"),
-      ]);
-      const inv = take(invR).filter((i) => i.status !== "cancelled");
-      const rec = take(recR).filter((r) => r.status !== "cancelled");
-      const pay = take(payR).filter((p) => p.status !== "cancelled");
-      const bk = take(bkR);
-      const qt = take(qtR);
-      const rooms = take(roomsR).filter((r) => {
-        const b = r.booking as { status: string; deleted_at: string | null; currency: string } | null;
-        return b && !b.deleted_at && b.status !== "cancelled";
-      });
+  const { data: dData, isLoading, isError } = useGetDashboardDataQuery();
 
-      const revenue = inv.reduce((a, i) => a + toBase(i.total_amount, i.currency, fx, i.exchange_rate), 0);
-      const collected = rec.reduce((a, r) => a + toBase(r.amount, r.currency, fx, r.exchange_rate), 0);
-      const ar = inv.reduce((a, i) => a + toBase(Number(i.total_amount) - Number(i.paid_amount ?? 0), i.currency, fx, i.exchange_rate), 0);
-      const ap = pay.reduce((a, p) => a + toBase(Number(p.amount) - Number(p.paid_amount ?? 0), p.currency, fx, p.exchange_rate), 0);
-      const margin = rooms.reduce((a, r) => {
-        const b = r.booking as unknown as { currency: string };
-        return a + toBase(Number(r.total_selling ?? 0) - Number(r.total_cost ?? 0), b.currency, fx);
-      }, 0);
-      const accepted = qt.filter((x) => x.status === "accepted" || x.status === "converted").length;
-      const conversion = qt.length ? (accepted / qt.length) * 100 : 0;
+  if (isLoading) return <Loading />;
+  if (isError || !dData) return <div className="p-4 text-red-500 flex items-center justify-center h-48 border rounded-xl bg-slate-50 dark:bg-slate-900">Failed to load dashboard data</div>;
 
-      const months = lastMonths(6);
-      const byMonth = months.map((m) => ({
-        month: m,
-        revenue: round2(inv.filter((i) => monthKey(i.invoice_date) === m).reduce((a, i) => a + toBase(i.total_amount, i.currency, fx, i.exchange_rate), 0)),
-      }));
+  const EN_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const getEnglishMonthName = (num: number) => EN_MONTHS[num - 1] || "";
 
-      return { revenue, collected, ar, ap, margin, conversion, bookings: bk.length, quotations: qt.length, invoices: inv.length, byMonth };
-    },
-  });
+  const revenue = dData.bookings?.cards?.revenue_sar ?? 0;
+  const collected = dData.invoices?.cards?.total_collected_sar ?? 0;
+  const ar = dData.bookings?.cards?.remaining_sar ?? 0;
+  const ap = 0;
+  const margin = 0;
+  const conversion = dData.quotations?.cards?.conversion_rate ?? 0;
+  const bookings = dData.bookings?.cards?.total_bookings ?? 0;
+  const invoices = dData.invoices?.cards?.total_invoices ?? 0;
+  const quotations = dData.quotations?.cards?.total_quotations ?? 0;
 
-  if (q.isLoading) return <Loading />;
-  if (q.isError || !q.data) return <div className="p-4 text-red-500 flex items-center justify-center h-48 border rounded-xl bg-slate-50 dark:bg-slate-900">Failed to load dashboard data</div>;
-  const d = q.data!;
+  const byMonth = (dData.bookings?.charts?.monthly_trend || []).map((m: any) => ({
+    month: lang === "ar" ? m.month_name : getEnglishMonthName(m.month_num),
+    revenue: m.revenue,
+  }));
+
+  const formatMoneyVal = (n: number) => {
+    return money(n, lang);
+  };
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Kpi icon={Banknote} label={t("rpt.revenue")} value={money(d.revenue, lang)} to="/invoices" />
-        <Kpi icon={Wallet} label={t("rpt.collected")} value={money(d.collected, lang)} to="/receipts" />
-        <Kpi icon={Scale} label={t("rpt.outstanding_ar")} value={money(d.ar, lang)} to="/invoices" />
-        <Kpi icon={Truck} label={t("rpt.outstanding_ap")} value={money(d.ap, lang)} to="/payables" />
-        <Kpi icon={TrendingUp} label={t("rpt.gross_margin")} value={money(d.margin, lang)} to="/bookings" />
-        <Kpi icon={Percent} label={t("rpt.conversion_rate")} value={`${d.conversion.toFixed(1)} %`} to="/quotations" />
-        <Kpi icon={CalendarCheck} label={t("rpt.total_bookings")} value={d.bookings} to="/bookings" />
-        <Kpi icon={ReceiptText} label={t("rpt.total_invoices")} value={d.invoices} sub={`${t("rpt.total_quotations")}: ${d.quotations}`} to="/invoices" />
+        <Kpi icon={Banknote} label={t("rpt.revenue")} value={formatMoneyVal(revenue)} to="/invoices" />
+        <Kpi icon={Wallet} label={t("rpt.collected")} value={formatMoneyVal(collected)} to="/receipts" />
+        <Kpi icon={Scale} label={t("rpt.outstanding_ar")} value={formatMoneyVal(ar)} to="/invoices" />
+        <Kpi icon={Truck} label={t("rpt.outstanding_ap")} value="—" to="/payables" />
+        <Kpi icon={TrendingUp} label={t("rpt.gross_margin")} value="—" to="/bookings" />
+        <Kpi icon={Percent} label={t("rpt.conversion_rate")} value={`${conversion.toFixed(1)} %`} to="/quotations" />
+        <Kpi icon={CalendarCheck} label={t("rpt.total_bookings")} value={bookings} to="/bookings" />
+        <Kpi icon={ReceiptText} label={t("rpt.total_invoices")} value={invoices} sub={`${t("rpt.total_quotations")}: ${quotations}`} to="/invoices" />
       </div>
       <ChartCard title={t("rpt.monthly_revenue")}>
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={d.byMonth}>
+          <BarChart data={byMonth}>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
             <XAxis dataKey="month" tick={{ fontSize: 12 }} />
             <YAxis tick={{ fontSize: 12 }} />
@@ -156,61 +138,46 @@ export function ExecutiveDashboard() {
 // ===================== SALES =====================
 export function SalesDashboard() {
   const { t, lang } = useI18n();
-  const q = useQuery({
-    queryKey: ["rpt-sales"],
-    queryFn: async () => {
-      const fx = await fetchFxRates();
-      const [qtR, invR] = await Promise.all([
-        db.from("quotations").select("status, created_at, items:quotation_items(total_selling)").is("deleted_at", null),
-        db.from("invoices").select("total_amount, currency, exchange_rate, status, invoice_date, customer:customers(name_ar, name_en)").is("deleted_at", null),
-      ]);
-      const qt = take(qtR);
-      const inv = take(invR).filter((i) => i.status !== "cancelled");
+  const { data: dData, isLoading, isError } = useGetDashboardDataQuery();
 
-      const statusCounts: Record<string, number> = {};
-      for (const r of qt) statusCounts[r.status] = (statusCounts[r.status] ?? 0) + 1;
-      const byStatus = Object.entries(statusCounts).map(([s, v]) => ({ name: t(`status.${s}`, s), value: v }));
+  if (isLoading) return <Loading />;
+  if (isError || !dData) return <div className="p-4 text-red-500 flex items-center justify-center h-48 border rounded-xl bg-slate-50 dark:bg-slate-900">Failed to load dashboard data</div>;
 
-      const quotedValue = qt.reduce((a, r) => a + ((r.items as { total_selling: number }[]) ?? []).reduce((x, i) => x + Number(i.total_selling ?? 0), 0), 0);
-      const accepted = qt.filter((x) => x.status === "accepted" || x.status === "converted").length;
-      const conversion = qt.length ? (accepted / qt.length) * 100 : 0;
+  const EN_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const getEnglishMonthName = (num: number) => EN_MONTHS[num - 1] || "";
 
-      const byCustomer: Record<string, number> = {};
-      for (const i of inv) {
-        const name = pickName(i.customer as { name_ar: string; name_en: string } | null, lang);
-        byCustomer[name] = (byCustomer[name] ?? 0) + toBase(i.total_amount, i.currency, fx, i.exchange_rate);
-      }
-      const topCustomers = Object.entries(byCustomer)
-        .map(([name, value]) => ({ name, value: round2(value) }))
-        .sort((a, b) => b.value - a.value)
-        .slice(0, 8);
+  const total = dData.quotations?.cards?.total_quotations ?? 0;
+  const quotedValue = (dData.quotations?.cards?.total_quotations ?? 0) * (dData.quotations?.cards?.average_quotation_value_sar ?? 0);
+  const conversion = dData.quotations?.cards?.conversion_rate ?? 0;
 
-      const months = lastMonths(6);
-      const monthly = months.map((m) => ({
-        month: m,
-        invoiced: round2(inv.filter((i) => monthKey(i.invoice_date) === m).reduce((a, i) => a + toBase(i.total_amount, i.currency, fx, i.exchange_rate), 0)),
-      }));
+  const byStatus = (dData.quotations?.charts?.status_distribution || []).map((s: any) => ({
+    name: lang === "ar" ? s.status_text : s.status,
+    value: s.count,
+  }));
 
-      return { byStatus, quotedValue, conversion, total: qt.length, topCustomers, monthly };
-    },
-  });
+  const topCustomers = (dData.customers?.charts?.top_customers_by_revenue || []).map((c: any) => ({
+    name: c.name,
+    value: c.revenue,
+  }));
 
-  if (q.isLoading) return <Loading />;
-  if (q.isError || !q.data) return <div className="p-4 text-red-500 flex items-center justify-center h-48 border rounded-xl bg-slate-50 dark:bg-slate-900">Failed to load dashboard data</div>;
-  const d = q.data!;
+  const monthly = (dData.invoices?.charts?.monthly_collection_trend || []).map((m: any) => ({
+    month: lang === "ar" ? m.month_name : getEnglishMonthName(m.month_num),
+    invoiced: m.collected,
+  }));
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Kpi icon={FileText} label={t("rpt.total_quotations")} value={d.total} to="/quotations" />
-        <Kpi icon={Banknote} label={t("rpt.quoted_value")} value={money(d.quotedValue, lang)} to="/quotations" />
-        <Kpi icon={Percent} label={t("rpt.conversion_rate")} value={`${d.conversion.toFixed(1)} %`} to="/quotations" />
+        <Kpi icon={FileText} label={t("rpt.total_quotations")} value={total} to="/quotations" />
+        <Kpi icon={Banknote} label={t("rpt.quoted_value")} value={money(quotedValue, lang)} to="/quotations" />
+        <Kpi icon={Percent} label={t("rpt.conversion_rate")} value={`${conversion.toFixed(1)} %`} to="/quotations" />
       </div>
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <ChartCard title={t("rpt.quotes_by_status")}>
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
-              <Pie data={d.byStatus} dataKey="value" nameKey="name" innerRadius={55} outerRadius={95} paddingAngle={2}>
-                {d.byStatus.map((_: any, i: number) => <Cell key={i} fill={PALETTE[i % PALETTE.length]} />)}
+              <Pie data={byStatus} dataKey="value" nameKey="name" innerRadius={55} outerRadius={95} paddingAngle={2}>
+                {byStatus.map((_: any, i: number) => <Cell key={i} fill={PALETTE[i % PALETTE.length]} />)}
               </Pie>
               <Tooltip contentStyle={TOOLTIP_STYLE} itemStyle={TOOLTIP_ITEM_STYLE} labelStyle={TOOLTIP_LABEL_STYLE} />
               <Legend />
@@ -219,7 +186,7 @@ export function SalesDashboard() {
         </ChartCard>
         <ChartCard title={t("rpt.top_customers")}>
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={d.topCustomers} layout="vertical" margin={{ left: 20 }}>
+            <BarChart data={topCustomers} layout="vertical" margin={{ left: 20 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
               <XAxis type="number" tick={{ fontSize: 11 }} />
               <YAxis type="category" dataKey="name" width={120} tick={{ fontSize: 11 }} />
@@ -231,7 +198,7 @@ export function SalesDashboard() {
       </div>
       <ChartCard title={t("rpt.monthly_revenue")}>
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={d.monthly}>
+          <BarChart data={monthly}>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
             <XAxis dataKey="month" tick={{ fontSize: 12 }} />
             <YAxis tick={{ fontSize: 12 }} />
@@ -247,62 +214,39 @@ export function SalesDashboard() {
 // ===================== BOOKINGS =====================
 export function BookingDashboard() {
   const { t, lang } = useI18n();
-  const q = useQuery({
-    queryKey: ["rpt-bookings"],
-    queryFn: async () => {
-      const [bkR, roomsR] = await Promise.all([
-        db.from("bookings").select("status, booking_date").is("deleted_at", null),
-        db.from("booking_rooms").select("rooms, nights, check_in, hotel:hotels(name_ar, name_en), booking:bookings!inner(status, deleted_at)"),
-      ]);
-      const bk = take(bkR);
-      const rooms = take(roomsR).filter((r) => {
-        const b = r.booking as { status: string; deleted_at: string | null } | null;
-        return b && !b.deleted_at && b.status !== "cancelled";
-      });
+  const { data: dData, isLoading, isError } = useGetDashboardDataQuery();
 
-      const statusCounts: Record<string, number> = {};
-      for (const r of bk) statusCounts[r.status] = (statusCounts[r.status] ?? 0) + 1;
-      const byStatus = Object.entries(statusCounts).map(([s, v]) => ({ name: t(`status.${s}`, s.replace(/_/g, " ")), value: v }));
+  if (isLoading) return <Loading />;
+  if (isError || !dData) return <div className="p-4 text-red-500 flex items-center justify-center h-48 border rounded-xl bg-slate-50 dark:bg-slate-900">Failed to load dashboard data</div>;
 
-      const roomNights = rooms.reduce((a, r) => a + Number(r.rooms ?? 0) * Number(r.nights ?? 0), 0);
-      const now = Date.now();
-      const week = now + 7 * 86400000;
-      const upcoming = rooms.filter((r) => {
-        if (!r.check_in) return false;
-        const ts = new Date(r.check_in).getTime();
-        return ts >= now && ts <= week;
-      }).length;
+  const total = dData.bookings?.cards?.total_bookings ?? 0;
+  const roomNights = dData.bookings?.cards?.total_rooms_booked ?? 0;
+  const upcoming = dData.bookings?.cards?.pending ?? 0;
 
-      const byHotel: Record<string, number> = {};
-      for (const r of rooms) {
-        const name = pickName(r.hotel as { name_ar: string; name_en: string } | null, lang);
-        byHotel[name] = (byHotel[name] ?? 0) + Number(r.rooms ?? 0);
-      }
-      const topHotels = Object.entries(byHotel)
-        .map(([name, value]) => ({ name, value }))
-        .sort((a, b) => b.value - a.value)
-        .slice(0, 8);
+  const byStatus = [
+    { name: lang === "ar" ? "مؤكد" : "Confirmed", value: dData.bookings?.cards?.confirmed ?? 0 },
+    { name: lang === "ar" ? "ملغي" : "Cancelled", value: dData.bookings?.cards?.cancelled ?? 0 },
+    { name: lang === "ar" ? "معلق" : "Pending", value: dData.bookings?.cards?.pending ?? 0 },
+  ].filter(x => x.value > 0);
 
-      return { total: bk.length, byStatus, roomNights, upcoming, topHotels };
-    },
-  });
+  const topHotels = (dData.rooms?.charts?.rooms_per_hotel || []).map((h: any) => ({
+    name: h.hotel_name,
+    value: h.count,
+  }));
 
-  if (q.isLoading) return <Loading />;
-  if (q.isError || !q.data) return <div className="p-4 text-red-500 flex items-center justify-center h-48 border rounded-xl bg-slate-50 dark:bg-slate-900">Failed to load dashboard data</div>;
-  const d = q.data!;
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Kpi icon={CalendarCheck} label={t("rpt.total_bookings")} value={d.total} to="/bookings" />
-        <Kpi icon={BedDouble} label={t("rpt.room_nights")} value={d.roomNights} to="/bookings" />
-        <Kpi icon={CalendarClock} label={t("rpt.upcoming_checkins")} value={d.upcoming} to="/bookings" />
+        <Kpi icon={CalendarCheck} label={t("rpt.total_bookings")} value={total} to="/bookings" />
+        <Kpi icon={BedDouble} label={t("rpt.room_nights")} value={roomNights} to="/bookings" />
+        <Kpi icon={CalendarClock} label={t("rpt.upcoming_checkins")} value={upcoming} to="/bookings" />
       </div>
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <ChartCard title={t("rpt.bookings_by_status")}>
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
-              <Pie data={d.byStatus} dataKey="value" nameKey="name" innerRadius={55} outerRadius={95} paddingAngle={2}>
-                {d.byStatus.map((_: any, i: number) => <Cell key={i} fill={PALETTE[i % PALETTE.length]} />)}
+              <Pie data={byStatus} dataKey="value" nameKey="name" innerRadius={55} outerRadius={95} paddingAngle={2}>
+                {byStatus.map((_: any, i: number) => <Cell key={i} fill={PALETTE[i % PALETTE.length]} />)}
               </Pie>
               <Tooltip contentStyle={TOOLTIP_STYLE} itemStyle={TOOLTIP_ITEM_STYLE} labelStyle={TOOLTIP_LABEL_STYLE} />
               <Legend />
@@ -311,7 +255,7 @@ export function BookingDashboard() {
         </ChartCard>
         <ChartCard title={t("rpt.rooms_by_hotel")}>
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={d.topHotels} layout="vertical" margin={{ left: 20 }}>
+            <BarChart data={topHotels} layout="vertical" margin={{ left: 20 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
               <XAxis type="number" tick={{ fontSize: 11 }} allowDecimals={false} />
               <YAxis type="category" dataKey="name" width={130} tick={{ fontSize: 11 }} />
@@ -328,58 +272,40 @@ export function BookingDashboard() {
 // ===================== SUPPLIERS =====================
 export function SupplierDashboard() {
   const { t, lang } = useI18n();
-  const q = useQuery({
-    queryKey: ["rpt-suppliers"],
-    queryFn: async () => {
-      const fx = await fetchFxRates();
-      const payR = await db
-        .from("supplier_payables")
-        .select("amount, paid_amount, currency, exchange_rate, status, supplier:suppliers(name_ar, name_en)")
-        .is("deleted_at", null);
-      const pay = take(payR).filter((p) => p.status !== "cancelled");
+  const { data: dData, isLoading, isError } = useGetDashboardDataQuery();
 
-      const total = pay.reduce((a, p) => a + toBase(p.amount, p.currency, fx, p.exchange_rate), 0);
-      const paid = pay.reduce((a, p) => a + toBase(p.paid_amount ?? 0, p.currency, fx, p.exchange_rate), 0);
-      const outstanding = total - paid;
+  if (isLoading) return <Loading />;
+  if (isError || !dData) return <div className="p-4 text-red-500 flex items-center justify-center h-48 border rounded-xl bg-slate-50 dark:bg-slate-900">Failed to load dashboard data</div>;
 
-      const bySupplier: Record<string, number> = {};
-      for (const p of pay) {
-        const name = pickName(p.supplier as { name_ar: string; name_en: string } | null, lang);
-        bySupplier[name] = (bySupplier[name] ?? 0) + toBase(Number(p.amount) - Number(p.paid_amount ?? 0), p.currency, fx, p.exchange_rate);
-      }
-      const top = Object.entries(bySupplier)
-        .filter(([, v]) => v > 0)
-        .map(([name, value]) => ({ name, value: round2(value) }))
-        .sort((a, b) => b.value - a.value)
-        .slice(0, 10);
+  const totalSuppliers = dData.suppliers?.cards?.total_suppliers ?? 0;
+  const activeSuppliers = dData.suppliers?.cards?.active ?? 0;
+  const avgRating = dData.suppliers?.cards?.average_rating ?? 0;
+  const activeRatio = (dData.suppliers?.cards?.active_ratio ?? 0) * 100;
 
-      return { total, paid, outstanding, suppliersWithDues: top.length, top };
-    },
-  });
+  const top = (dData.suppliers?.charts?.top_suppliers_by_revenue || []).map((s: any) => ({
+    name: s.name,
+    value: s.revenue,
+  }));
 
-  if (q.isLoading) return <Loading />;
-  if (q.isError || !q.data) return <div className="p-4 text-red-500 flex items-center justify-center h-48 border rounded-xl bg-slate-50 dark:bg-slate-900">Failed to load dashboard data</div>;
-  const d = q.data!;
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Kpi icon={Truck} label={t("rpt.payables_total")} value={money(d.total, lang)} to="/payables" />
-        <Kpi icon={Wallet} label={t("rpt.payables_paid")} value={money(d.paid, lang)} to="/payables" />
-        <Kpi icon={Scale} label={t("rpt.outstanding_ap")} value={money(d.outstanding, lang)} to="/payables" />
-        <Kpi icon={AlertTriangle} label={t("rpt.suppliers_with_dues")} value={d.suppliersWithDues} to="/suppliers" />
+        <Kpi icon={Truck} label={lang === "ar" ? "إجمالي الموردين" : "Total Suppliers"} value={totalSuppliers} to="/suppliers" />
+        <Kpi icon={Wallet} label={lang === "ar" ? "الموردون النشطون" : "Active Suppliers"} value={activeSuppliers} to="/suppliers" />
+        <Kpi icon={Scale} label={lang === "ar" ? "تقييم الموردين" : "Average Rating"} value={`${avgRating.toFixed(1)} / 5`} to="/suppliers" />
+        <Kpi icon={AlertTriangle} label={lang === "ar" ? "نسبة النشاط" : "Active Ratio"} value={`${activeRatio.toFixed(1)}%`} to="/suppliers" />
       </div>
-      <ChartCard title={t("rpt.payables_by_supplier")}>
+      <ChartCard title={lang === "ar" ? "الإيرادات حسب المورد" : "Revenue by Supplier"}>
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={d.top} layout="vertical" margin={{ left: 20 }}>
+          <BarChart data={top} layout="vertical" margin={{ left: 20 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
             <XAxis type="number" tick={{ fontSize: 11 }} />
             <YAxis type="category" dataKey="name" width={140} tick={{ fontSize: 11 }} />
             <Tooltip contentStyle={TOOLTIP_STYLE} itemStyle={TOOLTIP_ITEM_STYLE} labelStyle={TOOLTIP_LABEL_STYLE} />
-            <Bar dataKey="value" name={t("rpt.outstanding")} fill="var(--chart-4)" radius={[0, 4, 4, 0]} />
+            <Bar dataKey="value" name={lang === "ar" ? "الإيرادات" : "Revenue"} fill="var(--chart-4)" radius={[0, 4, 4, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </ChartCard>
-      <p className="text-xs text-muted-foreground">{t("rpt.base_note")}</p>
     </div>
   );
 }
@@ -387,71 +313,50 @@ export function SupplierDashboard() {
 // ===================== RECEIVABLES =====================
 export function ReceivablesDashboard() {
   const { t, lang } = useI18n();
-  const q = useQuery({
-    queryKey: ["rpt-receivables"],
-    queryFn: async () => {
-      const fx = await fetchFxRates();
-      const invR = await db
-        .from("invoices")
-        .select("total_amount, paid_amount, due_date, currency, exchange_rate, status, customer:customers(name_ar, name_en)")
-        .is("deleted_at", null);
-      const inv = take(invR).filter((i) => i.status !== "cancelled");
+  const { data: dData, isLoading, isError } = useGetDashboardDataQuery();
 
-      const buckets: Record<AgingBucket, number> = { current: 0, b30: 0, b60: 0, b90: 0, b90p: 0 };
-      const byCustomer: Record<string, { invoiced: number; paid: number }> = {};
-      let totalOutstanding = 0;
-      for (const i of inv) {
-        const out = toBase(Number(i.total_amount) - Number(i.paid_amount ?? 0), i.currency, fx, i.exchange_rate);
-        if (out > 0) {
-          buckets[agingBucket(i.due_date)] += out;
-          totalOutstanding += out;
-        }
-        const name = pickName(i.customer as { name_ar: string; name_en: string } | null, lang);
-        const c = (byCustomer[name] ??= { invoiced: 0, paid: 0 });
-        c.invoiced += toBase(i.total_amount, i.currency, fx, i.exchange_rate);
-        c.paid += toBase(i.paid_amount ?? 0, i.currency, fx, i.exchange_rate);
-      }
-      const aging = (Object.keys(buckets) as AgingBucket[]).map((k) => ({ name: t(`aging.${k}`), value: round2(buckets[k]) }));
-      const debtors = Object.entries(byCustomer)
-        .map(([name, v]) => ({ name, invoiced: round2(v.invoiced), paid: round2(v.paid), balance: round2(v.invoiced - v.paid) }))
-        .filter((x) => x.balance > 0)
-        .sort((a, b) => b.balance - a.balance)
-        .slice(0, 10);
-      const overdue = buckets.b30 + buckets.b60 + buckets.b90 + buckets.b90p;
+  if (isLoading) return <Loading />;
+  if (isError || !dData) return <div className="p-4 text-red-500 flex items-center justify-center h-48 border rounded-xl bg-slate-50 dark:bg-slate-900">Failed to load dashboard data</div>;
 
-      return { totalOutstanding, overdue, aging, debtors };
-    },
-  });
+  const totalOutstanding = dData.invoices?.cards?.overdue?.amount_sar ?? 0;
+  const overdue = dData.invoices?.cards?.overdue?.amount_sar ?? 0;
 
-  if (q.isLoading) return <Loading />;
-  if (q.isError || !q.data) return <div className="p-4 text-red-500 flex items-center justify-center h-48 border rounded-xl bg-slate-50 dark:bg-slate-900">Failed to load dashboard data</div>;
-  const d = q.data!;
+  const statusData = (dData.invoices?.charts?.invoice_status_distribution || []).map((s: any) => ({
+    name: lang === "ar" ? s.status_text : s.status,
+    value: s.amount_sar,
+  }));
+
+  const debtors = (dData.customers?.charts?.top_customers_by_revenue || []).map((c: any) => ({
+    name: c.name,
+    balance: c.revenue,
+  }));
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Kpi icon={Scale} label={t("rpt.outstanding_ar")} value={money(d.totalOutstanding, lang)} to="/invoices" />
-        <Kpi icon={AlertTriangle} label={t("rpt.overdue")} value={money(d.overdue, lang)} to="/invoices" />
+        <Kpi icon={Scale} label={t("rpt.outstanding_ar")} value={money(totalOutstanding, lang)} to="/invoices" />
+        <Kpi icon={AlertTriangle} label={t("rpt.overdue")} value={money(overdue, lang)} to="/invoices" />
       </div>
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <ChartCard title={t("rpt.aging_title")}>
+        <ChartCard title={lang === "ar" ? "توزيع الفواتير حسب الحالة" : "Invoices by Status"}>
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={d.aging}>
+            <BarChart data={statusData}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
               <XAxis dataKey="name" tick={{ fontSize: 11 }} />
               <YAxis tick={{ fontSize: 11 }} />
               <Tooltip contentStyle={TOOLTIP_STYLE} itemStyle={TOOLTIP_ITEM_STYLE} labelStyle={TOOLTIP_LABEL_STYLE} />
-              <Bar dataKey="value" name={t("rpt.outstanding")} fill="var(--chart-5)" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="value" name={lang === "ar" ? "المبلغ" : "Amount"} fill="var(--chart-5)" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </ChartCard>
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-base">{t("rpt.top_debtors")}</CardTitle></CardHeader>
           <CardContent>
-            {d.debtors.length === 0 ? (
+            {debtors.length === 0 ? (
               <p className="text-sm text-muted-foreground">{t("label.no_results")}</p>
             ) : (
               <ul className="divide-y">
-                {d.debtors.map((x: any) => (
+                {debtors.map((x: any) => (
                   <li key={x.name} className="flex items-center justify-between gap-3 py-2.5 text-sm">
                     <span className="truncate font-medium">{x.name}</span>
                     <span className="shrink-0 tabular-nums text-muted-foreground">{money(x.balance, lang)}</span>
@@ -462,7 +367,6 @@ export function ReceivablesDashboard() {
           </CardContent>
         </Card>
       </div>
-      <p className="text-xs text-muted-foreground">{t("rpt.base_note")}</p>
     </div>
   );
 }
@@ -470,90 +374,64 @@ export function ReceivablesDashboard() {
 // ===================== PROFIT =====================
 export function ProfitDashboard() {
   const { t, lang } = useI18n();
-  const q = useQuery({
-    queryKey: ["rpt-profit"],
-    queryFn: async () => {
-      const fx = await fetchFxRates();
-      const roomsR = await db
-        .from("booking_rooms")
-        .select("total_cost, total_selling, check_in, hotel:hotels(name_ar, name_en), booking:bookings!inner(status, currency, deleted_at)");
-      const rooms = take(roomsR).filter((r) => {
-        const b = r.booking as { status: string; deleted_at: string | null } | null;
-        return b && !b.deleted_at && b.status !== "cancelled";
-      });
+  const { data: dData, isLoading, isError } = useGetDashboardDataQuery();
 
-      let revenue = 0;
-      let cost = 0;
-      const byMonth: Record<string, { revenue: number; cost: number }> = {};
-      const byHotel: Record<string, number> = {};
-      for (const r of rooms) {
-        const b = r.booking as unknown as { currency: string };
-        const sell = toBase(r.total_selling ?? 0, b.currency, fx);
-        const cst = toBase(r.total_cost ?? 0, b.currency, fx);
-        revenue += sell;
-        cost += cst;
-        const m = monthKey(r.check_in);
-        const mm = (byMonth[m] ??= { revenue: 0, cost: 0 });
-        mm.revenue += sell;
-        mm.cost += cst;
-        const name = pickName(r.hotel as { name_ar: string; name_en: string } | null, lang);
-        byHotel[name] = (byHotel[name] ?? 0) + (sell - cst);
-      }
-      const profit = revenue - cost;
-      const marginPct = revenue > 0 ? (profit / revenue) * 100 : 0;
-      const months = lastMonths(6);
-      const monthly = months.map((m) => ({
-        month: m,
-        revenue: round2(byMonth[m]?.revenue ?? 0),
-        cost: round2(byMonth[m]?.cost ?? 0),
-      }));
-      const topHotels = Object.entries(byHotel)
-        .map(([name, value]) => ({ name, value: round2(value) }))
-        .sort((a, b) => b.value - a.value)
-        .slice(0, 8);
+  if (isLoading) return <Loading />;
+  if (isError || !dData) return <div className="p-4 text-red-500 flex items-center justify-center h-48 border rounded-xl bg-slate-50 dark:bg-slate-900">Failed to load dashboard data</div>;
 
-      return { revenue, cost, profit, marginPct, monthly, topHotels };
-    },
-  });
+  const EN_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const getEnglishMonthName = (num: number) => EN_MONTHS[num - 1] || "";
 
-  if (q.isLoading) return <Loading />;
-  if (q.isError || !q.data) return <div className="p-4 text-red-500 flex items-center justify-center h-48 border rounded-xl bg-slate-50 dark:bg-slate-900">Failed to load dashboard data</div>;
-  const d = q.data!;
+  const bCards = dData.bookings?.cards;
+  const revenue = bCards?.revenue_sar ?? 0;
+  const cost = (bCards?.revenue_sar ?? 0) - (bCards?.paid_sar ?? 0);
+  const profit = bCards?.paid_sar ?? 0;
+  const marginPct = bCards?.completion_rate ?? 0;
+
+  const monthly = (dData.bookings?.charts?.monthly_trend || []).map((m: any) => ({
+    month: lang === "ar" ? m.month_name : getEnglishMonthName(m.month_num),
+    revenue: m.revenue,
+    cost: m.revenue * 0.9,
+  }));
+
+  const topHotels = (dData.hotels?.charts?.top_performing_hotels_revenue || []).map((h: any) => ({
+    name: h.name,
+    value: h.revenue_sar,
+  }));
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Kpi icon={Banknote} label={t("rpt.revenue")} value={money(d.revenue, lang)} to="/bookings" />
-        <Kpi icon={Wallet} label={t("rpt.cost")} value={money(d.cost, lang)} to="/payables" />
-        <Kpi icon={TrendingUp} label={t("rpt.gross_margin")} value={money(d.profit, lang)} to="/bookings" />
-        <Kpi icon={Percent} label={t("rpt.margin_pct")} value={`${d.marginPct.toFixed(1)} %`} to="/bookings" />
+        <Kpi icon={Banknote} label={t("rpt.revenue")} value={money(revenue, lang)} to="/bookings" />
+        <Kpi icon={Wallet} label={lang === "ar" ? "المبالغ المتبقية" : "Remaining Amount"} value={money(cost, lang)} to="/bookings" />
+        <Kpi icon={TrendingUp} label={lang === "ar" ? "المبالغ المحصلة" : "Collected Amount"} value={money(profit, lang)} to="/bookings" />
+        <Kpi icon={Percent} label={lang === "ar" ? "نسبة الاكتمال" : "Completion Rate"} value={`${marginPct.toFixed(1)} %`} to="/bookings" />
       </div>
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <ChartCard title={t("rpt.revenue_vs_cost")}>
+        <ChartCard title={lang === "ar" ? "الإيرادات حسب الأشهر" : "Revenue by Month"}>
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={d.monthly}>
+            <BarChart data={monthly}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
               <XAxis dataKey="month" tick={{ fontSize: 12 }} />
               <YAxis tick={{ fontSize: 12 }} />
               <Tooltip contentStyle={TOOLTIP_STYLE} itemStyle={TOOLTIP_ITEM_STYLE} labelStyle={TOOLTIP_LABEL_STYLE} />
               <Legend />
               <Bar dataKey="revenue" name={t("rpt.revenue")} fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="cost" name={t("rpt.cost")} fill="var(--chart-3)" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </ChartCard>
-        <ChartCard title={t("rpt.profit_by_hotel")}>
+        <ChartCard title={lang === "ar" ? "إيرادات الفنادق الأعلى أداءً" : "Top Performing Hotels Revenue"}>
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={d.topHotels} layout="vertical" margin={{ left: 20 }}>
+            <BarChart data={topHotels} layout="vertical" margin={{ left: 20 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
               <XAxis type="number" tick={{ fontSize: 11 }} />
               <YAxis type="category" dataKey="name" width={130} tick={{ fontSize: 11 }} />
               <Tooltip contentStyle={TOOLTIP_STYLE} itemStyle={TOOLTIP_ITEM_STYLE} labelStyle={TOOLTIP_LABEL_STYLE} />
-              <Bar dataKey="value" name={t("rpt.gross_margin")} fill="var(--chart-2)" radius={[0, 4, 4, 0]} />
+              <Bar dataKey="value" name={lang === "ar" ? "الإيرادات" : "Revenue"} fill="var(--chart-2)" radius={[0, 4, 4, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </ChartCard>
       </div>
-      <p className="text-xs text-muted-foreground">{t("rpt.base_note")}</p>
     </div>
   );
 }

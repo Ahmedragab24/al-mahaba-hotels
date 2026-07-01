@@ -60,7 +60,7 @@ export default function RoomTypesList() {
     search: dSearch || undefined,
     hotel_id: hotel !== "all" ? hotel : undefined,
     room_type_id: roomType !== "all" ? roomType : undefined,
-    status: active === "active" ? "1" : active === "inactive" ? "0" : undefined,
+    status: active === "active" ? "1" : active === "inactive" ? "0" : active === "archived" ? "archived" : undefined,
     page: page,
     per_page: PAGE_SIZE,
     lang: lang,
@@ -130,6 +130,7 @@ export default function RoomTypesList() {
                   <SelectItem value="all">{t("filter.all")}</SelectItem>
                   <SelectItem value="active">{t("status.active")}</SelectItem>
                   <SelectItem value="inactive">{t("status.inactive")}</SelectItem>
+                  <SelectItem value="archived">{t("status.archived")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>

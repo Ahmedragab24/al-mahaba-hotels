@@ -300,7 +300,7 @@ export default function BookingsList() {
                   <TableHead>{t("bk.col.hotels")}</TableHead>
                   <TableHead>{t("bk.col.checkin")}</TableHead>
                   <TableHead className="text-center">{t("bk.col.nights")}</TableHead>
-                  <TableHead>{t("bk.source")}</TableHead>
+                  {/* <TableHead>{t("bk.source")}</TableHead> */}
                   <TableHead >{t("bk.value")}</TableHead>
                   <TableHead>{t("label.status")}</TableHead>
                   <TableHead className="text-end">{t("label.actions")}</TableHead>
@@ -391,15 +391,7 @@ export default function BookingsList() {
                           </span>
                         ) : <span className="text-muted-foreground">—</span>}
                       </TableCell>
-                      <TableCell className="text-xs">
-                        {b.quotation_id ? (
-                          <span className="inline-flex items-center gap-1 text-muted-foreground">
-                            <FileText className="h-3.5 w-3.5" /> {t("bk.source_quotation")}
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground">{t("bk.source_direct")}</span>
-                        )}
-                      </TableCell>
+
                       <TableCell dir="ltr" className="text-end text-xs font-semibold tabular-nums">
                         {fmt(value)} <span className="text-muted-foreground font-normal">{typeof b.currency === "object" ? b.currency?.code : (b.currency || "SAR")}</span>
                       </TableCell>

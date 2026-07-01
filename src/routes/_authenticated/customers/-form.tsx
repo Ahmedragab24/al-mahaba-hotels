@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { apiClient } from "@/lib/api/api-client";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -16,24 +17,34 @@ import { toast } from "sonner";
 import { Building2, User, Landmark, Briefcase } from "lucide-react";
 import type { Customer } from "@/types/api";
 
-const schema = z.object({
+const getSchema = (lang: "ar" | "en") => z.object({
   type: z.enum(["company", "individual", "agency", "government"]),
-  name_en: z.string().trim().max(200).optional().or(z.literal("")),
-  name_ar: z.string().trim().min(1).max(200),
-  email: z.string().trim().email().max(255).optional().or(z.literal("")),
-  phone: z.string().trim().max(40).regex(/^\+[1-9]\d{1,14}$/, { message: "يجب أن يبدأ رقم الهاتف بـ + ومفتاح الدولة (مثال: +966500000000) / Phone must start with + and country code (e.g., +966500000000)" }).optional().or(z.literal("")),
-  country_id: z.coerce.number().int().min(1, "مطلوب").or(z.literal("")),
-  legal_name: z.string().trim().max(200).optional().or(z.literal("")),
-  tax_number: z.string().trim().max(50).optional().or(z.literal("")),
-  commercial_register: z.string().trim().max(50).optional().or(z.literal("")),
-  credit_limit: z.coerce.number().min(0).default(0),
-  credit_days: z.coerce.number().int().min(0).default(0),
-  currency_id: z.coerce.number().int().min(1, "مطلوب").or(z.literal("")),
+  name_en: z.string().trim().max(200, lang === "ar" ? "يجب ألا يتجاوز الاسم 200 حرف" : "Name must not exceed 200 characters").optional().or(z.literal("")),
+  name_ar: z.string().trim()
+    .min(1, lang === "ar" ? "الاسم بالعربية مطلوب" : "Arabic name is required")
+    .max(200, lang === "ar" ? "يجب ألا يتجاوز الاسم 200 حرف" : "Name must not exceed 200 characters"),
+  email: z.string().trim()
+    .email(lang === "ar" ? "البريد الإلكتروني غير صالح" : "Invalid email address")
+    .max(255, lang === "ar" ? "البريد الإلكتروني يجب ألا يتجاوز 255 حرف" : "Email must not exceed 255 characters")
+    .optional().or(z.literal("")),
+  phone: z.string().trim().max(40, lang === "ar" ? "يجب ألا يتجاوز الهاتف 40 حرف" : "Phone must not exceed 40 characters")
+    .regex(/^\+[1-9]\d{1,14}$/, {
+      message: lang === "ar"
+        ? "يجب أن يبدأ رقم الهاتف بـ + ومفتاح الدولة (مثال: +966500000000)"
+        : "Phone must start with + and country code (e.g., +966500000000)"
+    }).optional().or(z.literal("")),
+  country_id: z.coerce.number().int().min(1, lang === "ar" ? "الدولة مطلوبة" : "Country is required").or(z.literal("")),
+  legal_name: z.string().trim().max(200, lang === "ar" ? "يجب ألا يتجاوز الاسم القانوني 200 حرف" : "Legal name must not exceed 200 characters").optional().or(z.literal("")),
+  tax_number: z.string().trim().max(50, lang === "ar" ? "يجب ألا يتجاوز الرقم الضريبي 50 حرف" : "Tax number must not exceed 50 characters").optional().or(z.literal("")),
+  commercial_register: z.string().trim().max(50, lang === "ar" ? "يجب ألا يتجاوز السجل التجاري 50 حرف" : "Commercial register must not exceed 50 characters").optional().or(z.literal("")),
+  credit_limit: z.coerce.number().min(0, lang === "ar" ? "الحد الائتماني يجب أن يكون صفراً أو أكثر" : "Credit limit must be 0 or more").default(0),
+  credit_days: z.coerce.number().int().min(0, lang === "ar" ? "أيام الائتمان يجب أن تكون صفراً أو أكثر" : "Credit days must be 0 or more").default(0),
+  currency_id: z.coerce.number().int().min(1, lang === "ar" ? "العملة مطلوبة" : "Currency is required").or(z.literal("")),
   status: z.enum(["active", "inactive"]),
-  notes: z.string().trim().max(2000).optional().or(z.literal("")),
+  notes: z.string().trim().max(2000, lang === "ar" ? "يجب ألا تتجاوز الملاحظات 2000 حرف" : "Notes must not exceed 2000 characters").optional().or(z.literal("")),
 });
 
-type FormVals = z.input<typeof schema>;
+type FormVals = z.input<ReturnType<typeof getSchema>>;
 
 interface bodyRequest {
   type: "individual" | "company" | "agency" | "government";
@@ -57,6 +68,8 @@ export function CustomerForm({ initial, onSaved }: { initial?: Partial<Customer>
   const dispatch = useDispatch();
   const countries = useCountries();
   const currencies = useCurrencies();
+
+  const schema = useMemo(() => getSchema(lang), [lang]);
 
   const form = useForm<FormVals>({
     resolver: zodResolver(schema),

@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -93,20 +93,56 @@ export function RateForm({ initial, onSaved }: { initial?: any; onSaved: (id: st
       meal_plan_exclusive_prices: initial?.meal_plan_exclusive_prices ?? initial?.meal_plan_details?.reduce((acc: any, d: any) => ({ ...acc, [d.id]: d.price }), {}) ?? {},
       cost_per_night: initial?.cost_per_night ?? 0,
       selling_price: initial?.selling_price?.toString() ?? "",
-      profit_margin: initial?.profit_margin?.toString() ?? "",
+      profit_margin: initial?.profit_margin?.toString() ?? "5",
       tax_type: initial?.tax_type ?? "inclusive_tax",
       tax_rate: initial?.tax_rate ?? 15,
       status: initial?.status ?? "approved",
       notes_en: initial?.notes_en ?? initial?.notes ?? "",
       notes_ar: initial?.notes_ar ?? initial?.notes ?? "",
-      cancellation_policy_en: initial?.cancellation_policy_en ?? initial?.cancellation_policy ?? "",
-      cancellation_policy_ar: initial?.cancellation_policy_ar ?? initial?.cancellation_policy ?? "",
+      cancellation_policy_en: initial?.cancellation_policy_en ?? initial?.cancellation_policy ?? "Guests may cancel their reservation free of charge up to 48 hours before the scheduled check-in date. Cancellations made within 48 hours of check-in, or failure to arrive (No-Show), will incur a charge equivalent to the first night's stay or as specified by the booked rate. For Non-Refundable reservations, no refund will be issued once the booking has been confirmed. Any eligible refunds will be processed in accordance with the hotel's policy and the original payment method.",
+      cancellation_policy_ar: initial?.cancellation_policy_ar ?? initial?.cancellation_policy ?? "يمكن للضيف إلغاء الحجز مجانًا حتى 48 ساعة قبل موعد تسجيل الوصول. في حال الإلغاء خلال أقل من 48 ساعة من موعد الوصول أو في حالة عدم الحضور (No-Show)، سيتم خصم قيمة الليلة الأولى أو وفقًا لشروط السعر المحجوز. في حال كان الحجز غير قابل للاسترداد (Non-Refundable)، فلن يتم استرداد أي مبالغ مدفوعة بعد تأكيد الحجز. تتم معالجة أي مبالغ مستحقة للاسترداد، إن وجدت، وفقًا لسياسة الفندق وطريقة الدفع المستخدمة.",
     },
   });
 
   const hotelId = form.watch("hotel_id");
   const isDirect = form.watch("is_direct");
   const mealPlanType = form.watch("meal_plan_type");
+  const costPerNight = form.watch("cost_per_night");
+  const profitMargin = form.watch("profit_margin");
+  const taxType = form.watch("tax_type");
+  const taxRate = form.watch("tax_rate");
+  const sellingPrice = form.watch("selling_price");
+  const currencyId = form.watch("currency_id");
+
+  // Auto-calculate selling_price from cost_per_night and profit_margin
+  useEffect(() => {
+    const cost = Number(costPerNight) || 0;
+    const margin = Number(profitMargin) || 0;
+    let price = cost + (cost * margin / 100);
+
+    if (taxType === "inclusive_tax") {
+      const rate = Number(taxRate) || 0;
+      price = price + (price * rate / 100);
+    }
+
+    form.setValue("selling_price", Number(price.toFixed(2)) || 0);
+  }, [costPerNight, profitMargin, taxType, taxRate, form]);
+
+  // If tax type is exclusive, set tax rate to 0
+  useEffect(() => {
+    if (taxType === "exclusive_tax") {
+      form.setValue("tax_rate", 0);
+    }
+  }, [taxType, form]);
+
+  const selectedCurrency = (Array.isArray(currencies.data) ? currencies.data : Array.isArray((currencies.data as any)?.data) ? (currencies.data as any).data : [])?.find((c: any) => (c.id || c.code).toString() === currencyId);
+  const currencySymbol = selectedCurrency ? (lang === "ar" ? selectedCurrency.symbol_ar : selectedCurrency.symbol_en) || selectedCurrency.code : "";
+
+  const sellingPriceNum = Number(sellingPrice) || 0;
+  const taxRateNum = taxType === "inclusive_tax" ? (Number(taxRate) || 0) : 0;
+  const total = taxType === "inclusive_tax"
+    ? sellingPriceNum
+    : Number((sellingPriceNum + (sellingPriceNum * taxRateNum / 100)).toFixed(2));
 
   const roomsQuery = useGetRoomsQuery({ hotel_id: hotelId });
 
@@ -146,6 +182,19 @@ export function RateForm({ initial, onSaved }: { initial?: any; onSaved: (id: st
       if (payload.currency_id) payload.currency_id = Number(payload.currency_id);
       if (payload.supplier_id) payload.supplier_id = Number(payload.supplier_id);
 
+      if (payload.cost_per_night !== "" && payload.cost_per_night !== null && payload.cost_per_night !== undefined) {
+        payload.cost_per_night = Number(payload.cost_per_night);
+      }
+      if (payload.selling_price !== "" && payload.selling_price !== null && payload.selling_price !== undefined) {
+        payload.selling_price = Number(payload.selling_price);
+      }
+      if (payload.profit_margin !== "" && payload.profit_margin !== null && payload.profit_margin !== undefined) {
+        payload.profit_margin = Number(payload.profit_margin);
+      }
+      if (payload.tax_rate !== "" && payload.tax_rate !== null && payload.tax_rate !== undefined) {
+        payload.tax_rate = Number(payload.tax_rate);
+      }
+
       if (initial?.id) {
         await updatePrice({ id: initial.id, body: payload, lang }).unwrap();
         toast.success(t("toast.saved"));
@@ -164,33 +213,9 @@ export function RateForm({ initial, onSaved }: { initial?: any; onSaved: (id: st
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <Card>
-          <CardContent className="grid grid-cols-1 gap-6 p-6 md:grid-cols-3" dir={lang === "ar" ? "rtl" : "ltr"}>
-            {/* Top Row: General Toggles (Spans across all columns) */}
-            <div className="col-span-full border-b pb-6 mb-2">
-              <div className="w-1/2 pe-3">
-                <FormField control={form.control} name="is_direct" render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm bg-card hover:bg-accent/5 transition-colors">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-sm font-medium cursor-pointer">{t("rates.is_direct")}</FormLabel>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={(checked) => {
-                          field.onChange(checked);
-                          if (checked) {
-                            form.setValue("supplier_id", "");
-                          }
-                        }}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )} />
-              </div>
-            </div>
-
-  {/* Column 1: Right Column */}
-            <div className="space-y-4">
+          <CardContent className="p-6 space-y-8" dir={lang === "ar" ? "rtl" : "ltr"}>
+            {/* Section 1: Property Info */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <FormField control={form.control} name="hotel_id" render={({ field }) => (
                 <FormItem>
                   <FormLabel>{t("rates.hotel")} *</FormLabel>
@@ -251,10 +276,29 @@ export function RateForm({ initial, onSaved }: { initial?: any; onSaved: (id: st
               }} />
             </div>
 
-            {/* Column 2: Middle Column */}
-            <div className="space-y-4">
+            {/* Section 2: Supplier Info */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-5 rounded-xl border bg-muted/30 items-center">
+              <FormField control={form.control} name="is_direct" render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm bg-card hover:bg-accent/5 transition-colors m-0">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-sm font-medium cursor-pointer">{t("rates.is_direct")}</FormLabel>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={(checked) => {
+                        field.onChange(checked);
+                        if (checked) {
+                          form.setValue("supplier_id", "");
+                        }
+                      }}
+                    />
+                  </FormControl>
+                </FormItem>
+              )} />
+
               <FormField control={form.control} name="supplier_id" render={({ field }) => (
-                <FormItem>
+                <FormItem className="m-0">
                   <FormLabel>{t("rates.supplier")} {!isDirect && "*"}</FormLabel>
                   <Select value={field.value || ""} onValueChange={field.onChange} disabled={isDirect}>
                     <FormControl><SelectTrigger><SelectValue placeholder={isDirect ? t("rates.source.direct") : "—"} /></SelectTrigger></FormControl>
@@ -269,8 +313,8 @@ export function RateForm({ initial, onSaved }: { initial?: any; onSaved: (id: st
               )} />
             </div>
 
-            {/* Column 3: Left Column */}
-            <div className="space-y-4">
+            {/* Section 3: Pricing & Dates */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <FormField control={form.control} name="currency_id" render={({ field }) => (
                 <FormItem>
                   <FormLabel>{t("label.currency")} *</FormLabel>
@@ -286,23 +330,21 @@ export function RateForm({ initial, onSaved }: { initial?: any; onSaved: (id: st
                 </FormItem>
               )} />
 
-              <div className="grid grid-cols-2 gap-3">
-                <FormField control={form.control} name="valid_from" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("rates.valid_from")} *</FormLabel>
-                    <FormControl><Input type="date" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
+              <FormField control={form.control} name="valid_from" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("rates.valid_from")} *</FormLabel>
+                  <FormControl><Input type="date" {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
 
-                <FormField control={form.control} name="valid_to" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("rates.valid_to")} *</FormLabel>
-                    <FormControl><Input type="date" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-              </div>
+              <FormField control={form.control} name="valid_to" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("rates.valid_to")} *</FormLabel>
+                  <FormControl><Input type="date" {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
             </div>
           </CardContent>
         </Card>
@@ -331,19 +373,18 @@ export function RateForm({ initial, onSaved }: { initial?: any; onSaved: (id: st
             )} />
             <FormField control={form.control} name="selling_price" render={({ field }) => (
               <FormItem>
-                <FormLabel>{t("rates.selling")}</FormLabel>
-                <FormControl><Input type="number" step="0.01" min="0" {...field} /></FormControl>
+                <FormLabel>{t("rates.selling")} ({lang === "ar" ? "تلقائي" : "Auto"})</FormLabel>
+                <FormControl><Input type="number" step="0.01" min="0" {...field} readOnly className="bg-muted cursor-not-allowed" /></FormControl>
                 <FormMessage />
               </FormItem>
             )} />
             <FormField control={form.control} name="profit_margin" render={({ field }) => (
               <FormItem>
-                <FormLabel>{t("rates.profit_margin")}</FormLabel>
+                <FormLabel>{t("rates.profit_margin")} (%)</FormLabel>
                 <FormControl><Input type="number" step="0.01" min="0" {...field} /></FormControl>
                 <FormMessage />
               </FormItem>
             )} />
-
 
             <FormField control={form.control} name="tax_type" render={({ field }) => (
               <FormItem>
@@ -361,13 +402,26 @@ export function RateForm({ initial, onSaved }: { initial?: any; onSaved: (id: st
               </FormItem>
             )} />
 
-            <FormField control={form.control} name="tax_rate" render={({ field }) => (
-              <FormItem>
-                <FormLabel>{t("rates.tax_rate")} (%)</FormLabel>
-                <FormControl><Input type="number" step="0.01" min="0" {...field} /></FormControl>
-                <FormMessage />
-              </FormItem>
-            )} />
+            {taxType === "inclusive_tax" && (
+              <FormField control={form.control} name="tax_rate" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("rates.tax_rate")} (%)</FormLabel>
+                  <FormControl><Input type="number" step="0.01" min="0" {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+            )}
+
+            {/* Total Price Display */}
+            <div className="col-span-1 sm:col-span-2 bg-primary/5 p-4 rounded-lg border border-primary/20 flex flex-col justify-center">
+              <span className="text-xs font-semibold text-primary uppercase tracking-wider">
+                {lang === "ar" ? "الإجمالي (سعر البيع + الضريبة)" : "Total (Selling Price + Tax)"}
+              </span>
+              <div className="text-3xl font-black text-primary mt-1 flex items-baseline gap-1">
+                <span>{total}</span>
+                <span className="text-sm font-medium text-muted-foreground">{currencySymbol}</span>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
@@ -381,10 +435,10 @@ export function RateForm({ initial, onSaved }: { initial?: any; onSaved: (id: st
               <FormItem><FormLabel>{t("rates.notes_ar")}</FormLabel><FormControl><Textarea rows={3} dir="rtl" {...field} /></FormControl><FormMessage /></FormItem>
             )} />
             <FormField control={form.control} name="cancellation_policy_en" render={({ field }) => (
-              <FormItem><FormLabel>{t("rates.cxl_en")}</FormLabel><FormControl><Textarea rows={3} {...field} /></FormControl><FormMessage /></FormItem>
+              <FormItem><FormLabel>{t("rates.cxl_en")}</FormLabel><FormControl><Textarea rows={6} dir="ltr" {...field} /></FormControl><FormMessage /></FormItem>
             )} />
             <FormField control={form.control} name="cancellation_policy_ar" render={({ field }) => (
-              <FormItem><FormLabel>{t("rates.cxl_ar")}</FormLabel><FormControl><Textarea rows={3} dir="rtl" {...field} /></FormControl><FormMessage /></FormItem>
+              <FormItem><FormLabel>{t("rates.cxl_ar")}</FormLabel><FormControl><Textarea rows={6} dir="rtl" {...field} /></FormControl><FormMessage /></FormItem>
             )} />
           </CardContent>
         </Card>

@@ -6,7 +6,7 @@ import { useSelector } from "react-redux";
 import { selectAuth } from "@/store/features/authSlice";
 import { hasAnyRole } from "@/lib/auth-utils";
 import { useDebounce } from "@/lib/use-debounce";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +16,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DataPagination } from "@/components/data-pagination";
 import { KpiCard } from "@/components/list-toolkit";
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+} from "recharts";
 import {
   Plus,
   Search,
@@ -28,6 +38,8 @@ import {
   Loader2,
   Paperclip,
   CheckCircle2,
+  FileText,
+  Coins,
 } from "lucide-react";
 import { formatDate } from "@/lib/format";
 import { toast } from "sonner";
@@ -209,6 +221,34 @@ export default function PlatformTransactionsList() {
   const ar = (a: string, e: string) => (lang === "ar" ? a : e);
   const fmt = (n: number) => new Intl.NumberFormat(lang === "ar" ? "ar-SA" : "en-US", { minimumFractionDigits: 2 }).format(n || 0);
 
+  const invoiceProfit = statsData?.invoices_profit?.total_profit_sar ?? 0;
+  const scheduledCount = statsData?.invoices_profit?.scheduled?.count ?? 0;
+  const scheduledProfit = statsData?.invoices_profit?.scheduled?.profit_sar ?? 0;
+  const notScheduledCount = statsData?.invoices_profit?.not_scheduled?.count ?? 0;
+  const notScheduledProfit = statsData?.invoices_profit?.not_scheduled?.profit_sar ?? 0;
+  const totalPlatformProfit = statsData?.total_platform_profit_sar ?? 0;
+
+  const monthlyData = useMemo(() => {
+    if (!statsData?.monthly_breakdown) return [];
+    return statsData.monthly_breakdown.map((m: any) => {
+      const date = new Date(m.month + "-01");
+      const monthLabel = isNaN(date.getTime())
+        ? m.month
+        : date.toLocaleDateString(lang === "ar" ? "ar-SA" : "en-US", { month: "short" });
+      return {
+        month: monthLabel,
+        income: m.income,
+        expense: m.expense,
+        netProfit: m.net_profit,
+      };
+    });
+  }, [statsData?.monthly_breakdown, lang]);
+
+  const categoryData = useMemo(() => {
+    if (!statsData?.category_breakdown) return [];
+    return statsData.category_breakdown;
+  }, [statsData?.category_breakdown]);
+
   return (
     <>
       <PageHeader
@@ -226,7 +266,7 @@ export default function PlatformTransactionsList() {
 
       <div className="space-y-5 p-4 sm:p-6" dir={dir}>
         {/* Statistics / KPIs */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
           <Card className="bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900/30">
             <CardContent className="p-5 flex items-center gap-4">
               <div className="p-3 bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 rounded-full">
@@ -262,7 +302,7 @@ export default function PlatformTransactionsList() {
               </div>
               <div>
                 <p className={statsData && statsData.net_profit_sar >= 0 ? "text-sm font-medium text-blue-600/80 dark:text-blue-400/80 uppercase tracking-wider" : "text-sm font-medium text-red-600/80 dark:text-red-400/80 uppercase tracking-wider"}>
-                  {ar("صافي الربح / الخسارة", "Net Profit / Loss")}
+                  {ar("صافي أرباح المعاملات", "Net Transaction Profit")}
                 </p>
                 <p className={`text-2xl font-bold mt-1 tabular-nums ${statsData && statsData.net_profit_sar >= 0 ? "text-blue-700 dark:text-blue-300" : "text-red-700 dark:text-red-300"}`}>
                   {statsData ? fmt(statsData.net_profit_sar) + " SAR" : "—"}
@@ -270,7 +310,127 @@ export default function PlatformTransactionsList() {
               </div>
             </CardContent>
           </Card>
+
+          <Card className="bg-indigo-50 dark:bg-indigo-950/20 border-indigo-200 dark:border-indigo-900/30">
+            <CardContent className="p-5 flex items-center gap-4">
+              <div className="p-3 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 rounded-full">
+                <FileText className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-indigo-600/80 dark:text-indigo-400/80 uppercase tracking-wider">
+                  {ar("أرباح الفواتير", "Invoices Profit")}
+                </p>
+                <p className="text-2xl font-bold text-indigo-700 dark:text-indigo-300 tabular-nums mt-1">
+                  {statsData ? fmt(invoiceProfit) + " SAR" : "—"}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/30">
+            <CardContent className="p-5 flex items-center gap-4">
+              <div className="p-3 bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400 rounded-full">
+                <Coins className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-amber-600/80 dark:text-amber-400/80 uppercase tracking-wider">
+                  {ar("إجمالي أرباح المنصة", "Total Platform Profit")}
+                </p>
+                <p className="text-2xl font-bold text-amber-700 dark:text-amber-300 tabular-nums mt-1">
+                  {statsData ? fmt(totalPlatformProfit) + " SAR" : "—"}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
+
+        {/* Reports & Charts Section */}
+        {statsData?.monthly_breakdown && statsData.monthly_breakdown.length > 0 && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Monthly Trend Chart */}
+            <Card className="lg:col-span-2">
+              <CardHeader>
+                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                  <Calendar className="w-5 h-5 text-primary" />
+                  {ar(`التحليل المالي الشهري لعام ${statsData.year || 2026}`, `Monthly Financial Analysis ${statsData.year || 2026}`)}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={monthlyData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                    <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                    <YAxis tick={{ fontSize: 12 }} />
+                    <Tooltip
+                      contentStyle={{
+                        background: "var(--popover)",
+                        border: "1px solid var(--border)",
+                        borderRadius: 8,
+                        color: "var(--popover-foreground)",
+                        fontSize: 12,
+                      }}
+                    />
+                    <Legend wrapperStyle={{ fontSize: 12 }} />
+                    <Bar dataKey="income" name={ar("الإيرادات", "Income")} fill="#10b981" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="expense" name={ar("المصروفات", "Expense")} fill="#ef4444" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="netProfit" name={ar("صافي الربح", "Net Profit")} fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            {/* Invoices Breakdown Card */}
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base font-semibold flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-indigo-500" />
+                    {ar("تفاصيل أرباح الفواتير", "Invoices Profit Breakdown")}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex justify-between items-center pb-2 border-b border-border">
+                    <span className="text-sm text-muted-foreground">{ar("فواتير مجدولة", "Scheduled Invoices")}</span>
+                    <div className="text-right">
+                      <span className="text-sm font-bold text-foreground">{fmt(scheduledProfit)} SAR</span>
+                      <span className="text-xs text-muted-foreground block">({scheduledCount} {ar("فاتورة", "Invoices")})</span>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center pb-2 border-b border-border">
+                    <span className="text-sm text-muted-foreground">{ar("فواتير غير مجدولة", "Non-Scheduled")}</span>
+                    <div className="text-right">
+                      <span className="text-sm font-bold text-foreground">{fmt(notScheduledProfit)} SAR</span>
+                      <span className="text-xs text-muted-foreground block">({notScheduledCount} {ar("فاتورة", "Invoices")})</span>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center pt-2 font-bold text-primary">
+                    <span className="text-sm">{ar("إجمالي الأرباح", "Total Profit")}</span>
+                    <span className="text-base">{fmt(invoiceProfit)} SAR</span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Category Breakdown (If any) */}
+              {categoryData.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base font-semibold">
+                      {ar("توزيع المصروفات حسب التصنيف", "Expense Breakdown by Category")}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3 max-h-[180px] overflow-y-auto">
+                    {categoryData.map((cat: any, idx: number) => (
+                      <div key={idx} className="flex justify-between items-center text-sm">
+                        <span className="text-muted-foreground">{lang === "ar" ? (cat.category_text || cat.category) : cat.category}</span>
+                        <span className="font-semibold">{fmt(cat.amount_sar || cat.amount)} SAR</span>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Filters */}
         <Card>

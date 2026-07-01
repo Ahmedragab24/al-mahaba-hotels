@@ -268,8 +268,8 @@ function PrintInvoice({
                 {((booking.items && booking.items.length > 0) ? booking.items : rooms).map((room: any, i: number) => {
                   const isItem = !!room.price;
                   const hotelName = isItem ? (lang === "ar" ? booking.hotel?.name_ar : booking.hotel?.name_en) : (lang === "ar" ? room.hotel?.name_ar || room.hotel?.name_en : room.hotel?.name_en || room.hotel?.name_ar);
-                  const roomTypeName = isItem ? (room.price?.room?.name || room.price?.room?.name_ar || room.price?.room?.name_en) : (lang === "ar" ? room.room_type?.name_ar || room.room_type?.name_en : room.room_type?.name_en || room.room_type?.name_ar);
-                  const viewName = isItem ? (room.price?.view?.name || room.price?.view?.name_ar || room.price?.view?.name_en) : (lang === "ar" ? room.view?.name_ar || room.view?.name_en : room.view?.name_en || room.view?.name_ar);
+                  const roomTypeName = isItem ? (lang === "ar" ? room.price?.room?.name_ar || room.price?.room?.name || room.price?.room?.name_en : room.price?.room?.name_en || room.price?.room?.name || room.price?.room?.name_ar) : (lang === "ar" ? room.room_type?.name_ar || room.room_type?.name || room.room_type?.name_en : room.room_type?.name_en || room.room_type?.name || room.room_type?.name_ar);
+                  const viewName = isItem ? (lang === "ar" ? room.price?.view?.name_ar || room.price?.view?.name || room.price?.view?.name_en : room.price?.view?.name_en || room.price?.view?.name || room.price?.view?.name_ar) : (lang === "ar" ? room.view?.name_ar || room.view?.name || room.view?.name_en : room.view?.name_en || room.view?.name || room.view?.name_ar);
                   const occupancy = isItem ? "—" : room.occupancy_type;
                   const roomCheckIn = isItem ? formatDate(booking.check_in) : formatDate(room.check_in);
                   const roomCheckOut = isItem ? formatDate(booking.check_out) : formatDate(room.check_out);
@@ -455,16 +455,16 @@ export default function BookingDetail() {
   const currencyCode = typeof r.currency === "object" ? r.currency?.code : (r.currency || "SAR");
   const hotelName =
     lang === "ar"
-      ? r.hotel?.name_ar || r.hotel?.name_en
-      : r.hotel?.name_en || r.hotel?.name_ar;
+      ? r.hotel?.name_ar || r.hotel?.name || r.hotel?.name_en
+      : r.hotel?.name_en || r.hotel?.name || r.hotel?.name_ar;
   const roomTypeName =
     lang === "ar"
-      ? r.room_type?.name_ar || r.room_type?.name_en
-      : r.room_type?.name_en || r.room_type?.name_ar;
+      ? r.room_type?.name_ar || r.room_type?.name || r.room_type?.name_en
+      : r.room_type?.name_en || r.room_type?.name || r.room_type?.name_ar;
   const viewName =
     lang === "ar"
-      ? r.view?.name_ar || r.view?.name_en
-      : r.view?.name_en || r.view?.name_ar;
+      ? r.view?.name_ar || r.view?.name || r.view?.name_en
+      : r.view?.name_en || r.view?.name || r.view?.name_ar;
 
   const editableHeader = canWrite && r.status === "draft" && !r.deleted_at;
   const editableRooms = canWrite && r.status === "draft" && !r.deleted_at;
@@ -548,35 +548,56 @@ export default function BookingDetail() {
 
               {/* Customer Info */}
               <DetailSection icon={User} title={ar("بيانات العميل", "Customer Info")}>
-                <div className="divide-y divide-border/40">
+                <div className="divide-y divide-border/40 text-sm">
+                  <KV k={ar("كود العميل", "Customer Code")} v={r.customer?.code || "—"} />
                   <KV k={t("bk.customer")} v={customerName} icon={User} />
+                  {r.customer?.legal_name && <KV k={ar("الاسم القانوني", "Legal Name")} v={r.customer.legal_name} />}
                   <KV k={ar("نوع العميل", "Customer Type")} v={r.customer?.type || t(`ctype.${r.customer?.customer_type}`, r.customer?.customer_type ?? "")} />
                   {r.customer?.email && <KV k={ar("البريد الإلكتروني", "Email")} v={<a href={`mailto:${r.customer.email}`} className="text-primary hover:underline">{r.customer.email}</a>} icon={Mail} />}
                   {r.customer?.phone && <KV k={ar("الهاتف", "Phone")} v={<a href={`tel:${r.customer.phone}`} className="text-primary hover:underline">{r.customer.phone}</a>} icon={Phone} />}
+                  {r.customer?.country && (
+                    <KV
+                      k={ar("الدولة", "Country")}
+                      v={lang === "ar" ? r.customer.country.name_ar || r.customer.country.name_en : r.customer.country.name_en || r.customer.country.name_ar}
+                      icon={MapPin}
+                    />
+                  )}
+                  {r.customer?.tax_number && <KV k={ar("الرقم الضريبي", "Tax Number")} v={r.customer.tax_number} />}
+                  {r.customer?.commercial_register && <KV k={ar("السجل التجاري", "Commercial Reg.")} v={r.customer.commercial_register} />}
+                  {r.customer?.credit_limit !== undefined && Number(r.customer?.credit_limit) > 0 && (
+                    <KV k={ar("الحد الائتماني", "Credit Limit")} v={`${Number(r.customer.credit_limit).toLocaleString()} SAR`} />
+                  )}
+                  {r.customer?.credit_days !== undefined && Number(r.customer?.credit_days) > 0 && (
+                    <KV k={ar("فترة الائتمان (أيام)", "Credit Days")} v={`${r.customer.credit_days} ${ar("يوم", "days")}`} />
+                  )}
+                  {r.customer?.notes && <KV k={ar("ملاحظات العميل", "Customer Notes")} v={r.customer.notes} />}
                 </div>
               </DetailSection>
 
-              {/* Booking Status */}
+              {/* Booking Info */}
               <DetailSection icon={FileText} title={ar("معلومات الحجز", "Booking Info")}>
-                <div className="divide-y divide-border/40">
-                  <KV k={t("bk.number")} v={<span dir="ltr" className="font-mono text-primary">{r.code || r.booking_no}</span>} />
+                <div className="divide-y divide-border/40 text-sm">
+                  <KV k={t("bk.number")} v={<span dir="ltr" className="font-mono text-primary font-bold">{r.code || r.booking_no}</span>} />
                   <KV k={t("filter.status")} v={r.status_text || <BkStatusBadge status={r.status} t={t} />} />
-                  <KV k={t("label.currency")} v={currencyCode} />
+                  <KV k={t("label.currency")} v={r.currency ? `${r.currency.name_ar || r.currency.name_en} (${r.currency.code})` : currencyCode} />
                   <KV k={t("bk.booking_date")} v={formatDate(r.booking_date)} icon={CalendarDays} />
                   <KV k={ar("نوع الحجز", "Booking Type")} v={r.booking_type_text || r.booking_type} />
-                  <KV k={ar("مصدر الحجز", "Booking Source")} v={r.booking_source_text || r.booking_source} />
+                  {/* <KV k={ar("مصدر الحجز", "Booking Source")} v={r.booking_source_text || r.booking_source} /> */}
+                  {r.group_size !== undefined && r.group_size !== null && <KV k={ar("عدد الأشخاص", "Number of Persons")} v={`${r.group_size} ${ar("أشخاص", "persons")}`} />}
+                  {r.creator?.name && <KV k={ar("بواسطة", "Created By")} v={r.creator.name} icon={User} />}
                 </div>
               </DetailSection>
 
               {/* Hotel & Room */}
               {(hotelName || roomTypeName || r.check_in || r.hotel) && (
                 <DetailSection icon={BedDouble} title={ar("الفندق والغرفة", "Hotel & Room")}>
-                  <div className="divide-y divide-border/40">
+                  <div className="divide-y divide-border/40 text-sm">
+                    {r.hotel?.code && <KV k={ar("كود الفندق", "Hotel Code")} v={r.hotel.code} />}
                     {hotelName && (
                       <KV
                         k={ar("الفندق", "Hotel")}
                         v={
-                          <span>
+                          <span className="font-semibold text-foreground">
                             {hotelName}
                             {(() => {
                               const st = Number(r.hotel?.stars || r.hotel?.star_rating || 0);
@@ -587,10 +608,18 @@ export default function BookingDetail() {
                         icon={Building2}
                       />
                     )}
+                    {r.hotel?.brand && <KV k={ar("العلامة التجارية", "Hotel Brand")} v={r.hotel.brand} />}
+                    {r.hotel && (r.hotel.city || r.hotel.country) && (
+                      <KV
+                        k={ar("العنوان والمدينة", "Location")}
+                        v={`${r.hotel.city ? (lang === "ar" ? r.hotel.city.name_ar : r.hotel.city.name_en) + ", " : ""}${r.hotel.country ? (lang === "ar" ? r.hotel.country.name_ar : r.hotel.country.name_en) : ""}`}
+                        icon={MapPin}
+                      />
+                    )}
                     {roomTypeName && <KV k={ar("نوع الغرفة", "Room Type")} v={roomTypeName} icon={BedDouble} />}
                     {viewName && <KV k={ar("الإطلالة", "View")} v={viewName} icon={MapPin} />}
                     {r.occupancy_type && <KV k={ar("نوع الإشغال", "Occupancy")} v={r.occupancy_type} />}
-                    {r.rooms && <KV k={ar("عدد الغرف", "Rooms")} v={r.rooms} />}
+                    {r.rooms !== undefined && r.rooms !== null && <KV k={ar("عدد الغرف", "Rooms")} v={r.rooms} />}
                   </div>
                 </DetailSection>
               )}
@@ -612,8 +641,8 @@ export default function BookingDetail() {
                     </thead>
                     <tbody className="divide-y divide-border/60">
                       {r.items.map((item: any, idx: number) => {
-                        const roomName = item.price?.room?.name || item.price?.room?.name_ar || item.price?.room?.name_en || "—";
-                        const viewName = item.price?.view?.name || item.price?.view?.name_ar || item.price?.view?.name_en || "—";
+                        const roomName = lang === "ar" ? item.price?.room?.name_ar || item.price?.room?.name || item.price?.room?.name_en || "—" : item.price?.room?.name_en || item.price?.room?.name || item.price?.room?.name_ar || "—";
+                        const viewName = lang === "ar" ? item.price?.view?.name_ar || item.price?.view?.name || item.price?.view?.name_en || "—" : item.price?.view?.name_en || item.price?.view?.name || item.price?.view?.name_ar || "—";
                         return (
                           <tr key={item.id || idx} className="hover:bg-muted/30">
                             <td className="py-3 px-4 font-medium text-foreground">{roomName}</td>
@@ -717,6 +746,56 @@ export default function BookingDetail() {
                     )}
                   </div>
                 </div>
+
+                {/* Installments Table if Partial */}
+                {((r.payment_method || r.payment_mode) === "partial" && r.installments && r.installments.length > 0) && (
+                  <div className="mt-6 space-y-3 border-t pt-4 border-border/40">
+                    <p className="text-sm font-semibold text-foreground">{ar("الأقساط / الدفعات المجدولة", "Installments / Scheduled Payments")}</p>
+                    <div className="overflow-x-auto rounded-lg border border-border/85">
+                      <table className="w-full text-sm border-collapse">
+                        <thead>
+                          <tr className="border-b border-border bg-muted/30 text-muted-foreground text-xs font-semibold uppercase tracking-wider">
+                            <th className="py-2.5 px-4 text-start">{ar("تاريخ الاستحقاق", "Due Date")}</th>
+                            <th className="py-2.5 px-4 text-center">{ar("المبلغ", "Amount")}</th>
+                            <th className="py-2.5 px-4 text-center">{ar("الحالة", "Status")}</th>
+                            <th className="py-2.5 px-4 text-end">{ar("الفاتورة", "Invoice")}</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border/60">
+                          {r.installments.map((inst: any, idx: number) => {
+                            const formattedAmount = Number(inst.amount).toLocaleString(undefined, { minimumFractionDigits: 2 });
+                            return (
+                              <tr key={inst.id || idx} className="hover:bg-muted/30">
+                                <td className="py-2.5 px-4 font-medium" dir="ltr">{formatDate(inst.due_date)}</td>
+                                <td className="py-2.5 px-4 text-center font-semibold tabular-nums">{formattedAmount} {currencyCode}</td>
+                                <td className="py-2.5 px-4 text-center">
+                                  <Badge className={inst.is_paid ? "bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-800" : "bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-800"}>
+                                    {inst.is_paid ? ar("تم الدفع", "Paid") : ar("غير مدفوع", "Unpaid")}
+                                  </Badge>
+                                </td>
+                                <td className="py-2.5 px-4 text-end">
+                                  {inst.invoice_image ? (
+                                    <a
+                                      href={inst.invoice_image}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-xs font-medium text-primary hover:underline inline-flex items-center gap-1"
+                                    >
+                                      <Receipt className="w-3.5 h-3.5" />
+                                      {ar("عرض الفاتورة", "View Invoice")}
+                                    </a>
+                                  ) : (
+                                    <span className="text-xs text-muted-foreground">—</span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
               </DetailSection>
             )}
 

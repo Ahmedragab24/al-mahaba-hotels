@@ -1,12 +1,12 @@
-import { useState, useMemo } from "react";
-import { db } from "@/lib/api/db";
+import { useState, useMemo, useEffect } from "react";
 import { apiClient } from "@/lib/api/api-client";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useI18n } from "@/lib/i18n";
 import { useSelector } from "react-redux";
 import { selectAuth } from "@/store/features/authSlice";
-import { hasRole, hasAnyRole, isAdmin, canAccessModule } from "@/lib/auth-utils";
 import {
+  useCountries,
+  useCities,
   useCurrencies,
 } from "@/lib/lookups";
 import { Card, CardContent } from "@/components/ui/card";
@@ -124,21 +124,18 @@ function ToggleField({
   return (
     <label
       htmlFor={id}
-      className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all duration-200 select-none ${
-        checked
-          ? "border-primary/50 bg-primary/5"
-          : "border-border hover:border-border/80 hover:bg-muted/30"
-      }`}
+      className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all duration-200 select-none ${checked
+        ? "border-primary/50 bg-primary/5"
+        : "border-border hover:border-border/80 hover:bg-muted/30"
+        }`}
     >
       <div
-        className={`relative shrink-0 w-10 h-6 rounded-full transition-colors duration-200 ${
-          checked ? "bg-primary" : "bg-muted"
-        }`}
+        className={`relative shrink-0 w-10 h-6 rounded-full transition-colors duration-200 ${checked ? "bg-primary" : "bg-muted"
+          }`}
       >
         <div
-          className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-200 ${
-            checked ? "start-5" : "start-1"
-          }`}
+          className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-200 ${checked ? "start-5" : "start-1"
+            }`}
         />
         <input
           type="checkbox"
@@ -175,6 +172,13 @@ function ToggleField({
 // Main Form Component
 // ═══════════════════════════════════════════════════════════════════════════════
 
+const toLocalISOString = (dateInput: Date | string) => {
+  const d = new Date(dateInput);
+  if (isNaN(d.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
 export function QuotationForm({ initial, onSaved }: Props) {
   const { t, lang } = useI18n();
   const auth = useSelector(selectAuth);
@@ -184,12 +188,14 @@ export function QuotationForm({ initial, onSaved }: Props) {
     currency_id: String(initial?.currency_id ?? ""),
     language_id: String(initial?.language_id ?? "1"),
     start_date: initial?.start_date
-      ? new Date(initial.start_date).toISOString().slice(0, 16).replace('T', ' ')
-      : new Date().toISOString().slice(0, 16).replace('T', ' '),
+      ? toLocalISOString(initial.start_date)
+      : toLocalISOString(new Date()),
     end_date: initial?.end_date
-      ? new Date(initial.end_date).toISOString().slice(0, 16).replace('T', ' ')
+      ? toLocalISOString(initial.end_date)
       : "",
     hotel_id: String(initial?.hotel_id ?? ""),
+    country_id: "",
+    city_id: "",
     is_recommended: initial?.is_recommended ?? false,
     notes: initial?.notes ?? "",
     status: initial?.status ?? "draft",
@@ -210,14 +216,20 @@ export function QuotationForm({ initial, onSaved }: Props) {
         // UI Display info
         room_name_en: item.price_details?.room?.name_en,
         room_name_ar: item.price_details?.room?.name_ar,
+        room_type_name_en: item.room_type?.name_en || item.price_details?.room_type?.name_en || item.price_details?.room?.room_type?.name_en,
+        room_type_name_ar: item.room_type?.name_ar || item.price_details?.room_type?.name_ar || item.price_details?.room?.room_type?.name_ar,
         view_name_en: item.price_details?.hotel_view?.name_en,
         view_name_ar: item.price_details?.hotel_view?.name_ar,
         supplier_name_en: item.price_details?.supplier?.name_en,
         supplier_name_ar: item.price_details?.supplier?.name_ar,
+        room: item.price_details?.room,
+        room_type: item.room_type || item.price_details?.room_type || item.price_details?.room?.room_type,
       }));
     }
     return [];
   });
+
+
 
   const currencies = useCurrencies({ lang, per_page: 500 });
 
@@ -227,6 +239,21 @@ export function QuotationForm({ initial, onSaved }: Props) {
     const currency = currencyList.find((c: any) => String(c.id) === form.currency_id);
     return currency?.code || "";
   }, [form.currency_id, currencies.data]);
+
+  const nights = useMemo(() => {
+    if (form.start_date && form.end_date) {
+      const startDateStr = form.start_date.split(/[ T]/)[0];
+      const endDateStr = form.end_date.split(/[ T]/)[0];
+      const start = new Date(startDateStr);
+      const end = new Date(endDateStr);
+      if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+        const diffTime = end.getTime() - start.getTime();
+        const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+        return diffDays > 0 ? diffDays : 0;
+      }
+    }
+    return 0;
+  }, [form.start_date, form.end_date]);
 
   const customers = useQuery({
     queryKey: ["lookup-customers"],
@@ -246,6 +273,29 @@ export function QuotationForm({ initial, onSaved }: Props) {
     setForm((f) => ({ ...f, hotel_id: val }));
     setSelectedItems([]);
   };
+
+  const handleCountryChange = (val: string) => {
+    setForm((f) => ({ ...f, country_id: val, city_id: "", hotel_id: "" }));
+    setSelectedItems([]);
+  };
+
+  const handleCityChange = (val: string) => {
+    setForm((f) => ({ ...f, city_id: val, hotel_id: "" }));
+    setSelectedItems([]);
+  };
+
+  const countries = useCountries({ lang, per_page: 500 });
+  const countryList = Array.isArray(countries.data) ? countries.data : Array.isArray(countries.data?.data) ? countries.data.data : [];
+
+  const cities = useCities(form.country_id || null);
+  const cityList = Array.isArray(cities.data) ? cities.data : Array.isArray(cities.data?.data) ? cities.data.data : [];
+
+  const filteredHotels = useMemo(() => {
+    let list = Array.isArray(hotelsQuery.data) ? hotelsQuery.data : [];
+    if (form.country_id) list = list.filter((h: any) => String(h.country_id) === String(form.country_id));
+    if (form.city_id) list = list.filter((h: any) => String(h.city_id) === String(form.city_id));
+    return list;
+  }, [hotelsQuery.data, form.country_id, form.city_id]);
 
   const save = useMutation({
     mutationFn: async () => {
@@ -323,9 +373,21 @@ export function QuotationForm({ initial, onSaved }: Props) {
                   ))}
                 </SelectContent>
               </Select>
+              {form.customer_id && (() => {
+                const custList = Array.isArray(customers.data) ? customers.data : Array.isArray(customers.data?.data) ? customers.data.data : [];
+                const selCust = custList?.find((c: any) => String(c.id) === String(form.customer_id));
+                if (selCust?.country) {
+                  return (
+                    <div className="text-sm text-end text-muted-foreground mt-1">
+                      ( {lang === "ar" ? selCust.country.name_ar : selCust.country.name_en} )
+                    </div>
+                  );
+                }
+                return null;
+              })()}
             </FormField>
 
-            <FormField label={arLabel("عدد المجموعه", "Group Size")}>
+            <FormField label={arLabel("عدد الأشخاص", "Number of Persons")}>
               <Input
                 className="h-9"
                 type="number"
@@ -374,7 +436,7 @@ export function QuotationForm({ initial, onSaved }: Props) {
           <SectionHeader
             icon={CalendarDays}
             title={arLabel("التواريخ", "Dates")}
-            subtitle={arLabel("تواريخ العرض والسفر", "Quotation and travel dates")}
+            subtitle={arLabel("تواريخ العرض", "Quotation dates")}
           />
           <FieldGroup className="grid-cols-1 md:grid-cols-2 mt-4">
             <FormField label={arLabel("تاريخ البداية", "Start Date")} required>
@@ -395,6 +457,13 @@ export function QuotationForm({ initial, onSaved }: Props) {
               />
             </FormField>
           </FieldGroup>
+
+          {nights > 0 && (
+            <div className="mt-4 text-sm font-medium text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg border border-border/50 flex items-center gap-2">
+              <span className="text-amber-600 bg-amber-100 dark:bg-amber-900/30 px-2.5 py-0.5 rounded text-base font-bold">{nights}</span>
+              {arLabel("ليالي", "Nights")}
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -403,27 +472,66 @@ export function QuotationForm({ initial, onSaved }: Props) {
         <CardContent className="p-5">
           <SectionHeader
             icon={Building2}
-            title={arLabel("اختيار الفندق", "Hotel Selection")}
-            subtitle={arLabel(
-              "اختر الفندق لعرض الأسعار المتاحة",
-              "Select hotel to view available rates",
-            )}
+            title={arLabel("الوجهة والفندق", "Destination & Hotel")}
+            subtitle={arLabel("اختر الدولة والمدينة والفندق", "Select country, city and hotel")}
           />
-          <FieldGroup className="grid-cols-1 mt-4">
+          <FieldGroup className="grid-cols-1 md:grid-cols-3 mt-4">
+            <FormField label={t("label.country", "الدولة")}>
+              <Select value={form.country_id} onValueChange={handleCountryChange}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder={arLabel("اختر الدولة", "Select country")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {countryList.map((c: any) => (
+                    <SelectItem key={c.id} value={String(c.id)}>
+                      {lang === "ar" ? c.name_ar : c.name_en}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormField>
+
+            <FormField label={t("label.city", "المدينة")}>
+              <Select
+                value={form.city_id}
+                onValueChange={handleCityChange}
+                disabled={!form.country_id}
+              >
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder={arLabel("اختر المدينة", "Select city")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {cityList.map((c: any) => (
+                    <SelectItem key={c.id} value={String(c.id)}>
+                      {lang === "ar" ? c.name_ar : c.name_en}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormField>
+
             <FormField label={t("rates.hotel", "الفندق")} required>
               <Select
                 value={form.hotel_id}
                 onValueChange={handleHotelChange}
+                disabled={!form.city_id}
               >
                 <SelectTrigger className="h-9">
                   <SelectValue placeholder={arLabel("اختر الفندق", "Select hotel")} />
                 </SelectTrigger>
                 <SelectContent>
-                  {(hotelsQuery.data ?? []).map((h: any) => (
-                    <SelectItem key={h.id} value={String(h.id)}>
-                      {lang === "ar" ? h.name_ar || h.name_en : h.name_en || h.name_ar}
+                  {filteredHotels.length === 0 ? (
+                    <SelectItem value="none" disabled>
+                      {arLabel("لا يتوفر فنادق في هذه المدينة", "No hotels available in this city")}
                     </SelectItem>
-                  ))}
+                  ) : (
+                    filteredHotels.map((h: any) => (
+                      <SelectItem key={h.id} value={String(h.id)}>
+                        {lang === "ar" ? h.name_ar || h.name_en : h.name_en || h.name_ar}
+                        {h.star_rating || h.stars ? " " + "★".repeat(h.star_rating || h.stars) : ""}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </FormField>
@@ -435,6 +543,8 @@ export function QuotationForm({ initial, onSaved }: Props) {
             currencyCode={currencyCode}
             selectedItems={selectedItems}
             onChange={(items) => setSelectedItems(items)}
+            nights={nights}
+            groupSize={form.group_size}
           />
         </CardContent>
       </Card>

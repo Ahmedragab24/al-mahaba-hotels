@@ -40,6 +40,7 @@ export interface Booking {
   status: BookingStatus;
   items?: BookingRoomItem[];
   rooms?: BookingRoomItem[]; // UI mapping uses rooms
+  group_size?: number;
   created_at?: string;
   updated_at?: string;
 }

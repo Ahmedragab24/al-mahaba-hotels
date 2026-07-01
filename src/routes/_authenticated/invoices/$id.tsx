@@ -1,11 +1,7 @@
 // Invoice detail — Section 15 (BR-INV). Items, status workflow, payments, sharing, history.
 import { useNavigate, useParams } from "react-router-dom";
-import { db } from "@/lib/api/db";
-import { apiClient } from "@/lib/api/api-client";
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { useGetInvoiceByIdQuery, useUpdateInvoiceMutation, useRecordInvoicePaymentMutation } from "@/store/api";
-import type { InvoiceStatus } from "@/types/api";
+import { useGetInvoiceByIdQuery, useUpdateInvoiceMutation } from "@/store/api";
 import { useI18n } from "@/lib/i18n";
 import { useSelector } from "react-redux";
 import { selectAuth } from "@/store/features/authSlice";
@@ -20,9 +16,8 @@ import logoUrl from "@/assets/daleel-logo-transparent.png";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Printer, Mail, MessageCircle, Send, BadgeCheck, CreditCard } from "lucide-react";
+import { ArrowLeft, Printer, Mail, MessageCircle, FileEdit, Eye } from "lucide-react";
 import { formatDate, formatMoney } from "@/lib/format";
-import { dbErrorMessage } from "@/lib/db-errors";
 import { toast } from "sonner";
 import { InvStatusBadge, FINANCE_WRITE } from "./index";
 
@@ -42,114 +37,20 @@ export default function InvoiceDetail() {
   const navigate = useNavigate();
   const canWrite = hasAnyRole(auth, [...FINANCE_WRITE]);
 
-  const [cancelOpen, setCancelOpen] = useState(false);
-  const [cancelReason, setCancelReason] = useState("");
-  const [itemOpen, setItemOpen] = useState(false);
-  const [descEn, setDescEn] = useState("");
-  const [descAr, setDescAr] = useState("");
-  const [qty, setQty] = useState("1");
-  const [price, setPrice] = useState("");
-  const [taxes, setTaxes] = useState("0");
-  const [fees, setFees] = useState("0");
+  const [editOpen, setEditOpen] = useState(false);
+  const [editStatus, setEditStatus] = useState("unpaid");
+  const [editNotes, setEditNotes] = useState("");
+  const [editInvoiceImage, setEditInvoiceImage] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
-
-  // Payment dialog state
-  const [payOpen, setPayOpen] = useState(false);
-  const [payDate, setPayDate] = useState(new Date().toISOString().slice(0, 10));
-  const [payAmount, setPayAmount] = useState("");
-  const [payMethod, setPayMethod] = useState<"cash" | "bank_transfer" | "credit_card" | "cheque" | "other">("bank_transfer");
-  const [payRef, setPayRef] = useState("");
-  const [payNotes, setPayNotes] = useState("");
 
   const { data: invoiceData, isLoading: isInvoiceLoading, refetch: refetchInvoice } = useGetInvoiceByIdQuery({ id: id || "", lang });
   const [updateInvoiceMutation] = useUpdateInvoiceMutation();
-  const [recordPayment] = useRecordInvoicePaymentMutation();
-
-  const allocsQuery = useQuery({
-    queryKey: ["invoice-allocations", id],
-    queryFn: async () => {
-      const { data } = await db.from("receipt_allocations").select("*, receipt:receipts(receipt_no,receipt_date,payment_method,status)").eq("invoice_id", id || "").order("created_at");
-      return data ?? [];
-    }
-  });
-
-  const refresh = () => {
-    refetchInvoice();
-    allocsQuery.refetch();
-  };
-
-  const setStatus = async (status: InvoiceStatus, extra?: Record<string, unknown>) => {
-    setBusy(true);
-    try {
-      await updateInvoiceMutation({ id: id || "", body: { status, ...extra } }).unwrap();
-      toast.success(t("label.saved", "Saved"));
-      setCancelOpen(false);
-      refresh();
-    } catch (e: any) {
-      toast.error(e.message || t("label.error", "Error"));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const handleRecordPayment = async () => {
-    if (!payAmount || Number(payAmount) <= 0) {
-      toast.error(lang === "ar" ? "يرجى إدخال مبلغ صحيح" : "Please enter a valid amount");
-      return;
-    }
-    setBusy(true);
-    try {
-      await recordPayment({
-        id: id || "",
-        body: {
-          payment_date: payDate,
-          amount: Number(payAmount),
-          payment_method: payMethod,
-          transaction_reference: payRef || undefined,
-          notes: payNotes || undefined,
-        }
-      }).unwrap();
-      toast.success(lang === "ar" ? "تم تسجيل الدفعة بنجاح" : "Payment recorded successfully");
-      setPayOpen(false);
-      setPayAmount("");
-      setPayRef("");
-      setPayNotes("");
-      setPayMethod("bank_transfer");
-      setPayDate(new Date().toISOString().slice(0, 10));
-      refetchInvoice();
-    } catch (e: any) {
-      toast.error(e.message || t("label.error", "Error"));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const addItem = async () => {
-    setBusy(true);
-    try {
-      const { error } = await db.from("invoice_items").insert({
-        invoice_id: id || "", description_en: descEn, description_ar: descAr || null,
-        quantity: Number(qty), unit_price: Number(price), taxes: Number(taxes), fees: Number(fees),
-      });
-      if (error) throw error;
-      setItemOpen(false); setDescEn(""); setDescAr(""); setQty("1"); setPrice(""); setTaxes("0"); setFees("0");
-      refresh();
-    } catch (e) { toast.error(dbErrorMessage(e)); } finally { setBusy(false); }
-  };
-
-  const removeItem = async (itemId?: string | number) => {
-    if (!itemId) return;
-    try {
-      await apiClient.invoiceItems.delete(itemId);
-      refresh();
-    } catch (e) { toast.error(dbErrorMessage(e)); }
-  };
 
   if (isInvoiceLoading) return <div className="p-6 text-muted-foreground">{t("label.loading")}</div>;
   const x = invoiceData;
   if (!x) return <div className="p-6 text-muted-foreground">{t("label.no_results")}</div>;
   const items = invoiceData?.items ?? [];
-  const allocs = allocsQuery.data ?? [];
+  const allocs: any[] = [];
   const custName = x.customer ? (lang === "ar" ? x.customer.name_ar || x.customer.name_en : x.customer.name_en || x.customer.name_ar) : "—";
   const balance = Number(x.total_amount) - Number(x.paid_amount);
   const isDraft = x.status === "draft";
@@ -552,12 +453,15 @@ Daleel Elm3alem`
             <Button variant="outline" size="sm" onClick={printInvoice}><Printer className="h-4 w-4" />{t("inv.pdf")}</Button>
             <Button asChild variant="outline" size="sm"><a href={emailHref}><Mail className="h-4 w-4" />{t("inv.send_email")}</a></Button>
             <Button asChild variant="outline" size="sm"><a href={waHref} target="_blank" rel="noreferrer"><MessageCircle className="h-4 w-4" />{t("inv.send_whatsapp")}</a></Button>
-            {canWrite && isDraft && <Button size="sm" disabled={busy} onClick={() => setStatus("issued")}><BadgeCheck className="h-4 w-4" />{t("inv.issue")}</Button>}
-            {canWrite && x.status === "issued" && <Button size="sm" disabled={busy} onClick={() => setStatus("sent")}><Send className="h-4 w-4" />{t("inv.mark_sent")}</Button>}
-            {canWrite && !(["paid", "cancelled"].includes(x.status)) && Number(x.remaining_amount ?? balance) > 0 && (
-              <Button size="sm" variant="outline" className="border-green-500 text-green-600 hover:bg-green-50 dark:hover:bg-green-950" onClick={() => { setPayAmount(String(Number(x.remaining_amount ?? balance))); setPayOpen(true); }}>
-                <CreditCard className="h-4 w-4" />
-                {lang === "ar" ? "تسجيل دفعة" : "Record Payment"}
+            {canWrite && (
+              <Button size="sm" onClick={() => {
+                setEditStatus(x.status ?? "unpaid");
+                setEditNotes(x.notes ?? "");
+                setEditInvoiceImage(null);
+                setEditOpen(true);
+              }}>
+                <FileEdit className="h-4 w-4" />
+                {lang === "ar" ? "تعديل الحالة" : "Edit Status"}
               </Button>
             )}
             <InvStatusBadge status={x.status} t={t} />
@@ -591,6 +495,24 @@ Daleel Elm3alem`
             <KV label={ar("بواسطة", "Created By")} value={x.creator?.name || "—"} />
             {x.cancellation_reason && <KV label={t("inv.cancel_reason")} value={x.cancellation_reason} />}
             {x.notes && <div className="md:col-span-3"><KV label={t("label.notes")} value={<span className="whitespace-pre-wrap">{x.notes}</span>} /></div>}
+            {x.invoice_image && (
+              <div className="md:col-span-3">
+                <KV
+                  label={ar("إيصال السداد / صورة الفاتورة", "Payment Receipt / Invoice Image")}
+                  value={
+                    <a
+                      href={x.invoice_image}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-primary hover:underline font-semibold flex items-center gap-1.5"
+                    >
+                      <Eye className="h-4 w-4" />
+                      {ar("عرض المستند / الإيصال المرفق", "View Attached Receipt / Document")}
+                    </a>
+                  }
+                />
+              </div>
+            )}
 
             {items && items.length > 0 && (
               <div className="md:col-span-3 border-t pt-5 mt-2 space-y-3">
@@ -623,108 +545,94 @@ Daleel Elm3alem`
         </Card>
       </div>
 
-      <Dialog open={cancelOpen} onOpenChange={setCancelOpen}>
-        <DialogContent dir={dir}>
-          <DialogHeader><DialogTitle>{t("inv.cancel")}</DialogTitle></DialogHeader>
-          <div className="space-y-2">
-            <Label>{t("inv.cancel_reason")}</Label>
-            <Textarea value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setCancelOpen(false)}>{t("actions.back")}</Button>
-            <Button variant="destructive" disabled={busy || !cancelReason.trim()} onClick={() => setStatus("cancelled", { cancellation_reason: cancelReason })}>{t("inv.cancel")}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={itemOpen} onOpenChange={setItemOpen}>
-        <DialogContent dir={dir}>
-          <DialogHeader><DialogTitle>{t("inv.add_item")}</DialogTitle></DialogHeader>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="col-span-2 space-y-2"><Label>{t("inv.item_desc")}</Label><Input value={descEn} onChange={(e) => setDescEn(e.target.value)} /></div>
-            <div className="col-span-2 space-y-2"><Label>{t("inv.item_desc_ar")}</Label><Input dir="rtl" value={descAr} onChange={(e) => setDescAr(e.target.value)} /></div>
-            <div className="space-y-2"><Label>{t("inv.qty")}</Label><Input type="number" min="0" value={qty} onChange={(e) => setQty(e.target.value)} /></div>
-            <div className="space-y-2"><Label>{t("inv.unit_price")}</Label><Input type="number" min="0" value={price} onChange={(e) => setPrice(e.target.value)} /></div>
-            <div className="space-y-2"><Label>{t("inv.taxes")}</Label><Input type="number" min="0" value={taxes} onChange={(e) => setTaxes(e.target.value)} /></div>
-            <div className="space-y-2"><Label>{t("inv.fees")}</Label><Input type="number" min="0" value={fees} onChange={(e) => setFees(e.target.value)} /></div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setItemOpen(false)}>{t("actions.cancel")}</Button>
-            <Button onClick={addItem} disabled={busy || !descEn.trim() || !price}>{t("actions.save")}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Record Payment Dialog */}
-      <Dialog open={payOpen} onOpenChange={setPayOpen}>
+      {/* Edit Invoice Dialog */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="max-w-md" dir={dir}>
           <DialogHeader>
             <DialogTitle>
-              {lang === "ar" ? "تسجيل عملية دفع" : "Record Payment"}
-              {" "}·{" "}
-              <span className="text-muted-foreground font-normal text-sm">{x.invoice_number || x.invoice_no}</span>
+              {lang === "ar" ? "تعديل حالة الفاتورة" : "Edit Invoice Status"} · {x.invoice_number || x.invoice_no}
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-3 p-3 bg-muted/30 rounded-md text-xs">
-              <div>
-                <div className="text-muted-foreground mb-0.5">{lang === "ar" ? "إجمالي الفاتورة" : "Invoice Total"}</div>
-                <div className="font-semibold">{formatMoney(Number(x.total_amount), currencyCode, lang)}</div>
-              </div>
-              <div>
-                <div className="text-muted-foreground mb-0.5">{lang === "ar" ? "المتبقي للسداد" : "Remaining Balance"}</div>
-                <div className="font-semibold text-destructive">{formatMoney(Number(x.remaining_amount ?? balance), currencyCode, lang)}</div>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">{lang === "ar" ? "العميل" : "Customer"}</Label>
+              <div className="text-sm font-semibold p-2 bg-muted/30 rounded border border-border/40">
+                {custName}
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>{lang === "ar" ? "تاريخ الدفع" : "Payment Date"}</Label>
-              <Input type="date" value={payDate} onChange={(e) => setPayDate(e.target.value)} />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">{lang === "ar" ? "رقم الحجز" : "Booking Code"}</Label>
+                <div className="text-sm font-semibold p-2 bg-muted/30 rounded border border-border/40 font-mono">
+                  {x.booking_code || x.booking?.code || "—"}
+                </div>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">{lang === "ar" ? "المبلغ الإجمالي" : "Total Amount"}</Label>
+                <div className="text-sm font-semibold p-2 bg-muted/30 rounded border border-border/40 tabular-nums">
+                  {formatMoney(Number(x.total_amount), currencyCode, lang)}
+                </div>
+              </div>
             </div>
 
             <div className="space-y-2">
-              <Label>{lang === "ar" ? "المبلغ المدفوع" : "Amount"} ({currencyCode})</Label>
-              <Input
-                type="number"
-                step="0.01"
-                min="0.01"
-                max={Number(x.remaining_amount ?? balance)}
-                value={payAmount}
-                onChange={(e) => setPayAmount(e.target.value)}
-                placeholder={`0.00 ${currencyCode}`}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>{lang === "ar" ? "طريقة الدفع" : "Payment Method"}</Label>
-              <Select value={payMethod} onValueChange={(v) => setPayMethod(v as typeof payMethod)}>
+              <Label className="text-sm font-semibold">{lang === "ar" ? "حالة الفاتورة" : "Invoice Status"}</Label>
+              <Select value={editStatus} onValueChange={setEditStatus}>
                 <SelectTrigger dir={dir}><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="cash">{lang === "ar" ? "نقداً" : "Cash"}</SelectItem>
-                  <SelectItem value="bank_transfer">{lang === "ar" ? "تحويل بنكي" : "Bank Transfer"}</SelectItem>
-                  <SelectItem value="credit_card">{lang === "ar" ? "بطاقة ائتمان" : "Credit Card"}</SelectItem>
-                  <SelectItem value="cheque">{lang === "ar" ? "شيك" : "Cheque"}</SelectItem>
-                  <SelectItem value="other">{lang === "ar" ? "أخرى" : "Other"}</SelectItem>
+                  <SelectItem value="unpaid">{lang === "ar" ? "غير مدفوعة" : "Unpaid"}</SelectItem>
+                  <SelectItem value="paid">{lang === "ar" ? "مدفوعة" : "Paid"}</SelectItem>
+                  <SelectItem value="cancelled">{lang === "ar" ? "ملغاة" : "Cancelled"}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <Label>{lang === "ar" ? "رقم المعاملة / المرجع" : "Transaction Reference"} <span className="text-muted-foreground text-xs">({lang === "ar" ? "اختياري" : "Optional"})</span></Label>
-              <Input value={payRef} onChange={(e) => setPayRef(e.target.value)} placeholder="REF-BANK-0000" />
+              <Label className="text-sm font-semibold">{lang === "ar" ? "ملاحظات الدفع / الفاتورة" : "Payment / Invoice Notes"}</Label>
+              <Textarea
+                value={editNotes}
+                onChange={(e) => setEditNotes(e.target.value)}
+                placeholder={lang === "ar" ? "اكتب ملاحظات الدفع أو الفاتورة هنا..." : "Write payment or invoice notes here..."}
+                rows={3}
+              />
             </div>
 
             <div className="space-y-2">
-              <Label>{lang === "ar" ? "ملاحظات" : "Notes"} <span className="text-muted-foreground text-xs">({lang === "ar" ? "اختياري" : "Optional"})</span></Label>
-              <Textarea value={payNotes} onChange={(e) => setPayNotes(e.target.value)} rows={2} placeholder={lang === "ar" ? "ملاحظات الدفعة..." : "Payment notes..."} />
+              <Label className="text-sm font-semibold">{lang === "ar" ? "إيصال السداد / صورة الفاتورة (اختياري)" : "Payment Receipt / Invoice Image (Optional)"}</Label>
+              <Input
+                type="file"
+                accept="image/jpeg,image/png,image/jpg,image/webp,application/pdf"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  setEditInvoiceImage(file || null);
+                }}
+              />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setPayOpen(false)}>{t("actions.cancel")}</Button>
-            <Button onClick={handleRecordPayment} disabled={busy || !payAmount || Number(payAmount) <= 0} className="bg-green-600 hover:bg-green-700 text-white">
-              <CreditCard className="h-4 w-4" />
-              {lang === "ar" ? "تسجيل الدفعة" : "Record Payment"}
-            </Button>
+            <Button variant="outline" onClick={() => setEditOpen(false)}>{t("actions.cancel")}</Button>
+            <Button onClick={async () => {
+              setBusy(true);
+              try {
+                const formData = new FormData();
+                formData.append("_method", "PUT");
+                formData.append("status", editStatus);
+                formData.append("notes", editNotes || "");
+                if (editInvoiceImage) {
+                  formData.append("invoice_image", editInvoiceImage);
+                }
+
+                await updateInvoiceMutation({ id: id || "", body: formData }).unwrap();
+                toast.success(t("label.saved", "Saved successfully"));
+                setEditOpen(false);
+                refetchInvoice();
+              } catch (e: any) {
+                toast.error(e.message || t("label.error", "Error"));
+              } finally {
+                setBusy(false);
+              }
+            }} disabled={busy}>{t("actions.save")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

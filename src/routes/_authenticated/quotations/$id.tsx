@@ -75,7 +75,7 @@ export default function QuotationDetail() {
     const customerName = DOC_LANGS[printLang].dir === "rtl"
       ? (q.data.customer?.name_ar || q.data.customer?.name_en)
       : (q.data.customer?.name_en || q.data.customer?.name_ar);
-    
+
     // Transform items to match print format
     const printItems = (q.data.items ?? []).map((item: any) => {
       const checkIn = item.price_details?.valid_from || q.data.start_date;
@@ -99,8 +99,8 @@ export default function QuotationDetail() {
       };
     });
 
-    const ok = await openQuotationPrint({ 
-      lang: printLang, 
+    const ok = await openQuotationPrint({
+      lang: printLang,
       quotation: {
         ...q.data,
         quotation_no: q.data.code,
@@ -108,9 +108,9 @@ export default function QuotationDetail() {
         travel_date: q.data.start_date,
         expiry_date: q.data.end_date,
         currency: typeof q.data.currency === 'object' ? q.data.currency.code : q.data.currency,
-      }, 
-      customerName: customerName ?? "—", 
-      items: printItems 
+      },
+      customerName: customerName ?? "—",
+      items: printItems
     });
     if (ok) {
       toast.success(t("quotes.pdf_ok"));

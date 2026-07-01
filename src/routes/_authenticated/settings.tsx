@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Country as CountryLib,
+  State as StateLib,
   City as CityLib,
 } from "country-state-city";
 import { PageHeader } from "@/components/page-header";
@@ -105,6 +106,58 @@ const ARABIC_CITY_MAP: Record<string, string> = {
   Casablanca: "الدار البيضاء",
   Marrakesh: "مراكش",
   Khartoum: "الخرطوم",
+  // Saudi Arabia States/Regions
+  "Al Madinah": "المدينة المنورة",
+  "Al Madinah Region": "المدينة المنورة",
+  "Makkah Region": "مكة المكرمة",
+  "Riyadh Region": "الرياض",
+  "Asir": "عسير",
+  "Asir Region": "عسير",
+  "Al-Qassim": "القصيم",
+  "Al-Qassim Region": "القصيم",
+  "Tabuk Region": "تبوك",
+  "Hail": "حائل",
+  "Hail Region": "حائل",
+  "Jazan": "جازان",
+  "Jazan Region": "جازان",
+  "Najran": "نجران",
+  "Najran Region": "نجران",
+  "Al-Bahah": "الباحة",
+  "Al-Bahah Region": "الباحة",
+  "Al-Jouf": "الجوف",
+  "Al-Jouf Region": "الجوف",
+  "Northern Borders": "الحدود الشمالية",
+  "Northern Borders Region": "الحدود الشمالية",
+  "Eastern Province": "المنطقة الشرقية",
+  // Egypt Governorates
+  Luxor: "الأقصر",
+  Aswan: "أسوان",
+  "Red Sea": "البحر الأحمر",
+  "South Sinai": "جنوب سيناء",
+  "North Sinai": "شمال سيناء",
+  Suez: "السويس",
+  "Port Said": "بورسعيد",
+  Ismailia: "الإسماعيلية",
+  Qena: "قنا",
+  Sohag: "سوهاج",
+  Asyut: "أسيوط",
+  Minya: "المنيا",
+  "Beni Suef": "بني سويف",
+  Faiyum: "الفيوم",
+  Qalyubia: "القليوبية",
+  Sharqia: "الشرقية",
+  Dakahlia: "الدقهلية",
+  Damietta: "دمياط",
+  Gharbia: "الغربية",
+  Monufia: "المنوفية",
+  "Kafr El Sheikh": "كفر الشيخ",
+  Beheira: "البحيرة",
+  Matrouh: "مطروح",
+  "New Valley": "الوادي الجديد",
+  // UAE Emirates
+  "Ras Al Khaimah": "رأس الخيمة",
+  "Fujairah": "الفجيرة",
+  "Umm Al Quwain": "أم القيوين",
 };
 
 const getCurrencySymbol = (code: string) => {
@@ -601,16 +654,28 @@ export default function SettingsPage() {
                                 <TableCell className="font-mono uppercase">
                                   {item.code || "—"}
                                 </TableCell>
-                                <TableCell dir="ltr">
+                                <TableCell >
                                   {item.phone_code || "—"}
                                 </TableCell>
                               </>
                             )}
                             {activeTab === "cities" && (
                               <TableCell>
-                                {(countriesForCitiesQuery.data as any[])?.find(
-                                  (c: any) => c.code === item.country_code
-                                )?.name_ar || item.country_code}
+                                {(() => {
+                                  const rawCountries = countriesForCitiesQuery.data as any[];
+                                  const cId = item.country_id || item.country?.id;
+                                  const cCode = item.country_code || item.country?.code;
+
+                                  const country = rawCountries?.find(
+                                    (c: any) => (cId && String(c.id) === String(cId)) || (cCode && c.code === cCode)
+                                  );
+
+                                  const name = lang === "ar"
+                                    ? country?.name_ar || item.country?.name_ar || country?.name_en || item.country?.name_en
+                                    : country?.name_en || item.country?.name_en || country?.name_ar || item.country?.name_ar;
+
+                                  return name || cCode || cId || "—";
+                                })()}
                               </TableCell>
                             )}
                             {activeTab === "currencies" && (
@@ -636,8 +701,8 @@ export default function SettingsPage() {
                             <TableCell>
                               <span
                                 className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${isActive
-                                    ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
-                                    : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
+                                  ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+                                  : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
                                   }`}
                               >
                                 {isActive
@@ -701,8 +766,8 @@ export default function SettingsPage() {
                           key={pageNum}
                           variant={pageNum === page ? "default" : "outline"}
                           className={`h-9 w-9 rounded-xl font-semibold border-border/50 ${pageNum === page
-                              ? "bg-[#a8702c] hover:bg-[#915f23] text-white"
-                              : ""
+                            ? "bg-[#a8702c] hover:bg-[#915f23] text-white"
+                            : ""
                             }`}
                           onClick={() => setPage(pageNum)}
                         >
@@ -813,7 +878,7 @@ export default function SettingsPage() {
                   className="bg-background/50 rounded-xl"
                   value={activeTab === "supplier_types" ? (formData.key || "") : (formData.code || "")}
                   onChange={(e) =>
-                    activeTab === "supplier_types" 
+                    activeTab === "supplier_types"
                       ? setFormData({ ...formData, key: e.target.value })
                       : setFormData({ ...formData, code: e.target.value })
                   }
@@ -1089,10 +1154,17 @@ export default function SettingsPage() {
 
                 {selectedCountryCodeForCities &&
                   (() => {
-                    const availableCities =
-                      CityLib.getCitiesOfCountry(
+                    const availableCities = (
+                      StateLib.getStatesOfCountry(
                         selectedCountryCodeForCities
-                      ) || [];
+                      ) || []
+                    ).map((state) => ({
+                      ...state,
+                      name: state.name
+                        .replace(/\s+(Region|Province|Governorate|State|Emirate)$/i, "")
+                        .replace(/^(Region|Province|Governorate|State|Emirate)\s+of\s+/i, "")
+                        .trim(),
+                    }));
                     const filteredCities = availableCities.filter((city) =>
                       city.name
                         .toLowerCase()

@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -13,25 +14,37 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { useCreateSupplierMutation, useUpdateSupplierMutation } from "@/store/services/suppliers/suppliersService";
 
-const schema = z.object({
-  name_en: z.string().trim().min(1).max(200),
-  name_ar: z.string().trim().min(1).max(200),
-  supplier_type_id: z.coerce.number().int().positive(),
+const getSchema = (lang: "ar" | "en") => z.object({
+  name_en: z.string().trim()
+    .min(1, lang === "ar" ? "الاسم بالإنجليزية مطلوب" : "English name is required")
+    .max(200, lang === "ar" ? "الاسم يجب ألا يتجاوز 200 حرف" : "Name must not exceed 200 characters"),
+  name_ar: z.string().trim()
+    .min(1, lang === "ar" ? "الاسم بالعربية مطلوب" : "Arabic name is required")
+    .max(200, lang === "ar" ? "الاسم يجب ألا يتجاوز 200 حرف" : "Name must not exceed 200 characters"),
+  supplier_type_id: z.coerce.number().int().positive(lang === "ar" ? "نوع المورد مطلوب" : "Supplier type is required"),
   status: z.coerce.number().int().min(0).max(1),
-  tax_number: z.string().trim().max(80).optional().or(z.literal("")),
-  commercial_register: z.string().trim().max(80).optional().or(z.literal("")),
-  currency_id: z.coerce.number().int().positive(),
-  country_id: z.coerce.number().int().positive(),
-  city_id: z.coerce.number().int().positive(),
-  address_1: z.string().trim().max(200).optional().or(z.literal("")),
-  address_2: z.string().trim().max(200).optional().or(z.literal("")),
-  phone: z.string().trim().max(40).regex(/^\+[1-9]\d{1,14}$/, { message: "يجب أن يبدأ رقم الهاتف بـ + ومفتاح الدولة (مثال: +966500000000) / Phone must start with + and country code (e.g., +966500000000)" }).optional().or(z.literal("")),
-  email: z.string().trim().email().max(255).optional().or(z.literal("")),
-  website: z.string().trim().max(200).optional().or(z.literal("")),
-  notes: z.string().trim().max(4000).optional().or(z.literal("")),
+  tax_number: z.string().trim().max(80, lang === "ar" ? "الرقم الضريبي يجب ألا يتجاوز 80 حرف" : "Tax number must not exceed 80 characters").optional().or(z.literal("")),
+  commercial_register: z.string().trim().max(80, lang === "ar" ? "السجل التجاري يجب ألا يتجاوز 80 حرف" : "Commercial register must not exceed 80 characters").optional().or(z.literal("")),
+  currency_id: z.coerce.number().int().positive(lang === "ar" ? "العملة مطلوبة" : "Currency is required"),
+  country_id: z.coerce.number().int().positive(lang === "ar" ? "الدولة مطلوبة" : "Country is required"),
+  city_id: z.coerce.number().int().positive(lang === "ar" ? "المدينة مطلوبة" : "City is required"),
+  address_1: z.string().trim().max(200, lang === "ar" ? "العنوان يجب ألا يتجاوز 200 حرف" : "Address must not exceed 200 characters").optional().or(z.literal("")),
+  address_2: z.string().trim().max(200, lang === "ar" ? "العنوان الإضافي يجب ألا يتجاوز 200 حرف" : "Address line 2 must not exceed 200 characters").optional().or(z.literal("")),
+  phone: z.string().trim().max(40, lang === "ar" ? "رقم الهاتف يجب ألا يتجاوز 40 حرف" : "Phone must not exceed 40 characters")
+    .regex(/^\+[1-9]\d{1,14}$/, {
+      message: lang === "ar"
+        ? "يجب أن يبدأ رقم الهاتف بـ + ومفتاح الدولة (مثال: +966500000000)"
+        : "Phone must start with + and country code (e.g., +966500000000)"
+    }).optional().or(z.literal("")),
+  email: z.string().trim()
+    .email(lang === "ar" ? "البريد الإلكتروني غير صالح" : "Invalid email address")
+    .max(255, lang === "ar" ? "البريد الإلكتروني يجب ألا يتجاوز 255 حرف" : "Email must not exceed 255 characters")
+    .optional().or(z.literal("")),
+  website: z.string().trim().max(200, lang === "ar" ? "الموقع الإلكتروني يجب ألا يتجاوز 200 حرف" : "Website must not exceed 200 characters").optional().or(z.literal("")),
+  notes: z.string().trim().max(4000, lang === "ar" ? "الملاحظات يجب ألا تتجاوز 4000 حرف" : "Notes must not exceed 4000 characters").optional().or(z.literal("")),
 });
 
-type FormVals = z.input<typeof schema>;
+type FormVals = z.input<ReturnType<typeof getSchema>>;
 
 export function SupplierForm({ initial, onSaved }: { initial?: any; onSaved: (id: number) => void }) {
   const { t, lang } = useI18n();
@@ -40,6 +53,8 @@ export function SupplierForm({ initial, onSaved }: { initial?: any; onSaved: (id
   const supplierTypes = useSupplierTypes();
   const [createSupplier] = useCreateSupplierMutation();
   const [updateSupplier] = useUpdateSupplierMutation();
+
+  const schema = useMemo(() => getSchema(lang), [lang]);
 
   const form = useForm<FormVals>({
     resolver: zodResolver(schema),

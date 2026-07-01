@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -15,30 +15,42 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useCreateHotelMutation, useUpdateHotelMutation } from "@/store/services/hotels/hotelsService";
 
-const schema = z.object({
-  name_en: z.string().trim().min(1).max(200),
-  name_ar: z.string().trim().min(1).max(200),
-  brand: z.string().trim().max(120).optional().or(z.literal("")),
-  stars: z.coerce.number().int().min(1).max(5),
-  status: z.enum(["1", "0"]),
-  country_id: z.string().min(1),
-  city_id: z.string().min(1),
-  district: z.string().trim().max(120).optional().or(z.literal("")),
-  address_1: z.string().trim().max(200).optional().or(z.literal("")),
-  postal_code: z.string().trim().max(20).optional().or(z.literal("")),
-  map_link: z.string().trim().max(1000).optional().or(z.literal("")),
-  phone: z.string().trim().max(40).optional().or(z.literal("")),
-  email: z.string().trim().email().max(255).optional().or(z.literal("")).nullable(),
-  website: z.string().trim().max(200).optional().or(z.literal("")),
-  check_in: z.string().regex(/^\d{2}:\d{2}$/).optional().or(z.literal("")),
-  check_out: z.string().regex(/^\d{2}:\d{2}$/).optional().or(z.literal("")),
-  description_en: z.string().trim().max(4000).optional().or(z.literal("")),
-  description_ar: z.string().trim().max(4000).optional().or(z.literal("")),
-  policies_en: z.string().trim().max(4000).optional().or(z.literal("")),
-  policies_ar: z.string().trim().max(4000).optional().or(z.literal("")),
+const getSchema = (lang: "ar" | "en") => z.object({
+  name_en: z.string().trim()
+    .min(1, lang === "ar" ? "الاسم بالإنجليزية مطلوب" : "English name is required")
+    .max(200, lang === "ar" ? "الاسم يجب ألا يتجاوز 200 حرف" : "Name must not exceed 200 characters")
+    .regex(/^[A-Z]/, lang === "ar" ? "يجب أن يبدأ الاسم الإنجليزي بحرف كبير" : "English name must start with a capital letter"),
+  name_ar: z.string().trim()
+    .min(1, lang === "ar" ? "الاسم بالعربية مطلوب" : "Arabic name is required")
+    .max(200, lang === "ar" ? "الاسم يجب ألا يتجاوز 200 حرف" : "Name must not exceed 200 characters"),
+  brand: z.string().trim().max(120, lang === "ar" ? "البراند يجب ألا يتجاوز 120 حرف" : "Brand must not exceed 120 characters").optional().or(z.literal("")),
+  stars: z.coerce.number().int()
+    .min(1, lang === "ar" ? "يجب أن يكون التقييم نجمة واحدة على الأقل" : "Stars must be at least 1")
+    .max(5, lang === "ar" ? "يجب ألا يتجاوز التقييم 5 نجوم" : "Stars must be at most 5"),
+  status: z.enum(["1", "0"], {
+    errorMap: () => ({ message: lang === "ar" ? "الحالة غير صالحة" : "Invalid status" })
+  }),
+  country_id: z.string().min(1, lang === "ar" ? "الدولة مطلوبة" : "Country is required"),
+  city_id: z.string().min(1, lang === "ar" ? "المدينة مطلوبة" : "City is required"),
+  district: z.string().trim().max(120, lang === "ar" ? "الحي يجب ألا يتجاوز 120 حرف" : "District must not exceed 120 characters").optional().or(z.literal("")),
+  address_1: z.string().trim().max(200, lang === "ar" ? "العنوان يجب ألا يتجاوز 200 حرف" : "Address must not exceed 200 characters").optional().or(z.literal("")),
+  postal_code: z.string().trim().max(20, lang === "ar" ? "الرمز البريدي يجب ألا يتجاوز 20 حرف" : "Postal code must not exceed 20 characters").optional().or(z.literal("")),
+  map_link: z.string().trim().max(1000, lang === "ar" ? "رابط الخريطة يجب ألا يتجاوز 1000 حرف" : "Map link must not exceed 1000 characters").optional().or(z.literal("")),
+  phone: z.string().trim().max(40, lang === "ar" ? "الهاتف يجب ألا يتجاوز 40 حرف" : "Phone must not exceed 40 characters").optional().or(z.literal("")),
+  email: z.string().trim()
+    .email(lang === "ar" ? "البريد الإلكتروني غير صالح" : "Invalid email address")
+    .max(255, lang === "ar" ? "البريد الإلكتروني يجب ألا يتجاوز 255 حرف" : "Email must not exceed 255 characters")
+    .optional().or(z.literal("")).nullable(),
+  website: z.string().trim().max(200, lang === "ar" ? "الموقع الإلكتروني يجب ألا يتجاوز 200 حرف" : "Website must not exceed 200 characters").optional().or(z.literal("")),
+  check_in: z.string().regex(/^\d{2}:\d{2}$/, lang === "ar" ? "تنسيق وقت تسجيل الدخول غير صالح (HH:MM)" : "Invalid check-in time format (HH:MM)").optional().or(z.literal("")),
+  check_out: z.string().regex(/^\d{2}:\d{2}$/, lang === "ar" ? "تنسيق وقت تسجيل الخروج غير صالح (HH:MM)" : "Invalid check-out time format (HH:MM)").optional().or(z.literal("")),
+  description_en: z.string().trim().max(4000, lang === "ar" ? "الوصف بالإنجليزية يجب ألا يتجاوز 4000 حرف" : "Description (EN) must not exceed 4000 characters").optional().or(z.literal("")),
+  description_ar: z.string().trim().max(4000, lang === "ar" ? "الوصف بالعربية يجب ألا يتجاوز 4000 حرف" : "Description (AR) must not exceed 4000 characters").optional().or(z.literal("")),
+  policies_en: z.string().trim().max(4000, lang === "ar" ? "السياسات بالإنجليزية يجب ألا يتجاوز 4000 حرف" : "Policies (EN) must not exceed 4000 characters").optional().or(z.literal("")),
+  policies_ar: z.string().trim().max(4000, lang === "ar" ? "السياسات بالعربية يجب ألا يتجاوز 4000 حرف" : "Policies (AR) must not exceed 4000 characters").optional().or(z.literal("")),
 });
 
-type FormVals = z.input<typeof schema>;
+type FormVals = z.input<ReturnType<typeof getSchema>>;
 
 export function HotelForm({ initial, onSaved }: { initial?: any; onSaved: (id: string) => void }) {
   const { t, lang } = useI18n();
@@ -48,6 +60,8 @@ export function HotelForm({ initial, onSaved }: { initial?: any; onSaved: (id: s
 
   const [createHotel] = useCreateHotelMutation();
   const [updateHotel] = useUpdateHotelMutation();
+
+  const schema = useMemo(() => getSchema(lang), [lang]);
 
   const form = useForm<FormVals>({
     resolver: zodResolver(schema),
@@ -70,8 +84,32 @@ export function HotelForm({ initial, onSaved }: { initial?: any; onSaved: (id: s
       check_out: initial?.check_out?.slice(0, 5) ?? "12:00",
       description_en: initial?.description_en ?? "",
       description_ar: initial?.description_ar ?? "",
-      policies_en: initial?.policies_en ?? "",
-      policies_ar: initial?.policies_ar ?? "",
+      policies_en: initial?.policies_en ?? `1. Official check-in time is 4:00 PM, and check-out time is 1:00 PM.
+
+2. Late check-out beyond the designated time will result in an additional full night's charge, in accordance with the hotel's policy.
+
+3. The reservation will be automatically canceled if the full payment is not received within the specified payment period.
+
+4. Guests are not entitled to a refund for any unused portion of their stay if they choose to check out before the agreed reservation period ends.
+
+5. Guests are required to comply with all hotel rules, regulations, and policies, and to maintain appropriate conduct and respect public etiquette throughout their stay.
+
+6. Guests are responsible for any damage or loss caused to the guest room or any hotel facilities during their stay.
+
+7. The hotel and the company shall not be held liable for the loss, theft, or damage of guests' personal belongings, valuables, or cash.`,
+      policies_ar: initial?.policies_ar ?? `1. وقت تسجيل الدخول الرسمي الساعة 04:00 مساءً، ووقت تسجيل الخروج الساعة 01:00 ظهراً.
+
+2. في حال التأخير عن موعد الخروج يتم احتساب ليلة إضافية كاملة وفق سياسة الفندق.
+
+3. يلغى الحجز تلقائياً في حال عدم سداد كامل المبلغ خلال المدة المحددة.
+
+4. لا يحق للنزيل استرداد قيمة الإقامة في حال المغادرة قبل انتهاء مدة الحجز المتفق عليها.
+
+5. يلتزم النزيل بالأنظمة والتعليمات المعمول بها في الفندق ومراعاة السلوك والآداب العامة.
+
+6. يتحمل النزيل مسؤولية أي أضرار أو تلفيات تنتج عن استخدامه للغرفة أو مرافق الفندق.
+
+7. الفندق والشركة غير مسؤولين عن فقدان أو سرقة المقتنيات الشخصية أو الأموال.`,
     },
   });
 
@@ -253,10 +291,10 @@ export function HotelForm({ initial, onSaved }: { initial?: any; onSaved: (id: s
             <FormItem><FormLabel>{t("label.description")} (AR)</FormLabel><FormControl><Textarea rows={4} dir="rtl" {...field} /></FormControl><FormMessage /></FormItem>
           )} />
           <FormField control={form.control} name="policies_en" render={({ field }) => (
-            <FormItem><FormLabel>Policies (EN)</FormLabel><FormControl><Textarea rows={4} dir="ltr" {...field} /></FormControl><FormMessage /></FormItem>
+            <FormItem><FormLabel>Policies (EN)</FormLabel><FormControl><Textarea rows={8} dir="ltr" {...field} /></FormControl><FormMessage /></FormItem>
           )} />
           <FormField control={form.control} name="policies_ar" render={({ field }) => (
-            <FormItem><FormLabel>السياسات (AR)</FormLabel><FormControl><Textarea rows={4} dir="rtl" {...field} /></FormControl><FormMessage /></FormItem>
+            <FormItem><FormLabel>السياسات (AR)</FormLabel><FormControl><Textarea rows={8} dir="rtl" {...field} /></FormControl><FormMessage /></FormItem>
           )} />
         </CardContent></Card>
 

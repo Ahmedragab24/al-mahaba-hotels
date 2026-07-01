@@ -8,7 +8,7 @@ import { selectAuth } from "@/store/features/authSlice";
 import { hasRole, hasAnyRole, isAdmin, canAccessModule } from "@/lib/auth-utils";
 import { useFacilities, useSuppliersLite, useHotelViews } from "@/lib/lookups";
 import { useGetRoomsQuery } from "@/store/services/rooms/roomsService";
-import { useGetHotelImagesQuery, useUploadHotelImagesMutation, useSetImageAsCoverMutation, useDeleteHotelImageMutation } from "@/store/services/hotels/hotelsService";
+import { useGetHotelImagesQuery, useUploadHotelImagesMutation, useSetImageAsCoverMutation, useDeleteHotelImageMutation, useGetHotelsQuery } from "@/store/services/hotels/hotelsService";
 import { useGetSuppliersQuery } from "@/store/services/suppliers/suppliersService";
 import { useGetBookingsQuery } from "@/store/services/bookings/bookingsService";
 import { useGetQuotationsQuery } from "@/store/services/quotations/quotationsService";
@@ -665,49 +665,57 @@ function ContactDialog({ open, onOpenChange, hotelId, initial, onSaved }: any) {
 /* ---------- Linked Suppliers ---------- */
 function SuppliersTab({ hotelId }: { hotelId: string }) {
   const { t, lang } = useI18n();
-  const { data: linkedSuppliersData, isLoading } = useGetSuppliersQuery({ hotel_id: hotelId });
-  const list = Array.isArray(linkedSuppliersData)
-    ? linkedSuppliersData
-    : (Array.isArray((linkedSuppliersData as any)?.data) ? (linkedSuppliersData as any).data : []);
+  const [selectedSupplierId, setSelectedSupplierId] = useState<string>("");
+  const { data: suppliersLite } = useSuppliersLite();
+  const { data: hotelsData, isLoading } = useGetHotelsQuery({ supplier_id: selectedSupplierId || undefined, lang });
+  const list = Array.isArray(hotelsData)
+    ? hotelsData
+    : (Array.isArray((hotelsData as any)?.data) ? (hotelsData as any).data : []);
 
   return (
     <Card><CardContent className="p-0">
+      <div className="flex items-center justify-between border-b p-3">
+        <h3 className="font-medium">{t("hotels.suppliers")}</h3>
+        <Select value={selectedSupplierId} onValueChange={setSelectedSupplierId}>
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder={t("filter.supplier")} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">{t("label.all")}</SelectItem>
+            {suppliersLite?.map((s: any) => (
+              <SelectItem key={s.id} value={s.id.toString()}>
+                {lang === "ar" ? s.name_ar : s.name_en}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
       <Table>
         <TableHeader><TableRow>
           <TableHead>{t("label.code")}</TableHead>
           <TableHead>{t("label.name")}</TableHead>
-          <TableHead>{t("supplier.apply.type")}</TableHead>
+          <TableHead>{t("label.brand")}</TableHead>
           <TableHead>{t("label.city")}</TableHead>
-          <TableHead>{t("label.phone")}</TableHead>
-          <TableHead>{t("label.email")}</TableHead>
-          <TableHead>{t("label.rating")}</TableHead>
-          <TableHead>{t("label.is_preferred")}</TableHead>
+          <TableHead>{t("label.stars")}</TableHead>
+          <TableHead>{t("label.status")}</TableHead>
         </TableRow></TableHeader>
         <TableBody>
-          {isLoading && <TableRow><TableCell colSpan={8} className="py-10 text-center text-muted-foreground">{t("label.loading")}</TableCell></TableRow>}
-          {!isLoading && list.length === 0 && <TableRow><TableCell colSpan={8} className="py-10 text-center text-muted-foreground">{t("empty.title")}</TableCell></TableRow>}
+          {isLoading && <TableRow><TableCell colSpan={6} className="py-10 text-center text-muted-foreground">{t("label.loading")}</TableCell></TableRow>}
+          {!isLoading && list.length === 0 && <TableRow><TableCell colSpan={6} className="py-10 text-center text-muted-foreground">{t("empty.title")}</TableCell></TableRow>}
           {!isLoading && list.map((r: any) => (
             <TableRow key={r.id}>
               <TableCell className="font-mono text-xs">{r.code}</TableCell>
               <TableCell className="font-medium">{lang === "ar" ? r.name_ar : r.name_en}</TableCell>
-              <TableCell><Badge variant="outline">{r.supplier_type ? (lang === "ar" ? r.supplier_type.name_ar : r.supplier_type.name_en) : "—"}</Badge></TableCell>
+              <TableCell>{r.brand || "—"}</TableCell>
               <TableCell>{r.city ? (lang === "ar" ? r.city.name_ar : r.city.name_en) : "—"}</TableCell>
-              <TableCell className="text-xs" dir="ltr">{r.phone || "—"}</TableCell>
-              <TableCell className="text-xs">{r.email || "—"}</TableCell>
               <TableCell>
-                {r.rating ? (
-                  <span className="text-amber-500 font-bold">{"★".repeat(r.rating)}</span>
+                {r.star_rating ? (
+                  <span className="text-amber-500 font-bold">{"★".repeat(r.star_rating)}</span>
                 ) : (
                   "—"
                 )}
               </TableCell>
-              <TableCell>
-                {(r.pivot?.is_preferred ?? r.is_preferred) ? (
-                  <Star className="h-4 w-4 fill-amber-500 text-amber-500" />
-                ) : (
-                  "—"
-                )}
-              </TableCell>
+              <TableCell><StatusPill status={r.status} /></TableCell>
             </TableRow>
           ))}
         </TableBody>

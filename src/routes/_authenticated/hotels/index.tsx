@@ -68,7 +68,9 @@ export default function HotelsList() {
     return m;
   }, [cities.data]);
 
-  const { data: allHotels, isLoading: isLoadingHotels, isFetching: isFetchingHotels } = useGetHotelsQuery();
+  const { data: allHotels, isLoading: isLoadingHotels, isFetching: isFetchingHotels } = useGetHotelsQuery({
+    is_archived: showArchived ? 1 : 0
+  });
   const [updateHotel] = useUpdateHotelMutation();
   const [deleteHotel] = useDeleteHotelMutation();
 
@@ -137,7 +139,7 @@ export default function HotelsList() {
           country_id: h.country_id,
           is_archived: action === "archive" ? 1 : 0
         } : { is_archived: action === "archive" ? 1 : 0 };
-        
+
         await updateHotel({ id, body: body as any }).unwrap();
         toast.success(action === "archive" ? t("toast.archived") : t("toast.restored"));
       }

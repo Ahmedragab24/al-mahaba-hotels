@@ -29,48 +29,24 @@ export const invoicesApi = api.injectEndpoints({
       query: (params) => ({ url: "/invoices/statistics", params: params || undefined }),
       providesTags: ["Invoices"],
     }),
-    createInvoice: build.mutation<Invoice, Partial<Invoice>>({
-      query: (body) => ({ url: "/invoices", method: "POST", body }),
-      invalidatesTags: ["Invoices"],
-    }),
-    createInvoiceFromBooking: build.mutation<
-      Invoice | string,
-      {
-        booking_id: string | number;
-        invoice_date?: string;
-        due_date?: string;
-        tax_percent?: number;
-        discount?: number;
-        notes?: string;
-        items?: { description: string; quantity: number; unit_price: number }[];
-      }
-    >({
-      query: (body) => ({ url: "/invoices", method: "POST", body: { ...body, invoice_type: "from_booking" } }),
-      invalidatesTags: ["Invoices", "Bookings"],
-    }),
-    updateInvoice: build.mutation<Invoice, { id: string | number; body: Partial<Invoice> }>({
-      query: ({ id, body }) => ({ url: `/invoices/${id}`, method: "PUT", body }),
+
+    updateInvoice: build.mutation<Invoice, { id: string | number; body: any }>({
+      query: ({ id, body }) => {
+        const isFormData = body instanceof FormData;
+        return {
+          url: `/invoices/${id}`,
+          method: isFormData ? "POST" : "PUT",
+          body,
+        };
+      },
       invalidatesTags: (result, error, { id }) => ["Invoices", { type: "Invoices", id }],
     }),
-    deleteInvoice: build.mutation<void, string | number>({
-      query: (id) => ({ url: `/invoices/${id}`, method: "DELETE" }),
-      invalidatesTags: ["Invoices"],
-    }),
-    recordInvoicePayment: build.mutation<void, { id: string | number; body: Partial<InvoicePayment> }>({
-      query: ({ id, body }) => ({ url: `/invoices/${id}/payments`, method: "POST", body }),
-      invalidatesTags: (result, error, { id }) => ["Invoices", { type: "Invoices", id }, "Bookings"],
-    }),
   }),
-  overrideExisting: false,
 });
 
 export const {
   useGetInvoicesQuery,
-  useGetInvoiceByIdQuery,
   useGetInvoiceStatisticsQuery,
-  useCreateInvoiceMutation,
-  useCreateInvoiceFromBookingMutation,
+  useGetInvoiceByIdQuery,
   useUpdateInvoiceMutation,
-  useDeleteInvoiceMutation,
-  useRecordInvoicePaymentMutation,
 } = invoicesApi;

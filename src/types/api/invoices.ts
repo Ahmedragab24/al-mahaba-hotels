@@ -66,18 +66,27 @@ export interface Invoice {
     id: number;
     booking_no: string;
     status?: string;
+    code?: string;
   };
   items?: InvoiceItem[];
   allocs?: any[];
   payments?: InvoicePayment[];
   created_at?: string;
   updated_at?: string;
+  invoice_image?: string | null;
+  booking_code?: string | null;
 }
 
 export interface InvoiceStatistics {
-  total: number;
-  outstanding: number;
-  overdue: number;
-  paid: number;
-  draft: number;
+  total?: number;
+  outstanding?: number;
+  overdue?: number;
+  paid?: number;
+  draft?: number;
+
+  total_invoices_count?: number;
+  due_amount_sar?: number;
+  overdue_count?: number;
+  paid_count?: number;
+  scheduled_count?: number;
 }

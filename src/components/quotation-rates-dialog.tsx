@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/api-client";
 import { useI18n } from "@/lib/i18n";
+import { useGetRoomsQuery } from "@/store/api";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,10 +24,14 @@ export interface SelectedRate {
   // UI Display info
   room_name_en?: string;
   room_name_ar?: string;
+  room_type_name_en?: string;
+  room_type_name_ar?: string;
   view_name_en?: string;
   view_name_ar?: string;
   supplier_name_en?: string;
   supplier_name_ar?: string;
+  room?: any;
+  room_type?: any;
 }
 
 interface QuotationRatesDialogProps {
@@ -35,10 +40,23 @@ interface QuotationRatesDialogProps {
   hotelId: string;
   initialSelected?: SelectedRate[];
   onSave: (selected: SelectedRate[]) => void;
+  nights?: number;
+  groupSize?: number;
 }
 
-export function QuotationRatesDialog({ open, onOpenChange, hotelId, initialSelected, onSave }: QuotationRatesDialogProps) {
+export function QuotationRatesDialog({ open, onOpenChange, hotelId, initialSelected, onSave, nights = 1, groupSize = 1 }: QuotationRatesDialogProps) {
   const { t, lang } = useI18n();
+
+  const { data: roomsData } = useGetRoomsQuery(
+    hotelId ? { hotel_id: hotelId } : undefined,
+    { skip: !hotelId || !open }
+  );
+
+  const roomsList = useMemo(() => {
+    if (!roomsData) return [];
+    if (Array.isArray(roomsData)) return roomsData;
+    return (roomsData as any).data || [];
+  }, [roomsData]);
 
   // Selected state per rate_id: quantity
   const [selected, setSelected] = useState<Record<string, { selected: boolean; quantity: number }>>({});
@@ -135,21 +153,31 @@ export function QuotationRatesDialog({ open, onOpenChange, hotelId, initialSelec
       const state = selected[r.id];
       if (state?.selected && state.quantity > 0) {
         const actualSupplier = r.supplier || r.contract?.supplier;
+        const roomObj = roomsList.find((rm: any) => String(rm.id) === String(r.room_id || r.room?.id)) || r.room;
+        
+        const viewObj = r.hotel_view || r.hotelView || roomObj?.hotel_view || roomObj?.hotelView;
+        const fallbackView = typeof r.view === "string" ? r.view : (typeof roomObj?.view === "string" ? roomObj.view : undefined);
+        const roomTypeObj = roomObj?.room_type || r.room_type;
+        
         results.push({
           rate_id: String(r.id),
-          room_type_id: String(r.room_type_id),
-          view_id: String(r.hotel_view_id || null),
+          room_type_id: String(r.room_type_id || roomObj?.room_type_id),
+          view_id: String(r.hotel_view_id || roomObj?.hotel_view_id || null),
           meal_plan: r.meal_plan_type || "exclusive",
           selling_price: r.selling_price || r.cost_per_night,
           rooms: state.quantity,
           supplier_id: String(r.supplier_id || r.contract?.supplier_id || null),
           is_direct: r.is_direct,
-          room_name_en: r.room?.name_en,
-          room_name_ar: r.room?.name_ar,
-          view_name_en: r.hotel_view?.name_en,
-          view_name_ar: r.hotel_view?.name_ar,
+          room_name_en: roomObj?.name_en || r.room?.name_en,
+          room_name_ar: roomObj?.name_ar || r.room?.name_ar,
+          room_type_name_en: roomTypeObj?.name_en || roomTypeObj?.name,
+          room_type_name_ar: roomTypeObj?.name_ar || roomTypeObj?.name,
+          view_name_en: viewObj?.name_en || fallbackView,
+          view_name_ar: viewObj?.name_ar || fallbackView,
           supplier_name_en: actualSupplier?.name_en || (r.is_direct ? "Direct Hotel" : "Supplier"),
           supplier_name_ar: actualSupplier?.name_ar || (r.is_direct ? "فندق مباشر" : "مورد"),
+          room: roomObj,
+          room_type: roomTypeObj,
         });
       }
     });
@@ -159,96 +187,172 @@ export function QuotationRatesDialog({ open, onOpenChange, hotelId, initialSelec
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0">
+      <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col p-0">
         <DialogHeader className="p-6 pb-2 border-b">
-          <DialogTitle className="text-xl flex items-center gap-2">
-            <Building2 className="w-5 h-5 text-amber-600" />
-            {lang === "ar" ? "عروض أسعار الفندق" : "Hotel Rates"}
+          <DialogTitle className="text-xl flex items-center justify-between w-full">
+            <div className="flex items-center gap-2">
+              <Building2 className="w-5 h-5 text-amber-600" />
+              {lang === "ar" ? "عروض أسعار الفندق" : "Hotel Rates"}
+            </div>
+            <div className="flex gap-2 me-6">
+              <Badge variant="secondary" className="text-xs font-semibold px-3 py-1 bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
+                {nights} {lang === "ar" ? "ليالي" : "Nights"}
+              </Badge>
+              <Badge variant="secondary" className="text-xs font-semibold px-3 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
+                {groupSize} {lang === "ar" ? "أشخاص" : "Persons"}
+              </Badge>
+            </div>
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto p-6 bg-white dark:bg-card">
+        <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-slate-50/50 dark:bg-card">
           {q.isLoading && <div className="text-center py-10 text-muted-foreground">{t("label.loading")}</div>}
           {!q.isLoading && groupedRates.length === 0 && (
             <div className="text-center py-10 text-muted-foreground">لا توجد أسعار متاحة لهذا الفندق.</div>
           )}
 
-          <div className="space-y-10">
-            {groupedRates.map((group) => (
-              <div key={group.supplier_id || "direct"} className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
-                    <Building2 className="w-5 h-5 text-amber-700 dark:text-amber-500" />
+          <div className="space-y-6">
+            {groupedRates.map((group) => {
+              // Calculate total for this group
+              const groupTotal = group.rates.reduce((acc, rate) => {
+                const isSelected = selected[rate.id]?.selected || false;
+                const qty = selected[rate.id]?.quantity || 0;
+                const price = rate.selling_price || rate.cost_per_night;
+                return acc + (isSelected ? qty * price * (nights || 1) : 0);
+              }, 0);
+
+              return (
+                <div key={group.supplier_id || "direct"} className="bg-card border rounded-2xl p-6 shadow-sm">
+                  <div className="flex items-start justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
+                        <Building2 className="w-5 h-5 text-amber-700 dark:text-amber-500" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-bold text-lg text-slate-800 dark:text-slate-200">
+                            {lang === "ar" ? group.name_ar : group.name_en}
+                          </h3>
+                          {group.is_direct && (
+                            <Badge variant="secondary" className="bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-normal px-3 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800">
+                              مصدر رئيسي
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {group.is_direct ? (lang === "ar" ? "عروض الأسعار المباشرة من إدارة الفندق" : "Direct rate offers from hotel management") : (lang === "ar" ? "أسعار وخدمات المورد لعملائك" : "Supplier prices and services for your clients")}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-end">
+                      <div className="text-[11px] text-muted-foreground mb-0.5">الإجمالي للمورد</div>
+                      <div className="font-bold text-base text-amber-600 dark:text-amber-500">
+                        <span className="text-lg me-1">{groupTotal}</span>
+                        <span className="text-sm">ريال</span>
+                      </div>
+                    </div>
                   </div>
-                  <h3 className="font-bold text-lg text-slate-800 dark:text-slate-200">{lang === "ar" ? group.name_ar : group.name_en}</h3>
-                  {group.is_direct && <Badge variant="secondary" className="bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-normal px-3 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800">مصدر رئيسي</Badge>}
-                </div>
 
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="text-slate-400 dark:text-slate-500 font-normal text-center">
-                        <th className="py-2 px-4 font-normal text-start">الغرفة</th>
-                        <th className="py-2 px-4 font-normal">الإطلالة</th>
-                        <th className="py-2 px-4 font-normal">خطة الوجبات</th>
-                        <th className="py-2 px-4 font-normal">سعر الليلة</th>
-                        <th className="py-2 px-4 font-normal w-32">العدد</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {group.rates.map(rate => {
-                        const isSelected = selected[rate.id]?.selected || false;
-                        const qty = selected[rate.id]?.quantity || "";
-                        const price = rate.selling_price || rate.cost_per_night;
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="text-slate-400 dark:text-slate-500 font-normal text-center border-b border-border/50">
+                          <th className="pb-4 px-4 font-normal text-start">الغرفة</th>
+                          <th className="pb-4 px-4 font-normal">{lang === "ar" ? "نوع الغرفة" : "Room Type"}</th>
+                          <th className="pb-4 px-4 font-normal">الإطلالة</th>
+                          <th className="pb-4 px-4 font-normal">خطة الوجبات</th>
+                          <th className="pb-4 px-4 font-normal">سعر الليلة</th>
+                          <th className="pb-4 px-4 font-normal w-32">{lang === "ar" ? "عدد الغرف" : "Rooms Qty"}</th>
+                          <th className="pb-4 px-4 font-normal">الإجمالي</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {group.rates.map(rate => {
+                          const isSelected = selected[rate.id]?.selected || false;
+                          const qty = selected[rate.id]?.quantity || "";
+                          const price = rate.selling_price || rate.cost_per_night;
 
-                        return (
-                          <tr key={rate.id}>
-                            <td className="py-3 px-4">
-                              <div className="flex items-center gap-3">
-                                <Checkbox
-                                  checked={isSelected}
-                                  onCheckedChange={(c) => handleToggle(rate.id, !!c)}
-                                  className={cn("border-slate-300 dark:border-slate-600 rounded", isSelected && "bg-amber-600 border-amber-600 dark:border-amber-600")}
-                                />
-                                <span className="font-bold text-slate-800 dark:text-slate-200">
-                                  {lang === "ar" ? rate.room?.name_ar : rate.room?.name_en}
-                                </span>
-                              </div>
-                            </td>
-                            <td className="py-3 px-4 text-center">
-                              <div className="flex items-center justify-center gap-1 text-slate-600 dark:text-slate-300 font-medium">
-                                {rate.hotel_view ? (lang === "ar" ? rate.hotel_view.name_ar : rate.hotel_view.name_en) : "—"}
-                                {rate.hotel_view && <MapPin className="w-3.5 h-3.5 text-amber-600" />}
-                              </div>
-                            </td>
-                            <td className="py-3 px-4 text-center">
-                              <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-medium py-2 px-4 rounded-lg mx-auto w-fit min-w-[100px]">
-                                {t(`board.${rate.meal_plan_type}`, rate.meal_plan_type || "—")}
-                              </div>
-                            </td>
-                            <td className="py-3 px-4 text-center">
-                              <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 text-amber-600/90 dark:text-amber-500 font-medium py-2 px-4 rounded-lg mx-auto w-fit min-w-[100px]">
-                                {price} {String(rate.currency?.code || rate.currency_id || "")}
-                              </div>
-                            </td>
-                            <td className="py-3 px-4">
-                              <Input
-                                type="number"
-                                min={1}
-                                value={qty}
-                                onChange={(e) => handleQuantity(rate.id, parseInt(e.target.value) || 0)}
-                                className="h-10 text-center bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 rounded-lg text-slate-600 dark:text-slate-300 font-medium focus-visible:ring-amber-500"
-                                placeholder=""
-                              />
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                          const roomObj = roomsList.find((rm: any) => String(rm.id) === String(rate.room_id || rate.room?.id)) || rate.room;
+                          const viewObj = rate.hotel_view || rate.hotelView || roomObj?.hotel_view || roomObj?.hotelView;
+                          const fallbackView = typeof rate.view === "string" ? rate.view : (typeof roomObj?.view === "string" ? roomObj.view : null);
+                          const roomView = viewObj
+                            ? (lang === "ar" ? (viewObj.name_ar || viewObj.name_en) : (viewObj.name_en || viewObj.name_ar))
+                            : fallbackView;
+                          
+                          const roomTypeObj = roomObj?.room_type || rate.room_type;
+                          const roomTypeName = roomTypeObj
+                             ? (lang === "ar" ? (roomTypeObj.name_ar || roomTypeObj.name_en || roomTypeObj.name) : (roomTypeObj.name_en || roomTypeObj.name_ar || roomTypeObj.name))
+                             : "—";
+
+                          return (
+                            <tr key={rate.id} className="transition-colors group">
+                              <td className="py-3 px-4">
+                                <div className="flex items-center gap-3">
+                                  <Checkbox
+                                    checked={isSelected}
+                                    onCheckedChange={(c) => handleToggle(rate.id, !!c)}
+                                    className={cn("border-slate-300 dark:border-slate-600 rounded transition-colors", isSelected && "bg-amber-600 border-amber-600 dark:border-amber-600")}
+                                  />
+                                  <span className={cn("font-bold transition-colors", isSelected ? "text-slate-800 dark:text-slate-200" : "text-muted-foreground")}>
+                                    {lang === "ar" ? rate.room?.name_ar : rate.room?.name_en}
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="py-3 px-4 text-center">
+                                <div className={cn("font-medium transition-colors", isSelected ? "text-slate-600 dark:text-slate-300" : "text-muted-foreground/50")}>
+                                  <span>{roomTypeName}</span>
+                                </div>
+                              </td>
+                              <td className="py-3 px-4 text-center">
+                                <div className={cn("flex items-center justify-center gap-1.5 font-medium transition-colors", isSelected ? "text-slate-600 dark:text-slate-300" : "text-muted-foreground/50")}>
+                                  {roomView && <MapPin className={cn("w-3.5 h-3.5", isSelected ? "text-amber-600" : "text-muted-foreground/50")} />}
+                                  <span>{roomView || "—"}</span>
+                                </div>
+                              </td>
+                              <td className="py-3 px-4 text-center">
+                                <div className={cn("font-medium transition-all mx-auto w-fit min-w-[100px]", isSelected ? "bg-slate-50 dark:bg-slate-800/50 py-2.5 px-4 rounded-xl text-slate-600 dark:text-slate-300" : "text-muted-foreground/50")}>
+                                  {t(`board.${rate.meal_plan_type}`, rate.meal_plan_type || "—")}
+                                </div>
+                              </td>
+                              <td className="py-3 px-4 text-center">
+                                <div className={cn("font-medium transition-all mx-auto w-fit min-w-[100px]", isSelected ? "bg-slate-50 dark:bg-slate-800/50 py-2.5 px-4 rounded-xl text-amber-600 dark:text-amber-500" : "text-muted-foreground/50")}>
+                                  {price} {lang === "ar" ? "ريال" : String(rate.currency?.code || rate.currency_id || "")}
+                                </div>
+                              </td>
+                              <td className="py-3 px-4">
+                                {isSelected ? (
+                                  <Input
+                                    type="number"
+                                    min={1}
+                                    value={qty}
+                                    onChange={(e) => handleQuantity(rate.id, parseInt(e.target.value) || 0)}
+                                    className="h-10 text-center bg-slate-50 dark:bg-slate-800/50 border-0 rounded-xl text-amber-600 dark:text-amber-500 font-bold focus-visible:ring-1 focus-visible:ring-amber-500"
+                                    placeholder=""
+                                  />
+                                ) : (
+                                  <div className="text-center font-medium text-muted-foreground/50 h-10 flex items-center justify-center">
+                                    0
+                                  </div>
+                                )}
+                              </td>
+                              <td className="py-3 px-4 text-center">
+                                {isSelected ? (
+                                  <div className="font-bold text-amber-600 dark:text-amber-500">
+                                    {price * (typeof qty === 'number' ? qty : 0) * (nights || 1)} {lang === "ar" ? "ريال" : String(rate.currency?.code || rate.currency_id || "")}
+                                  </div>
+                                ) : (
+                                  <div className="text-muted-foreground/50 font-medium">—</div>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
 

@@ -45,6 +45,17 @@ export interface PlatformTransactionCategoryBreakdown {
   total_sar: number;
 }
 
+export interface InvoicesProfitDetail {
+  count: number;
+  profit_sar: number;
+}
+
+export interface InvoicesProfit {
+  scheduled: InvoicesProfitDetail;
+  not_scheduled: InvoicesProfitDetail;
+  total_profit_sar: number;
+}
+
 export interface PlatformTransactionsStatistics {
   // Real API field names
   total_income_sar: number;
@@ -53,6 +64,8 @@ export interface PlatformTransactionsStatistics {
   year: number;
   monthly_breakdown: PlatformTransactionMonthlyBreakdown[];
   category_breakdown: PlatformTransactionCategoryBreakdown[];
+  invoices_profit?: InvoicesProfit;
+  total_platform_profit_sar?: number;
   // Legacy aliases (kept for safety)
   income?: number;
   expense?: number;

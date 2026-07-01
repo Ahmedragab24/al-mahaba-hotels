@@ -79,21 +79,38 @@ export default function RatesList() {
     } else {
       try {
         const r = rates.find((x: any) => String(x.id) === String(id));
-        const body = r ? {
-          hotel_id: r.hotel_id,
-          room_id: r.room_id,
-          supplier_id: r.supplier_id,
-          currency_id: r.currency_id,
-          valid_from: r.valid_from,
-          valid_to: r.valid_to,
-          cost_per_night: r.cost_per_night,
-          selling_price: r.selling_price,
-          meal_plan_type: r.meal_plan_type,
-          status: r.status,
-          is_archived: action === "archive" ? 1 : 0
-        } : { is_archived: action === "archive" ? 1 : 0 };
+        if (!r) return;
 
-        await updateMutation({ id, body: body as any, lang }).unwrap();
+        const body = {
+          hotel_id: Number(r.hotel_id),
+          room_id: Number(r.room_id),
+          hotel_view_id: r.hotel_view_id ? Number(r.hotel_view_id) : null,
+          currency_id: Number(r.currency_id || r.currency),
+          valid_from: r.valid_from ? r.valid_from.split('T')[0] : "",
+          valid_to: r.valid_to ? r.valid_to.split('T')[0] : "",
+          meal_plan_type: r.meal_plan_type || "inclusive",
+          cost_per_night: Number(r.cost_per_night),
+          selling_price: r.selling_price ? Number(r.selling_price) : null,
+          profit_margin: r.profit_margin ? Number(r.profit_margin) : null,
+          tax_type: r.tax_type || "inclusive_tax",
+          tax_rate: r.tax_rate !== undefined && r.tax_rate !== null ? Number(r.tax_rate) : 15,
+          status: r.status || "approved",
+          is_direct: !!r.is_direct,
+          supplier_id: !r.is_direct && r.supplier_id ? Number(r.supplier_id) : null,
+          is_archived: action === "archive" ? 1 : 0,
+          notes_ar: r.notes_ar || null,
+          notes_en: r.notes_en || null,
+          cancellation_policy_ar: r.cancellation_policy_ar || null,
+          cancellation_policy_en: r.cancellation_policy_en || null,
+        } as any;
+
+        if (body.meal_plan_type === "inclusive") {
+          body.meal_plan_inclusive_details = r.meal_plan_inclusive_details ?? r.meal_plan_details?.map((d: any) => d.id) ?? [];
+        } else {
+          body.meal_plan_exclusive_prices = r.meal_plan_exclusive_prices ?? r.meal_plan_details?.reduce((acc: any, d: any) => ({ ...acc, [d.id]: d.price }), {}) ?? {};
+        }
+
+        await updateMutation({ id, body, lang }).unwrap();
         toast.success(action === "archive" ? t("toast.archived") : t("toast.restored"));
         qc.invalidateQueries({ queryKey: ["getPrices"] });
         setConfirm(null);

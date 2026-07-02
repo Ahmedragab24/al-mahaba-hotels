@@ -148,6 +148,7 @@ function PrintInvoice({
   rooms: any[];
   lang: string;
 }) {
+  const { t } = useI18n();
   const ar = (a: string, e: string) => (lang === "ar" ? a : e);
   const customerName =
     lang === "ar"
@@ -211,8 +212,16 @@ function PrintInvoice({
 
       {/* Status badge */}
       <div style={{ display: "flex", gap: "8mm", marginBottom: "6mm" }}>
-        <div style={{ padding: "1.5mm 4mm", borderRadius: "4px", background: booking.status === "confirmed" || booking.status === "checked_in" || booking.status === "checked_out" ? "#d1fae5" : "#fef3c7", border: `1px solid ${booking.status === "confirmed" || booking.status === "checked_in" || booking.status === "checked_out" ? "#6ee7b7" : "#fcd34d"}`, color: booking.status === "confirmed" || booking.status === "checked_in" || booking.status === "checked_out" ? "#065f46" : "#92400e", fontSize: "9pt", fontWeight: "bold" }}>
-          {ar(`الحالة: ${booking.status}`, `Status: ${booking.status}`)}
+        <div style={{
+          padding: "1.5mm 4mm",
+          borderRadius: "4px",
+          background: ["confirmed", "checked_in", "checked_out"].includes(booking.status) ? "#d1fae5" : ["cancelled", "no_show"].includes(booking.status) ? "#fee2e2" : "#fef3c7",
+          border: `1px solid ${["confirmed", "checked_in", "checked_out"].includes(booking.status) ? "#6ee7b7" : ["cancelled", "no_show"].includes(booking.status) ? "#fca5a5" : "#fcd34d"}`,
+          color: ["confirmed", "checked_in", "checked_out"].includes(booking.status) ? "#065f46" : ["cancelled", "no_show"].includes(booking.status) ? "#991b1b" : "#92400e",
+          fontSize: "9pt",
+          fontWeight: "bold"
+        }}>
+          {ar(`الحالة: ${t(`bkstatus.${booking.status}`)}`, `Status: ${t(`bkstatus.${booking.status}`)}`)}
         </div>
         <div style={{ padding: "1.5mm 4mm", borderRadius: "4px", background: "#e0e7ff", border: "1px solid #c7d2fe", color: "#3730a3", fontSize: "9pt", fontWeight: "bold" }}>
           {ar(`العملة: ${currency}`, `Currency: ${currency}`)}
@@ -466,10 +475,10 @@ export default function BookingDetail() {
       ? r.view?.name_ar || r.view?.name || r.view?.name_en
       : r.view?.name_en || r.view?.name || r.view?.name_ar;
 
-  const editableHeader = canWrite && r.status === "draft" && !r.deleted_at;
-  const editableRooms = canWrite && r.status === "draft" && !r.deleted_at;
-  const confirmableRooms = canWrite && ["draft", "pending_supplier_confirmation"].includes(r.status) && !r.deleted_at;
-  const editableGuests = canWrite && ["draft", "pending_supplier_confirmation", "confirmed"].includes(r.status) && !r.deleted_at;
+  const editableHeader = canWrite && ["pending", "pending_supplier_confirmation", "draft"].includes(r.status) && !r.deleted_at;
+  const editableRooms = canWrite && ["pending", "pending_supplier_confirmation", "draft"].includes(r.status) && !r.deleted_at;
+  const confirmableRooms = canWrite && ["pending", "pending_supplier_confirmation", "draft"].includes(r.status) && !r.deleted_at;
+  const editableGuests = canWrite && ["pending", "pending_supplier_confirmation", "draft", "confirmed"].includes(r.status) && !r.deleted_at;
 
   const total = Number(r.total_amount) || rooms.data?.reduce((s: number, rm: any) => s + Number(rm.total_selling), 0) || 0;
   const paid = Number(r.paid_amount) || Number(r.amount_paid) || 0;
@@ -487,13 +496,8 @@ export default function BookingDetail() {
     show: boolean;
     needsReason?: boolean;
   }[] = [
-      // { key: "submit", label: t("bk.submit"), status: "pending_supplier_confirmation", icon: Send, show: canWrite && r.status === "draft" },
-      // { key: "return", label: t("bk.return_draft"), status: "draft", icon: Undo2, variant: "outline", show: canWrite && r.status === "pending_supplier_confirmation" },
-      // { key: "confirm", label: t("bk.confirm"), status: "confirmed", icon: Check, show: canManage && r.status === "pending_supplier_confirmation" },
-      // { key: "check_in", label: t("bk.check_in"), status: "checked_in", icon: LogIn, show: canWrite && r.status === "confirmed" },
-      // { key: "check_out", label: t("bk.check_out"), status: "checked_out", icon: LogOut, show: canWrite && r.status === "checked_in" },
-      // { key: "no_show", label: t("bk.no_show_action"), status: "no_show", icon: UserX, variant: "destructive", show: canManage && r.status === "confirmed", needsReason: true },
-      { key: "cancel", label: t("bk.cancel"), status: "cancelled", icon: Ban, variant: "destructive", show: canWrite && ["draft", "pending_supplier_confirmation", "confirmed"].includes(r.status), needsReason: true },
+      { key: "confirm", label: t("bk.confirm"), status: "confirmed", icon: Check, show: canWrite && ["pending", "pending_supplier_confirmation", "draft"].includes(r.status) },
+      { key: "cancel", label: t("bk.cancel"), status: "cancelled", icon: Ban, variant: "destructive", show: canWrite && ["pending", "pending_supplier_confirmation", "draft", "confirmed"].includes(r.status), needsReason: true },
     ];
 
   return (

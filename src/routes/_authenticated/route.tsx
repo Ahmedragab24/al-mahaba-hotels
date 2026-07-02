@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Outlet, useNavigate, useLocation, Navigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { AppSidebar } from "@/components/app-sidebar";
@@ -5,7 +6,7 @@ import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/s
 import { LangSwitcher } from "@/components/lang-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
-import { selectAuth } from "@/store/features/authSlice";
+import { selectAuth, clearAuth } from "@/store/features/authSlice";
 import { useGetProfileQuery, useLogoutMutation } from "@/store/api";
 import { canAccessModule, hasAnyRole } from "@/lib/auth-utils";
 import { useI18n } from "@/lib/i18n";
@@ -40,21 +41,22 @@ export default function AuthenticatedLayout() {
 
   const [logoutMutation] = useLogoutMutation();
 
-  if (!cookieToken) {
-    return <Navigate to="/auth" replace />;
-  }
+  useEffect(() => {
+    if (!cookieToken) {
+      dispatch(clearAuth());
+      navigate("/auth", { replace: true });
+    } else if (!isProfileLoading && !auth.isAuthenticated) {
+      dispatch(clearAuth());
+      navigate("/auth", { replace: true });
+    }
+  }, [cookieToken, isProfileLoading, auth.isAuthenticated, dispatch, navigate]);
 
-  if (isProfileLoading) {
+  if (!cookieToken || isProfileLoading || !auth.isAuthenticated) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin" style={{ color: "var(--brand-gold)" }} />
       </div>
     );
-  }
-
-  if (!auth.isAuthenticated) {
-    // If not authenticated and we finished loading profile, it means the token is invalid or expired
-    return <Navigate to="/auth" replace />;
   }
 
   const currentModule = pathToModule(pathname);

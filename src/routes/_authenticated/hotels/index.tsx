@@ -311,7 +311,7 @@ export default function HotelsList() {
                         ? <Button variant="ghost" size="icon" className="h-8 w-8" title={t("actions.restore")} onClick={() => setConfirm({ id: h.id, action: "restore" })}><RotateCcw className="h-4 w-4" /></Button>
                         : <Button variant="ghost" size="icon" className="h-8 w-8" title={t("actions.archive")} onClick={() => setConfirm({ id: h.id, action: "archive" })}><Archive className="h-4 w-4" /></Button>
                       )}
-                      {isAdmin(auth) && h.is_archived && (
+                      {isAdmin(auth) && (
                         <Button variant="ghost" size="icon" className="h-8 w-8" title={t("actions.delete")} onClick={() => setConfirm({ id: h.id, action: "delete" })}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                       )}
                     </div>

@@ -313,6 +313,7 @@ export function BookingForm({
 
     special_requests: initial?.special_requests ?? "",
     notes: initial?.notes ?? "",
+    status: initial?.status ?? "confirmed",
   });
 
   const [installments, setInstallments] = useState<any[]>(() => {
@@ -388,6 +389,7 @@ export function BookingForm({
         })(),
         special_requests: initial.special_requests ?? f.special_requests,
         notes: initial.notes ?? f.notes,
+        status: initial.status ?? f.status,
       }));
 
       if (initial.items && Array.isArray(initial.items)) {
@@ -627,7 +629,7 @@ export function BookingForm({
         booking_date: form.booking_date,
         payment_method: form.payment_mode,
         paid_amount: paidAmt,
-        status: initial?.status ?? "confirmed",
+        status: form.status,
       };
 
       if (isQuotationMode) {
@@ -818,6 +820,24 @@ export function BookingForm({
                   value={form.group_size}
                   onChange={(e) => set("group_size", Number(e.target.value) || 1)}
                 />
+              </FormField>
+
+              <FormField label={ar("حالة الحجز", "Booking Status")} required>
+                <Select
+                  value={form.status}
+                  onValueChange={(v) => set("status", v)}
+                >
+                  <SelectTrigger className="h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="confirmed">{ar("مؤكد", "Confirmed")}</SelectItem>
+                    <SelectItem value="pending">{ar("قيد الانتظار", "Pending")}</SelectItem>
+                    {initial?.status && !["confirmed", "pending"].includes(initial.status) && (
+                      <SelectItem value={initial.status}>{t(`bkstatus.${initial.status}`)}</SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
               </FormField>
             </div>
           </CardContent>

@@ -109,7 +109,7 @@ export function RoomTypeDialog({ open, onOpenChange, initial, onSaved, fixedHote
                   <SelectTrigger className="h-10"><SelectValue placeholder={t("room_types.hotel")} /></SelectTrigger>
                   <SelectContent>
                     {(Array.isArray(hotels.data) ? hotels.data : Array.isArray(hotels.data?.data) ? hotels.data.data : [])?.map((h: any) => (
-                      <SelectItem key={h.id} value={h.id}>
+                      <SelectItem key={h.id} value={h.id.toString()}>
                         {lang === "ar" ? (h.name_ar || h.name_en) : (h.name_en || h.name_ar)}
                       </SelectItem>
                     ))}

@@ -25,10 +25,17 @@ const getLocalStorageItem = (key: string) => {
   }
 };
 
+const getCookieToken = () => {
+  if (typeof window === "undefined") return null;
+  const match = document.cookie.match(new RegExp("(^| )auth_token=([^;]+)"));
+  return match ? decodeURIComponent(match[2]) : null;
+};
+
 const persistedToken = getLocalStorageItem("auth_token");
 const persistedUser = getLocalStorageItem("auth_user");
 const persistedProfile = getLocalStorageItem("auth_profile");
 const persistedRoles = getLocalStorageItem("auth_roles");
+const hasCookie = typeof window !== "undefined" ? !!getCookieToken() : false;
 
 const initialState: AuthState = {
   token: persistedToken,
@@ -36,7 +43,7 @@ const initialState: AuthState = {
   profile: persistedProfile ? JSON.parse(persistedProfile) : null,
   roles: persistedRoles ? JSON.parse(persistedRoles) : [],
   blockedModules: [],
-  isAuthenticated: !!persistedToken,
+  isAuthenticated: !!persistedToken && hasCookie,
 };
 
 export const authSlice = createSlice({

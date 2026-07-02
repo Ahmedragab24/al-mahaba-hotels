@@ -1006,6 +1006,7 @@ export const dict: Dict = {
   "bk.tab.timeline": { ar: "مسار الحالة", en: "Status Timeline" },
   // statuses
   "bkstatus.draft": { ar: "مسودة", en: "Draft" },
+  "bkstatus.pending": { ar: "قيد الانتظار", en: "Pending" },
   "bkstatus.pending_supplier_confirmation": { ar: "بانتظار تأكيد المورد", en: "Pending Supplier Confirmation" },
   "bkstatus.confirmed": { ar: "مؤكد", en: "Confirmed" },
   "bkstatus.checked_in": { ar: "تم تسجيل الوصول", en: "Checked-In" },

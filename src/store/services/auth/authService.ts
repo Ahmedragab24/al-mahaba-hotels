@@ -42,27 +42,31 @@ export const authApi = api.injectEndpoints({
     getProfile: build.query<any, void>({
       query: () => ({ url: "/user" }),
       async onQueryStarted(_arg, { dispatch, queryFulfilled }) {
-        const { data } = await queryFulfilled;
-        if (data) {
-          const user = data.user || data;
-          const roles = data.roles || (user.type ? [user.type] : []);
-          const match = document.cookie.match(new RegExp("(^| )auth_token=([^;]+)"));
-          const token = match ? decodeURIComponent(match[2]) : null;
-          if (token) {
-            const userId = String(user.id);
-            document.cookie = `auth_user_id=${encodeURIComponent(userId)}; path=/; max-age=86400; SameSite=Lax`;
-            if (typeof window !== "undefined") {
-              localStorage.setItem("auth_user_id", userId);
+        try {
+          const { data } = await queryFulfilled;
+          if (data) {
+            const user = data.user || data;
+            const roles = data.roles || (user.type ? [user.type] : []);
+            const match = document.cookie.match(new RegExp("(^| )auth_token=([^;]+)"));
+            const token = match ? decodeURIComponent(match[2]) : null;
+            if (token) {
+              const userId = String(user.id);
+              document.cookie = `auth_user_id=${encodeURIComponent(userId)}; path=/; max-age=86400; SameSite=Lax`;
+              if (typeof window !== "undefined") {
+                localStorage.setItem("auth_user_id", userId);
+              }
+              dispatch(
+                setCredentials({
+                  token,
+                  user: { id: userId, email: user.email },
+                  profile: user,
+                  roles,
+                })
+              );
             }
-            dispatch(
-              setCredentials({
-                token,
-                user: { id: userId, email: user.email },
-                profile: user,
-                roles,
-              })
-            );
           }
+        } catch (error) {
+          dispatch(clearAuth());
         }
       },
       providesTags: ["Auth"],

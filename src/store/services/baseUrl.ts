@@ -20,6 +20,9 @@ const rawBaseQuery = fetchBaseQuery({
   baseUrl: getApiBaseUrl(),
   prepareHeaders: (headers) => {
     headers.set("Accept", "application/json");
+    headers.set("Cache-Control", "no-cache, no-store, must-revalidate");
+    headers.set("Pragma", "no-cache");
+    headers.set("Expires", "0");
     const token = getAuthToken();
     if (token) {
       headers.set("Authorization", `Bearer ${token}`);

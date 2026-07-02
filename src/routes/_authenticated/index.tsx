@@ -2,7 +2,6 @@ import { Link, Navigate, type LinkProps } from "react-router-dom";
 import { useI18n } from "@/lib/i18n";
 import { useSelector } from "react-redux";
 import { selectAuth } from "@/store/features/authSlice";
-import { useGetDashboardDataQuery } from "@/store/api";
 import { hasRole, hasAnyRole } from "@/lib/auth-utils";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent } from "@/components/ui/card";
@@ -32,6 +31,7 @@ import {
   Bar,
   CartesianGrid
 } from "recharts";
+import { useGetHomeDataQuery } from "@/store/services/home";
 
 export default function DashboardOrRedirect() {
   const auth = useSelector(selectAuth);
@@ -94,133 +94,170 @@ function KPIStatCard({
 function Dashboard() {
   const { t, lang } = useI18n();
 
-  const { data: dData, isLoading: isDashboardLoading } = useGetDashboardDataQuery();
+  const { data: dData, isLoading: isDashboardLoading } = useGetHomeDataQuery();
 
   const formatCurrency = (amount: number) => {
     return lang === "ar" ? `${amount}ر.س` : `${amount} SAR`;
   };
 
-  // Extract / Calculate values based on API and screenshots
-  const totalBookings = dData?.bookings?.cards?.total_bookings ?? 2845;
-  const pendingOffers = dData?.quotations?.cards?.draft ?? 142;
-  const confirmedBookings = dData?.bookings?.cards?.confirmed ?? 1932;
-  const activeSuppliers = dData?.suppliers?.cards?.active ?? 86;
-  const activeHotels = dData?.hotels?.cards?.active ?? 458;
-  const totalRooms = dData?.rooms?.cards?.total_rooms ?? 1204;
-  const totalCustomers = dData?.customers?.cards?.total_customers ?? 12490;
-  const outstandingAR = dData?.bookings?.cards?.remaining_sar ?? 6000;
-  const totalCollected = dData?.invoices?.cards?.total_collected_sar ?? 6000;
+  const getBadgeInfo = (change?: number) => {
+    if (change === undefined || change === null) return { text: "0.0%", type: "neutral" as const };
+    const sign = change > 0 ? "+" : "";
+    const text = `${sign}${change.toFixed(1)}%`;
+    const type = change > 0 ? ("success" as const) : change < 0 ? ("danger" as const) : ("neutral" as const);
+    return { text, type };
+  };
 
-  const cardData = useMemo(() => [
-    {
-      icon: BookOpen,
-      label: lang === "ar" ? "إجمالي الحجوزات" : "Total Bookings",
-      value: totalBookings.toLocaleString("en-US"),
-      badgeText: dData?.bookings?.charts?.annual_comparison?.growth_rate
-        ? `${dData.bookings.charts.annual_comparison.growth_rate >= 0 ? "+" : ""}${dData.bookings.charts.annual_comparison.growth_rate.toFixed(1)}%`
-        : "+12.5%",
-      badgeType: "success" as const,
-      to: "/bookings" as const
-    },
-    {
-      icon: FileText,
-      label: lang === "ar" ? "عروض معلقة" : "Pending Offers",
-      value: pendingOffers.toLocaleString("en-US"),
-      badgeText: "-2.4%",
-      badgeType: "danger" as const,
-      to: "/quotations" as const
-    },
-    {
-      icon: CheckCircle2,
-      label: lang === "ar" ? "حجوزات مؤكدة" : "Confirmed Bookings",
-      value: confirmedBookings.toLocaleString("en-US"),
-      badgeText: "+18.2%",
-      badgeType: "success" as const,
-      to: "/bookings" as const
-    },
-    {
-      icon: Briefcase,
-      label: lang === "ar" ? "موردين نشطين" : "Active Suppliers",
-      value: activeSuppliers.toLocaleString("en-US"),
-      badgeText: "0.0%",
-      badgeType: "success" as const,
-      to: "/suppliers" as const
-    },
-    {
-      icon: Hotel,
-      label: lang === "ar" ? "فنادق نشطة" : "Active Hotels",
-      value: activeHotels.toLocaleString("en-US"),
-      badgeText: "+4.1%",
-      badgeType: "success" as const,
-      to: "/hotels" as const
-    },
-    {
-      icon: Bed,
-      label: lang === "ar" ? "عدد الغرف" : "Rooms Count",
-      value: totalRooms.toLocaleString("en-US"),
-      badgeText: "+1.2%",
-      badgeType: "success" as const,
-      to: "/rates" as const
-    },
-    {
-      icon: Users,
-      label: lang === "ar" ? "إجمالي العملاء" : "Total Customers",
-      value: totalCustomers.toLocaleString("en-US"),
-      badgeText: "+8.4%",
-      badgeType: "success" as const,
-      to: "/customers" as const
-    },
-    {
-      icon: Coins,
-      label: lang === "ar" ? "مستحقات مالية" : "Financial Receivables",
-      value: formatCurrency(outstandingAR),
-      badgeText: "+5.1%",
-      badgeType: "danger" as const,
-      to: "/invoices" as const
-    },
-    {
-      icon: Wallet,
-      label: lang === "ar" ? "مدفوعات مالية" : "Financial Payments",
-      value: formatCurrency(totalCollected),
-      badgeText: "-14.2%",
-      badgeType: "success" as const,
-      to: "/receipts" as const
-    }
-  ], [lang, totalBookings, pendingOffers, confirmedBookings, activeSuppliers, activeHotels, totalRooms, totalCustomers, outstandingAR, totalCollected, dData]);
+  // Extract / Calculate values based on API and screenshots
+  const cards = dData?.cards;
+  const totalBookings = cards?.total_bookings?.value ?? 0;
+  const pendingOffers = cards?.total_quotations?.value ?? 0;
+  const confirmedBookings = cards?.confirmed_bookings?.value ?? 0;
+  const activeSuppliers = cards?.active_suppliers?.value ?? cards?.total_suppliers?.value ?? 0;
+  const activeHotels = cards?.active_hotels?.value ?? 0;
+  const totalRooms = cards?.total_rooms?.value ?? 0;
+  const totalCustomers = cards?.total_customers?.value ?? 0;
+  const outstandingAR = cards?.receivables_sar?.value ?? 0;
+  const totalCollected = cards?.payments_sar?.value ?? 0;
+
+  const cardData = useMemo(() => {
+    const c = dData?.cards;
+    const b1 = getBadgeInfo(c?.total_bookings?.change_percentage);
+    const b2 = getBadgeInfo(c?.total_quotations?.change_percentage);
+    const b3 = getBadgeInfo(c?.confirmed_bookings?.change_percentage);
+    const b4 = getBadgeInfo(c?.active_suppliers?.change_percentage ?? c?.total_suppliers?.change_percentage);
+    const b5 = getBadgeInfo(c?.active_hotels?.change_percentage);
+    const b6 = getBadgeInfo(c?.total_rooms?.change_percentage);
+    const b7 = getBadgeInfo(c?.total_customers?.change_percentage);
+    const b8 = getBadgeInfo(c?.receivables_sar?.change_percentage);
+    const b9 = getBadgeInfo(c?.payments_sar?.change_percentage);
+
+    return [
+      {
+        icon: BookOpen,
+        label: lang === "ar" ? "إجمالي الحجوزات" : "Total Bookings",
+        value: totalBookings.toLocaleString("en-US"),
+        badgeText: b1.text,
+        badgeType: b1.type,
+        to: "/bookings" as const
+      },
+      {
+        icon: FileText,
+        label: lang === "ar" ? "عروض معلقة" : "Pending Offers",
+        value: pendingOffers.toLocaleString("en-US"),
+        badgeText: b2.text,
+        badgeType: b2.type,
+        to: "/quotations" as const
+      },
+      {
+        icon: CheckCircle2,
+        label: lang === "ar" ? "حجوزات مؤكدة" : "Confirmed Bookings",
+        value: confirmedBookings.toLocaleString("en-US"),
+        badgeText: b3.text,
+        badgeType: b3.type,
+        to: "/bookings" as const
+      },
+      {
+        icon: Briefcase,
+        label: lang === "ar" ? "موردين نشطين" : "Active Suppliers",
+        value: activeSuppliers.toLocaleString("en-US"),
+        badgeText: b4.text,
+        badgeType: b4.type,
+        to: "/suppliers" as const
+      },
+      {
+        icon: Hotel,
+        label: lang === "ar" ? "فنادق نشطة" : "Active Hotels",
+        value: activeHotels.toLocaleString("en-US"),
+        badgeText: b5.text,
+        badgeType: b5.type,
+        to: "/hotels" as const
+      },
+      {
+        icon: Bed,
+        label: lang === "ar" ? "عدد الغرف" : "Rooms Count",
+        value: totalRooms.toLocaleString("en-US"),
+        badgeText: b6.text,
+        badgeType: b6.type,
+        to: "/rates" as const
+      },
+      {
+        icon: Users,
+        label: lang === "ar" ? "إجمالي العملاء" : "Total Customers",
+        value: totalCustomers.toLocaleString("en-US"),
+        badgeText: b7.text,
+        badgeType: b7.type,
+        to: "/customers" as const
+      },
+      {
+        icon: Coins,
+        label: lang === "ar" ? "مستحقات مالية" : "Financial Receivables",
+        value: formatCurrency(outstandingAR),
+        badgeText: b8.text,
+        badgeType: b8.type,
+        to: "/invoices" as const
+      },
+      {
+        icon: Wallet,
+        label: lang === "ar" ? "مدفوعات مالية" : "Financial Payments",
+        value: formatCurrency(totalCollected),
+        badgeText: b9.text,
+        badgeType: b9.type,
+        to: "/receipts" as const
+      }
+    ];
+  }, [lang, totalBookings, pendingOffers, confirmedBookings, activeSuppliers, activeHotels, totalRooms, totalCustomers, outstandingAR, totalCollected, dData]);
 
   // Annual financial performance data mapping
   const annualPerformanceData = useMemo(() => {
-    const apiMonthlyTrend = dData?.bookings?.charts?.monthly_trend || [];
+    const apiTrend = dData?.charts?.annual_financial_performance || [];
     const monthNamesAr = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
     const monthNamesEn = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     const defaultValues = [95000, 110000, 85000, 130000, 160000, 150000, 180000, 200000, 190000, 210000, 220000, 250000];
 
     return Array.from({ length: 12 }, (_, i) => {
       const monthNum = i + 1;
-      const apiMonth = apiMonthlyTrend.find((m: any) => m.month_num === monthNum);
+      const apiMonth = apiTrend.find((m: any) => m.month_num === monthNum);
       return {
         name: lang === "ar" ? monthNamesAr[i] : monthNamesEn[i],
-        value: apiMonth ? apiMonth.revenue : defaultValues[i],
+        value: apiMonth ? (apiMonth.bookings_revenue + (apiMonth.other_income || 0)) : defaultValues[i],
       };
     });
   }, [lang, dData]);
 
   // Booking status data mapping
   const bookingStatusData = useMemo(() => {
-    const pending = dData?.bookings?.cards?.pending ?? 500;
-    const cancelled = dData?.bookings?.cards?.cancelled ?? 300;
-    const draft = dData?.quotations?.cards?.draft ?? 113;
+    const apiDist = dData?.charts?.bookings_status_distribution || [];
 
-    return [
-      { name: lang === "ar" ? "مؤكد" : "Confirmed", value: confirmedBookings, color: "#B27B32" },
-      { name: lang === "ar" ? "قيد الانتظار" : "Pending", value: pending, color: "#8C9BB4" },
-      { name: lang === "ar" ? "ملغي" : "Cancelled", value: cancelled, color: "#C3CCD9" },
-      { name: lang === "ar" ? "مسودة" : "Draft", value: draft, color: "#F3F5F8" },
-    ];
-  }, [lang, confirmedBookings, dData]);
+    const colors = {
+      confirmed: "#B27B32",
+      pending: "#8C9BB4",
+      cancelled: "#C3CCD9",
+    };
+
+    const labels = {
+      confirmed: lang === "ar" ? "مؤكد" : "Confirmed",
+      pending: lang === "ar" ? "قيد الانتظار" : "Pending",
+      cancelled: lang === "ar" ? "ملغي" : "Cancelled",
+    };
+
+    return apiDist.map((item: any) => ({
+      name: item.label || labels[item.status as keyof typeof labels] || item.status,
+      value: item.count,
+      color: colors[item.status as keyof typeof colors] || "#8C9BB4",
+    }));
+  }, [lang, dData]);
 
   // Weekly booking trend data mapping
   const weeklyTrendData = useMemo(() => {
+    const apiTrend = dData?.charts?.weekly_bookings_trend || [];
+    if (apiTrend.length > 0) {
+      return apiTrend.map((item: any) => ({
+        name: item.week_label,
+        value: item.count,
+      }));
+    }
+    // Fallback if empty
     const scaleFactor = totalBookings / 2845;
     const defaultWeeklyValues = [120, 150, 180, 168, 210, 245, 235, 290];
 
@@ -228,21 +265,21 @@ function Dashboard() {
       name: lang === "ar" ? `أسبوع ${i + 1}` : `Week ${i + 1}`,
       value: Math.round(defaultWeeklyValues[i] * scaleFactor),
     }));
-  }, [lang, totalBookings]);
+  }, [lang, totalBookings, dData]);
 
   // Skeleton loading screen
   if (isDashboardLoading) {
     return (
       <div className="space-y-8 p-6 animate-pulse" dir={lang === "ar" ? "rtl" : "ltr"}>
-        <div className="h-10 w-48 bg-slate-200 dark:bg-slate-800 rounded-xl mb-6" />
+        <div className="h-10 w-48 bg-muted rounded-xl mb-6" />
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {Array.from({ length: 9 }).map((_, i) => (
-            <div key={i} className="h-32 bg-slate-100 dark:bg-slate-800 rounded-2xl" />
+            <div key={i} className="h-32 bg-muted rounded-2xl" />
           ))}
         </div>
-        <div className="h-[380px] bg-slate-100 dark:bg-slate-800 rounded-2xl mb-6" />
-        <div className="h-[380px] bg-slate-100 dark:bg-slate-800 rounded-2xl mb-6" />
-        <div className="h-[380px] bg-slate-100 dark:bg-slate-800 rounded-2xl" />
+        <div className="h-[380px] bg-muted rounded-2xl mb-6" />
+        <div className="h-[380px] bg-muted rounded-2xl mb-6" />
+        <div className="h-[380px] bg-muted rounded-2xl" />
       </div>
     );
   }

@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Check, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
@@ -46,6 +47,16 @@ export function MealPlanConfigurator({
     const exclusivePrices = useWatch({ control, name: "meal_plan_exclusive_prices" }) || {};
 
     const isInclusive = mealPlanType === "inclusive";
+
+    const [roomOnly, setRoomOnly] = useState(() => {
+      return Object.keys(exclusivePrices).length === 0;
+    });
+
+    useEffect(() => {
+      if (Object.keys(exclusivePrices).length > 0) {
+        setRoomOnly(false);
+      }
+    }, [exclusivePrices]);
 
     return (
       <div className="pt-6 border-t mt-6">
@@ -103,7 +114,7 @@ export function MealPlanConfigurator({
         </div>
 
         {isInclusive ? (
-          <div dir={lang === "ar" ? "rtl" : "ltr"} className="max-w-3xl mx-auto">
+          <div dir={lang === "ar" ? "rtl" : "ltr"} className="">
             <div className="text-sm font-medium text-muted-foreground mb-4">
               {lang === "ar" ? "مكونات الخطة الشاملة" : "Included Plan Components"}
             </div>
@@ -135,18 +146,51 @@ export function MealPlanConfigurator({
               })}
             </div>
             <div className="bg-[#f0fbf4] border border-[#e6f7ec] dark:bg-green-950/30 dark:border-green-900 text-[#16a34a] dark:text-green-500 px-6 py-4 rounded-xl flex items-center justify-between">
-               <div className="flex-1 text-center font-bold text-sm">
-                 {lang === "ar" ? "هذه الوجبات مشمولة ضمن سعر الحجز" : "These meals are included in the rate"}
-               </div>
-               <CheckCircle2 className="w-5 h-5 shrink-0" />
+              <div className="flex-1 text-center font-bold text-sm">
+                {lang === "ar" ? "هذه الوجبات مشمولة ضمن سعر الحجز" : "These meals are included in the rate"}
+              </div>
+              <CheckCircle2 className="w-5 h-5 shrink-0" />
             </div>
           </div>
         ) : (
-          <div className="border rounded-xl bg-card overflow-hidden max-w-3xl mx-auto">
-            <div className="bg-muted/30 px-6 py-4 hidden sm:flex justify-between items-center border-b text-xs font-medium text-muted-foreground" dir={lang === "ar" ? "rtl" : "ltr"}>
-              <div>{lang === "ar" ? "نوع الوجبة" : "Meal Type"}</div>
-              <div className="w-[300px] text-left" dir="ltr">{lang === "ar" ? "السعر" : "Price"} (SAR)</div>
+          <div className="border rounded-xl bg-card overflow-hidden">
+            {/* Room Only Option Header */}
+            <div className="bg-amber-50/50 dark:bg-amber-950/10 px-6 py-4 flex items-center justify-between border-b" dir={lang === "ar" ? "rtl" : "ltr"}>
+              <div className="flex items-center gap-3">
+                <div
+                  onClick={() => {
+                    if (formContext) {
+                      const nextVal = !roomOnly;
+                      setRoomOnly(nextVal);
+                      if (nextVal) {
+                        formContext.setValue("meal_plan_exclusive_prices", {}, { shouldDirty: true });
+                      }
+                    }
+                  }}
+                  className={cn("w-5 h-5 rounded flex items-center justify-center border cursor-pointer shrink-0 transition-colors", roomOnly ? "bg-amber-600 border-amber-600 text-white" : "border-gray-300 bg-white dark:bg-transparent dark:border-gray-600")}
+                >
+                  {roomOnly && <Check className="w-3.5 h-3.5" />}
+                </div>
+                <span
+                  onClick={() => {
+                    if (formContext) {
+                      const nextVal = !roomOnly;
+                      setRoomOnly(nextVal);
+                      if (nextVal) {
+                        formContext.setValue("meal_plan_exclusive_prices", {}, { shouldDirty: true });
+                      }
+                    }
+                  }}
+                  className="text-sm font-bold cursor-pointer text-amber-700 dark:text-amber-500"
+                >
+                  {lang === "ar" ? "بدون وجبات (إقامة فقط)" : "No Meals (Room Only)"}
+                </span>
+              </div>
+              <span className="text-xs text-muted-foreground">
+                {lang === "ar" ? "تفعيل هذا الخيار يلغي ويقفل جميع أسعار الوجبات الأخرى" : "Enabling this disables and locks other meal prices"}
+              </span>
             </div>
+
             <div className="divide-y" dir={lang === "ar" ? "rtl" : "ltr"}>
               {meals.map(meal => {
                 const mealId = Number(meal.id);
@@ -156,6 +200,7 @@ export function MealPlanConfigurator({
                     <div className="flex items-center gap-3">
                       <div
                         onClick={() => {
+                          if (roomOnly) return;
                           if (formContext) {
                             const current = { ...exclusivePrices };
                             if (checked) {
@@ -166,12 +211,16 @@ export function MealPlanConfigurator({
                             formContext.setValue("meal_plan_exclusive_prices", current, { shouldDirty: true });
                           }
                         }}
-                        className={cn("w-4 h-4 rounded flex items-center justify-center border cursor-pointer shrink-0 transition-colors", checked ? "bg-amber-600 border-amber-600 text-white" : "border-gray-300 bg-transparent dark:border-gray-600")}
+                        className={cn("w-4 h-4 rounded flex items-center justify-center border cursor-pointer shrink-0 transition-colors",
+                          checked ? "bg-amber-600 border-amber-600 text-white" : "border-gray-300 bg-transparent dark:border-gray-600",
+                          roomOnly && "opacity-50 cursor-not-allowed"
+                        )}
                       >
                         {checked && <Check className="w-3 h-3" />}
                       </div>
-                      <span className={cn("text-sm font-bold cursor-pointer", checked ? "text-foreground" : "text-muted-foreground")}
+                      <span className={cn("text-sm font-bold cursor-pointer", checked ? "text-foreground" : "text-muted-foreground", roomOnly && "opacity-50 cursor-not-allowed")}
                         onClick={() => {
+                          if (roomOnly) return;
                           if (formContext) {
                             const current = { ...exclusivePrices };
                             if (checked) {
@@ -186,17 +235,17 @@ export function MealPlanConfigurator({
                         {lang === "ar" ? meal.name_ar : meal.name_en}
                       </span>
                     </div>
-                    
+
                     <div className="w-full sm:w-[300px]" dir="ltr">
-                      <div className={cn("relative flex items-center border rounded-lg overflow-hidden transition-all", checked ? "focus-within:ring-1 focus-within:ring-amber-600 focus-within:border-amber-600 border-amber-600/50" : "border-border opacity-50 bg-muted/10")}>
-                        <span className={cn("px-4 text-xs font-bold border-r py-3 transition-colors", checked ? "text-amber-700 dark:text-amber-500 border-amber-600/50 bg-amber-50/10 dark:bg-amber-950/20" : "text-muted-foreground border-border bg-muted/20")}>SAR</span>
+                      <div className={cn("relative flex items-center border rounded-lg overflow-hidden transition-all", checked && !roomOnly ? "focus-within:ring-1 focus-within:ring-amber-600 focus-within:border-amber-600 border-amber-600/50" : "border-border opacity-50 bg-muted/10")}>
+                        <span className={cn("px-4 text-xs font-bold border-r py-3 transition-colors", checked && !roomOnly ? "text-amber-700 dark:text-amber-500 border-amber-600/50 bg-amber-50/10 dark:bg-amber-950/20" : "text-muted-foreground border-border bg-muted/20")}>SAR</span>
                         <input
                           type="number"
                           step="0.01"
                           min="0"
                           placeholder="0.00"
-                          disabled={!checked}
-                          className="flex-1 bg-transparent border-0 focus:ring-0 focus:outline-none text-right pr-4 text-sm w-full h-auto rounded-none"
+                          disabled={!checked || roomOnly}
+                          className="flex-1 bg-transparent border-0 focus:ring-0 focus:outline-none text-right pr-4 text-sm w-full h-auto rounded-none disabled:cursor-not-allowed"
                           value={exclusivePrices[mealId.toString()] || ""}
                           onChange={(e) => {
                             if (formContext) {

@@ -5,6 +5,7 @@ import { selectAuth } from "@/store/features/authSlice";
 import { hasRole, hasAnyRole } from "@/lib/auth-utils";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent } from "@/components/ui/card";
+import { KPI_TONE, type KpiTone } from "@/components/list-toolkit";
 import {
   Users,
   Hotel,
@@ -14,7 +15,7 @@ import {
   CheckCircle2,
   Bed,
   Coins,
-  Wallet
+  Wallet,
 } from "lucide-react";
 import React, { useMemo } from "react";
 import {
@@ -29,13 +30,16 @@ import {
   Cell,
   BarChart,
   Bar,
-  CartesianGrid
+  CartesianGrid,
 } from "recharts";
 import { useGetHomeDataQuery } from "@/store/services/home";
 
 export default function DashboardOrRedirect() {
   const auth = useSelector(selectAuth);
-  if (hasRole(auth, "viewer") && !hasAnyRole(auth, ["super_admin", "sales_manager", "financial_manager", "employee", "viewer"])) {
+  if (
+    hasRole(auth, "viewer") &&
+    !hasAnyRole(auth, ["super_admin", "sales_manager", "financial_manager", "employee", "viewer"])
+  ) {
     return <Navigate to="/supplier-portal" replace />;
   }
   return <Dashboard />;
@@ -57,37 +61,45 @@ function KPIStatCard({
   to?: LinkProps["to"];
   lang: string;
 }) {
-  const badgeColors = {
-    success: "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400 border border-emerald-100/50 dark:border-emerald-900/30",
-    danger: "bg-rose-50 text-rose-600 dark:bg-rose-950/30 dark:text-rose-400 border border-rose-100/50 dark:border-rose-900/30",
-    neutral: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border border-slate-200/50 dark:border-slate-700/30",
+  const toneByBadge: Record<typeof badgeType, KpiTone> = {
+    success: "success",
+    danger: "destructive",
+    neutral: "muted",
   };
+  const tone = KPI_TONE[toneByBadge[badgeType]];
 
   const card = (
-    <Card>
-      <CardContent className="p-4">
-        <div className="flex items-center justify-between w-full py-2">
-          <div className="text-muted-foreground">
+    <Card className="group h-full overflow-hidden border-border/70 bg-card transition-all hover:-translate-y-0.5 hover:shadow-md hover:shadow-primary/5">
+      <CardContent className="relative p-4">
+        <div className="flex w-full items-center justify-between py-2">
+          <div className="grid h-9 w-9 place-items-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/15">
             <Icon className="h-4.5 w-4.5" />
           </div>
-          <span className={`text-sm font-bold px-2 py-0.5 rounded-full ${badgeColors[badgeType]}`}>
+          <span
+            className={`rounded-full border border-transparent px-2 py-0.5 text-sm font-bold ${tone.bg} ${tone.fg}`}
+          >
             {badgeText}
           </span>
-
         </div>
         <div className="space-y-0.5">
-          <div className="text-2xl font-bold tracking-tight text-slate-950 dark:text-white leading-tight">
+          <div className="text-2xl font-bold leading-tight tracking-tight text-foreground">
             {value}
           </div>
-          <div className="text-sm text-muted-foreground font-medium">
-            {label}
-          </div>
+          <div className="text-sm font-medium text-muted-foreground">{label}</div>
         </div>
+        <span
+          className={`pointer-events-none absolute inset-x-0 bottom-0 h-0.5 origin-start scale-x-0 transition-transform group-hover:scale-x-100 ${tone.bar}`}
+        />
       </CardContent>
     </Card>
   );
 
-  if (to) return <Link to={to} className="block h-full">{card}</Link>;
+  if (to)
+    return (
+      <Link to={to} className="block h-full">
+        {card}
+      </Link>
+    );
   return card;
 }
 
@@ -104,7 +116,8 @@ function Dashboard() {
     if (change === undefined || change === null) return { text: "0.0%", type: "neutral" as const };
     const sign = change > 0 ? "+" : "";
     const text = `${sign}${change.toFixed(1)}%`;
-    const type = change > 0 ? ("success" as const) : change < 0 ? ("danger" as const) : ("neutral" as const);
+    const type =
+      change > 0 ? ("success" as const) : change < 0 ? ("danger" as const) : ("neutral" as const);
     return { text, type };
   };
 
@@ -125,7 +138,9 @@ function Dashboard() {
     const b1 = getBadgeInfo(c?.total_bookings?.change_percentage);
     const b2 = getBadgeInfo(c?.total_quotations?.change_percentage);
     const b3 = getBadgeInfo(c?.confirmed_bookings?.change_percentage);
-    const b4 = getBadgeInfo(c?.active_suppliers?.change_percentage ?? c?.total_suppliers?.change_percentage);
+    const b4 = getBadgeInfo(
+      c?.active_suppliers?.change_percentage ?? c?.total_suppliers?.change_percentage,
+    );
     const b5 = getBadgeInfo(c?.active_hotels?.change_percentage);
     const b6 = getBadgeInfo(c?.total_rooms?.change_percentage);
     const b7 = getBadgeInfo(c?.total_customers?.change_percentage);
@@ -139,7 +154,7 @@ function Dashboard() {
         value: totalBookings.toLocaleString("en-US"),
         badgeText: b1.text,
         badgeType: b1.type,
-        to: "/bookings" as const
+        to: "/bookings" as const,
       },
       {
         icon: FileText,
@@ -147,7 +162,7 @@ function Dashboard() {
         value: pendingOffers.toLocaleString("en-US"),
         badgeText: b2.text,
         badgeType: b2.type,
-        to: "/quotations" as const
+        to: "/quotations" as const,
       },
       {
         icon: CheckCircle2,
@@ -155,7 +170,7 @@ function Dashboard() {
         value: confirmedBookings.toLocaleString("en-US"),
         badgeText: b3.text,
         badgeType: b3.type,
-        to: "/bookings" as const
+        to: "/bookings" as const,
       },
       {
         icon: Briefcase,
@@ -163,7 +178,7 @@ function Dashboard() {
         value: activeSuppliers.toLocaleString("en-US"),
         badgeText: b4.text,
         badgeType: b4.type,
-        to: "/suppliers" as const
+        to: "/suppliers" as const,
       },
       {
         icon: Hotel,
@@ -171,7 +186,7 @@ function Dashboard() {
         value: activeHotels.toLocaleString("en-US"),
         badgeText: b5.text,
         badgeType: b5.type,
-        to: "/hotels" as const
+        to: "/hotels" as const,
       },
       {
         icon: Bed,
@@ -179,7 +194,7 @@ function Dashboard() {
         value: totalRooms.toLocaleString("en-US"),
         badgeText: b6.text,
         badgeType: b6.type,
-        to: "/rates" as const
+        to: "/rates" as const,
       },
       {
         icon: Users,
@@ -187,7 +202,7 @@ function Dashboard() {
         value: totalCustomers.toLocaleString("en-US"),
         badgeText: b7.text,
         badgeType: b7.type,
-        to: "/customers" as const
+        to: "/customers" as const,
       },
       {
         icon: Coins,
@@ -195,7 +210,7 @@ function Dashboard() {
         value: formatCurrency(outstandingAR),
         badgeText: b8.text,
         badgeType: b8.type,
-        to: "/invoices" as const
+        to: "/invoices" as const,
       },
       {
         icon: Wallet,
@@ -203,24 +218,75 @@ function Dashboard() {
         value: formatCurrency(totalCollected),
         badgeText: b9.text,
         badgeType: b9.type,
-        to: "/receipts" as const
-      }
+        to: "/receipts" as const,
+      },
     ];
-  }, [lang, totalBookings, pendingOffers, confirmedBookings, activeSuppliers, activeHotels, totalRooms, totalCustomers, outstandingAR, totalCollected, dData]);
+  }, [
+    lang,
+    totalBookings,
+    pendingOffers,
+    confirmedBookings,
+    activeSuppliers,
+    activeHotels,
+    totalRooms,
+    totalCustomers,
+    outstandingAR,
+    totalCollected,
+    dData,
+  ]);
+
+  const chartColors = {
+    primary: "var(--chart-1)",
+    secondary: "var(--chart-2)",
+    muted: "var(--muted-foreground)",
+    border: "var(--border)",
+    foreground: "var(--foreground)",
+    card: "var(--card)",
+  };
 
   // Annual financial performance data mapping
   const annualPerformanceData = useMemo(() => {
     const apiTrend = dData?.charts?.annual_financial_performance || [];
-    const monthNamesAr = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
-    const monthNamesEn = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    const defaultValues = [95000, 110000, 85000, 130000, 160000, 150000, 180000, 200000, 190000, 210000, 220000, 250000];
+    const monthNamesAr = [
+      "يناير",
+      "فبراير",
+      "مارس",
+      "أبريل",
+      "مايو",
+      "يونيو",
+      "يوليو",
+      "أغسطس",
+      "سبتمبر",
+      "أكتوبر",
+      "نوفمبر",
+      "ديسمبر",
+    ];
+    const monthNamesEn = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ];
+    const defaultValues = [
+      95000, 110000, 85000, 130000, 160000, 150000, 180000, 200000, 190000, 210000, 220000, 250000,
+    ];
 
     return Array.from({ length: 12 }, (_, i) => {
       const monthNum = i + 1;
       const apiMonth = apiTrend.find((m: any) => m.month_num === monthNum);
       return {
         name: lang === "ar" ? monthNamesAr[i] : monthNamesEn[i],
-        value: apiMonth ? (apiMonth.bookings_revenue + (apiMonth.other_income || 0)) : defaultValues[i],
+        value: apiMonth
+          ? apiMonth.bookings_revenue + (apiMonth.other_income || 0)
+          : defaultValues[i],
       };
     });
   }, [lang, dData]);
@@ -230,9 +296,9 @@ function Dashboard() {
     const apiDist = dData?.charts?.bookings_status_distribution || [];
 
     const colors = {
-      confirmed: "#B27B32",
-      pending: "#8C9BB4",
-      cancelled: "#C3CCD9",
+      confirmed: "var(--chart-1)",
+      pending: "var(--chart-3)",
+      cancelled: "var(--chart-5)",
     };
 
     const labels = {
@@ -244,7 +310,7 @@ function Dashboard() {
     return apiDist.map((item: any) => ({
       name: item.label || labels[item.status as keyof typeof labels] || item.status,
       value: item.count,
-      color: colors[item.status as keyof typeof colors] || "#8C9BB4",
+      color: colors[item.status as keyof typeof colors] || "var(--muted-foreground)",
     }));
   }, [lang, dData]);
 
@@ -287,8 +353,10 @@ function Dashboard() {
   return (
     <div className="min-h-screen" dir={lang === "ar" ? "rtl" : "ltr"}>
       <PageHeader title={lang === "ar" ? "لوحة التحكم" : "Dashboard"}>
-        <div className="border border-slate-100 dark:border-slate-800/80 bg-[#F4F4F1] dark:bg-slate-900/50 px-4 py-2 rounded-2xl text-xs font-semibold text-slate-600 dark:text-slate-400">
-          {lang === "ar" ? "مرحباً بعودتك، نظرة عامة على عمليات اليوم." : "Welcome back, here is today's overview."}
+        <div className="rounded-2xl border border-border bg-muted/50 px-4 py-2 text-xs font-semibold text-muted-foreground">
+          {lang === "ar"
+            ? "مرحباً بعودتك، نظرة عامة على عمليات اليوم."
+            : "Welcome back, here is today's overview."}
         </div>
       </PageHeader>
 
@@ -306,50 +374,66 @@ function Dashboard() {
         <div className="space-y-6">
           {/* Chart 1: Annual Financial Performance */}
           <Card className="">
-            <div className="px-6 py-5 border-b border-slate-50 dark:border-slate-800/50 flex items-center justify-between">
-              <h3 className="text-sm font-bold text-slate-800 dark:text-white">
+            <div className="flex items-center justify-between border-b border-border/60 px-6 py-5">
+              <h3 className="text-sm font-bold text-foreground">
                 {lang === "ar" ? "الأداء المالي السنوي" : "Annual Financial Performance"}
               </h3>
             </div>
             <CardContent className="p-6">
               <div className="h-[300px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={annualPerformanceData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+                  <AreaChart
+                    data={annualPerformanceData}
+                    margin={{ top: 10, right: 10, left: 10, bottom: 0 }}
+                  >
                     <defs>
                       <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#B27B32" stopOpacity={0.12} />
-                        <stop offset="95%" stopColor="#B27B32" stopOpacity={0.01} />
+                        <stop offset="5%" stopColor={chartColors.primary} stopOpacity={0.18} />
+                        <stop offset="95%" stopColor={chartColors.primary} stopOpacity={0.02} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" className="dark:stroke-slate-800/40" />
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      vertical={false}
+                      stroke={chartColors.border}
+                    />
                     <XAxis
                       dataKey="name"
                       tickLine={false}
                       axisLine={false}
-                      tick={{ fill: "#94A3B8", fontSize: 11, fontWeight: 550 }}
+                      tick={{ fill: chartColors.muted, fontSize: 11, fontWeight: 550 }}
                       dy={10}
                     />
                     <YAxis
                       tickLine={false}
                       axisLine={false}
-                      tick={{ fill: "#94A3B8", fontSize: 11, fontWeight: 550 }}
-                      tickFormatter={(val) => val === 0 ? "0" : lang === "ar" ? `${val / 1000}K ر.س` : `${val / 1000}K SAR`}
+                      tick={{ fill: chartColors.muted, fontSize: 11, fontWeight: 550 }}
+                      tickFormatter={(val) =>
+                        val === 0
+                          ? "0"
+                          : lang === "ar"
+                            ? `${val / 1000}K ر.س`
+                            : `${val / 1000}K SAR`
+                      }
                       dx={lang === "ar" ? 10 : -10}
                     />
                     <Tooltip
-                      formatter={(value: any) => [formatCurrency(value), lang === "ar" ? "الإيرادات" : "Revenue"]}
+                      formatter={(value: any) => [
+                        formatCurrency(value),
+                        lang === "ar" ? "الإيرادات" : "Revenue",
+                      ]}
                       contentStyle={{
                         borderRadius: "16px",
                         border: "1px solid var(--border)",
                         backgroundColor: "var(--card)",
                       }}
-                      itemStyle={{ color: "#B27B32" }}
-                      labelStyle={{ color: "var(--muted-foreground)" }}
+                      itemStyle={{ color: chartColors.primary }}
+                      labelStyle={{ color: chartColors.muted }}
                     />
                     <Area
                       type="monotone"
                       dataKey="value"
-                      stroke="#1E293B"
+                      stroke={chartColors.primary}
                       strokeWidth={2}
                       strokeDasharray="4 4"
                       fillOpacity={1}
@@ -363,8 +447,8 @@ function Dashboard() {
 
           {/* Chart 2: Booking Status */}
           <Card className="">
-            <div className="px-6 py-5 border-b border-slate-50 dark:border-slate-800/50">
-              <h3 className="text-sm font-bold text-slate-800 dark:text-white">
+            <div className="border-b border-border/60 px-6 py-5">
+              <h3 className="text-sm font-bold text-foreground">
                 {lang === "ar" ? "حالة الحجوزات" : "Booking Status"}
               </h3>
             </div>
@@ -394,8 +478,8 @@ function Dashboard() {
                             border: "1px solid var(--border)",
                             backgroundColor: "var(--card)",
                           }}
-                          itemStyle={{ color: "#B27B32" }}
-                          labelStyle={{ color: "var(--muted-foreground)" }}
+                          itemStyle={{ color: chartColors.primary }}
+                          labelStyle={{ color: chartColors.muted }}
                         />
                       </PieChart>
                     </ResponsiveContainer>
@@ -404,8 +488,11 @@ function Dashboard() {
                 <div className="w-full md:w-[260px] flex flex-col justify-center space-y-4">
                   {bookingStatusData.map((item, index) => (
                     <div key={index} className="flex items-center gap-3 text-sm font-semibold">
-                      <span className="w-3.5 h-3.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
-                      <span className="text-slate-700 dark:text-slate-300">{item.name}</span>
+                      <span
+                        className="w-3.5 h-3.5 rounded-full shrink-0"
+                        style={{ backgroundColor: item.color }}
+                      />
+                      <span className="text-foreground">{item.name}</span>
                     </div>
                   ))}
                 </div>
@@ -415,27 +502,34 @@ function Dashboard() {
 
           {/* Chart 3: Weekly Booking Trend */}
           <Card className="">
-            <div className="px-6 py-5 border-b border-slate-50 dark:border-slate-800/50">
-              <h3 className="text-sm font-bold text-slate-800 dark:text-white">
+            <div className="border-b border-border/60 px-6 py-5">
+              <h3 className="text-sm font-bold text-foreground">
                 {lang === "ar" ? "اتجاه الحجوزات الأسبوعي" : "Weekly Booking Trend"}
               </h3>
             </div>
             <CardContent className="p-6">
               <div className="h-[300px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={weeklyTrendData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" className="dark:stroke-slate-800/40" />
+                  <BarChart
+                    data={weeklyTrendData}
+                    margin={{ top: 10, right: 10, left: 10, bottom: 0 }}
+                  >
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      vertical={false}
+                      stroke={chartColors.border}
+                    />
                     <XAxis
                       dataKey="name"
                       tickLine={false}
                       axisLine={false}
-                      tick={{ fill: "#94A3B8", fontSize: 11, fontWeight: 550 }}
+                      tick={{ fill: chartColors.muted, fontSize: 11, fontWeight: 550 }}
                       dy={10}
                     />
                     <YAxis
                       tickLine={false}
                       axisLine={false}
-                      tick={{ fill: "#94A3B8", fontSize: 11, fontWeight: 550 }}
+                      tick={{ fill: chartColors.muted, fontSize: 11, fontWeight: 550 }}
                       dx={lang === "ar" ? 10 : -10}
                     />
                     <Tooltip
@@ -445,10 +539,15 @@ function Dashboard() {
                         border: "1px solid var(--border)",
                         backgroundColor: "var(--card)",
                       }}
-                      itemStyle={{ color: "#B27B32" }}
-                      labelStyle={{ color: "var(--muted-foreground)" }}
+                      itemStyle={{ color: chartColors.primary }}
+                      labelStyle={{ color: chartColors.muted }}
                     />
-                    <Bar dataKey="value" fill="#B27B32" radius={[4, 4, 0, 0]} barSize={22} />
+                    <Bar
+                      dataKey="value"
+                      fill={chartColors.primary}
+                      radius={[4, 4, 0, 0]}
+                      barSize={22}
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               </div>

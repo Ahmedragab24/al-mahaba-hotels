@@ -1,6 +1,6 @@
 // KPI Engine — currency-aware aggregation helpers for Reports & Dashboards (BR-RPT-001 → BR-RPT-006)
 import type { AppRole } from "@/hooks/use-auth";
-import { apiClient } from "@/lib/api/api-client";
+import { apiClient } from "@/store/queryBridge";
 
 export const BASE_CURRENCY = "SAR";
 export type FxMap = Record<string, number>;

@@ -1,14 +1,11 @@
 import { useState, useMemo, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { apiClient } from "@/lib/api/api-client";
 import { useI18n } from "@/lib/i18n";
-import { useGetRoomsQuery } from "@/store/api";
+import { useGetRoomsQuery, useGetPricesQuery } from "@/store/api";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Building2, MapPin } from "lucide-react";
+import { Building2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
@@ -49,13 +46,17 @@ export function QuotationRatesDialog({ open, onOpenChange, hotelId, initialSelec
 
   const { data: roomsData } = useGetRoomsQuery(
     hotelId ? { hotel_id: hotelId } : undefined,
-    { skip: !hotelId || !open }
+    { skip: !hotelId || !open, pollingInterval: 2000 } // Auto-refresh rooms every 2 seconds
   );
 
   const roomsList = useMemo(() => {
     if (!roomsData) return [];
     if (Array.isArray(roomsData)) return roomsData;
-    return (roomsData as any).data || [];
+    // Handle { data: { data: [...] } } format
+    if (roomsData && Array.isArray(roomsData)) return roomsData;
+    // Handle { data: [...] } format
+    if (Array.isArray((roomsData as any)?.data)) return (roomsData as any).data;
+    return [];
   }, [roomsData]);
 
   // Selected state per rate_id: quantity
@@ -76,19 +77,30 @@ export function QuotationRatesDialog({ open, onOpenChange, hotelId, initialSelec
     }
   }, [open, hotelId, initialSelected]);
 
-  const q = useQuery({
-    queryKey: ["prices", hotelId],
-    queryFn: async () => {
-      const response = await apiClient.prices.getAll({
+  const q = useGetPricesQuery(
+    hotelId
+      ? {
         hotel_id: hotelId,
-        status: "approved",
+        status: "valid",
         lang,
-        per_page: "500"
-      });
-      return response;
-    },
-    enabled: !!hotelId && open,
-  });
+        per_page: "500",
+      }
+      : undefined,
+    {
+      skip: !hotelId || !open,
+      pollingInterval: 2000, // Auto-refresh prices every 2 seconds
+    }
+  );
+
+  const ratesData = useMemo(() => {
+    if (!q.data) return [];
+    if (Array.isArray(q.data)) return q.data;
+    // Handle { data: { data: [...] } } format
+    if (q.data?.data && Array.isArray(q.data.data)) return q.data.data;
+    // Handle { data: [...] } format
+    if (Array.isArray((q.data as any)?.data)) return (q.data as any).data;
+    return [];
+  }, [q.data]);
 
   const groupedRates = useMemo(() => {
     const groups: Record<string, { supplier_id: string | null; name_en: string; name_ar: string; is_direct: boolean; rates: any[] }> = {};
@@ -101,8 +113,6 @@ export function QuotationRatesDialog({ open, onOpenChange, hotelId, initialSelec
       is_direct: true,
       rates: []
     };
-
-    const ratesData = Array.isArray(q.data) ? q.data : (q.data?.data?.data || q.data?.data || []);
 
     ratesData.forEach((r: any) => {
       const actualSupplierId = r.supplier_id || r.contract?.supplier_id;
@@ -130,7 +140,7 @@ export function QuotationRatesDialog({ open, onOpenChange, hotelId, initialSelec
     }
 
     return Object.values(groups);
-  }, [q.data]);
+  }, [ratesData]);
 
   const handleToggle = (rateId: string, checked: boolean) => {
     setSelected(prev => ({
@@ -148,17 +158,16 @@ export function QuotationRatesDialog({ open, onOpenChange, hotelId, initialSelec
 
   const handleSave = () => {
     const results: SelectedRate[] = [];
-    const ratesData = Array.isArray(q.data) ? q.data : (q.data?.data?.data || q.data?.data || []);
     ratesData.forEach((r: any) => {
       const state = selected[r.id];
       if (state?.selected && state.quantity > 0) {
         const actualSupplier = r.supplier || r.contract?.supplier;
         const roomObj = roomsList.find((rm: any) => String(rm.id) === String(r.room_id || r.room?.id)) || r.room;
-        
+
         const viewObj = r.hotel_view || r.hotelView || roomObj?.hotel_view || roomObj?.hotelView;
         const fallbackView = typeof r.view === "string" ? r.view : (typeof roomObj?.view === "string" ? roomObj.view : undefined);
         const roomTypeObj = roomObj?.room_type || r.room_type;
-        
+
         results.push({
           rate_id: String(r.id),
           room_type_id: String(r.room_type_id || roomObj?.room_type_id),
@@ -187,7 +196,7 @@ export function QuotationRatesDialog({ open, onOpenChange, hotelId, initialSelec
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col p-0">
+      <DialogContent className="max-w-6xl max-h-[90vh] flex flex-col p-0">
         <DialogHeader className="p-6 pb-2 border-b">
           <DialogTitle className="text-xl flex items-center justify-between w-full">
             <div className="flex items-center gap-2">
@@ -259,7 +268,7 @@ export function QuotationRatesDialog({ open, onOpenChange, hotelId, initialSelec
                         <tr className="text-slate-400 dark:text-slate-500 font-normal text-center border-b border-border/50">
                           <th className="pb-4 px-4 font-normal text-start">الغرفة</th>
                           <th className="pb-4 px-4 font-normal">{lang === "ar" ? "نوع الغرفة" : "Room Type"}</th>
-                          <th className="pb-4 px-4 font-normal">الإطلالة</th>
+                          <th className="pb-4 px-4 font-normal">فترة الصلاحية</th>
                           <th className="pb-4 px-4 font-normal">خطة الوجبات</th>
                           <th className="pb-4 px-4 font-normal">سعر الليلة</th>
                           <th className="pb-4 px-4 font-normal w-32">{lang === "ar" ? "عدد الغرف" : "Rooms Qty"}</th>
@@ -278,11 +287,11 @@ export function QuotationRatesDialog({ open, onOpenChange, hotelId, initialSelec
                           const roomView = viewObj
                             ? (lang === "ar" ? (viewObj.name_ar || viewObj.name_en) : (viewObj.name_en || viewObj.name_ar))
                             : fallbackView;
-                          
+
                           const roomTypeObj = roomObj?.room_type || rate.room_type;
                           const roomTypeName = roomTypeObj
-                             ? (lang === "ar" ? (roomTypeObj.name_ar || roomTypeObj.name_en || roomTypeObj.name) : (roomTypeObj.name_en || roomTypeObj.name_ar || roomTypeObj.name))
-                             : "—";
+                            ? (lang === "ar" ? (roomTypeObj.name_ar || roomTypeObj.name_en || roomTypeObj.name) : (roomTypeObj.name_en || roomTypeObj.name_ar || roomTypeObj.name))
+                            : "—";
 
                           return (
                             <tr key={rate.id} className="transition-colors group">
@@ -293,9 +302,12 @@ export function QuotationRatesDialog({ open, onOpenChange, hotelId, initialSelec
                                     onCheckedChange={(c) => handleToggle(rate.id, !!c)}
                                     className={cn("border-slate-300 dark:border-slate-600 rounded transition-colors", isSelected && "bg-amber-600 border-amber-600 dark:border-amber-600")}
                                   />
-                                  <span className={cn("font-bold transition-colors", isSelected ? "text-slate-800 dark:text-slate-200" : "text-muted-foreground")}>
-                                    {lang === "ar" ? rate.room?.name_ar : rate.room?.name_en}
-                                  </span>
+                                  <div>
+                                    <span className={cn("font-bold transition-colors", isSelected ? "text-slate-800 dark:text-slate-200" : "text-muted-foreground")}>
+                                      {lang === "ar" ? (rate.room?.name_ar || rate.room?.name_en || "—") : (rate.room?.name_en || rate.room?.name_ar || "—")}
+                                    </span>
+                                    <div className="text-[10px] text-muted-foreground mt-0.5 font-mono">{rate.code}</div>
+                                  </div>
                                 </div>
                               </td>
                               <td className="py-3 px-4 text-center">
@@ -304,9 +316,11 @@ export function QuotationRatesDialog({ open, onOpenChange, hotelId, initialSelec
                                 </div>
                               </td>
                               <td className="py-3 px-4 text-center">
-                                <div className={cn("flex items-center justify-center gap-1.5 font-medium transition-colors", isSelected ? "text-slate-600 dark:text-slate-300" : "text-muted-foreground/50")}>
-                                  {roomView && <MapPin className={cn("w-3.5 h-3.5", isSelected ? "text-amber-600" : "text-muted-foreground/50")} />}
-                                  <span>{roomView || "—"}</span>
+                                <div className={cn("flex items-center justify-center gap-1.5 font-medium transition-colors text-xs", isSelected ? "text-slate-600 dark:text-slate-300" : "text-muted-foreground/50")}>
+                                  {rate.valid_from && rate.valid_to && (
+                                    <span>{rate.valid_from} → {rate.valid_to}</span>
+                                  )}
+                                  {!rate.valid_from && <span>—</span>}
                                 </div>
                               </td>
                               <td className="py-3 px-4 text-center">

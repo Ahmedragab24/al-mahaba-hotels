@@ -1,12 +1,10 @@
-import { useMemo } from "react";
+import { useMemo } from "react"; 
 import { useForm } from "react-hook-form";
-import { apiClient } from "@/lib/api/api-client";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useDispatch } from "react-redux";
 import { useCreateCustomerMutation, useUpdateCustomerMutation, customersApi } from "@/store/services/customers/customersService";
 import { useI18n } from "@/lib/i18n";
-import { useCountries, useCurrencies } from "@/lib/lookups";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -16,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { Building2, User, Landmark, Briefcase } from "lucide-react";
 import type { Customer } from "@/types/api";
+import { useGetCountriesQuery, useGetCurrenciesQuery } from "@/store/api";
 
 const getSchema = (lang: "ar" | "en") => z.object({
   type: z.enum(["company", "individual", "agency", "government"]),
@@ -66,8 +65,8 @@ interface bodyRequest {
 export function CustomerForm({ initial, onSaved }: { initial?: Partial<Customer> & { id?: string | number }; onSaved: (id: string) => void }) {
   const { t, lang } = useI18n();
   const dispatch = useDispatch();
-  const countries = useCountries();
-  const currencies = useCurrencies();
+  const countries = useGetCountriesQuery({ lang, all: 1 });
+  const currencies = useGetCurrenciesQuery({ lang });   
 
   const schema = useMemo(() => getSchema(lang), [lang]);
 
@@ -221,7 +220,7 @@ export function CustomerForm({ initial, onSaved }: { initial?: Partial<Customer>
                 <Select value={field.value ? field.value.toString() : ""} onValueChange={(val) => field.onChange(val)}>
                   <FormControl><SelectTrigger><SelectValue placeholder="—" /></SelectTrigger></FormControl>
                   <SelectContent>
-                    {(Array.isArray(countries.data) ? countries.data : Array.isArray(countries.data?.data) ? countries.data.data : [])?.map((c: any) => (
+                    {(Array.isArray(countries.data) ? countries.data : Array.isArray((countries.data as any)?.data) ? (countries.data as any).data : [])?.map((c: any) => (
                       <SelectItem key={c.id} value={c.id?.toString()}>
                         {lang === "ar" ? c.name_ar : c.name_en}
                       </SelectItem>
@@ -289,7 +288,7 @@ export function CustomerForm({ initial, onSaved }: { initial?: Partial<Customer>
                 <Select value={field.value ? field.value.toString() : ""} onValueChange={(val) => field.onChange(val)}>
                   <FormControl><SelectTrigger><SelectValue placeholder="—" /></SelectTrigger></FormControl>
                   <SelectContent>
-                    {(Array.isArray(currencies.data) ? currencies.data : Array.isArray(currencies.data?.data) ? currencies.data.data : [])?.map((c: any) => (
+                    {(Array.isArray(currencies.data) ? currencies.data : Array.isArray((currencies.data as any)?.data) ? (currencies.data as any).data : [])?.map((c: any) => (
                       <SelectItem key={c.id} value={c.id?.toString()}>
                         {c.code} — {lang === "ar" ? c.name_ar : c.name_en}
                       </SelectItem>

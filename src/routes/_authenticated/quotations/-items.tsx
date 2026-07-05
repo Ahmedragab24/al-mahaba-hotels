@@ -1,8 +1,8 @@
 // Quotation Items tab — cascading Hotel → Contract → Room Type (rate) → Season → Occupancy → Pricing
 import { useMemo, useState } from "react";
-import { db } from "@/lib/api/db";
-import { apiClient } from "@/lib/api/api-client";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { db } from "@/store/queryBridge";
+import { apiClient } from "@/store/queryBridge";
+import { useQuery, useMutation, useQueryClient } from "@/store/queryBridge";
 import { useI18n } from "@/lib/i18n";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from "@/components/ui/table";
@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { formatDate } from "@/lib/format";
-import { dbErrorMessage } from "@/lib/db-errors";
+import { dbErrorMessage } from "@/store/queryBridge";
 import { toast } from "sonner";
 import { OCCUPANCY_TYPES } from "../rates/-occupancy";
 
@@ -78,7 +78,7 @@ export function ItemsTab({ quotationId, currency, editable }: { quotationId: str
       (await db.from("rates")
         .select("id,code,currency,valid_from,valid_to,room_type_id,room_type:hotel_room_types(name_en,name_ar)")
         .eq("hotel_id", form.hotel_id).eq("contract_id", form.contract_id)
-        .eq("status", "approved").is("deleted_at", null).order("valid_from", { ascending: false })).data ?? [],
+        .eq("status", "valid").is("deleted_at", null).order("valid_from", { ascending: false })).data ?? [],
   });
 
   const seasons = useQuery({

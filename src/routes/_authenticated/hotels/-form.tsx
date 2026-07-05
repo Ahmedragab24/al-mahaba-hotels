@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@/store/queryBridge";
 import { useI18n } from "@/lib/i18n";
 import { useCountries, useCities } from "@/lib/lookups";
 import { Card, CardContent } from "@/components/ui/card";
@@ -55,7 +55,7 @@ type FormVals = z.input<ReturnType<typeof getSchema>>;
 export function HotelForm({ initial, onSaved }: { initial?: any; onSaved: (id: string) => void }) {
   const { t, lang } = useI18n();
   const qc = useQueryClient();
-  const countries = useCountries();
+  const countries = useCountries({}, { refetchInterval: 2000 });
   const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
 
   const [createHotel] = useCreateHotelMutation();
@@ -114,7 +114,7 @@ export function HotelForm({ initial, onSaved }: { initial?: any; onSaved: (id: s
   });
 
   const countryId = form.watch("country_id");
-  const cities = useCities(countryId ? { country_id: countryId } : null);
+  const cities = useCities(countryId ? { country_id: countryId } : null, { refetchInterval: 2000 });
 
   const mut = useMutation({
     mutationFn: async (vals: FormVals) => {

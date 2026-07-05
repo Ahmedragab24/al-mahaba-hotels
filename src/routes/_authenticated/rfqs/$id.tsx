@@ -1,8 +1,8 @@
 import { useNavigate, useParams } from "react-router-dom";
-import { db } from "@/lib/api/db";
-import { apiClient } from "@/lib/api/api-client";
+import { db } from "@/store/queryBridge";
+import { apiClient } from "@/store/queryBridge";
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@/store/queryBridge";
 import { useI18n } from "@/lib/i18n";
 import { useSelector } from "react-redux";
 import { selectAuth } from "@/store/features/authSlice";
@@ -15,7 +15,7 @@ import { ConfirmDialog } from "@/components/confirm-dialog";
 import { ArrowLeft, Pencil, Send, Check, X, Ban, Clock, RotateCcw, CheckCheck } from "lucide-react";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { toast } from "sonner";
-import { dbErrorMessage } from "@/lib/db-errors";
+import { dbErrorMessage } from "@/store/queryBridge";
 import { RfqForm } from "./-form";
 import { RfqItemsTab } from "./-items";
 import {

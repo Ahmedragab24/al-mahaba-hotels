@@ -1,7 +1,7 @@
 // Shared report toolbar — export buttons (CSV / Excel / PDF) + save-as-template.
 import { useState } from "react";
-import { db } from "@/lib/api/db";
-import { apiClient } from "@/lib/api/api-client";
+import { db } from "@/store/queryBridge";
+import { apiClient } from "@/store/queryBridge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

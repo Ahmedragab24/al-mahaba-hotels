@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { db } from "@/lib/api/db";
-import { apiClient } from "@/lib/api/api-client";
+import { db } from "@/store/queryBridge";
+import { apiClient } from "@/store/queryBridge";
 import { toast } from "sonner";
 import { Upload, Image as ImageIcon, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";

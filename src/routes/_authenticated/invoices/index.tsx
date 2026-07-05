@@ -1,10 +1,10 @@
 // Invoice list — Section 15 (BR-INV). KPIs, filters, create from booking or manual.
 import { Link, useNavigate } from "react-router-dom";
-import { db } from "@/lib/api/db";
-import { apiClient } from "@/lib/api/api-client";
-import { getCurrentUserId } from "@/lib/api/base";
+import { db } from "@/store/queryBridge";
+import { apiClient } from "@/store/queryBridge";
+import { getCurrentUserId } from "@/store/queryBridge";
 import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@/store/queryBridge";
 import {
   useGetInvoicesQuery,
   useGetInvoiceStatisticsQuery,

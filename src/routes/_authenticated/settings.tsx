@@ -1,10 +1,6 @@
 import { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  Country as CountryLib,
-  State as StateLib,
-  City as CityLib,
-} from "country-state-city";
+import { useQuery, useMutation, useQueryClient } from "@/store/queryBridge";
+import { Country as CountryLib, State as StateLib, City as CityLib } from "country-state-city";
 import { PageHeader } from "@/components/page-header";
 import { useI18n } from "@/lib/i18n";
 import { Card } from "@/components/ui/card";
@@ -20,6 +16,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -48,11 +45,7 @@ import {
   ChevronsUpDown,
 } from "lucide-react";
 import { toast } from "sonner";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Command,
   CommandEmpty,
@@ -62,7 +55,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
-import { apiClient } from "@/lib/api/api-client";
+import { apiClient } from "@/store/queryBridge";
 
 // Arabic city name map for bulk-add flow
 const ARABIC_CITY_MAP: Record<string, string> = {
@@ -111,16 +104,16 @@ const ARABIC_CITY_MAP: Record<string, string> = {
   "Al Madinah Region": "المدينة المنورة",
   "Makkah Region": "مكة المكرمة",
   "Riyadh Region": "الرياض",
-  "Asir": "عسير",
+  Asir: "عسير",
   "Asir Region": "عسير",
   "Al-Qassim": "القصيم",
   "Al-Qassim Region": "القصيم",
   "Tabuk Region": "تبوك",
-  "Hail": "حائل",
+  Hail: "حائل",
   "Hail Region": "حائل",
-  "Jazan": "جازان",
+  Jazan: "جازان",
   "Jazan Region": "جازان",
-  "Najran": "نجران",
+  Najran: "نجران",
   "Najran Region": "نجران",
   "Al-Bahah": "الباحة",
   "Al-Bahah Region": "الباحة",
@@ -156,7 +149,7 @@ const ARABIC_CITY_MAP: Record<string, string> = {
   "New Valley": "الوادي الجديد",
   // UAE Emirates
   "Ras Al Khaimah": "رأس الخيمة",
-  "Fujairah": "الفجيرة",
+  Fujairah: "الفجيرة",
   "Umm Al Quwain": "أم القيوين",
 };
 
@@ -191,12 +184,7 @@ const getCurrencyNameAr = (code: string) => {
 };
 
 type ActiveTab =
-  | "countries"
-  | "cities"
-  | "currencies"
-  | "room_types"
-  | "supplier_types"
-  | "meal_plans";
+  "countries" | "cities" | "currencies" | "room_types" | "supplier_types" | "meal_plans";
 
 const TAB_LABELS: Record<ActiveTab, { ar: string; en: string }> = {
   countries: { ar: "الدول", en: "Countries" },
@@ -232,8 +220,7 @@ export default function SettingsPage() {
   // Form helper state
   const [countryPopoverOpen, setCountryPopoverOpen] = useState(false);
   const [currencyPopoverOpen, setCurrencyPopoverOpen] = useState(false);
-  const [selectedCountryCodeForCities, setSelectedCountryCodeForCities] =
-    useState("");
+  const [selectedCountryCodeForCities, setSelectedCountryCodeForCities] = useState("");
   const [citySearchQuery, setCitySearchQuery] = useState("");
   const [selectedCityNames, setSelectedCityNames] = useState<string[]>([]);
 
@@ -284,7 +271,7 @@ export default function SettingsPage() {
 
   // ── Filter & paginate ────────────────────────────────────────────────────
   const rawData: any = dataQuery.data;
-  const rawList = Array.isArray(rawData) ? rawData : (rawData?.data || []);
+  const rawList = Array.isArray(rawData) ? rawData : rawData?.data || [];
   const filteredList = rawList.filter((item: any) => {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
@@ -296,10 +283,7 @@ export default function SettingsPage() {
   });
   const totalItems = filteredList.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
-  const paginatedList = filteredList.slice(
-    (page - 1) * pageSize,
-    page * pageSize
-  );
+  const paginatedList = filteredList.slice((page - 1) * pageSize, page * pageSize);
 
   // ── Save mutation ────────────────────────────────────────────────────────
   const saveMutation = useMutation({
@@ -334,7 +318,7 @@ export default function SettingsPage() {
         } else {
           // Bulk city creation
           const rawCountries: any = countriesForCitiesQuery.data;
-          const countryArr = Array.isArray(rawCountries) ? rawCountries : (rawCountries?.data || []);
+          const countryArr = Array.isArray(rawCountries) ? rawCountries : rawCountries?.data || [];
           const countryObj = countryArr.find((c: any) => c.code === selectedCountryCodeForCities);
           const countryId = countryObj?.id || selectedCountryCodeForCities;
 
@@ -357,7 +341,7 @@ export default function SettingsPage() {
             symbol_ar: payload.symbol,
             symbol_en: payload.symbol,
             rate_to_sar: 1,
-            status: 1,
+            status: payload.is_active ? 1 : 0,
           });
         } else {
           await apiClient.currencies.create({
@@ -368,7 +352,7 @@ export default function SettingsPage() {
             symbol_ar: payload.symbol,
             symbol_en: payload.symbol,
             rate_to_sar: 1,
-            status: 1,
+            status: payload.is_active ? 1 : 0,
           });
         }
       } else if (activeTab === "room_types") {
@@ -377,12 +361,14 @@ export default function SettingsPage() {
             name_ar: payload.name_ar,
             name_en: payload.name_en,
             code: payload.code || editingItem.code,
+            status: payload.is_active ? 1 : 0,
           });
         } else {
           await apiClient.roomTypes.create({
             code: payload.code,
             name_ar: payload.name_ar,
             name_en: payload.name_en,
+            status: payload.is_active ? 1 : 0,
           });
         }
       } else if (activeTab === "supplier_types") {
@@ -406,13 +392,14 @@ export default function SettingsPage() {
           await apiClient.mealPlans.update(editingItem.id, {
             name_ar: payload.name_ar,
             name_en: payload.name_en,
+            status: payload.is_active ? 1 : 0,
           });
         } else {
           await apiClient.mealPlans.create({
             key: payload.key,
             name_ar: payload.name_ar,
             name_en: payload.name_en,
-            status: true,
+            status: payload.is_active ? 1 : 0,
           });
         }
       }
@@ -455,7 +442,7 @@ export default function SettingsPage() {
   // ── Dialog helpers ───────────────────────────────────────────────────────
   const openForm = (item: any | null = null) => {
     setEditingItem(item);
-    setFormData(item ? { ...item } : { is_active: true });
+    setFormData(item ? { ...item, is_active: getItemActive(item) } : { is_active: true });
     setCountryPopoverOpen(false);
     setCurrencyPopoverOpen(false);
     setSelectedCountryCodeForCities("");
@@ -468,18 +455,12 @@ export default function SettingsPage() {
     e.preventDefault();
     if (activeTab === "cities" && !editingItem) {
       if (!selectedCountryCodeForCities) {
-        toast.error(
-          lang === "ar"
-            ? "يرجى اختيار الدولة أولاً"
-            : "Please select a country first"
-        );
+        toast.error(lang === "ar" ? "يرجى اختيار الدولة أولاً" : "Please select a country first");
         return;
       }
       if (selectedCityNames.length === 0) {
         toast.error(
-          lang === "ar"
-            ? "يرجى تحديد مدينة واحدة على الأقل"
-            : "Please select at least one city"
+          lang === "ar" ? "يرجى تحديد مدينة واحدة على الأقل" : "Please select at least one city",
         );
         return;
       }
@@ -492,9 +473,7 @@ export default function SettingsPage() {
   // ── Render ───────────────────────────────────────────────────────────────
   return (
     <>
-      <PageHeader
-        title={lang === "ar" ? "إعدادات النظام" : "System Settings"}
-      />
+      <PageHeader title={lang === "ar" ? "إعدادات النظام" : "System Settings"} />
 
       <div className="p-6 mx-auto space-y-6" dir={dir}>
         <Card className="border border-border/40 bg-card/60 backdrop-blur-md shadow-lg rounded-2xl overflow-hidden">
@@ -512,9 +491,7 @@ export default function SettingsPage() {
                     value={value}
                     className="px-4 py-2 text-sm font-semibold rounded-full data-[state=active]:bg-[#a8702c] data-[state=active]:text-white transition-all text-muted-foreground"
                   >
-                    {lang === "ar"
-                      ? TAB_LABELS[value].ar
-                      : TAB_LABELS[value].en}
+                    {lang === "ar" ? TAB_LABELS[value].ar : TAB_LABELS[value].en}
                   </TabsTrigger>
                 ))}
               </TabsList>
@@ -529,9 +506,7 @@ export default function SettingsPage() {
                   className="bg-[#a8702c] text-white hover:bg-[#915f23] rounded-xl px-5 h-11 font-medium transition-all flex items-center gap-2 cursor-pointer shadow-sm"
                 >
                   <Plus className="h-4 w-4" />
-                  <span>
-                    {lang === "ar" ? "إضافة سمة جديدة" : "Add New Attribute"}
-                  </span>
+                  <span>{lang === "ar" ? "إضافة سمة جديدة" : "Add New Attribute"}</span>
                 </Button>
                 <div className="relative w-full md:w-80">
                   <Input
@@ -549,15 +524,11 @@ export default function SettingsPage() {
               {dataQuery.isLoading ? (
                 <div className="flex flex-col items-center justify-center py-20 gap-4">
                   <Loader2 className="h-8 w-8 animate-spin text-[#a8702c]" />
-                  <span className="text-sm text-muted-foreground">
-                    {t("label.loading")}
-                  </span>
+                  <span className="text-sm text-muted-foreground">{t("label.loading")}</span>
                 </div>
               ) : paginatedList.length === 0 ? (
                 <div className="text-center py-20 text-muted-foreground text-sm border border-dashed rounded-2xl">
-                  {lang === "ar"
-                    ? "لا توجد نتائج مطابقة لبحثك"
-                    : "No results found"}
+                  {lang === "ar" ? "لا توجد نتائج مطابقة لبحثك" : "No results found"}
                 </div>
               ) : (
                 <div className="border border-border/40 rounded-2xl overflow-hidden shadow-sm bg-background/40">
@@ -567,52 +538,32 @@ export default function SettingsPage() {
                         <TableHead className="w-12">
                           <Checkbox className="rounded" />
                         </TableHead>
+                        <TableHead>{lang === "ar" ? "الاسم بالعربي" : "Name (Arabic)"}</TableHead>
                         <TableHead>
-                          {lang === "ar" ? "الاسم بالعربي" : "Name (Arabic)"}
-                        </TableHead>
-                        <TableHead>
-                          {lang === "ar"
-                            ? "الاسم بالانجليزي"
-                            : "Name (English)"}
+                          {lang === "ar" ? "الاسم بالانجليزي" : "Name (English)"}
                         </TableHead>
                         {activeTab === "countries" && (
                           <>
-                            <TableHead>
-                              {lang === "ar" ? "رمز الدولة" : "Code"}
-                            </TableHead>
-                            <TableHead>
-                              {lang === "ar" ? "مفتاح الاتصال" : "Phone Code"}
-                            </TableHead>
+                            <TableHead>{lang === "ar" ? "رمز الدولة" : "Code"}</TableHead>
+                            <TableHead>{lang === "ar" ? "مفتاح الاتصال" : "Phone Code"}</TableHead>
                           </>
                         )}
                         {activeTab === "cities" && (
-                          <TableHead>
-                            {lang === "ar" ? "الدولة" : "Country"}
-                          </TableHead>
+                          <TableHead>{lang === "ar" ? "الدولة" : "Country"}</TableHead>
                         )}
                         {activeTab === "currencies" && (
                           <>
-                            <TableHead>
-                              {lang === "ar" ? "رمز العملة" : "Code"}
-                            </TableHead>
-                            <TableHead>
-                              {lang === "ar" ? "الرمز" : "Symbol"}
-                            </TableHead>
+                            <TableHead>{lang === "ar" ? "رمز العملة" : "Code"}</TableHead>
+                            <TableHead>{lang === "ar" ? "الرمز" : "Symbol"}</TableHead>
                           </>
                         )}
                         {activeTab === "room_types" && (
-                          <TableHead>
-                            {lang === "ar" ? "الرمز" : "Code"}
-                          </TableHead>
+                          <TableHead>{lang === "ar" ? "الرمز" : "Code"}</TableHead>
                         )}
                         {(activeTab === "meal_plans" || activeTab === "supplier_types") && (
-                          <TableHead>
-                            {lang === "ar" ? "المفتاح" : "Key"}
-                          </TableHead>
+                          <TableHead>{lang === "ar" ? "المفتاح" : "Key"}</TableHead>
                         )}
-                        <TableHead>
-                          {lang === "ar" ? "الحالة" : "Status"}
-                        </TableHead>
+                        <TableHead>{lang === "ar" ? "الحالة" : "Status"}</TableHead>
                         <TableHead className="text-center w-28">
                           {lang === "ar" ? "الإجراءات" : "Actions"}
                         </TableHead>
@@ -637,9 +588,7 @@ export default function SettingsPage() {
                                     alt={item.name_en}
                                     className="w-6 h-4 object-contain shadow-sm rounded-sm border border-border/40 shrink-0"
                                     onError={(e) => {
-                                      (
-                                        e.target as HTMLElement
-                                      ).style.display = "none";
+                                      (e.target as HTMLElement).style.display = "none";
                                     }}
                                   />
                                 )}
@@ -654,9 +603,7 @@ export default function SettingsPage() {
                                 <TableCell className="font-mono uppercase">
                                   {item.code || "—"}
                                 </TableCell>
-                                <TableCell >
-                                  {item.phone_code || "—"}
-                                </TableCell>
+                                <TableCell>{item.phone_code || "—"}</TableCell>
                               </>
                             )}
                             {activeTab === "cities" && (
@@ -667,12 +614,21 @@ export default function SettingsPage() {
                                   const cCode = item.country_code || item.country?.code;
 
                                   const country = rawCountries?.find(
-                                    (c: any) => (cId && String(c.id) === String(cId)) || (cCode && c.code === cCode)
+                                    (c: any) =>
+                                      (cId && String(c.id) === String(cId)) ||
+                                      (cCode && c.code === cCode),
                                   );
 
-                                  const name = lang === "ar"
-                                    ? country?.name_ar || item.country?.name_ar || country?.name_en || item.country?.name_en
-                                    : country?.name_en || item.country?.name_en || country?.name_ar || item.country?.name_ar;
+                                  const name =
+                                    lang === "ar"
+                                      ? country?.name_ar ||
+                                        item.country?.name_ar ||
+                                        country?.name_en ||
+                                        item.country?.name_en
+                                      : country?.name_en ||
+                                        item.country?.name_en ||
+                                        country?.name_ar ||
+                                        item.country?.name_ar;
 
                                   return name || cCode || cId || "—";
                                 })()}
@@ -683,9 +639,7 @@ export default function SettingsPage() {
                                 <TableCell className="font-mono uppercase">
                                   {item.code || "—"}
                                 </TableCell>
-                                <TableCell className="font-medium">
-                                  {item.symbol || "—"}
-                                </TableCell>
+                                <TableCell className="font-medium">{item.symbol || "—"}</TableCell>
                               </>
                             )}
                             {activeTab === "room_types" && (
@@ -694,16 +648,15 @@ export default function SettingsPage() {
                               </TableCell>
                             )}
                             {(activeTab === "meal_plans" || activeTab === "supplier_types") && (
-                              <TableCell className="font-semibold">
-                                {item.key || "—"}
-                              </TableCell>
+                              <TableCell className="font-semibold">{item.key || "—"}</TableCell>
                             )}
                             <TableCell>
                               <span
-                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${isActive
-                                  ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
-                                  : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
-                                  }`}
+                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                                  isActive
+                                    ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+                                    : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
+                                }`}
                               >
                                 {isActive
                                   ? lang === "ar"
@@ -765,10 +718,9 @@ export default function SettingsPage() {
                         <Button
                           key={pageNum}
                           variant={pageNum === page ? "default" : "outline"}
-                          className={`h-9 w-9 rounded-xl font-semibold border-border/50 ${pageNum === page
-                            ? "bg-[#a8702c] hover:bg-[#915f23] text-white"
-                            : ""
-                            }`}
+                          className={`h-9 w-9 rounded-xl font-semibold border-border/50 ${
+                            pageNum === page ? "bg-[#a8702c] hover:bg-[#915f23] text-white" : ""
+                          }`}
                           onClick={() => setPage(pageNum)}
                         >
                           {pageNum}
@@ -779,9 +731,7 @@ export default function SettingsPage() {
                       variant="outline"
                       size="icon"
                       className="h-9 w-9 rounded-xl border-border/50 disabled:opacity-40"
-                      onClick={() =>
-                        setPage((p) => Math.min(totalPages, p + 1))
-                      }
+                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                       disabled={page === totalPages}
                     >
                       {dir === "rtl" ? (
@@ -835,9 +785,7 @@ export default function SettingsPage() {
               onClick={() => deleteMutation.mutate(deleteItem)}
               disabled={deleteMutation.isPending}
             >
-              {deleteMutation.isPending && (
-                <Loader2 className="h-4 w-4 animate-spin mr-1" />
-              )}
+              {deleteMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-1" />}
               {lang === "ar" ? "تأكيد الحذف" : "Confirm Delete"}
             </Button>
           </DialogFooter>
@@ -876,7 +824,7 @@ export default function SettingsPage() {
                   required
                   disabled={!!editingItem}
                   className="bg-background/50 rounded-xl"
-                  value={activeTab === "supplier_types" ? (formData.key || "") : (formData.code || "")}
+                  value={activeTab === "supplier_types" ? formData.key || "" : formData.code || ""}
                   onChange={(e) =>
                     activeTab === "supplier_types"
                       ? setFormData({ ...formData, key: e.target.value })
@@ -894,19 +842,10 @@ export default function SettingsPage() {
                 </Label>
                 <Select
                   value={formData.key || ""}
-                  onValueChange={(val) =>
-                    setFormData({ ...formData, key: val })
-                  }
+                  onValueChange={(val) => setFormData({ ...formData, key: val })}
                 >
-                  <SelectTrigger
-                    id="mp_key"
-                    className="bg-background/50 rounded-xl"
-                  >
-                    <SelectValue
-                      placeholder={
-                        lang === "ar" ? "اختر النوع" : "Select Board Type"
-                      }
-                    />
+                  <SelectTrigger id="mp_key" className="bg-background/50 rounded-xl">
+                    <SelectValue placeholder={lang === "ar" ? "اختر النوع" : "Select Board Type"} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="RO">RO — Room Only (بدون وجبات)</SelectItem>
@@ -926,10 +865,7 @@ export default function SettingsPage() {
                 <Label className="text-sm font-semibold">
                   {lang === "ar" ? "اختر الدولة" : "Select Country"}
                 </Label>
-                <Popover
-                  open={countryPopoverOpen}
-                  onOpenChange={setCountryPopoverOpen}
-                >
+                <Popover open={countryPopoverOpen} onOpenChange={setCountryPopoverOpen}>
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
@@ -939,15 +875,15 @@ export default function SettingsPage() {
                       <span className="truncate">
                         {formData.code
                           ? (() => {
-                            const c = CountryLib.getAllCountries().find(
-                              (c) => c.isoCode === formData.code
-                            );
-                            return c
-                              ? `${c.name} (${c.isoCode})`
-                              : lang === "ar"
-                                ? "اختر الدولة..."
-                                : "Select Country...";
-                          })()
+                              const c = CountryLib.getAllCountries().find(
+                                (c) => c.isoCode === formData.code,
+                              );
+                              return c
+                                ? `${c.name} (${c.isoCode})`
+                                : lang === "ar"
+                                  ? "اختر الدولة..."
+                                  : "Select Country...";
+                            })()
                           : lang === "ar"
                             ? "اختر الدولة..."
                             : "Select Country..."}
@@ -961,11 +897,7 @@ export default function SettingsPage() {
                   >
                     <Command>
                       <CommandInput
-                        placeholder={
-                          lang === "ar"
-                            ? "ابحث عن دولة..."
-                            : "Search for a country..."
-                        }
+                        placeholder={lang === "ar" ? "ابحث عن دولة..." : "Search for a country..."}
                       />
                       <CommandList className="max-h-[300px]">
                         <CommandEmpty>
@@ -984,13 +916,13 @@ export default function SettingsPage() {
                                     new Intl.DisplayNames(["ar"], {
                                       type: "region",
                                     }).of(country.isoCode) || country.name;
-                                } catch { }
+                                } catch {}
                                 try {
                                   nameEn =
                                     new Intl.DisplayNames(["en"], {
                                       type: "region",
                                     }).of(country.isoCode) || country.name;
-                                } catch { }
+                                } catch {}
                                 setFormData({
                                   ...formData,
                                   code: country.isoCode,
@@ -1006,9 +938,7 @@ export default function SettingsPage() {
                               <Check
                                 className={cn(
                                   "h-4 w-4 shrink-0",
-                                  formData.code === country.isoCode
-                                    ? "opacity-100"
-                                    : "opacity-0"
+                                  formData.code === country.isoCode ? "opacity-100" : "opacity-0",
                                 )}
                               />
                               <img
@@ -1016,8 +946,7 @@ export default function SettingsPage() {
                                 alt={country.name}
                                 className="w-5 h-3 object-contain shrink-0 rounded-sm border border-border/40"
                                 onError={(e) => {
-                                  (e.target as HTMLElement).style.display =
-                                    "none";
+                                  (e.target as HTMLElement).style.display = "none";
                                 }}
                               />
                               <span className="truncate">
@@ -1039,10 +968,7 @@ export default function SettingsPage() {
                 <Label className="text-sm font-semibold">
                   {lang === "ar" ? "اختر العملة" : "Select Currency"}
                 </Label>
-                <Popover
-                  open={currencyPopoverOpen}
-                  onOpenChange={setCurrencyPopoverOpen}
-                >
+                <Popover open={currencyPopoverOpen} onOpenChange={setCurrencyPopoverOpen}>
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
@@ -1065,53 +991,45 @@ export default function SettingsPage() {
                   >
                     <Command>
                       <CommandInput
-                        placeholder={
-                          lang === "ar"
-                            ? "ابحث عن عملة..."
-                            : "Search for a currency..."
-                        }
+                        placeholder={lang === "ar" ? "ابحث عن عملة..." : "Search for a currency..."}
                       />
                       <CommandList className="max-h-[300px]">
                         <CommandEmpty>
                           {lang === "ar" ? "لا توجد نتائج" : "No results"}
                         </CommandEmpty>
                         <CommandGroup>
-                          {Intl.supportedValuesOf("currency").map(
-                            (currencyCode) => {
-                              const nameEn = getCurrencyNameEn(currencyCode);
-                              const nameAr = getCurrencyNameAr(currencyCode);
-                              return (
-                                <CommandItem
-                                  key={currencyCode}
-                                  value={`${nameEn} ${nameAr} ${currencyCode}`}
-                                  onSelect={() => {
-                                    setFormData({
-                                      ...formData,
-                                      code: currencyCode,
-                                      symbol: getCurrencySymbol(currencyCode),
-                                      name_ar: nameAr,
-                                      name_en: nameEn,
-                                      is_active: true,
-                                    });
-                                    setCurrencyPopoverOpen(false);
-                                  }}
-                                  className="flex items-center gap-2 cursor-pointer"
-                                >
-                                  <Check
-                                    className={cn(
-                                      "h-4 w-4 shrink-0",
-                                      formData.code === currencyCode
-                                        ? "opacity-100"
-                                        : "opacity-0"
-                                    )}
-                                  />
-                                  <span className="truncate">
-                                    {nameEn} ({currencyCode}) — {nameAr}
-                                  </span>
-                                </CommandItem>
-                              );
-                            }
-                          )}
+                          {Intl.supportedValuesOf("currency").map((currencyCode) => {
+                            const nameEn = getCurrencyNameEn(currencyCode);
+                            const nameAr = getCurrencyNameAr(currencyCode);
+                            return (
+                              <CommandItem
+                                key={currencyCode}
+                                value={`${nameEn} ${nameAr} ${currencyCode}`}
+                                onSelect={() => {
+                                  setFormData({
+                                    ...formData,
+                                    code: currencyCode,
+                                    symbol: getCurrencySymbol(currencyCode),
+                                    name_ar: nameAr,
+                                    name_en: nameEn,
+                                    is_active: true,
+                                  });
+                                  setCurrencyPopoverOpen(false);
+                                }}
+                                className="flex items-center gap-2 cursor-pointer"
+                              >
+                                <Check
+                                  className={cn(
+                                    "h-4 w-4 shrink-0",
+                                    formData.code === currencyCode ? "opacity-100" : "opacity-0",
+                                  )}
+                                />
+                                <span className="truncate">
+                                  {nameEn} ({currencyCode}) — {nameAr}
+                                </span>
+                              </CommandItem>
+                            );
+                          })}
                         </CommandGroup>
                       </CommandList>
                     </Command>
@@ -1136,11 +1054,7 @@ export default function SettingsPage() {
                     }}
                   >
                     <SelectTrigger className="bg-background/50 rounded-xl">
-                      <SelectValue
-                        placeholder={
-                          lang === "ar" ? "اختر الدولة" : "Select Country"
-                        }
-                      />
+                      <SelectValue placeholder={lang === "ar" ? "اختر الدولة" : "Select Country"} />
                     </SelectTrigger>
                     <SelectContent>
                       {(countriesForCitiesQuery.data as any[])?.map((c: any) => (
@@ -1155,9 +1069,7 @@ export default function SettingsPage() {
                 {selectedCountryCodeForCities &&
                   (() => {
                     const availableCities = (
-                      StateLib.getStatesOfCountry(
-                        selectedCountryCodeForCities
-                      ) || []
+                      StateLib.getStatesOfCountry(selectedCountryCodeForCities) || []
                     ).map((state) => ({
                       ...state,
                       name: state.name
@@ -1166,31 +1078,22 @@ export default function SettingsPage() {
                         .trim(),
                     }));
                     const filteredCities = availableCities.filter((city) =>
-                      city.name
-                        .toLowerCase()
-                        .includes(citySearchQuery.toLowerCase())
+                      city.name.toLowerCase().includes(citySearchQuery.toLowerCase()),
                     );
                     const allSelected =
                       filteredCities.length > 0 &&
-                      filteredCities.every((city) =>
-                        selectedCityNames.includes(city.name)
-                      );
+                      filteredCities.every((city) => selectedCityNames.includes(city.name));
                     const someSelected =
-                      filteredCities.some((city) =>
-                        selectedCityNames.includes(city.name)
-                      ) && !allSelected;
+                      filteredCities.some((city) => selectedCityNames.includes(city.name)) &&
+                      !allSelected;
                     return (
                       <div className="space-y-3 pt-2">
                         <Label className="text-sm font-semibold">
-                          {lang === "ar"
-                            ? "اختر المدن المراد إضافتها"
-                            : "Select Cities to Add"}
+                          {lang === "ar" ? "اختر المدن المراد إضافتها" : "Select Cities to Add"}
                         </Label>
                         <div className="relative">
                           <Input
-                            placeholder={
-                              lang === "ar" ? "ابحث عن مدينة..." : "Search city..."
-                            }
+                            placeholder={lang === "ar" ? "ابحث عن مدينة..." : "Search city..."}
                             value={citySearchQuery}
                             onChange={(e) => setCitySearchQuery(e.target.value)}
                             className="pe-10 ps-4 h-10 rounded-xl"
@@ -1202,27 +1105,18 @@ export default function SettingsPage() {
                             <Checkbox
                               id="select-all-cities"
                               className="rounded cursor-pointer"
-                              checked={
-                                allSelected
-                                  ? true
-                                  : someSelected
-                                    ? "indeterminate"
-                                    : false
-                              }
+                              checked={allSelected ? true : someSelected ? "indeterminate" : false}
                               onCheckedChange={(checked) => {
                                 if (checked) {
                                   const next = [...selectedCityNames];
                                   filteredCities.forEach((c) => {
-                                    if (!next.includes(c.name))
-                                      next.push(c.name);
+                                    if (!next.includes(c.name)) next.push(c.name);
                                   });
                                   setSelectedCityNames(next);
                                 } else {
                                   const names = filteredCities.map((c) => c.name);
                                   setSelectedCityNames(
-                                    selectedCityNames.filter(
-                                      (n) => !names.includes(n)
-                                    )
+                                    selectedCityNames.filter((n) => !names.includes(n)),
                                   );
                                 }
                               }}
@@ -1251,20 +1145,13 @@ export default function SettingsPage() {
                                 <Checkbox
                                   id={`city-${city.name}`}
                                   className="rounded cursor-pointer"
-                                  checked={selectedCityNames.includes(
-                                    city.name
-                                  )}
+                                  checked={selectedCityNames.includes(city.name)}
                                   onCheckedChange={(checked) => {
                                     if (checked)
-                                      setSelectedCityNames([
-                                        ...selectedCityNames,
-                                        city.name,
-                                      ]);
+                                      setSelectedCityNames([...selectedCityNames, city.name]);
                                     else
                                       setSelectedCityNames(
-                                        selectedCityNames.filter(
-                                          (n) => n !== city.name
-                                        )
+                                        selectedCityNames.filter((n) => n !== city.name),
                                       );
                                   }}
                                 />
@@ -1303,9 +1190,7 @@ export default function SettingsPage() {
                     required
                     className="bg-background/50 rounded-xl"
                     value={formData.name_ar || ""}
-                    onChange={(e) =>
-                      setFormData({ ...formData, name_ar: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, name_ar: e.target.value })}
                   />
                 </div>
                 <div className="space-y-2">
@@ -1317,12 +1202,24 @@ export default function SettingsPage() {
                     required
                     className="bg-background/50 rounded-xl"
                     value={formData.name_en || ""}
-                    onChange={(e) =>
-                      setFormData({ ...formData, name_en: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, name_en: e.target.value })}
                   />
                 </div>
               </>
+            )}
+
+            {/* Status Switch */}
+            {!(activeTab === "cities" && !editingItem) && (
+              <div className="flex items-center gap-2 mt-4 bg-muted/30 p-3 rounded-xl border border-border/30">
+                <Switch 
+                  id="is_active" 
+                  checked={formData.is_active} 
+                  onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })} 
+                />
+                <Label htmlFor="is_active" className="text-sm font-semibold cursor-pointer">
+                  {lang === "ar" ? "الحالة: نشط" : "Status: Active"}
+                </Label>
+              </div>
             )}
 
             <DialogFooter className="pt-4 border-t gap-2 flex sm:justify-end">
@@ -1339,9 +1236,7 @@ export default function SettingsPage() {
                 disabled={saveMutation.isPending}
                 className="bg-[#a8702c] hover:bg-[#915f23] text-white rounded-xl px-6"
               >
-                {saveMutation.isPending && (
-                  <Loader2 className="h-4 w-4 animate-spin mr-1" />
-                )}
+                {saveMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-1" />}
                 {lang === "ar" ? "حفظ السمة" : "Save Attribute"}
               </Button>
             </DialogFooter>

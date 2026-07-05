@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { db } from "@/lib/api/db";
-import { apiClient } from "@/lib/api/api-client";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { db } from "@/store/queryBridge";
+import { apiClient } from "@/store/queryBridge";
+import { useQuery, useMutation, useQueryClient } from "@/store/queryBridge";
 import { useI18n } from "@/lib/i18n";
 import { useSelector } from "react-redux";
 import { selectAuth } from "@/store/features/authSlice";
@@ -14,7 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Send, Check, X, Undo2, Archive } from "lucide-react";
 import { formatDateTime } from "@/lib/format";
-import { dbErrorMessage } from "@/lib/db-errors";
+import { dbErrorMessage } from "@/store/queryBridge";
 import { toast } from "sonner";
 import type { AttachmentEntityType } from "@/components/entity-attachments";
 

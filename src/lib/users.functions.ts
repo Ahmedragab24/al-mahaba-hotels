@@ -1,5 +1,5 @@
-import { db } from "@/lib/api/db";
-import { apiClient } from "@/lib/api/api-client";
+import { db } from "@/store/queryBridge";
+import { apiClient } from "@/store/queryBridge";
 
 export async function createStaffUser({ data }: { data: any }) {
   const { full_name_ar, full_name_en, email, password, role, blocked_modules } = data;

@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { db } from "@/lib/api/db";
-import { apiClient } from "@/lib/api/api-client";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { db } from "@/store/queryBridge";
+import { apiClient } from "@/store/queryBridge";
+import { useQuery, useMutation, useQueryClient } from "@/store/queryBridge";
 import { useI18n } from "@/lib/i18n";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { formatDate } from "@/lib/format";
-import { dbErrorMessage } from "@/lib/db-errors";
+import { dbErrorMessage } from "@/store/queryBridge";
 import { toast } from "sonner";
 
 const OCC = ["SGL", "DBL", "TPL", "QUAD", "CHD", "INF"] as const;

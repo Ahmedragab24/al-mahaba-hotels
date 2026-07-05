@@ -1,4 +1,4 @@
-import { db } from "@/lib/api/db";
+import { db } from "@/store/queryBridge";
 
 export async function getSimulationSettings() {
   const { data, error } = await db
@@ -22,7 +22,7 @@ export async function getSimulationSettings() {
   ]) {
     const { count } = await db
       .from(table as any)
-      .select("*", { count: "exact", head: true })
+      .select("*", { count: "exact" })
       .eq("is_simulated", true);
     counts[table] = count ?? 0;
   }
@@ -45,12 +45,9 @@ export async function updateSimulationSettings({ data }: { data: any }) {
 }
 
 export async function runSimulationNow() {
-  // Client side simulation tick run trigger:
-    // otherwise, we can perform a simulated action or just return ok: true.
   try {
-    const { data, error } = await db.functions.invoke("simulation-tick", {
-      body: { force: true }
-    });
+    // For local mock / simulation tick:
+    const { data, error } = await db.from("simulation_ticks" as any).insert({ force: true });
     if (error) throw error;
     return data || { ok: true, message: "Simulation triggered successfully." };
   } catch (err) {
@@ -74,7 +71,7 @@ export async function purgeSimulatedData() {
   ]) {
     const { count, error } = await db
       .from(table as any)
-      .delete({ count: "exact" })
+      .delete()
       .eq("is_simulated", true);
     if (error) {
       deletions.push([table, -1]);

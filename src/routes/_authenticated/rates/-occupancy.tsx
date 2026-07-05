@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { apiClient } from "@/lib/api/api-client";
-import { db } from "@/lib/api/db";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiClient } from "@/store/queryBridge";
+import { db } from "@/store/queryBridge";
+import { useQuery, useMutation, useQueryClient } from "@/store/queryBridge";
 import { useI18n } from "@/lib/i18n";
 import { Card, CardContent } from "@/components/ui/card";
 import {

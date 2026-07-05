@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { db } from "@/lib/api/db";
-import { apiClient } from "@/lib/api/api-client";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { db } from "@/store/queryBridge";
+import { apiClient } from "@/store/queryBridge";
+import { useQuery, useMutation, useQueryClient } from "@/store/queryBridge";
 import { useNavigate } from "react-router-dom";
 import { useI18n } from "@/lib/i18n";
 import { useSelector } from "react-redux";
@@ -17,7 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Plus, Trash2, Check, X, Trophy, FileOutput } from "lucide-react";
 import { formatDate, formatDateTime } from "@/lib/format";
-import { dbErrorMessage } from "@/lib/db-errors";
+import { dbErrorMessage } from "@/store/queryBridge";
 import { toast } from "sonner";
 import { useCurrencies } from "@/lib/lookups";
 import { useRfqItems, rfqItemLabel } from "./-items";

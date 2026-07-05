@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
-import { db } from "@/lib/api/db";
-import { apiClient } from "@/lib/api/api-client";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { db } from "@/store/queryBridge";
+import { apiClient } from "@/store/queryBridge";
+import { useQuery, useMutation, useQueryClient } from "@/store/queryBridge";
 import { useI18n } from "@/lib/i18n";
 import { useSelector } from "react-redux";
 import { selectAuth } from "@/store/features/authSlice";
@@ -14,7 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Upload, Eye, Download, Archive, ArchiveRestore, FileText, Image as ImageIcon, FileSpreadsheet } from "lucide-react";
 import { formatDateTime } from "@/lib/format";
-import { dbErrorMessage } from "@/lib/db-errors";
+import { dbErrorMessage } from "@/store/queryBridge";
 import { toast } from "sonner";
 
 export type AttachmentEntityType =

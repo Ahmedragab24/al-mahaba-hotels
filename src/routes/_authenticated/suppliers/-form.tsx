@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation } from "@/store/queryBridge";
 import { useI18n } from "@/lib/i18n";
 import { useCountries, useCities, useCurrencies, useSupplierTypes } from "@/lib/lookups";
 import { Card, CardContent } from "@/components/ui/card";
@@ -48,9 +48,9 @@ type FormVals = z.input<ReturnType<typeof getSchema>>;
 
 export function SupplierForm({ initial, onSaved }: { initial?: any; onSaved: (id: number) => void }) {
   const { t, lang } = useI18n();
-  const countries = useCountries();
-  const currencies = useCurrencies();
-  const supplierTypes = useSupplierTypes();
+  const countries = useCountries({}, { refetchInterval: 2000 });
+  const currencies = useCurrencies({}, { refetchInterval: 2000 });
+  const supplierTypes = useSupplierTypes({}, { refetchInterval: 2000 });
   const [createSupplier] = useCreateSupplierMutation();
   const [updateSupplier] = useUpdateSupplierMutation();
 
@@ -78,7 +78,7 @@ export function SupplierForm({ initial, onSaved }: { initial?: any; onSaved: (id
   });
 
   const countryId = form.watch("country_id");
-  const cities = useCities(countryId ? countryId.toString() : null);
+  const cities = useCities(countryId ? countryId.toString() : null, { refetchInterval: 2000 });
 
   const mut = useMutation({
     mutationFn: async (vals: FormVals) => {
@@ -95,7 +95,16 @@ export function SupplierForm({ initial, onSaved }: { initial?: any; onSaved: (id
       toast.success(t("toast.saved"));
       onSaved(id);
     },
-    onError: (e: any) => toast.error(e.message ?? t("toast.error")),
+    onError: (e: any) => {
+      const errData = e?.data || e;
+      if (errData?.errors && typeof errData.errors === "object") {
+        Object.keys(errData.errors).forEach((key) => {
+          const msg = Array.isArray(errData.errors[key]) ? errData.errors[key][0] : errData.errors[key];
+          form.setError(key as any, { type: "server", message: msg });
+        });
+      }
+      toast.error(errData?.message || e.message || t("toast.error"));
+    },
   });
 
   return (

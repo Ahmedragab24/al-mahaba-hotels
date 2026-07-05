@@ -1,8 +1,8 @@
 // Operational report — bookings activity with filters and full export (Section 17).
 import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { db } from "@/lib/api/db";
+import { useQuery } from "@/store/queryBridge";
+import { db } from "@/store/queryBridge";
 import { useI18n } from "@/lib/i18n";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent } from "@/components/ui/card";

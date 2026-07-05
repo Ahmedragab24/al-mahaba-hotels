@@ -1,8 +1,8 @@
 // Dashboard widgets — six role-gated dashboards with real KPI calculations (BR-RPT-001 → BR-RPT-006).
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@/store/queryBridge";
 import { useGetDashboardDataQuery } from "@/store/api";
-import { db } from "@/lib/api/db";
-import { apiClient } from "@/lib/api/api-client";
+import { db } from "@/store/queryBridge";
+import { apiClient } from "@/store/queryBridge";
 import { Link, type LinkProps } from "react-router-dom";
 import { useI18n } from "@/lib/i18n";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

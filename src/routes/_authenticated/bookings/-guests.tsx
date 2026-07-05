@@ -1,8 +1,5 @@
 // Booking Guests tab — guest CRUD with lead-guest logic (exactly one lead per booking).
 import { useState } from "react";
-import { db } from "@/lib/api/db";
-import { apiClient } from "@/lib/api/api-client";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useI18n } from "@/lib/i18n";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -32,9 +29,14 @@ import {
 } from "@/components/ui/dialog";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Plus, Pencil, Trash2, Star } from "lucide-react";
-import { dbErrorMessage } from "@/lib/db-errors";
 import { toast } from "sonner";
 import { useBookingRooms } from "./-rooms";
+import {
+  useGetBookingGuestsQuery,
+  useCreateBookingGuestMutation,
+  useUpdateBookingGuestMutation,
+  useDeleteBookingGuestMutation,
+} from "@/store/api";
 
 type GuestForm = {
   id?: string;
@@ -56,26 +58,11 @@ const BLANK: GuestForm = {
   booking_room_id: "",
 };
 
-export function useBookingGuests(bookingId: string) {
-  return useQuery({
-    queryKey: ["booking-guests", bookingId],
-    queryFn: async () => {
-      const { data, error } = await db
-        .from("booking_guests")
-        .select("*")
-        .eq("booking_id", bookingId)
-        .order("is_lead", { ascending: false })
-        .order("created_at");
-      if (error) throw error;
-      return (data ?? []) as any[];
-    },
-  });
-}
+
 
 export function GuestsTab({ bookingId, editable }: { bookingId: string; editable: boolean }) {
   const { t, lang } = useI18n();
-  const qc = useQueryClient();
-  const guests = useBookingGuests(bookingId);
+  const guests = useGetBookingGuestsQuery({ booking_id: bookingId });
   const rooms = useBookingRooms(bookingId);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<GuestForm>(BLANK);
@@ -88,66 +75,63 @@ export function GuestsTab({ bookingId, editable }: { bookingId: string; editable
     return r ? `${nm(r.hotel)} · ${t(`occupancy.${r.occupancy_type}`, r.occupancy_type)}` : "—";
   };
 
-  const invalidate = () => {
-    qc.invalidateQueries({ queryKey: ["booking-guests", bookingId] });
-    qc.invalidateQueries({ queryKey: ["booking", bookingId] });
-  };
 
-  const save = useMutation({
-    mutationFn: async () => {
-      if (!form.full_name.trim()) throw new Error(t("bk.guests.name") + " *");
-      const payload: any = {
-        booking_id: bookingId,
-        full_name: form.full_name.trim(),
-        guest_type: form.guest_type,
-        nationality: form.nationality || null,
-        passport_no: form.passport_no || null,
-        phone: form.phone || null,
-        email: form.email || null,
-        booking_room_id: form.booking_room_id || null,
-      };
+  const [createGuest] = useCreateBookingGuestMutation();
+  const [updateGuest] = useUpdateBookingGuestMutation();
+
+  const save = async () => {
+    if (!form.full_name.trim()) {
+      toast.error(t("bk.guests.name") + " *");
+      return;
+    }
+    const payload: any = {
+      full_name: form.full_name.trim(),
+      guest_type: form.guest_type,
+      nationality: form.nationality || null,
+      passport_no: form.passport_no || null,
+      phone: form.phone || null,
+      email: form.email || null,
+      booking_room_id: form.booking_room_id || null,
+    };
+    try {
       if (form.id) {
-        await apiClient.bookingGuests.update(form.id, payload);
+        await updateGuest({ booking_id: bookingId, guest_id: form.id, body: payload }).unwrap();
       } else {
-        await apiClient.bookingGuests.create(payload);
+        await createGuest({ booking_id: bookingId, body: payload }).unwrap();
       }
-    },
-    onSuccess: () => {
       toast.success(t("toast.saved"));
       setOpen(false);
       setForm(BLANK);
-      invalidate();
-    },
-    onError: (e: any) => toast.error(dbErrorMessage(e, t)),
-  });
+    } catch (e: any) {
+      toast.error(e.data?.message || e.message || t("toast.error"));
+    }
+  };
 
-  const del = useMutation({
-    mutationFn: async (id: string) => {
-      await apiClient.bookingGuests.delete(id);
-    },
-    onSuccess: () => {
+  const [deleteGuest] = useDeleteBookingGuestMutation();
+
+  const del = async (id: string) => {
+    try {
+      await deleteGuest({ booking_id: bookingId, guest_id: id }).unwrap();
       toast.success(t("toast.saved"));
       setDeleteId(null);
-      invalidate();
-    },
-    onError: (e: any) => toast.error(dbErrorMessage(e, t)),
-  });
+    } catch (e: any) {
+      toast.error(e.data?.message || e.message || t("toast.error"));
+    }
+  };
 
   // Lead guest logic: demote current lead, promote selected guest
-  const setLead = useMutation({
-    mutationFn: async (id: string) => {
+  const setLead = async (id: string) => {
+    try {
       const current: any = (guests.data ?? []).find((g: any) => g.is_lead);
       if (current && current.id !== id) {
-        await apiClient.bookingGuests.update(current.id, { is_lead: false });
+        await updateGuest({ booking_id: bookingId, guest_id: current.id, body: { is_lead: false } }).unwrap();
       }
-      await apiClient.bookingGuests.update(id, { is_lead: true });
-    },
-    onSuccess: () => {
+      await updateGuest({ booking_id: bookingId, guest_id: id, body: { is_lead: true } }).unwrap();
       toast.success(t("toast.saved"));
-      invalidate();
-    },
-    onError: (e: any) => toast.error(dbErrorMessage(e, t)),
-  });
+    } catch (e: any) {
+      toast.error(e.data?.message || e.message || t("toast.error"));
+    }
+  };
 
   const rows = guests.data ?? [];
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
@@ -215,7 +199,7 @@ export function GuestsTab({ bookingId, editable }: { bookingId: string; editable
                           size="sm"
                           variant="ghost"
                           className="h-7 text-xs"
-                          onClick={() => setLead.mutate(g.id)}
+                          onClick={() => setLead(g.id)}
                         >
                           {t("bk.guests.set_lead")}
                         </Button>
@@ -343,7 +327,7 @@ export function GuestsTab({ bookingId, editable }: { bookingId: string; editable
             </div>
           </div>
           <DialogFooter>
-            <Button disabled={save.isPending} onClick={() => save.mutate()}>
+            <Button onClick={save}>
               {t("actions.save")}
             </Button>
           </DialogFooter>
@@ -355,7 +339,7 @@ export function GuestsTab({ bookingId, editable }: { bookingId: string; editable
         onOpenChange={(v) => !v && setDeleteId(null)}
         title={t("actions.delete")}
         description={t("bk.guests.name")}
-        onConfirm={() => deleteId && del.mutate(deleteId)}
+        onConfirm={() => deleteId && del(deleteId)}
       />
     </div>
   );

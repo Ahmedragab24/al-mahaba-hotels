@@ -1,5 +1,5 @@
-import { db } from "@/lib/api/db";
-import { getCurrentUserId } from "@/lib/api/base";
+import { db } from "@/store/queryBridge";
+import { getCurrentUserId } from "@/store/queryBridge";
 
 export async function getMySupplierProfile() {
   const userData = { user: { id: getCurrentUserId() } };

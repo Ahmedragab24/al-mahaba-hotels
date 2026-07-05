@@ -2,7 +2,7 @@ import { useMemo, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@/store/queryBridge";
 import { useI18n } from "@/lib/i18n";
 import {
   useHotelsLite, useMealPlans, useCurrencies, useSuppliersLite,
@@ -15,11 +15,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { useCreatePriceMutation, useUpdatePriceMutation } from "@/store/services/pricing/pricingService";
+import { useCreatePriceMutation, useUpdatePriceMutation, useGetPricesQuery } from "@/store/services/pricing/pricingService";
 import { MealPlanConfigurator } from "@/components/meal-plan-configurator";
+import { Calendar, Hotel } from "lucide-react";
 
-function buildSchema(t: (k: string) => string) {
+function buildSchema(t: (k: string) => string, initial?: any) {
   return z.object({
     hotel_id: z.coerce.string().min(1, t("val.required_hotel")),
     is_direct: z.boolean().default(false),
@@ -34,16 +37,25 @@ function buildSchema(t: (k: string) => string) {
     meal_plan_inclusive_details: z.array(z.number()).default([]),
     meal_plan_exclusive_prices: z.record(z.string(), z.coerce.number()).default({}),
 
-    cost_per_night: z.coerce
-      .number({ invalid_type_error: t("val.required_cost") })
-      .nonnegative(t("val.nonnegative")),
+    is_weekend_weekday: z.boolean().default(false),
+
+    cost_per_night: z.coerce.number().nonnegative(t("val.nonnegative")).optional().or(z.literal("")),
     selling_price: z.coerce.number().nonnegative(t("val.nonnegative")).optional().or(z.literal("")),
     profit_margin: z.coerce.number().optional().or(z.literal("")),
+
+    weekend_price: z.object({
+      cost_per_night: z.coerce.number().nonnegative(t("val.nonnegative")).optional().or(z.literal("")),
+      days: z.array(z.string()).default([]),
+    }).optional(),
+    weekday_price: z.object({
+      cost_per_night: z.coerce.number().nonnegative(t("val.nonnegative")).optional().or(z.literal("")),
+      days: z.array(z.string()).default([]),
+    }).optional(),
 
     tax_type: z.enum(["inclusive_tax", "exclusive_tax"]).default("inclusive_tax"),
     tax_rate: z.coerce.number().nonnegative(t("val.nonnegative")).default(15),
 
-    status: z.string().default("approved"),
+    status: z.string().default("valid"),
 
     notes_en: z.string().max(2000, t("val.max_2000")).optional().or(z.literal("")),
     notes_ar: z.string().max(2000, t("val.max_2000")).optional().or(z.literal("")),
@@ -57,6 +69,46 @@ function buildSchema(t: (k: string) => string) {
     .refine((v) => v.is_direct || (v.supplier_id && v.supplier_id.toString().length > 0), {
       path: ["supplier_id"],
       message: t("val.required_supplier"),
+    })
+    .superRefine((data, ctx) => {
+      if (data.is_weekend_weekday) {
+        if (data.weekend_price?.cost_per_night === undefined || data.weekend_price?.cost_per_night === "") {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: t("val.required_cost"),
+            path: ["weekend_price", "cost_per_night"],
+          });
+        }
+        if (!data.weekend_price?.days || data.weekend_price.days.length === 0) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: t("val.required_days"),
+            path: ["weekend_price", "days"],
+          });
+        }
+        if (data.weekday_price?.cost_per_night === undefined || data.weekday_price?.cost_per_night === "") {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: t("val.required_cost"),
+            path: ["weekday_price", "cost_per_night"],
+          });
+        }
+        if (!data.weekday_price?.days || data.weekday_price.days.length === 0) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: t("val.required_days"),
+            path: ["weekday_price", "days"],
+          });
+        }
+      } else {
+        if (data.cost_per_night === undefined || data.cost_per_night === "") {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: t("val.required_cost"),
+            path: ["cost_per_night"],
+          });
+        }
+      }
     });
 }
 
@@ -65,17 +117,17 @@ type FormVals = z.input<ReturnType<typeof buildSchema>>;
 export function RateForm({ initial, onSaved }: { initial?: any; onSaved: (id: string) => void }) {
   const { t, lang } = useI18n();
   const qc = useQueryClient();
-  const hotels = useHotelsLite();
-  const suppliers = useSuppliersLite();
-  const currencies = useCurrencies();
-  const { data: mealPlansRes } = useMealPlans();
+  const hotels = useHotelsLite({ refetchInterval: 2000 });
+  const suppliers = useSuppliersLite({ refetchInterval: 2000 });
+  const currencies = useCurrencies({ refetchInterval: 2000 });
+  const { data: mealPlansRes } = useMealPlans({ refetchInterval: 2000 });
   const dynamicMeals = Array.isArray(mealPlansRes) ? mealPlansRes : (mealPlansRes?.data || []);
 
   const [createPrice, { isLoading: isCreating }] = useCreatePriceMutation();
   const [updatePrice, { isLoading: isUpdating }] = useUpdatePriceMutation();
   const isPending = isCreating || isUpdating;
 
-  const schema = useMemo(() => buildSchema(t), [lang]);
+  const schema = useMemo(() => buildSchema(t, initial), [lang, initial]);
 
   const form = useForm<FormVals>({
     resolver: zodResolver(schema),
@@ -90,13 +142,22 @@ export function RateForm({ initial, onSaved }: { initial?: any; onSaved: (id: st
       valid_to: initial?.valid_to ? initial.valid_to.split('T')[0] : "",
       meal_plan_type: initial?.meal_plan_type ?? "inclusive",
       meal_plan_inclusive_details: initial?.meal_plan_inclusive_details ?? initial?.meal_plan_details?.map((d: any) => d.id) ?? [],
-      meal_plan_exclusive_prices: initial?.meal_plan_exclusive_prices ?? initial?.meal_plan_details?.reduce((acc: any, d: any) => ({ ...acc, [d.id]: d.price }), {}) ?? {},
-      cost_per_night: initial?.cost_per_night ?? 0,
+      meal_plan_exclusive_prices: initial?.meal_plan_exclusive_prices ?? initial?.meal_plan_details?.reduce((acc: any, d: any) => ({ ...acc, [d.id.toString()]: d.price }), {}) ?? {},
+      is_weekend_weekday: initial?.is_weekend_weekday ?? false,
+      cost_per_night: initial?.cost_per_night ?? "",
       selling_price: initial?.selling_price?.toString() ?? "",
       profit_margin: initial?.profit_margin?.toString() ?? "5",
+      weekend_price: {
+        cost_per_night: (initial?.is_weekend_weekday && initial?.price_type === 'weekend') ? (initial?.cost_per_night ?? "") : (initial?.weekend_price?.cost_per_night ?? ""),
+        days: (initial?.is_weekend_weekday && initial?.price_type === 'weekend' && initial?.days?.length > 0) ? initial.days : (initial?.weekend_price?.days ?? ["Friday", "Saturday"]),
+      },
+      weekday_price: {
+        cost_per_night: (initial?.is_weekend_weekday && initial?.price_type === 'weekday') ? (initial?.cost_per_night ?? "") : (initial?.weekday_price?.cost_per_night ?? ""),
+        days: (initial?.is_weekend_weekday && initial?.price_type === 'weekday' && initial?.days?.length > 0) ? initial.days : (initial?.weekday_price?.days ?? ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday"]),
+      },
       tax_type: initial?.tax_type ?? "inclusive_tax",
       tax_rate: initial?.tax_rate ?? 15,
-      status: initial?.status ?? "approved",
+      status: initial?.status ?? "valid",
       notes_en: initial?.notes_en ?? initial?.notes ?? "",
       notes_ar: initial?.notes_ar ?? initial?.notes ?? "",
       cancellation_policy_en: initial?.cancellation_policy_en ?? initial?.cancellation_policy ?? "Guests may cancel their reservation free of charge up to 48 hours before the scheduled check-in date. Cancellations made within 48 hours of check-in, or failure to arrive (No-Show), will incur a charge equivalent to the first night's stay or as specified by the booked rate. For Non-Refundable reservations, no refund will be issued once the booking has been confirmed. Any eligible refunds will be processed in accordance with the hotel's policy and the original payment method.",
@@ -104,9 +165,86 @@ export function RateForm({ initial, onSaved }: { initial?: any; onSaved: (id: st
     },
   });
 
+  const siblingQuery = useGetPricesQuery({
+    hotel_id: initial?.hotel_id ? Number(initial.hotel_id) : undefined,
+    room_id: initial?.room_id ? Number(initial.room_id) : undefined,
+    supplier_id: initial?.supplier_id ? Number(initial.supplier_id) : undefined,
+    is_direct: initial?.is_direct,
+    valid_from: initial?.valid_from ? initial.valid_from.split('T')[0] : undefined,
+    valid_to: initial?.valid_to ? initial.valid_to.split('T')[0] : undefined,
+    all: "1",
+  }, {
+    skip: !initial?.id || !initial?.is_weekend_weekday
+  });
+
+  useEffect(() => {
+    if (initial) {
+      let weCost = (initial?.is_weekend_weekday && initial?.price_type === 'weekend') ? (initial?.cost_per_night ?? "") : "";
+      let weDays = (initial?.is_weekend_weekday && initial?.price_type === 'weekend' && initial?.days?.length > 0) ? initial.days : ["Friday", "Saturday"];
+      
+      let wdCost = (initial?.is_weekend_weekday && initial?.price_type === 'weekday') ? (initial?.cost_per_night ?? "") : "";
+      let wdDays = (initial?.is_weekend_weekday && initial?.price_type === 'weekday' && initial?.days?.length > 0) ? initial.days : ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday"];
+
+      const siblingRates = Array.isArray(siblingQuery.data) 
+        ? siblingQuery.data 
+        : (Array.isArray((siblingQuery.data as any)?.data) ? (siblingQuery.data as any).data : []);
+      
+      if (siblingRates && siblingRates.length > 0) {
+        const weRate = siblingRates.find((r: any) => r.price_type === "weekend");
+        const wdRate = siblingRates.find((r: any) => r.price_type === "weekday");
+
+        if (weRate) {
+          weCost = weRate.cost_per_night ?? "";
+          weDays = weRate.days?.length > 0 ? weRate.days : ["Friday", "Saturday"];
+        }
+        if (wdRate) {
+          wdCost = wdRate.cost_per_night ?? "";
+          wdDays = wdRate.days?.length > 0 ? wdRate.days : ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday"];
+        }
+      }
+
+      form.reset({
+        hotel_id: initial?.hotel_id?.toString() ?? "",
+        is_direct: initial?.is_direct ?? false,
+        supplier_id: initial?.supplier_id?.toString() ?? "",
+        room_id: (initial?.room_id || initial?.room_type_id)?.toString() ?? "",
+        hotel_view_id: (initial?.hotel_view_id || initial?.view_id)?.toString() ?? "",
+        currency_id: (initial?.currency_id || initial?.currency)?.toString() ?? "1",
+        valid_from: initial?.valid_from ? initial.valid_from.split('T')[0] : "",
+        valid_to: initial?.valid_to ? initial.valid_to.split('T')[0] : "",
+        meal_plan_type: initial?.meal_plan_type ?? "inclusive",
+        meal_plan_inclusive_details: initial?.meal_plan_inclusive_details ?? initial?.meal_plan_details?.map((d: any) => d.id) ?? [],
+        meal_plan_exclusive_prices: initial?.meal_plan_exclusive_prices ?? initial?.meal_plan_details?.reduce((acc: any, d: any) => ({ ...acc, [d.id.toString()]: d.price }), {}) ?? {},
+        is_weekend_weekday: initial?.is_weekend_weekday ?? false,
+        cost_per_night: initial?.cost_per_night ?? "",
+        selling_price: initial?.selling_price?.toString() ?? "",
+        profit_margin: initial?.profit_margin?.toString() ?? "5",
+        weekend_price: {
+          cost_per_night: weCost,
+          days: weDays,
+        },
+        weekday_price: {
+          cost_per_night: wdCost,
+          days: wdDays,
+        },
+        tax_type: initial?.tax_type ?? "inclusive_tax",
+        tax_rate: initial?.tax_rate ?? 15,
+        status: initial?.status ?? "valid",
+        notes_en: initial?.notes_en ?? initial?.notes ?? "",
+        notes_ar: initial?.notes_ar ?? initial?.notes ?? "",
+        cancellation_policy_en: initial?.cancellation_policy_en ?? initial?.cancellation_policy ?? "Guests may cancel their reservation free of charge up to 48 hours before the scheduled check-in date. Cancellations made within 48 hours of check-in, or failure to arrive (No-Show), will incur a charge equivalent to the first night's stay or as specified by the booked rate. For Non-Refundable reservations, no refund will be issued once the booking has been confirmed. Any eligible refunds will be processed in accordance with the hotel's policy and the original payment method.",
+        cancellation_policy_ar: initial?.cancellation_policy_ar ?? initial?.cancellation_policy ?? "يمكن للضيف إلغاء الحجز مجانًا حتى 48 ساعة قبل موعد تسجيل الوصول. في حال الإلغاء خلال أقل من 48 ساعة من موعد الوصول أو في حالة عدم الحضور (No-Show)، سيتم خصم قيمة الليلة الأولى أو وفقًا لشروط السعر المحجوز. في حال كان الحجز غير قابل للاسترداد (Non-Refundable)، فلن يتم استرداد أي مبالغ مدفوعة بعد تأكيد الحجز. تتم معالجة أي مبالغ مستحقة للاسترداد، إن وجدت، وفقًا لسياسة الفندق وطريقة الدفع المستخدمة.",
+      });
+    }
+  }, [initial, siblingQuery.data, form]);
+
+  const isEdit = !!initial?.id;
+  const activePriceType = initial?.price_type;
+
   const hotelId = form.watch("hotel_id");
   const isDirect = form.watch("is_direct");
   const mealPlanType = form.watch("meal_plan_type");
+  const isWeekendWeekday = form.watch("is_weekend_weekday");
   const costPerNight = form.watch("cost_per_night");
   const profitMargin = form.watch("profit_margin");
   const taxType = form.watch("tax_type");
@@ -114,37 +252,58 @@ export function RateForm({ initial, onSaved }: { initial?: any; onSaved: (id: st
   const sellingPrice = form.watch("selling_price");
   const currencyId = form.watch("currency_id");
 
+  const weekendPrice = form.watch("weekend_price");
+  const weekdayPrice = form.watch("weekday_price");
+  const weCostPerNight = weekendPrice?.cost_per_night;
+  const wdCostPerNight = weekdayPrice?.cost_per_night;
+
   // Auto-calculate selling_price from cost_per_night and profit_margin
   useEffect(() => {
+    if (isWeekendWeekday) return;
     const cost = Number(costPerNight) || 0;
     const margin = Number(profitMargin) || 0;
     let price = cost + (cost * margin / 100);
 
     if (taxType === "inclusive_tax") {
       const rate = Number(taxRate) || 0;
-      price = price + (price * rate / 100);
+      price = price - (price * rate / 100);
     }
 
     form.setValue("selling_price", Number(price.toFixed(2)) || 0);
-  }, [costPerNight, profitMargin, taxType, taxRate, form]);
+  }, [costPerNight, profitMargin, taxType, taxRate, isWeekendWeekday, form]);
 
-  // If tax type is exclusive, set tax rate to 0
-  useEffect(() => {
-    if (taxType === "exclusive_tax") {
-      form.setValue("tax_rate", 0);
+
+
+  const calculateDerivedPrices = (costVal: any) => {
+    const cost = Number(costVal) || 0;
+    const margin = Number(profitMargin) || 0;
+    let selling = cost + (cost * margin / 100);
+    const rate = Number(taxRate) || 0;
+
+    if (taxType === "inclusive_tax") {
+      selling = selling - (selling * rate / 100);
     }
-  }, [taxType, form]);
+
+    const totalVal = taxType === "inclusive_tax"
+      ? selling
+      : selling + (selling * rate / 100);
+
+    return {
+      sellingPrice: Number(selling.toFixed(2)),
+      total: Number(totalVal.toFixed(2)),
+    };
+  };
 
   const selectedCurrency = (Array.isArray(currencies.data) ? currencies.data : Array.isArray((currencies.data as any)?.data) ? (currencies.data as any).data : [])?.find((c: any) => (c.id || c.code).toString() === currencyId);
   const currencySymbol = selectedCurrency ? (lang === "ar" ? selectedCurrency.symbol_ar : selectedCurrency.symbol_en) || selectedCurrency.code : "";
 
   const sellingPriceNum = Number(sellingPrice) || 0;
-  const taxRateNum = taxType === "inclusive_tax" ? (Number(taxRate) || 0) : 0;
+  const taxRateNum = Number(taxRate) || 0;
   const total = taxType === "inclusive_tax"
     ? sellingPriceNum
     : Number((sellingPriceNum + (sellingPriceNum * taxRateNum / 100)).toFixed(2));
 
-  const roomsQuery = useGetRoomsQuery({ hotel_id: hotelId });
+  const roomsQuery = useGetRoomsQuery({ hotel_id: hotelId }, { pollingInterval: 2000 });
 
   const selectedHotel = Array.isArray(hotels.data)
     ? hotels.data.find((h: any) => h.id == hotelId)
@@ -175,24 +334,53 @@ export function RateForm({ initial, onSaved }: { initial?: any; onSaved: (id: st
       }
 
       // Convert ID fields to numbers where appropriate if the API expects it.
-      // Usually form inputs are strings, we coerce to numbers for the payload if needed.
       if (payload.hotel_id) payload.hotel_id = Number(payload.hotel_id);
       if (payload.room_id) payload.room_id = Number(payload.room_id);
       if (payload.hotel_view_id) payload.hotel_view_id = Number(payload.hotel_view_id);
       if (payload.currency_id) payload.currency_id = Number(payload.currency_id);
       if (payload.supplier_id) payload.supplier_id = Number(payload.supplier_id);
 
-      if (payload.cost_per_night !== "" && payload.cost_per_night !== null && payload.cost_per_night !== undefined) {
-        payload.cost_per_night = Number(payload.cost_per_night);
-      }
-      if (payload.selling_price !== "" && payload.selling_price !== null && payload.selling_price !== undefined) {
-        payload.selling_price = Number(payload.selling_price);
-      }
-      if (payload.profit_margin !== "" && payload.profit_margin !== null && payload.profit_margin !== undefined) {
-        payload.profit_margin = Number(payload.profit_margin);
-      }
       if (payload.tax_rate !== "" && payload.tax_rate !== null && payload.tax_rate !== undefined) {
         payload.tax_rate = Number(payload.tax_rate);
+      }
+
+      if (payload.is_weekend_weekday) {
+        const margin = Number(payload.profit_margin) || 0;
+        const weCost = Number(payload.weekend_price?.cost_per_night) || 0;
+        const weDerived = calculateDerivedPrices(weCost);
+
+        payload.weekend_price = {
+          cost_per_night: weCost,
+          selling_price: weDerived.sellingPrice,
+          profit_margin: margin,
+          days: payload.weekend_price?.days || [],
+        };
+
+        const wdCost = Number(payload.weekday_price?.cost_per_night) || 0;
+        const wdDerived = calculateDerivedPrices(wdCost);
+
+        payload.weekday_price = {
+          cost_per_night: wdCost,
+          selling_price: wdDerived.sellingPrice,
+          profit_margin: margin,
+          days: payload.weekday_price?.days || [],
+        };
+
+        delete payload.cost_per_night;
+        delete payload.selling_price;
+        delete payload.profit_margin;
+      } else {
+        if (payload.cost_per_night !== "" && payload.cost_per_night !== null && payload.cost_per_night !== undefined) {
+          payload.cost_per_night = Number(payload.cost_per_night);
+        }
+        if (payload.selling_price !== "" && payload.selling_price !== null && payload.selling_price !== undefined) {
+          payload.selling_price = Number(payload.selling_price);
+        }
+        if (payload.profit_margin !== "" && payload.profit_margin !== null && payload.profit_margin !== undefined) {
+          payload.profit_margin = Number(payload.profit_margin);
+        }
+        delete payload.weekend_price;
+        delete payload.weekday_price;
       }
 
       if (initial?.id) {
@@ -205,7 +393,17 @@ export function RateForm({ initial, onSaved }: { initial?: any; onSaved: (id: st
         onSaved(res.id ? String(res.id) : "");
       }
     } catch (e: any) {
-      toast.error(e?.data?.message || e?.message || t("toast.error"));
+      if (e?.data?.errors) {
+        const errs = e.data.errors;
+        const messages = Object.entries(errs).map(([key, val]) => {
+          const fieldName = t(`rates.${key}`, key);
+          const errorsList = Array.isArray(val) ? val.join(", ") : String(val);
+          return `${fieldName}: ${errorsList}`;
+        });
+        toast.error(messages.join(" | "));
+      } else {
+        toast.error(e?.data?.message || e?.message || t("toast.error"));
+      }
     }
   };
 
@@ -363,65 +561,298 @@ export function RateForm({ initial, onSaved }: { initial?: any; onSaved: (id: st
 
         {/* Pricing & Taxes */}
         <Card>
-          <CardContent className="grid grid-cols-1 gap-6 p-6 sm:grid-cols-2" dir={lang === "ar" ? "rtl" : "ltr"}>
-            <FormField control={form.control} name="cost_per_night" render={({ field }) => (
-              <FormItem>
-                <FormLabel>{t("rates.cost")} *</FormLabel>
-                <FormControl><Input type="number" step="0.01" min="0" {...field} /></FormControl>
-                <FormMessage />
-              </FormItem>
-            )} />
-            <FormField control={form.control} name="selling_price" render={({ field }) => (
-              <FormItem>
-                <FormLabel>{t("rates.selling")} ({lang === "ar" ? "تلقائي" : "Auto"})</FormLabel>
-                <FormControl><Input type="number" step="0.01" min="0" {...field} readOnly className="bg-muted cursor-not-allowed" /></FormControl>
-                <FormMessage />
-              </FormItem>
-            )} />
-            <FormField control={form.control} name="profit_margin" render={({ field }) => (
-              <FormItem>
-                <FormLabel>{t("rates.profit_margin")} (%)</FormLabel>
-                <FormControl><Input type="number" step="0.01" min="0" {...field} /></FormControl>
-                <FormMessage />
+          <CardContent className="space-y-6 p-6" dir={lang === "ar" ? "rtl" : "ltr"}>
+
+            {/* W.D and W.E Toggle */}
+            <FormField control={form.control} name="is_weekend_weekday" render={({ field }) => (
+              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm bg-card hover:bg-accent/5 transition-colors">
+                <div className="space-y-0.5">
+                  <FormLabel className="text-sm font-semibold cursor-pointer">{t("rates.wd_we_title")}</FormLabel>
+                </div>
+                <FormControl>
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
               </FormItem>
             )} />
 
-            <FormField control={form.control} name="tax_type" render={({ field }) => (
-              <FormItem>
-                <FormLabel>{t("rates.tax_type")}</FormLabel>
-                <Select value={field.value} onValueChange={field.onChange}>
-                  <FormControl>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="inclusive_tax">{t("rates.tax_inclusive_yes")}</SelectItem>
-                    <SelectItem value="exclusive_tax">{t("rates.tax_inclusive_no")}</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )} />
+            {isWeekendWeekday ? (
+              <div className="space-y-6">
+                {/* Global parameters for calculation: Profit Margin & Tax Rate */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                  <FormField control={form.control} name="profit_margin" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("rates.profit_margin")} (%)</FormLabel>
+                      <FormControl><Input type="number" step="0.01" min="0" {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <FormField control={form.control} name="tax_type" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("rates.tax_type")}</FormLabel>
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                        <SelectContent>
+                          <SelectItem value="inclusive_tax">{t("rates.tax_inclusive_yes")}</SelectItem>
+                          <SelectItem value="exclusive_tax">{t("rates.tax_inclusive_no")}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  {taxType === "inclusive_tax" && (
+                    <FormField control={form.control} name="tax_rate" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("rates.tax_rate")} (%)</FormLabel>
+                        <FormControl><Input type="number" step="0.01" min="0" {...field} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                  )}
+                </div>
 
-            {taxType === "inclusive_tax" && (
-              <FormField control={form.control} name="tax_rate" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("rates.tax_rate")} (%)</FormLabel>
-                  <FormControl><Input type="number" step="0.01" min="0" {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-            )}
+                {/* Weekend Prices Box */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 justify-start" dir={lang === "ar" ? "rtl" : "ltr"}>
+                    <div className="w-9 h-9 rounded-full flex items-center justify-center bg-[#fbf6ef] dark:bg-amber-950/30 border border-[#f5e6d3] dark:border-amber-900/30 shrink-0 shadow-sm">
+                      <Calendar className="w-4.5 h-4.5 text-[#a8702c] dark:text-amber-500" />
+                    </div>
+                    <span className="font-bold text-[#1f2937] dark:text-zinc-200 text-base">{t("rates.we_rates")}</span>
+                  </div>
 
-            {/* Total Price Display */}
-            <div className="col-span-1 sm:col-span-2 bg-primary/5 p-4 rounded-lg border border-primary/20 flex flex-col justify-center">
-              <span className="text-xs font-semibold text-primary uppercase tracking-wider">
-                {lang === "ar" ? "الإجمالي (سعر البيع + الضريبة)" : "Total (Selling Price + Tax)"}
-              </span>
-              <div className="text-3xl font-black text-primary mt-1 flex items-baseline gap-1">
-                <span>{total}</span>
-                <span className="text-sm font-medium text-muted-foreground">{currencySymbol}</span>
+                  <Card className="border border-border/30 dark:border-zinc-800/80  rounded-2xl shadow-none p-6">
+                    <CardContent className="p-0 space-y-6">
+                      {/* Days Checklist */}
+                      <div className="flex w-full justify-between flex-wrap gap-x-2 gap-y-3" dir="rtl">
+                        {[
+                          { key: "Saturday", ar: "السبت", en: "Saturday" },
+                          { key: "Sunday", ar: "الاحد", en: "Sunday" },
+                          { key: "Monday", ar: "الاثنين", en: "Monday" },
+                          { key: "Tuesday", ar: "الثلاثاء", en: "Tuesday" },
+                          { key: "Wednesday", ar: "الاربعاء", en: "Wednesday" },
+                          { key: "Thursday", ar: "الخميس", en: "Thursday" },
+                          { key: "Friday", ar: "الجمعة", en: "Friday" },
+                        ].map((day) => {
+                          const weDays = form.watch("weekend_price.days") || [];
+                          const isChecked = weDays.includes(day.key);
+                          return (
+                            <div key={day.key} className="flex items-center gap-2 flex-row-reverse">
+                              <Checkbox
+                                id={`we-day-${day.key}`}
+                                checked={isChecked}
+                                onCheckedChange={(checked) => {
+                                  const next = checked
+                                    ? [...weDays, day.key]
+                                    : weDays.filter((d: string) => d !== day.key);
+                                  form.setValue("weekend_price.days", next, { shouldValidate: true });
+                                }}
+                                className="data-[state=checked]:bg-[#a8702c] data-[state=checked]:border-[#a8702c] dark:data-[state=checked]:bg-amber-600 dark:data-[state=checked]:border-amber-600 border-border/60 dark:border-zinc-700 rounded-md w-5 h-5 cursor-pointer"
+                              />
+                              <Label htmlFor={`we-day-${day.key}`} className="text-xs font-semibold text-[#5c6873] dark:text-zinc-400 cursor-pointer">
+                                {lang === "ar" ? day.ar : day.en}
+                              </Label>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <FormField control={form.control} name="weekend_price.days" render={({ field }) => (
+                        <FormItem>
+                          <FormMessage />
+                        </FormItem>
+                      )} />
+
+                      {/* Price input row */}
+                      <div className="flex items-center justify-between border-t border-border/30 dark:border-zinc-800/80 pt-5 mt-4 relative" dir={lang === "ar" ? "rtl" : "ltr"}>
+                        {/* Right side: label + input */}
+                        <div className="flex items-center gap-4">
+                          <span className="font-extrabold text-base text-[#1f2937] dark:text-zinc-200">{lang === "ar" ? "السعر" : "Price"}</span>
+                          <FormField control={form.control} name="weekend_price.cost_per_night" render={({ field }) => (
+                            <FormItem className="space-y-1 m-0">
+                              <FormControl>
+                                <div className="flex items-center gap-1.5 bg-[#fafafc] dark:bg-zinc-900/50 border border-[#f1f1f4] dark:border-zinc-800/80 rounded-2xl px-4 py-2 w-40 h-11 shadow-sm">
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    className="bg-transparent border-0 text-[#a8702c] dark:text-amber-500 font-black text-lg text-center p-0 focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none h-full w-full"
+                                    placeholder="60"
+                                    {...field}
+                                  />
+                                  <span className="text-xs font-bold text-[#a8702c] dark:text-amber-500 shrink-0 ps-1">{currencySymbol || "ريال"}</span>
+                                </div>
+                              </FormControl>
+                              <FormMessage className="text-[10px] text-destructive block mt-1" />
+                            </FormItem>
+                          )} />
+                        </div>
+
+                        {/* Left side: Derived Selling and Total Display */}
+                        {(() => {
+                          const derived = calculateDerivedPrices(weCostPerNight);
+                          return (
+                            <div className="text-[11px] text-muted-foreground bg-[#fafafc] dark:bg-zinc-900/50 px-3 py-1.5 rounded-lg border border-border/30 dark:border-zinc-800/80 space-y-0.5">
+                              <div>{lang === "ar" ? "الإجمالي" : "Total with Tax"}: <span className="font-bold text-primary">{derived.total} {currencySymbol}</span></div>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Weekday Prices Box */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 justify-start" dir={lang === "ar" ? "rtl" : "ltr"}>
+                    <div className="w-9 h-9 rounded-full flex items-center justify-center bg-[#fbf6ef] dark:bg-amber-950/30 border border-[#f5e6d3] dark:border-amber-900/30 shrink-0 shadow-sm">
+                      <Hotel className="w-4.5 h-4.5 text-[#a8702c] dark:text-amber-500" />
+                    </div>
+                    <span className="font-bold text-[#1f2937] dark:text-zinc-200 text-base">{t("rates.wd_rates")}</span>
+                  </div>
+
+                  <Card className="border border-border/30 dark:border-zinc-800/80 rounded-2xl shadow-none p-6">
+                    <CardContent className="p-0 space-y-6">
+                      {/* Days Checklist */}
+                      <div className="flex w-full justify-between flex-wrap gap-x-2 gap-y-3" dir="rtl">
+                        {[
+                          { key: "Saturday", ar: "السبت", en: "Saturday" },
+                          { key: "Sunday", ar: "الاحد", en: "Sunday" },
+                          { key: "Monday", ar: "الاثنين", en: "Monday" },
+                          { key: "Tuesday", ar: "الثلاثاء", en: "Tuesday" },
+                          { key: "Wednesday", ar: "الاربعاء", en: "Wednesday" },
+                          { key: "Thursday", ar: "الخميس", en: "Thursday" },
+                          { key: "Friday", ar: "الجمعة", en: "Friday" },
+                        ].map((day) => {
+                          const wdDays = form.watch("weekday_price.days") || [];
+                          const isChecked = wdDays.includes(day.key);
+                          return (
+                            <div key={day.key} className="flex items-center gap-2 flex-row-reverse">
+                              <Checkbox
+                                    id={`wd-day-${day.key}`}
+                                    checked={isChecked}
+                                    onCheckedChange={(checked) => {
+                                      const next = checked
+                                        ? [...wdDays, day.key]
+                                        : wdDays.filter((d: string) => d !== day.key);
+                                      form.setValue("weekday_price.days", next, { shouldValidate: true });
+                                    }}
+                                    className="data-[state=checked]:bg-[#a8702c] data-[state=checked]:border-[#a8702c] dark:data-[state=checked]:bg-amber-600 dark:data-[state=checked]:border-amber-600 border-border/60 dark:border-zinc-700 rounded-md w-5 h-5 cursor-pointer"
+                                  />
+                              <Label htmlFor={`wd-day-${day.key}`} className="text-xs font-semibold text-[#5c6873] dark:text-zinc-400 cursor-pointer">
+                                {lang === "ar" ? day.ar : day.en}
+                              </Label>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <FormField control={form.control} name="weekday_price.days" render={({ field }) => (
+                        <FormItem>
+                          <FormMessage />
+                        </FormItem>
+                      )} />
+
+                      {/* Price input row */}
+                      <div className="flex items-center justify-between border-t border-border/30 dark:border-zinc-800/80 pt-5 mt-4 relative" dir={lang === "ar" ? "rtl" : "ltr"}>
+                        {/* Right side: label + input */}
+                        <div className="flex items-center gap-4">
+                          <span className="font-extrabold text-base text-[#1f2937] dark:text-zinc-200">{lang === "ar" ? "السعر" : "Price"}</span>
+                          <FormField control={form.control} name="weekday_price.cost_per_night" render={({ field }) => (
+                            <FormItem className="space-y-1 m-0">
+                              <FormControl>
+                                <div className="flex items-center gap-1.5 bg-[#fafafc] dark:bg-zinc-900/50 border border-[#f1f1f4] dark:border-zinc-800/80 rounded-2xl px-4 py-2 w-40 h-11 shadow-sm">
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    className="bg-transparent border-0 text-[#a8702c] dark:text-amber-500 font-black text-lg text-center p-0 focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none h-full w-full"
+                                    placeholder="45"
+                                    {...field}
+                                  />
+                                  <span className="text-xs font-bold text-[#a8702c] dark:text-amber-500 shrink-0 ps-1">{currencySymbol || "ريال"}</span>
+                                </div>
+                              </FormControl>
+                              <FormMessage className="text-[10px] text-destructive block mt-1" />
+                            </FormItem>
+                          )} />
+                        </div>
+
+                        {/* Left side: Derived Selling and Total Display */}
+                        {(() => {
+                          const derived = calculateDerivedPrices(wdCostPerNight);
+                          return (
+                            <div className="text-[11px] text-muted-foreground bg-[#fafafc] dark:bg-zinc-900/50 px-3 py-1.5 rounded-lg border border-border/30 dark:border-zinc-800/80 space-y-0.5">
+                              <div>{lang === "ar" ? "الإجمالي" : "Total with Tax"}: <span className="font-bold text-primary">{derived.total} {currencySymbol}</span></div>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                <FormField control={form.control} name="cost_per_night" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("rates.cost")} *</FormLabel>
+                    <FormControl><Input type="number" step="0.01" min="0" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="selling_price" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("rates.selling")} ({lang === "ar" ? "تلقائي" : "Auto"})</FormLabel>
+                    <FormControl><Input type="number" step="0.01" min="0" {...field} readOnly className="bg-muted cursor-not-allowed" /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="profit_margin" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("rates.profit_margin")} (%)</FormLabel>
+                    <FormControl><Input type="number" step="0.01" min="0" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+
+                <FormField control={form.control} name="tax_type" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("rates.tax_type")}</FormLabel>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <FormControl>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="inclusive_tax">{t("rates.tax_inclusive_yes")}</SelectItem>
+                        <SelectItem value="exclusive_tax">{t("rates.tax_inclusive_no")}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+
+                {taxType === "inclusive_tax" && (
+                  <FormField control={form.control} name="tax_rate" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("rates.tax_rate")} (%)</FormLabel>
+                      <FormControl><Input type="number" step="0.01" min="0" {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                )}
+
+                {/* Total Price Display */}
+                <div className="col-span-1 sm:col-span-2 bg-primary/5 p-4 rounded-lg border border-primary/20 flex flex-col justify-center">
+                  <span className="text-xs font-semibold text-primary uppercase tracking-wider">
+                    {lang === "ar" ? "الإجمالي (سعر البيع + الضريبة)" : "Total (Selling Price + Tax)"}
+                  </span>
+                  <div className="text-3xl font-black text-primary mt-1 flex items-baseline gap-1">
+                    <span>{total}</span>
+                    <span className="text-sm font-medium text-muted-foreground">{currencySymbol}</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 

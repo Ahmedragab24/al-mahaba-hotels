@@ -1,9 +1,9 @@
 // Hotel Information sharing actions — Preview / Print-PDF / WhatsApp (BRD Hotel Information Sharing).
 // Languages: Arabic, English, Indonesian, Urdu. Defaults to customer preferred language in customer context.
 import { useMemo, useState, useEffect } from "react";
-import { db } from "@/lib/api/db";
-import { apiClient } from "@/lib/api/api-client";
-import { useQuery } from "@tanstack/react-query";
+import { db } from "@/store/queryBridge";
+import { apiClient } from "@/store/queryBridge";
+import { useQuery } from "@/store/queryBridge";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";

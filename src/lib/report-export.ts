@@ -1,4 +1,3 @@
-// Export services — CSV / Excel / PDF for all reports (Section 17).
 export type ReportColumn = { key: string; label: string; numeric?: boolean };
 export type ReportRow = Record<string, string | number | null | undefined>;
 
@@ -38,9 +37,8 @@ export function exportExcel(filename: string, columns: ReportColumn[], rows: Rep
           .join("")}</tr>`,
     )
     .join("");
-  const html = `<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="UTF-8"></head><body>${
-    title ? `<h3>${esc(title)}</h3>` : ""
-  }<table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></body></html>`;
+  const html = `<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="UTF-8"></head><body>${title ? `<h3>${esc(title)}</h3>` : ""
+    }<table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></body></html>`;
   download(`${filename}.xls`, new Blob(["\uFEFF" + html], { type: "application/vnd.ms-excel;charset=utf-8" }));
 }
 

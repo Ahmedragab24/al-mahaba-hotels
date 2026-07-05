@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
-import { apiClient } from "@/lib/api/api-client";
+import { apiClient } from "@/store/queryBridge";
 import { useState, useMemo } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@/store/queryBridge";
 import { PageHeader } from "@/components/page-header";
 import { useI18n } from "@/lib/i18n";
 import { useSelector } from "react-redux";
@@ -10,19 +10,47 @@ import { hasRole, hasAnyRole, isAdmin, canAccessModule } from "@/lib/auth-utils"
 import { useDebounce } from "@/lib/use-debounce";
 import { useCountries } from "@/lib/lookups";
 import { Card, CardContent } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { StatusPill as StatusBadge } from "@/components/status-pill";
-import { KpiCard, StatusPill } from "@/components/list-toolkit";
+import { KpiCard } from "@/components/list-toolkit";
 import { DataPagination } from "@/components/data-pagination";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import { Plus, Search, Eye, Pencil, Archive, RotateCcw, Trash2, Star, Building2, CheckCircle2, XCircle, Award, Calendar } from "lucide-react";
+import {
+  Plus,
+  Search,
+  Eye,
+  Pencil,
+  Archive,
+  RotateCcw,
+  Trash2,
+  Building2,
+  CheckCircle2,
+  XCircle,
+  Calendar,
+} from "lucide-react";
 import { toast } from "sonner";
-import { useGetSuppliersQuery, useUpdateSupplierMutation } from "@/store/services/suppliers/suppliersService";
+import {
+  useGetSuppliersQuery,
+  useUpdateSupplierMutation,
+} from "@/store/services/suppliers/suppliersService";
 import { useGetSupplierTypesQuery } from "@/store/services/attributes/supplier-types";
 
 const PAGE_SIZE = 20;
@@ -32,7 +60,12 @@ export default function SuppliersList() {
   const auth = useSelector(selectAuth);
   const qc = useQueryClient();
   const navigate = useNavigate();
-  const canWrite = hasAnyRole(auth, ["super_admin", "admin", "operations_manager", "operations_agent"]);
+  const canWrite = hasAnyRole(auth, [
+    "super_admin",
+    "admin",
+    "operations_manager",
+    "operations_agent",
+  ]);
 
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<string>("all");
@@ -40,7 +73,10 @@ export default function SuppliersList() {
   const [stype, setStype] = useState<string>("all");
   const [showArchived, setShowArchived] = useState(false);
   const [page, setPage] = useState(1);
-  const [confirm, setConfirm] = useState<{ id: number; action: "archive" | "restore" | "delete" } | null>(null);
+  const [confirm, setConfirm] = useState<{
+    id: number;
+    action: "archive" | "restore" | "delete";
+  } | null>(null);
 
   const dSearch = useDebounce(search, 300);
   const countries = useCountries();
@@ -52,20 +88,20 @@ export default function SuppliersList() {
   }, [supplierTypesData]);
 
   const { data: suppliersData, isLoading } = useGetSuppliersQuery(
-    { 
-      lang, 
-      search: dSearch || undefined, 
-      supplier_type_id: stype !== "all" ? Number(stype) : undefined, 
-      status: status !== "all" ? (status === "active" ? 1 : 0) : undefined, 
-      country_id: country !== "all" ? Number(country) : undefined, 
+    {
+      lang,
+      search: dSearch || undefined,
+      supplier_type_id: stype !== "all" ? Number(stype) : undefined,
+      status: status !== "all" ? (status === "active" ? 1 : 0) : undefined,
+      country_id: country !== "all" ? Number(country) : undefined,
       all: 1,
-      is_archived: showArchived || undefined 
+      is_archived: showArchived || undefined,
     },
-    { refetchOnMountOrArgChange: true }
+    { refetchOnMountOrArgChange: true },
   );
 
-  console.log('[SuppliersList] suppliersData:', suppliersData);
-  console.log('[SuppliersList] isLoading:', isLoading);
+  console.log("[SuppliersList] suppliersData:", suppliersData);
+  console.log("[SuppliersList] isLoading:", isLoading);
 
   const suppliers = useMemo(() => {
     let list = suppliersData?.data ?? [];
@@ -76,15 +112,21 @@ export default function SuppliersList() {
   }, [suppliersData, stype]);
   const statistics = suppliersData?.statistics;
 
-  console.log('[SuppliersList] suppliers:', suppliers);
-  console.log('[SuppliersList] statistics:', statistics);
+  console.log("[SuppliersList] suppliers:", suppliers);
+  console.log("[SuppliersList] statistics:", statistics);
 
   const [updateSupplier] = useUpdateSupplierMutation();
 
-  const handleAction = async ({ id, action }: { id: number; action: "archive" | "restore" | "delete" }) => {
+  const handleAction = async ({
+    id,
+    action,
+  }: {
+    id: number;
+    action: "archive" | "restore" | "delete";
+  }) => {
     if (action === "delete") {
       try {
-        console.log('[handleAction] Calling apiClient.suppliers.delete for id:', id);
+        console.log("[handleAction] Calling apiClient.suppliers.delete for id:", id);
         await apiClient.suppliers.delete(id);
         toast.success(t("toast.deleted"));
         qc.invalidateQueries({ queryKey: ["Suppliers"] });
@@ -128,45 +170,111 @@ export default function SuppliersList() {
 
   const total = suppliers.length;
 
-  const actions = useMemo(() => canWrite && (
-    <Button onClick={() => navigate("/suppliers/new")} size="sm">
-      <Plus className="h-4 w-4" /> {t("suppliers.new")}
-    </Button>
-  ), [canWrite, navigate, t]);
+  const actions = useMemo(
+    () =>
+      canWrite && (
+        <Button onClick={() => navigate("/suppliers/new")} size="sm">
+          <Plus className="h-4 w-4" /> {t("suppliers.new")}
+        </Button>
+      ),
+    [canWrite, navigate, t],
+  );
 
   return (
     <>
-      <PageHeader title={t("suppliers.title")} subtitle={`${total} ${t("label.total")}`} children={actions} />
+      <PageHeader
+        title={t("suppliers.title")}
+        subtitle={`${total} ${t("label.total")}`}
+        children={actions}
+      />
       <div className="space-y-4 p-6">
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          <KpiCard icon={Building2} tone="primary" label={t("kpi.total")} value={statistics?.total ?? "—"}
-            active={status === "all" && !showArchived} onClick={() => { setStatus("all"); setShowArchived(false); setPage(1); }} />
-          <KpiCard icon={CheckCircle2} tone="success" label={t("kpi.active")} value={statistics?.active ?? "—"}
-            active={status === "active"} onClick={() => { setStatus("active"); setShowArchived(false); setPage(1); }} />
-          <KpiCard icon={XCircle} tone="warning" label={t("kpi.inactive")} value={statistics?.inactive ?? "—"}
-            active={status === "inactive"} onClick={() => { setStatus("inactive"); setShowArchived(false); setPage(1); }} />
-          <KpiCard icon={Archive} tone="muted" label={t("kpi.archived")} value={statistics?.archived ?? "—"}
-            active={showArchived} onClick={() => { setShowArchived(true); setStatus("all"); setPage(1); }} />
-          <KpiCard icon={Award} tone="info" label={t("kpi.top_rated")} value={statistics?.top_rated ?? "—"} />
-          <KpiCard icon={Calendar} tone="info" label={t("kpi.this_month")} value={statistics?.this_month ?? "—"} />
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          <KpiCard
+            icon={Building2}
+            tone="primary"
+            label={t("kpi.total")}
+            value={statistics?.total ?? "—"}
+            active={status === "all" && !showArchived}
+            onClick={() => {
+              setStatus("all");
+              setShowArchived(false);
+              setPage(1);
+            }}
+          />
+          <KpiCard
+            icon={CheckCircle2}
+            tone="success"
+            label={t("kpi.active")}
+            value={statistics?.active ?? "—"}
+            active={status === "active"}
+            onClick={() => {
+              setStatus("active");
+              setShowArchived(false);
+              setPage(1);
+            }}
+          />
+          <KpiCard
+            icon={XCircle}
+            tone="warning"
+            label={t("kpi.inactive")}
+            value={statistics?.inactive ?? "—"}
+            active={status === "inactive"}
+            onClick={() => {
+              setStatus("inactive");
+              setShowArchived(false);
+              setPage(1);
+            }}
+          />
+          <KpiCard
+            icon={Archive}
+            tone="muted"
+            label={t("kpi.archived")}
+            value={statistics?.archived ?? "—"}
+            active={showArchived}
+            onClick={() => {
+              setShowArchived(true);
+              setStatus("all");
+              setPage(1);
+            }}
+          />
+          <KpiCard
+            icon={Calendar}
+            tone="info"
+            label={t("kpi.this_month")}
+            value={statistics?.this_month ?? "—"}
+          />
         </div>
 
-
         <Card>
-          <CardContent className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            <div className="flex flex-col gap-1.5 sm:col-span-2 lg:col-span-3 xl:col-span-4">
+          <CardContent className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+            <div className="flex flex-col gap-1.5">
               <Label className="text-muted-foreground">{t("actions.search")}</Label>
               <div className="relative w-full">
                 <Search className="absolute top-2.5 start-2 h-4 w-4 text-muted-foreground" />
-                <Input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                  placeholder={t("actions.search")} className="ps-8 w-full" />
+                <Input
+                  value={search}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    setPage(1);
+                  }}
+                  placeholder={t("actions.search")}
+                  className="ps-8 w-full"
+                />
               </div>
             </div>
-            
+
             <div className="flex flex-col gap-1.5">
               <Label className="text-muted-foreground">{t("filter.type")}</Label>
-              <Select value={stype} onValueChange={(v) => { setStype(v); setPage(1); }}>
-                <SelectTrigger className="w-full"><SelectValue placeholder={t("filter.type")} /></SelectTrigger>
+              <Select
+                value={stype}
+                onValueChange={(v) => {
+                  setStype(v);
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder={t("filter.type")} />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t("filter.all")}</SelectItem>
                   {supplierTypes?.map((st: any) => (
@@ -177,11 +285,19 @@ export default function SuppliersList() {
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="flex flex-col gap-1.5">
               <Label className="text-muted-foreground">{t("filter.status")}</Label>
-              <Select value={status} onValueChange={(v) => { setStatus(v); setPage(1); }}>
-                <SelectTrigger className="w-full"><SelectValue placeholder={t("filter.status")} /></SelectTrigger>
+              <Select
+                value={status}
+                onValueChange={(v) => {
+                  setStatus(v);
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder={t("filter.status")} />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t("filter.all")}</SelectItem>
                   <SelectItem value="active">{t("status.active")}</SelectItem>
@@ -189,22 +305,43 @@ export default function SuppliersList() {
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="flex flex-col gap-1.5">
               <Label className="text-muted-foreground">{t("filter.country")}</Label>
-              <Select value={country} onValueChange={(v) => { setCountry(v); setPage(1); }}>
-                <SelectTrigger className="w-full"><SelectValue placeholder={t("filter.country")} /></SelectTrigger>
+              <Select
+                value={country}
+                onValueChange={(v) => {
+                  setCountry(v);
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder={t("filter.country")} />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t("filter.all")}</SelectItem>
-                  {(Array.isArray(countries.data) ? countries.data : Array.isArray(countries.data?.data) ? countries.data.data : [])?.map((c: any) => (
-                    <SelectItem key={c.id} value={c.id.toString()}>{lang === "ar" ? c.name_ar : c.name_en}</SelectItem>
+                  {(Array.isArray(countries.data)
+                    ? countries.data
+                    : Array.isArray(countries.data?.data)
+                      ? countries.data.data
+                      : []
+                  )?.map((c: any) => (
+                    <SelectItem key={c.id} value={c.id.toString()}>
+                      {lang === "ar" ? c.name_ar : c.name_en}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            
+
             <label className="flex items-center gap-2 text-sm self-end pb-2 cursor-pointer mt-auto">
-              <Checkbox checked={showArchived} onCheckedChange={(v) => { setShowArchived(!!v); setPage(1); }} />
+              <Checkbox
+                checked={showArchived}
+                onCheckedChange={(v) => {
+                  setShowArchived(!!v);
+                  setPage(1);
+                }}
+              />
               {t("filter.show_archived")}
             </label>
           </CardContent>
@@ -227,42 +364,81 @@ export default function SuppliersList() {
               </TableHeader>
               <TableBody>
                 {isLoading && (
-                  <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-10">{t("label.loading")}</TableCell></TableRow>
+                  <TableRow>
+                    <TableCell colSpan={9} className="text-center text-muted-foreground py-10">
+                      {t("label.loading")}
+                    </TableCell>
+                  </TableRow>
                 )}
                 {!isLoading && suppliers.length === 0 && (
-                  <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-10">{t("label.no_results")}</TableCell></TableRow>
+                  <TableRow>
+                    <TableCell colSpan={9} className="text-center text-muted-foreground py-10">
+                      {t("label.no_results")}
+                    </TableCell>
+                  </TableRow>
                 )}
                 {suppliers.map((s: any) => (
                   <TableRow key={s.id} className={s.is_archived ? "opacity-60" : ""}>
                     <TableCell className="font-mono text-xs">{s.code}</TableCell>
                     <TableCell className="font-medium">
                       <Link to={`/suppliers/${s.id}`} className="hover:underline">
-                        {lang === "ar" ? (s.name_ar || s.name_en) : (s.name_en || s.name_ar)}
+                        {lang === "ar" ? s.name_ar || s.name_en : s.name_en || s.name_ar}
                       </Link>
                     </TableCell>
                     <TableCell className="text-xs">{s.supplier_type?.name ?? "—"}</TableCell>
                     <TableCell className="text-xs">{s.country?.name ?? "—"}</TableCell>
-                    <TableCell dir="ltr" className="text-xs">{s.phone ?? "—"}</TableCell>
+                    <TableCell dir="ltr" className="text-xs">
+                      {s.phone ?? "—"}
+                    </TableCell>
                     <TableCell className="text-xs font-mono">{s.currency?.code ?? "—"}</TableCell>
                     {/* <TableCell>{s.rating ? <span className="flex items-center gap-0.5 text-amber-500"><Star className="h-3 w-3 fill-current" />{Number(s.rating).toFixed(1)}</span> : <span className="text-muted-foreground">—</span>}</TableCell> */}
-                    <TableCell><StatusBadge status={s.status ? "active" : "inactive"} /></TableCell>
+                    <TableCell>
+                      <StatusBadge status={s.status ? "active" : "inactive"} />
+                    </TableCell>
                     <TableCell className="text-end">
                       <div className="flex justify-end gap-1">
                         <Button asChild variant="ghost" size="icon" title={t("actions.view")}>
-                          <Link to={`/suppliers/${s.id}`}><Eye className="h-4 w-4" /></Link>
+                          <Link to={`/suppliers/${s.id}`}>
+                            <Eye className="h-4 w-4" />
+                          </Link>
                         </Button>
                         {canWrite && !s.is_archived && (
                           <Button asChild variant="ghost" size="icon" title={t("actions.edit")}>
-                            <Link to={`/suppliers/${s.id}?edit=1`}><Pencil className="h-4 w-4" /></Link>
+                            <Link to={`/suppliers/${s.id}?edit=1`}>
+                              <Pencil className="h-4 w-4" />
+                            </Link>
                           </Button>
                         )}
                         {isAdmin(auth) && (
-                          <Button variant="ghost" size="icon" title={t("actions.delete")} onClick={() => setConfirm({ id: s.id, action: "delete" })}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title={t("actions.delete")}
+                            onClick={() => setConfirm({ id: s.id, action: "delete" })}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
                         )}
-                        {isAdmin(auth) && (s.is_archived
-                          ? <Button variant="ghost" size="icon" title={t("actions.restore")} onClick={() => setConfirm({ id: s.id, action: "restore" })}><RotateCcw className="h-4 w-4" /></Button>
-                          : <Button variant="ghost" size="icon" title={t("actions.archive")} onClick={() => setConfirm({ id: s.id, action: "archive" })}><Archive className="h-4 w-4" /></Button>
-                        )}
+                        {isAdmin(auth) &&
+                          (s.is_archived ? (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title={t("actions.restore")}
+                              onClick={() => setConfirm({ id: s.id, action: "restore" })}
+                            >
+                              <RotateCcw className="h-4 w-4" />
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title={t("actions.archive")}
+                              onClick={() => setConfirm({ id: s.id, action: "archive" })}
+                            >
+                              <Archive className="h-4 w-4" />
+                            </Button>
+                          ))}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -276,8 +452,20 @@ export default function SuppliersList() {
       <ConfirmDialog
         open={!!confirm}
         onOpenChange={(v) => !v && setConfirm(null)}
-        title={confirm?.action === "restore" ? t("actions.restore") : confirm?.action === "delete" ? t("actions.delete") : t("actions.archive")}
-        description={confirm?.action === "delete" ? t("toast.confirm_delete") : confirm?.action === "restore" ? "" : t("toast.confirm_archive")}
+        title={
+          confirm?.action === "restore"
+            ? t("actions.restore")
+            : confirm?.action === "delete"
+              ? t("actions.delete")
+              : t("actions.archive")
+        }
+        description={
+          confirm?.action === "delete"
+            ? t("toast.confirm_delete")
+            : confirm?.action === "restore"
+              ? ""
+              : t("toast.confirm_archive")
+        }
         destructive={confirm?.action !== "restore"}
         onConfirm={() => confirm && handleAction(confirm)}
       />

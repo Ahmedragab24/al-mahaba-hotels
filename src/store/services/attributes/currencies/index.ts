@@ -5,10 +5,10 @@ export const currenciesApi = api.injectEndpoints({
   endpoints: (build) => ({
     getCurrencies: build.query<
       Currency[],
-      { lang?: string; search?: string; per_page?: number | string } | void
+      { lang?: string; search?: string; per_page?: number | string; all?: number } | void
     >({
       query: (params) => ({ url: "/currencies", params: params || undefined }),
-      providesTags: ["Currencies"],
+      providesTags: ["Currencies"], 
     }),
     getCurrencyById: build.query<Currency, { id: string | number; lang?: string }>({
       query: ({ id, lang }) => ({ url: `/currencies/${id}`, params: { lang } }),

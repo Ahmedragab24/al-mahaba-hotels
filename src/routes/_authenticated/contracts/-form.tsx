@@ -1,11 +1,11 @@
 import { useNavigate } from "react-router-dom";
-import { getCurrentUserId } from "@/lib/api/base";
-import { apiClient } from "@/lib/api/api-client";
-import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
-import { useI18n } from "@/lib/i18n";
+import { getCurrentUserId } from "@/store/queryBridge";
+import { apiClient } from "@/store/queryBridge";
+import { useMutation } from "@/store/queryBridge";
+import { dbErrorMessage } from "@/store/queryBridge";
 import { useHotelsLite, useSuppliersLite, useCurrencies } from "@/lib/lookups";
-import { dbErrorMessage } from "@/lib/db-errors";
+import { useState } from "react";
+import { useI18n } from "@/lib/i18n";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -79,7 +79,7 @@ export function ContractForm({ initial, onSaved }: { initial?: any; onSaved?: ()
             <Select value={v.supplier_id ?? ""} onValueChange={(x) => setV({ ...v, supplier_id: x })}>
               <SelectTrigger><SelectValue placeholder={t("contracts.supplier")} /></SelectTrigger>
               <SelectContent>
-                {(Array.isArray(suppliers.data) ? suppliers.data : Array.isArray(suppliers.data?.data) ? suppliers.data.data : [])?.map((s: any) => <SelectItem key={s.id} value={s.id}>{lang === "ar" ? (s.name_ar || s.name_en) : (s.name_en || s.name_ar)}</SelectItem>)}
+                {(Array.isArray(suppliers.data) ? suppliers.data : Array.isArray(suppliers.data) ? suppliers.data : [])?.map((s: any) => <SelectItem key={s.id} value={s.id}>{lang === "ar" ? (s.name_ar || s.name_en) : (s.name_en || s.name_ar)}</SelectItem>)}
               </SelectContent>
             </Select>
           </Field>
@@ -87,7 +87,7 @@ export function ContractForm({ initial, onSaved }: { initial?: any; onSaved?: ()
             <Select value={v.hotel_id ?? ""} onValueChange={(x) => setV({ ...v, hotel_id: x })}>
               <SelectTrigger><SelectValue placeholder={t("contracts.hotel")} /></SelectTrigger>
               <SelectContent>
-                {(Array.isArray(hotels.data) ? hotels.data : Array.isArray(hotels.data?.data) ? hotels.data.data : [])?.map((h: any) => <SelectItem key={h.id} value={h.id}>{lang === "ar" ? (h.name_ar || h.name_en) : (h.name_en || h.name_ar)}</SelectItem>)}
+                {(Array.isArray(hotels.data) ? hotels.data : Array.isArray(hotels.data) ? hotels.data : [])?.map((h: any) => <SelectItem key={h.id} value={h.id}>{lang === "ar" ? (h.name_ar || h.name_en) : (h.name_en || h.name_ar)}</SelectItem>)}
               </SelectContent>
             </Select>
           </Field>

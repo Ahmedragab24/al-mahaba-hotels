@@ -1,9 +1,6 @@
 import { useNavigate } from "react-router-dom";
-import { db } from "@/lib/api/db";
-import { apiClient } from "@/lib/api/api-client";
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useMemo } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, db, apiClient, dbErrorMessage } from "@/store/queryBridge";
 import { useGetQuotationsQuery } from "@/store/api";
 import { useI18n } from "@/lib/i18n";
 import { PageHeader } from "@/components/page-header";
@@ -21,7 +18,6 @@ import {
 } from "@/components/ui/command";
 import { ArrowLeft, Check, ChevronsUpDown } from "lucide-react";
 import { toast } from "sonner";
-import { dbErrorMessage } from "@/lib/db-errors";
 import { BookingForm } from "./-form";
 import { cn } from "@/lib/utils";
 
@@ -39,10 +35,11 @@ export default function NewBooking() {
       return res?.data || res;
     },
     enabled: !!quoteId,
+    refetchInterval: 2000, // Auto-refresh every 2 seconds
   });
-
-  // accepted, not-yet-converted quotations
-  const { data: rawQuotes, isLoading: isLoadingQuotes } = useGetQuotationsQuery({ all: true, lang });
+  
+  // Auto-refresh quotations list every 2 seconds to ensure latest data
+  const { data: rawQuotes, isLoading: isLoadingQuotes } = useGetQuotationsQuery({ all: true, lang }, { pollingInterval: 2000 });
 
   const convertedQuery = useQuery({
     queryKey: ["converted-booking-quotes"],

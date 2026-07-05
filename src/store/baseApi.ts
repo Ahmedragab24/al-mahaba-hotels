@@ -3,6 +3,8 @@ import type { BaseQueryFn, FetchArgs, FetchBaseQueryError } from "@reduxjs/toolk
 import { baseQuery } from "./services/baseUrl";
 import { clearAuth } from "@/store/features/authSlice";
 
+
+
 const allTags = [
   "Auth",
   "Users",

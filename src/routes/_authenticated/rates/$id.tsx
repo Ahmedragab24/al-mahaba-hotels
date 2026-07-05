@@ -1,6 +1,6 @@
 import { useNavigate, Link, useParams, useSearchParams } from "react-router-dom";
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@/store/queryBridge";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/hooks/use-auth";
 import { PageHeader } from "@/components/page-header";
@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { StatusPill } from "@/components/status-pill";
+import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ArrowLeft, Pencil, Send, Check, X } from "lucide-react";
@@ -51,7 +52,7 @@ export default function RateDetail() {
         profit_margin: r.profit_margin ? Number(r.profit_margin) : null,
         tax_type: r.tax_type || "inclusive_tax",
         tax_rate: r.tax_rate !== undefined && r.tax_rate !== null ? Number(r.tax_rate) : 15,
-        status: "pending",
+        status: "valid",
         is_direct: !!r.is_direct,
         supplier_id: !r.is_direct && r.supplier_id ? Number(r.supplier_id) : null,
         is_archived: r.is_archived ? 1 : 0,
@@ -91,7 +92,7 @@ export default function RateDetail() {
         profit_margin: r.profit_margin ? Number(r.profit_margin) : null,
         tax_type: r.tax_type || "inclusive_tax",
         tax_rate: r.tax_rate !== undefined && r.tax_rate !== null ? Number(r.tax_rate) : 15,
-        status: "approved",
+        status: "valid",
         is_direct: !!r.is_direct,
         supplier_id: !r.is_direct && r.supplier_id ? Number(r.supplier_id) : null,
         is_archived: r.is_archived ? 1 : 0,
@@ -131,7 +132,7 @@ export default function RateDetail() {
         profit_margin: r.profit_margin ? Number(r.profit_margin) : null,
         tax_type: r.tax_type || "inclusive_tax",
         tax_rate: r.tax_rate !== undefined && r.tax_rate !== null ? Number(r.tax_rate) : 15,
-        status: "rejected",
+        status: "expired",
         rejection_reason: reason,
         is_direct: !!r.is_direct,
         supplier_id: !r.is_direct && r.supplier_id ? Number(r.supplier_id) : null,
@@ -162,7 +163,7 @@ export default function RateDetail() {
   const supplierName = r.supplier
     ? (lang === "ar" ? (r.supplier.name_ar || r.supplier.name_en) : (r.supplier.name_en || r.supplier.name_ar))
     : t("rates.source.direct", "Direct");
-  const editable = canWrite && !r.is_archived;
+  const editable = canWrite;
 
   return (
     <>
@@ -174,7 +175,11 @@ export default function RateDetail() {
             <Button variant="outline" size="sm" onClick={() => navigate("/rates")}>
               <ArrowLeft className="h-4 w-4 rtl:rotate-180" />{t("actions.back")}
             </Button>
-            <StatusPill status={r.status} />
+            {r.status_text && r.status_text !== t(`status.${r.status}`) ? (
+              <Badge className={r.status === "expired" || r.status_text === "منتهي" ? "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400 border-transparent" : "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-400 border-transparent"}>{r.status_text}</Badge>
+            ) : (
+              <StatusPill status={r.status} />
+            )}
             {editable && (
               <Button size="sm" variant="outline" asChild>
                 <Link to={`/rates/new?edit=${id}`}>
@@ -252,10 +257,37 @@ function ProfileView({ r, lang, t }: any) {
     <Card><CardContent className="grid grid-cols-1 gap-x-6 p-4 md:grid-cols-3">
       <KV k={t("label.code")} v={<span className="font-mono">{r.code}</span>} />
       <KV k={t("rates.hotel")} v={lang === "ar" ? (r.hotel?.name_ar || r.hotel?.name_en) : (r.hotel?.name_en || r.hotel?.name_ar)} />
-      <KV k={t("rates.supplier")} v={lang === "ar" ? (r.supplier?.name_ar || r.supplier?.name_en) : (r.supplier?.name_en || r.supplier?.name_ar)} />
+      <KV k={t("rates.supplier")} v={r.is_direct ? <span className="text-emerald-600 dark:text-emerald-400 font-medium">{t("rates.is_direct_short")}</span> : (lang === "ar" ? (r.supplier?.name_ar || r.supplier?.name_en) : (r.supplier?.name_en || r.supplier?.name_ar))} />
+
       <KV k={t("rates.room")} v={lang === "ar" ? (r.room?.name_ar || r.room?.name_en) : (r.room?.name_en || r.room?.name_ar)} />
-      {/* <KV k={t("rates.view")} v={r.hotel_view ? (lang === "ar" ? (r.hotel_view.name_ar || r.hotel_view.name_en) : (r.hotel_view.name_en || r.hotel_view.name_ar)) : null} /> */}
-      <KV k={t("rates.meal_plan")} v={r.meal_plan_type} />
+
+      <KV k={t("rates.meal_plan")} v={
+        <div>
+          <div>{t(`board.${r.meal_plan_type}`) || r.meal_plan_type}</div>
+          {r.meal_plan_details && r.meal_plan_details.length > 0 && (
+            <ul className="mt-1 space-y-1">
+              {r.meal_plan_details.map((d: any) => (
+                <li key={d.id} className="text-xs flex gap-2">
+                  <span className="text-muted-foreground">- {d.label || t(`board.${d.key}`)}:</span>
+                  <span className="font-mono">{d.price} {r.currency?.symbol || r.currency?.code}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      } />
+
+      <KV k={t("rates.taxes")} v={`${r.tax_type === "inclusive_tax" ? t("rates.tax_inclusive_yes") : t("rates.tax_inclusive_no")} (${r.tax_rate}%)`} />
+
+      {r.days && r.days.length > 0 && (
+        <KV k={t("rates.price_type", "نوع السعر")} v={
+          <div>
+            <div className="capitalize">{r.price_type === "weekend" ? t("rates.we_rates", "نهاية الأسبوع") : (r.price_type === "weekday" ? t("rates.wd_rates", "أيام الأسبوع") : r.price_type)}</div>
+            <div className="text-xs text-muted-foreground mt-1" dir="ltr">{r.days.join(", ")}</div>
+          </div>
+        } />
+      )}
+
       <KV k={t("label.currency")} v={<span className="font-mono">{r.currency?.code || ""}</span>} />
       <KV k={t("rates.valid_from")} v={formatDate(r.valid_from)} />
       <KV k={t("rates.valid_to")} v={formatDate(r.valid_to)} />

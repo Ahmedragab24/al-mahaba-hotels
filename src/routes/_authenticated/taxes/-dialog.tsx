@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { db } from "@/lib/api/db";
-import { getCurrentUserId } from "@/lib/api/base";
-import { apiClient } from "@/lib/api/api-client";
-import { useMutation } from "@tanstack/react-query";
+import { db } from "@/store/queryBridge";
+import { getCurrentUserId } from "@/store/queryBridge";
+import { apiClient } from "@/store/queryBridge";
+import { useMutation } from "@/store/queryBridge";
 import { useI18n } from "@/lib/i18n";
 import { useHotels, useCurrencies } from "@/lib/lookups";
-import { dbErrorMessage } from "@/lib/db-errors";
+import { dbErrorMessage } from "@/store/queryBridge";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

@@ -1,4 +1,4 @@
-import { db } from "@/lib/api/db";
+import { db } from "@/store/queryBridge";
 
 export type SupplierType = "direct_hotel" | "wholesaler" | "dmc" | "hotel_supplier" | "other";
 

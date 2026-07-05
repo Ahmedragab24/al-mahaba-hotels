@@ -1,33 +1,43 @@
 import { useState, useMemo, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { SelectedRate } from "@/components/quotation-rates-dialog";
 import { HotelRatesSelector } from "@/components/hotel-rates-selector";
 import { useI18n } from "@/lib/i18n";
-import {
-  useCountries,
-  useCities,
-  useCurrencies,
-} from "@/lib/lookups";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
-  User, Globe, CalendarDays, FileText,
-  Wallet, CreditCard, Receipt, Plus, X, Check
+  User,
+  Globe,
+  CalendarDays,
+  FileText,
+  Wallet,
+  CreditCard,
+  Receipt,
+  Plus,
+  X,
+  Check,
 } from "lucide-react";
 import {
   useCreateBookingMutation,
   useUpdateBookingMutation,
   useGetCustomersQuery,
   useGetHotelsQuery,
+  useGetCurrenciesQuery,
+  useGetCountriesQuery,
+  useGetCitiesQuery,
 } from "@/store/api";
-import { supabase } from "@/integrations/supabase/client";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
@@ -173,12 +183,13 @@ function FinancialSummary({
                   </Badge>
                 ) : null}
                 <span
-                  className={`text-sm font-bold tabular-nums ${remaining < 0
-                    ? "text-amber-600"
-                    : remaining === 0 && totalAmount > 0
-                      ? "text-emerald-600"
-                      : "text-destructive"
-                    }`}
+                  className={`text-sm font-bold tabular-nums ${
+                    remaining < 0
+                      ? "text-amber-600"
+                      : remaining === 0 && totalAmount > 0
+                        ? "text-emerald-600"
+                        : "text-destructive"
+                  }`}
                 >
                   {fmt(Math.max(remaining, 0))} {currency}
                 </span>
@@ -195,8 +206,9 @@ function FinancialSummary({
             </div>
             <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
               <div
-                className={`h-full rounded-full transition-all duration-500 ${isOverpaid ? "bg-amber-500" : "bg-emerald-500"
-                  }`}
+                className={`h-full rounded-full transition-all duration-500 ${
+                  isOverpaid ? "bg-amber-500" : "bg-emerald-500"
+                }`}
                 style={{ width: `${Math.min((amountPaid / totalAmount) * 100, 100)}%` }}
               />
             </div>
@@ -221,8 +233,9 @@ export function BookingForm({
   isQuotationConfirm?: boolean;
 }) {
   const { t, lang } = useI18n();
-  const currencies = useCurrencies({ lang, per_page: 500 });
-  const countries = useCountries({ lang, per_page: 500 });
+  // Auto-refresh all lists every 2 seconds for real-time data
+  const currencies = useGetCurrenciesQuery({ lang, all: 1 }, { pollingInterval: 2000 });
+  const countries = useGetCountriesQuery({ lang, all: 1 }, { pollingInterval: 2000 });
 
   const ar = (a: string, e: string) => (lang === "ar" ? a : e);
 
@@ -235,7 +248,8 @@ export function BookingForm({
         const viewObj = price.hotel_view || price.hotelView || price.view;
         const viewNameEn = viewObj?.name_en || (typeof viewObj === "string" ? viewObj : "");
         const viewNameAr = viewObj?.name_ar || (typeof viewObj === "string" ? viewObj : "");
-        const supplierNameEn = price.supplier?.name_en || (price.is_direct ? "Direct Hotel" : "Supplier");
+        const supplierNameEn =
+          price.supplier?.name_en || (price.is_direct ? "Direct Hotel" : "Supplier");
         const supplierNameAr = price.supplier?.name_ar || (price.is_direct ? "فندق مباشر" : "مورد");
 
         return {
@@ -249,8 +263,16 @@ export function BookingForm({
           is_direct: !!price.is_direct,
           room_name_en: roomNameEn,
           room_name_ar: roomNameAr,
-          room_type_name_en: item.room_type?.name_en || price.room_type?.name_en || price.room?.room_type?.name_en || "",
-          room_type_name_ar: item.room_type?.name_ar || price.room_type?.name_ar || price.room?.room_type?.name_ar || "",
+          room_type_name_en:
+            item.room_type?.name_en ||
+            price.room_type?.name_en ||
+            price.room?.room_type?.name_en ||
+            "",
+          room_type_name_ar:
+            item.room_type?.name_ar ||
+            price.room_type?.name_ar ||
+            price.room?.room_type?.name_ar ||
+            "",
           view_name_en: viewNameEn,
           view_name_ar: viewNameAr,
           supplier_name_en: supplierNameEn,
@@ -282,10 +304,17 @@ export function BookingForm({
     check_in: initial?.check_in ? initial.check_in.slice(0, 10) : "",
     check_out: initial?.check_out ? initial.check_out.slice(0, 10) : "",
 
-    is_direct: initial?.booking_type ? (initial.booking_type === "direct") : (initial?.is_direct ?? true),
+    is_direct: initial?.booking_type
+      ? initial.booking_type === "direct"
+      : (initial?.is_direct ?? true),
     room_rate: (() => {
       if (initial?.room_rate) return String(initial.room_rate);
-      if (initial?.quotation_id && initial?.total_amount && initial?.check_in && initial?.check_out) {
+      if (
+        initial?.quotation_id &&
+        initial?.total_amount &&
+        initial?.check_in &&
+        initial?.check_out
+      ) {
         const d1 = new Date(initial.check_in.slice(0, 10));
         const d2 = new Date(initial.check_out.slice(0, 10));
         const diff = d2.getTime() - d1.getTime();
@@ -328,13 +357,35 @@ export function BookingForm({
     return [{ amount: "", due_date: "", is_paid: false, invoice_image: null }];
   });
 
-  const addInstallment = () => setInstallments([...installments, { amount: "", due_date: "", is_paid: false, invoice_image: null }]);
+  const addInstallment = () =>
+    setInstallments([
+      ...installments,
+      { amount: "", due_date: "", is_paid: false, invoice_image: null },
+    ]);
   const updateInstallment = (idx: number, key: string, val: any) => {
     const newInst = [...installments];
     newInst[idx][key] = val;
     setInstallments(newInst);
   };
-  const removeInstallment = (idx: number) => setInstallments(installments.filter((_, i) => i !== idx));
+  // State for number of installments
+  const [numInstallments, setNumInstallments] = useState(1);
+
+  // Function to distribute remaining amount equally among installments
+  // remainingAmount = totalAmount - amountPaid (المتبقي من السعر الإجمالي بعد الدفع الفوري)
+  const distributeInstallments = (count: number, remaining: number) => {
+    if (count <= 0 || remaining <= 0) return [];
+    const amountPerInstallment = (remaining / count).toFixed(2);
+    const result = Array.from({ length: count }, (_, idx) => ({
+      amount:
+        idx === count - 1
+          ? String(remaining - parseFloat(amountPerInstallment) * (count - 1))
+          : amountPerInstallment,
+      due_date: "",
+      is_paid: false,
+      invoice_image: null,
+    }));
+    return result;
+  };
 
   const isQuotationMode = isQuotationConfirm || !!initial?.quotation_id;
 
@@ -359,10 +410,17 @@ export function BookingForm({
         group_size: initial.group_size ?? f.group_size,
         check_in: initial.check_in ? initial.check_in.slice(0, 10) : f.check_in,
         check_out: initial.check_out ? initial.check_out.slice(0, 10) : f.check_out,
-        is_direct: initial.booking_type ? (initial.booking_type === "direct") : (initial.is_direct ?? f.is_direct),
+        is_direct: initial.booking_type
+          ? initial.booking_type === "direct"
+          : (initial.is_direct ?? f.is_direct),
         room_rate: (() => {
           if (initial.room_rate) return String(initial.room_rate);
-          if (initial.quotation_id && initial.total_amount && initial.check_in && initial.check_out) {
+          if (
+            initial.quotation_id &&
+            initial.total_amount &&
+            initial.check_in &&
+            initial.check_out
+          ) {
             const d1 = new Date(initial.check_in.slice(0, 10));
             const d2 = new Date(initial.check_out.slice(0, 10));
             const diff = d2.getTime() - d1.getTime();
@@ -401,8 +459,10 @@ export function BookingForm({
             const viewObj = price.hotel_view || price.hotelView || price.view;
             const viewNameEn = viewObj?.name_en || (typeof viewObj === "string" ? viewObj : "");
             const viewNameAr = viewObj?.name_ar || (typeof viewObj === "string" ? viewObj : "");
-            const supplierNameEn = price.supplier?.name_en || (price.is_direct ? "Direct Hotel" : "Supplier");
-            const supplierNameAr = price.supplier?.name_ar || (price.is_direct ? "فندق مباشر" : "مورد");
+            const supplierNameEn =
+              price.supplier?.name_en || (price.is_direct ? "Direct Hotel" : "Supplier");
+            const supplierNameAr =
+              price.supplier?.name_ar || (price.is_direct ? "فندق مباشر" : "مورد");
 
             return {
               rate_id: String(price.id || item.price_id || ""),
@@ -420,7 +480,7 @@ export function BookingForm({
               supplier_name_en: supplierNameEn,
               supplier_name_ar: supplierNameAr,
             };
-          })
+          }),
         );
       }
     }
@@ -429,7 +489,10 @@ export function BookingForm({
   const currencyList = useMemo(() => {
     if (!currencies.data) return [];
     if (Array.isArray(currencies.data)) return currencies.data;
-    if (currencies.data.data && Array.isArray(currencies.data.data)) return currencies.data.data;
+    // Handle { data: { data: [...] } } format
+    if (currencies.data?.data && Array.isArray(currencies.data.data)) return currencies.data.data;
+    // Handle { data: [...] } format
+    if (Array.isArray((currencies.data as any)?.data)) return (currencies.data as any).data;
     return [];
   }, [currencies.data]);
 
@@ -442,20 +505,28 @@ export function BookingForm({
   const countryList = useMemo(() => {
     if (!countries.data) return [];
     if (Array.isArray(countries.data)) return countries.data;
-    if (countries.data.data && Array.isArray(countries.data.data)) return countries.data.data;
+    // Handle { data: { data: [...] } } format
+    if (countries.data?.data && Array.isArray(countries.data.data)) return countries.data.data;
+    // Handle { data: [...] } format
+    if (Array.isArray((countries.data as any)?.data)) return (countries.data as any).data;
     return [];
   }, [countries.data]);
 
-  const cities = useCities(form.country_id || null);
+  const cities = useGetCitiesQuery(form.country_id ? { country_id: form.country_id } : undefined, {
+    pollingInterval: 2000,
+  });
 
   const cityList = useMemo(() => {
     if (!cities.data) return [];
     if (Array.isArray(cities.data)) return cities.data;
-    if (cities.data.data && Array.isArray(cities.data.data)) return cities.data.data;
+    // Handle { data: { data: [...] } } format
+    if (cities.data?.data && Array.isArray(cities.data.data)) return cities.data.data;
+    // Handle { data: [...] } format
+    if (Array.isArray((cities.data as any)?.data)) return (cities.data as any).data;
     return [];
   }, [cities.data]);
 
-  const customersQuery = useGetCustomersQuery({ all: true });
+  const customersQuery = useGetCustomersQuery({ all: true }, { pollingInterval: 2000 });
 
   const customerList = useMemo(() => {
     const d = customersQuery.data;
@@ -465,24 +536,31 @@ export function BookingForm({
     return [];
   }, [customersQuery.data]);
 
-  const hotelsQuery = useGetHotelsQuery({
-    per_page: 1000,
-    lang,
-    country_id: form.country_id || undefined,
-    city_id: form.city_id || undefined,
-  });
+  const hotelsQuery = useGetHotelsQuery(
+    {
+      per_page: 1000,
+      lang,
+      country_id: form.country_id || undefined,
+      city_id: form.city_id || undefined,
+    },
+    { pollingInterval: 2000 },
+  );
 
   const hotelList = useMemo(() => {
     const d = hotelsQuery.data;
     if (!d) return [];
     if (Array.isArray(d)) return d;
-    if (Array.isArray((d as any).data)) return (d as any).data;
+    // Handle { data: { data: [...] } } format
+    if (d?.data && Array.isArray(d.data)) return d.data;
+    // Handle { data: [...] } format
+    if (Array.isArray((d as any)?.data)) return (d as any).data;
     return [];
   }, [hotelsQuery.data]);
 
   const filteredHotels = useMemo(() => {
     let list = hotelList;
-    if (form.country_id) list = list.filter((h: any) => String(h.country_id) === String(form.country_id));
+    if (form.country_id)
+      list = list.filter((h: any) => String(h.country_id) === String(form.country_id));
     if (form.city_id) list = list.filter((h: any) => String(h.city_id) === String(form.city_id));
     return list;
   }, [hotelList, form.country_id, form.city_id]);
@@ -506,50 +584,37 @@ export function BookingForm({
   const amountPaid = Number(form.amount_paid) || 0;
   const remaining = totalAmount - amountPaid;
 
-  const initialRooms = useQuery({
-    queryKey: ["booking-rooms-initial", initial?.id],
-    enabled: !!initial?.id,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("booking_rooms")
-        .select("*, hotel:hotels(name_en,name_ar), room_type:hotel_room_types(name_en,name_ar), supplier:suppliers(name_en,name_ar), rate:rates(*)")
-        .eq("booking_id", initial.id)
-        .order("created_at");
-      if (error) throw error;
-      return (data ?? []) as any[];
-    },
-  });
-
+  // Auto-generate installments when numInstallments or amount_paid changes
   useEffect(() => {
-    if (initialRooms.data && initialRooms.data.length > 0 && selectedItems.length === 0) {
-      setSelectedItems(
-        initialRooms.data.map((r: any) => ({
-          rate_id: r.rate_id,
-          room_type_id: r.room_type_id || r.rate?.room_type_id,
-          view_id: r.rate?.view_id || null,
-          meal_plan: r.rate?.meal_plan || "RO",
-          selling_price: Number(r.selling_price) || 0,
-          rooms: r.rooms || 1,
-          supplier_id: r.supplier_id || null,
-          is_direct: r.rate?.is_direct ?? true,
-          room_name_en: r.room_type?.name_en,
-          room_name_ar: r.room_type?.name_ar,
-          supplier_name_en: r.supplier?.name_en,
-          supplier_name_ar: r.supplier?.name_ar,
-        }))
-      );
+    if (form.payment_mode === "partial" && numInstallments > 0 && totalAmount > 0) {
+      const amountPaidNum = Number(form.amount_paid) || 0;
+      const remaining = Math.max(0, totalAmount - amountPaidNum);
+
+      // Check if this is a user-initiated change (not restoration of initial data)
+      const existingPayments = installments.filter((i) => i.amount);
+      // Only auto-distribute if installments are empty or count has changed
+      if (existingPayments.length === 0 || installments.length !== numInstallments) {
+        setInstallments(distributeInstallments(numInstallments, remaining));
+      }
     }
-  }, [initialRooms.data]);
+  }, [numInstallments, form.payment_mode, form.amount_paid, totalAmount, installments]);
 
   useEffect(() => {
     if (selectedItems.length > 0) {
       const totalRoomsCount = selectedItems.reduce((sum, item) => sum + (item.rooms || 0), 0);
-      const roomTotalRate = selectedItems.reduce((sum, item) => sum + (Number(item.selling_price) || 0) * (item.rooms || 1), 0);
+      const roomTotalRate = selectedItems.reduce(
+        (sum, item) => sum + (Number(item.selling_price) || 0) * (item.rooms || 1),
+        0,
+      );
       const autoTotal = roomTotalRate * nights;
 
       setForm((f) => {
         const nextTotal = autoTotal > 0 ? String(autoTotal) : f.total_amount;
-        if (f.total_amount === nextTotal && f.room_rate === String(roomTotalRate / (totalRoomsCount || 1))) return f;
+        if (
+          f.total_amount === nextTotal &&
+          f.room_rate === String(roomTotalRate / (totalRoomsCount || 1))
+        )
+          return f;
         return {
           ...f,
           rooms: totalRoomsCount,
@@ -576,6 +641,34 @@ export function BookingForm({
       });
     }
   }, [selectedItems, nights, isQuotationMode, form.room_rate]);
+
+  // Auto-update amount_paid based on payment mode and installments
+  useEffect(() => {
+    setForm((f) => {
+      if (f.payment_mode === "full") {
+        // Full payment: amount_paid should be total_amount
+        if (f.amount_paid !== f.total_amount) {
+          return { ...f, amount_paid: f.total_amount };
+        }
+      } else if (f.payment_mode === "deferred") {
+        // Deferred payment: amount_paid should be 0
+        if (f.amount_paid !== "0") {
+          return { ...f, amount_paid: "0" };
+        }
+      } else if (f.payment_mode === "partial") {
+        // Partial payment: amount_paid should be sum of paid installments
+        const paidSum = installments.reduce(
+          (sum, inst) => sum + (inst.is_paid ? Number(inst.amount) || 0 : 0),
+          0,
+        );
+        const paidSumStr = String(paidSum);
+        if (f.amount_paid !== paidSumStr) {
+          return { ...f, amount_paid: paidSumStr };
+        }
+      }
+      return f;
+    });
+  }, [form.payment_mode, form.total_amount, installments]);
 
   const handleCountryChange = (val: string) => {
     setForm((f) => ({ ...f, country_id: val, city_id: "", hotel_id: "", room_type_id: "" }));
@@ -621,7 +714,10 @@ export function BookingForm({
       } else if (form.payment_mode === "deferred") {
         paidAmt = 0;
       } else if (form.payment_mode === "partial") {
-        paidAmt = installments.reduce((sum, inst) => sum + (inst.is_paid ? (Number(inst.amount) || 0) : 0), 0);
+        paidAmt = installments.reduce(
+          (sum, inst) => sum + (inst.is_paid ? Number(inst.amount) || 0 : 0),
+          0,
+        );
       }
 
       let payload: any = {
@@ -660,7 +756,7 @@ export function BookingForm({
       if (form.payment_mode === "deferred") {
         payload.deferred_payment_due_date = form.deferred_payment_due_date;
       } else if (form.payment_mode === "partial") {
-        payload.installments = installments.map(i => ({
+        payload.installments = installments.map((i) => ({
           amount: Number(i.amount) || 0,
           due_date: i.due_date,
           is_paid: Boolean(i.is_paid),
@@ -668,8 +764,9 @@ export function BookingForm({
         }));
       }
 
-      const hasFiles = invoiceImage ||
-        (form.payment_mode === "partial" && installments.some(i => i.invoice_image));
+      const hasFiles =
+        invoiceImage ||
+        (form.payment_mode === "partial" && installments.some((i) => i.invoice_image));
 
       let finalBody: any;
       if (hasFiles) {
@@ -688,7 +785,10 @@ export function BookingForm({
               formData.append(`installments[${idx}][due_date]`, String(inst.due_date));
               formData.append(`installments[${idx}][is_paid]`, inst.is_paid ? "true" : "false");
               if (installments[idx].invoice_image) {
-                formData.append(`installments[${idx}][invoice_image]`, installments[idx].invoice_image);
+                formData.append(
+                  `installments[${idx}][invoice_image]`,
+                  installments[idx].invoice_image,
+                );
               }
             });
           } else {
@@ -732,12 +832,14 @@ export function BookingForm({
               title={ar("بيانات العميل", "Customer Details")}
               subtitle={ar("المعلومات الأساسية للحجز", "Basic booking information")}
             />
-            <div className="grid gap-4 md:grid-cols-4 mt-4">
+            <div className="grid gap-4 md:grid-cols-5 mt-4">
               <FormField label={t("bk.customer")} required>
                 <Select
                   value={form.customer_id}
                   onValueChange={(val) => {
-                    const selectedCust = customerList.find((c: any) => String(c.id) === String(val));
+                    const selectedCust = customerList.find(
+                      (c: any) => String(c.id) === String(val),
+                    );
                     if (selectedCust?.country_id) {
                       setForm((f) => ({
                         ...f,
@@ -746,13 +848,17 @@ export function BookingForm({
                         city_id: "",
                         hotel_id: "",
                         room_type_id: "",
-                        currency_id: selectedCust.currency_id ? String(selectedCust.currency_id) : f.currency_id,
+                        currency_id: selectedCust.currency_id
+                          ? String(selectedCust.currency_id)
+                          : f.currency_id,
                       }));
                     } else {
                       setForm((f) => ({
                         ...f,
                         customer_id: val,
-                        currency_id: selectedCust?.currency_id ? String(selectedCust.currency_id) : f.currency_id,
+                        currency_id: selectedCust?.currency_id
+                          ? String(selectedCust.currency_id)
+                          : f.currency_id,
                       }));
                     }
                     setSelectedItems([]);
@@ -765,23 +871,26 @@ export function BookingForm({
                   <SelectContent>
                     {customerList.map((c: any) => (
                       <SelectItem key={c.id} value={String(c.id)}>
-                        {lang === "ar" ? (c.name_ar || c.name_en) : (c.name_en || c.name_ar)} —{" "}
+                        {lang === "ar" ? c.name_ar || c.name_en : c.name_en || c.name_ar} —{" "}
                         {t(`ctype.${c.type || c.customer_type || "individual"}`)}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                {form.customer_id && (() => {
-                  const selCust = customerList.find((c: any) => String(c.id) === String(form.customer_id));
-                  if (selCust?.country) {
-                    return (
-                      <div className="text-sm text-end text-muted-foreground mt-1">
-                        ( {lang === "ar" ? selCust.country.name_ar : selCust.country.name_en} )
-                      </div>
+                {form.customer_id &&
+                  (() => {
+                    const selCust = customerList.find(
+                      (c: any) => String(c.id) === String(form.customer_id),
                     );
-                  }
-                  return null;
-                })()}
+                    if (selCust?.country) {
+                      return (
+                        <div className="text-sm text-end text-muted-foreground mt-1">
+                          ( {lang === "ar" ? selCust.country.name_ar : selCust.country.name_en} )
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
               </FormField>
 
               <FormField label={t("label.currency")} required>
@@ -823,10 +932,7 @@ export function BookingForm({
               </FormField>
 
               <FormField label={ar("حالة الحجز", "Booking Status")} required>
-                <Select
-                  value={form.status}
-                  onValueChange={(v) => set("status", v)}
-                >
+                <Select value={form.status} onValueChange={(v) => set("status", v)}>
                   <SelectTrigger className="h-9">
                     <SelectValue />
                   </SelectTrigger>
@@ -834,7 +940,9 @@ export function BookingForm({
                     <SelectItem value="confirmed">{ar("مؤكد", "Confirmed")}</SelectItem>
                     <SelectItem value="pending">{ar("قيد الانتظار", "Pending")}</SelectItem>
                     {initial?.status && !["confirmed", "pending"].includes(initial.status) && (
-                      <SelectItem value={initial.status}>{t(`bkstatus.${initial.status}`)}</SelectItem>
+                      <SelectItem value={initial.status}>
+                        {t(`bkstatus.${initial.status}`)}
+                      </SelectItem>
                     )}
                   </SelectContent>
                 </Select>
@@ -844,7 +952,6 @@ export function BookingForm({
         </Card>
       )}
 
-
       {/* ── 4. Stay Dates ── */}
       <Card className="shadow-sm border-border/60">
         <CardContent className="p-5">
@@ -853,32 +960,53 @@ export function BookingForm({
             title={ar("تواريخ الإقامة", "Stay Dates")}
             subtitle={ar("تاريخ الوصول والمغادرة", "Check-in and check-out dates")}
           />
-          <div className="grid gap-4 md:grid-cols-3 mt-4">
+          <div className={`grid gap-4 md:grid-cols-3 mt-4 ${isQuotationMode && "items-center"}`}>
             <FormField label={ar("تاريخ الوصول (Check-in)", "Check-in Date")} required>
               <Input
-                className="h-9"
+                className={`h-9 ${isQuotationMode ? "bg-muted cursor-not-allowed" : ""}`}
                 type="date"
                 value={form.check_in}
                 onChange={(e) => set("check_in", e.target.value)}
+                readOnly={isQuotationMode}
+                disabled={isQuotationMode}
               />
+              {isQuotationMode && (
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  {ar(
+                    "يتم جلب التاريخ من عرض السعر تلقائياً",
+                    "Date is fetched from the quotation automatically",
+                  )}
+                </p>
+              )}
             </FormField>
 
             <FormField label={ar("تاريخ المغادرة (Check-out)", "Check-out Date")} required>
               <Input
-                className="h-9"
+                className={`h-9 ${isQuotationMode ? "bg-muted cursor-not-allowed" : ""}`}
                 type="date"
                 value={form.check_out}
                 min={form.check_in || undefined}
                 onChange={(e) => set("check_out", e.target.value)}
+                readOnly={isQuotationMode}
+                disabled={isQuotationMode}
               />
+              {isQuotationMode && (
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  {ar(
+                    "يتم جلب التاريخ من عرض السعر تلقائياً",
+                    "Date is fetched from the quotation automatically",
+                  )}
+                </p>
+              )}
             </FormField>
 
             <div className="flex flex-col justify-end">
               <div
-                className={`flex items-center justify-center gap-2 rounded-lg border p-2.5 ${nights > 0
-                  ? "bg-primary/5 border-primary/30 text-primary"
-                  : "bg-muted border-border text-muted-foreground"
-                  }`}
+                className={`flex items-center justify-center gap-2 rounded-lg border p-2.5 ${
+                  nights > 0
+                    ? "bg-primary/5 border-primary/30 text-primary"
+                    : "bg-muted border-border text-muted-foreground"
+                }`}
               >
                 <CalendarDays className="w-4 h-4" />
                 <span className="text-sm font-semibold tabular-nums">
@@ -953,8 +1081,10 @@ export function BookingForm({
                     ) : (
                       filteredHotels.map((h: any) => (
                         <SelectItem key={h.id} value={String(h.id)}>
-                          {lang === "ar" ? (h.name_ar || h.name_en) : (h.name_en || h.name_ar)}
-                          {h.star_rating || h.stars ? " " + "★".repeat(h.star_rating || h.stars) : ""}
+                          {lang === "ar" ? h.name_ar || h.name_en : h.name_en || h.name_ar}
+                          {h.star_rating || h.stars
+                            ? " " + "★".repeat(h.star_rating || h.stars)
+                            : ""}
                         </SelectItem>
                       ))
                     )}
@@ -976,16 +1106,16 @@ export function BookingForm({
         </Card>
       )}
 
-
-
-
       {/* ── 5. Pricing & Payment ── */}
       <Card className="shadow-sm border-border/60">
         <CardContent className="p-5">
           <SectionHeader
             icon={Wallet}
             title={ar("التسعير والدفع", "Pricing & Payment")}
-            subtitle={ar("سعر الغرفة وطريقة الدفع والمبلغ المدفوع", "Room rate, payment method and amount paid")}
+            subtitle={ar(
+              "سعر الغرفة وطريقة الدفع والمبلغ المدفوع",
+              "Room rate, payment method and amount paid",
+            )}
           />
           <div className="grid gap-6 lg:grid-cols-2 mt-4">
             <div className="space-y-4">
@@ -1006,10 +1136,11 @@ export function BookingForm({
 
                 <div className="flex flex-col justify-end">
                   <div
-                    className={`flex items-center justify-center gap-2 rounded-lg border p-2 h-9 ${nights > 0
-                      ? "bg-primary/5 border-primary/30 text-primary"
-                      : "bg-muted border-border text-muted-foreground"
-                      }`}
+                    className={`flex items-center justify-center gap-2 rounded-lg border p-2 h-9 ${
+                      nights > 0
+                        ? "bg-primary/5 border-primary/30 text-primary"
+                        : "bg-muted border-border text-muted-foreground"
+                    }`}
                   >
                     <CalendarDays className="w-4 h-4" />
                     <span className="text-sm font-semibold tabular-nums">
@@ -1028,10 +1159,11 @@ export function BookingForm({
                       key={pm.code}
                       type="button"
                       onClick={() => handlePaymentModeChange(pm.code)}
-                      className={`flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition-all duration-150 ${form.payment_mode === pm.code
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border hover:border-primary/40 hover:bg-muted/40 text-muted-foreground"
-                        }`}
+                      className={`flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition-all duration-150 ${
+                        form.payment_mode === pm.code
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border hover:border-primary/40 hover:bg-muted/40 text-muted-foreground"
+                      }`}
                     >
                       <CreditCard className="w-3.5 h-3.5 shrink-0" />
                       {lang === "ar" ? pm.ar : pm.en}
@@ -1040,7 +1172,7 @@ export function BookingForm({
                 </div>
               </FormField>
 
-              {!isQuotationMode && (
+              {!isQuotationMode && form.payment_mode !== "partial" && (
                 <FormField label={ar("المبلغ المدفوع", "Amount Paid")}>
                   <div className="relative">
                     <Input
@@ -1051,14 +1183,19 @@ export function BookingForm({
                       placeholder="0.00"
                       value={form.amount_paid}
                       disabled={form.payment_mode === "deferred"}
-                      readOnly
+                      readOnly={form.payment_mode === "full"}
                       onChange={(e) => set("amount_paid", e.target.value)}
                     />
                     <span className="absolute end-3 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground pointer-events-none">
                       {currencyCode}
                     </span>
                   </div>
-                  {remaining > 0 && totalAmount > 0 && (
+                  {form.payment_mode === "full" && (
+                    <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">
+                      {ar("يتم سداد المبلغ كاملاً", "Full amount will be paid")}
+                    </p>
+                  )}
+                  {remaining > 0 && totalAmount > 0 && form.payment_mode !== "full" && (
                     <p className="text-xs text-muted-foreground mt-1">
                       {ar("المبلغ المتبقي: ", "Remaining: ")}
                       <span className="font-semibold text-destructive tabular-nums">
@@ -1082,38 +1219,131 @@ export function BookingForm({
 
               {form.payment_mode === "partial" && (
                 <div className="col-span-full space-y-4 border-t pt-4 mt-2">
+                  {/* إدخال المبلغ الفوري (الدفع الآن) */}
+                  <FormField label={ar("المبلغ المدفوع الآن", "Amount to Pay Now")}>
+                    <div className="relative">
+                      <Input
+                        className="h-9 pe-12"
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        max={totalAmount}
+                        placeholder="0.00"
+                        value={form.amount_paid}
+                        onChange={(e) => set("amount_paid", e.target.value)}
+                      />
+                      <span className="absolute end-3 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground pointer-events-none">
+                        {currencyCode}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {ar("المتبقي للأقساط: ", "Remaining for installments: ")}
+                      <span className="font-semibold text-primary tabular-nums">
+                        {new Intl.NumberFormat().format(
+                          Math.max(0, totalAmount - (Number(form.amount_paid) || 0)),
+                        )}{" "}
+                        {currencyCode}
+                      </span>
+                    </p>
+                  </FormField>
+
+                  {/* عدد الأقساط */}
+                  <FormField label={ar("عدد الأقساط", "Number of Installments")}>
+                    <div className="flex items-center gap-3">
+                      <div className="relative flex-1">
+                        <Input
+                          className="h-9"
+                          type="number"
+                          min={1}
+                          max={12}
+                          value={numInstallments}
+                          onChange={(e) => {
+                            const val = Math.max(1, Math.min(12, Number(e.target.value) || 1));
+                            setNumInstallments(val);
+                          }}
+                        />
+                      </div>
+                      <div className="text-xs text-muted-foreground bg-muted/50 px-2.5 py-2 rounded-md whitespace-nowrap">
+                        {ar(
+                          `كل قسط: ${(Math.max(0, totalAmount - (Number(form.amount_paid) || 0)) / numInstallments).toFixed(2)} ${currencyCode}`,
+                          `Per installment: ${(Math.max(0, totalAmount - (Number(form.amount_paid) || 0)) / numInstallments).toFixed(2)} ${currencyCode}`,
+                        )}
+                      </div>
+                    </div>
+                    <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                      {ar(
+                        "سيتم توزيع المتبقي على الأقساط تلقائياً",
+                        "Remaining amount will be distributed automatically",
+                      )}
+                    </p>
+                  </FormField>
+
                   <div className="flex justify-between items-center">
-                    <Label className="text-sm font-semibold">{ar("الأقساط / الدفعات", "Installments")}</Label>
-                    <Button type="button" variant="outline" size="sm" onClick={addInstallment}>
+                    <Label className="text-sm font-semibold">
+                      {ar("الأقساط / الدفعات", "Installments")}
+                    </Label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setNumInstallments((prev) => prev + 1)}
+                      disabled={numInstallments >= 12}
+                    >
                       <Plus className="w-4 h-4 me-1" />
-                      {ar("إضافة تاريخ سداد", "Add Payment Date")}
+                      {ar("إضافة قسط", "Add Installment")}
                     </Button>
                   </div>
                   {installments.map((inst, idx) => (
-                    <div key={idx} className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end p-3 border rounded-lg bg-muted/20">
+                    <div
+                      key={idx}
+                      className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end p-3 border rounded-lg bg-muted/20"
+                    >
                       <FormField label={ar("تاريخ السداد", "Due Date")}>
-                        <Input type="date" className="h-9" value={inst.due_date} onChange={(e) => updateInstallment(idx, "due_date", e.target.value)} />
+                        <Input
+                          type="date"
+                          className="h-9"
+                          value={inst.due_date}
+                          onChange={(e) => updateInstallment(idx, "due_date", e.target.value)}
+                        />
                       </FormField>
                       <FormField label={ar("المبلغ", "Amount")}>
-                        <Input type="number" className="h-9" value={inst.amount} onChange={(e) => updateInstallment(idx, "amount", e.target.value)} />
+                        <Input
+                          type="number"
+                          className="h-9"
+                          value={inst.amount}
+                          onChange={(e) => updateInstallment(idx, "amount", e.target.value)}
+                        />
                       </FormField>
                       <div className="flex items-center gap-4 pb-2 sm:col-span-2">
                         <label className="flex items-center gap-2 cursor-pointer text-sm">
-                          <Checkbox checked={inst.is_paid} onCheckedChange={(c) => updateInstallment(idx, "is_paid", !!c)} />
+                          <Checkbox
+                            checked={inst.is_paid}
+                            onCheckedChange={(c) => updateInstallment(idx, "is_paid", !!c)}
+                          />
                           {ar("تم الدفع", "Paid")}
                         </label>
                       </div>
                       {inst.is_paid && (
                         <div className="sm:col-span-2 flex items-center justify-between gap-2">
-                          <Input type="file" accept="image/*,application/pdf" className="text-xs h-9" onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            updateInstallment(idx, "invoice_image", file || null);
-                          }} />
+                          <Input
+                            type="file"
+                            accept="image/*,application/pdf"
+                            className="text-xs h-9"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              updateInstallment(idx, "invoice_image", file || null);
+                            }}
+                          />
                         </div>
                       )}
                       {installments.length > 1 && (
                         <div className="sm:col-span-2 flex justify-end">
-                          <Button variant="ghost" size="sm" className="text-destructive" onClick={() => removeInstallment(idx)}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive"
+                            onClick={() => removeInstallment(idx)}
+                          >
                             <X className="w-4 h-4 me-1" />
                             {ar("إزالة", "Remove")}
                           </Button>
@@ -1140,9 +1370,12 @@ export function BookingForm({
                     </div>
                   </div>
                   <div className="text-start sm:text-end shrink-0">
-                    <p className="text-xs text-emerald-600/80 dark:text-emerald-400/80 mb-0.5">{ar("المبلغ الإجمالي", "Total Amount")}</p>
+                    <p className="text-xs text-emerald-600/80 dark:text-emerald-400/80 mb-0.5">
+                      {ar("المبلغ الإجمالي", "Total Amount")}
+                    </p>
                     <p className="font-bold text-emerald-700 dark:text-emerald-400 tabular-nums">
-                      {new Intl.NumberFormat().format(Number(form.total_amount) || 0)} {currencyCode}
+                      {new Intl.NumberFormat().format(Number(form.total_amount) || 0)}{" "}
+                      {currencyCode}
                     </p>
                   </div>
                 </div>
@@ -1199,7 +1432,10 @@ export function BookingForm({
             <SectionHeader
               icon={FileText}
               title={ar("الطلبات والملاحظات", "Requests & Notes")}
-              subtitle={ar("أي طلبات خاصة أو ملاحظات إضافية", "Special requests or additional notes")}
+              subtitle={ar(
+                "أي طلبات خاصة أو ملاحظات إضافية",
+                "Special requests or additional notes",
+              )}
             />
             <div className="grid gap-4 md:grid-cols-2 mt-4">
               <FormField label={t("bk.special_requests")}>
@@ -1231,9 +1467,7 @@ export function BookingForm({
           disabled={isSaving}
           onClick={saveBooking}
         >
-          {isSaving
-            ? ar("جاري الحفظ...", "Saving...")
-            : t("actions.save")}
+          {isSaving ? ar("جاري الحفظ...", "Saving...") : t("actions.save")}
         </Button>
       </div>
     </div>

@@ -26,7 +26,11 @@ export interface Price {
   cancellation_policy?: string;
   cancellation_policy_ar?: string;
   cancellation_policy_en?: string;
-  status: "draft" | "pending" | "approved" | "rejected" | "expired";
+  status: "draft" | "pending" | "approved" | "rejected" | "expired" | "valid";
+  status_text?: string;
+  is_weekend_weekday?: boolean;
+  price_type?: string;
+  days?: string[];
   is_archived?: boolean;
   created_at?: string;
   updated_at?: string;

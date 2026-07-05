@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
-import { apiClient } from "@/lib/api/api-client";
+import { apiClient } from "@/store/queryBridge";
 import { useI18n } from "@/lib/i18n";
 import { useHotels, useHotelViews } from "@/lib/lookups";
-import { dbErrorMessage } from "@/lib/db-errors";
+import { dbErrorMessage } from "@/store/queryBridge";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,7 +20,7 @@ export function RoomTypeDialog({ open, onOpenChange, initial, onSaved, fixedHote
   open: boolean; onOpenChange: (v: boolean) => void; initial?: any; onSaved: () => void; fixedHotelId?: string;
 }) {
   const { t, lang } = useI18n();
-  const hotels = useHotels();
+  const hotels = useHotels({}, { refetchInterval: 2000 });
   const [v, setV] = useState<any>({});
   const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
   const isEdit = !!initial?.id;
@@ -30,7 +30,7 @@ export function RoomTypeDialog({ open, onOpenChange, initial, onSaved, fixedHote
 
   const { data: roomTypesData } = useGetRoomTypesQuery(
     v.hotel_id ? { hotel_id: v.hotel_id } : undefined,
-    { skip: !v.hotel_id }
+    { skip: !v.hotel_id, pollingInterval: 2000 }
   );
 
   const roomTypes = Array.isArray(roomTypesData)

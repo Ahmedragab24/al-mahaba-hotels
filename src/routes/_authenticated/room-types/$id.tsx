@@ -1,6 +1,5 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useI18n } from "@/lib/i18n";
 import { useSelector } from "react-redux";
 import { selectAuth } from "@/store/features/authSlice";
@@ -16,7 +15,7 @@ import { ArrowLeft, Pencil, Archive, RotateCcw, Trash2 } from "lucide-react";
 import { formatDateTime } from "@/lib/format";
 import { useGetRoomByIdQuery, useUpdateRoomMutation, useDeleteRoomMutation } from "@/store/services/rooms/roomsService";
 import { toast } from "sonner";
-import { dbErrorMessage } from "@/lib/db-errors";
+import { useMutation, useQueryClient, dbErrorMessage } from "@/store/queryBridge";
 
 function KV({ label, value, mono }: { label: string; value: any; mono?: boolean }) {
   if (value === null || value === undefined || value === "" || value === false) return null;
@@ -33,10 +32,10 @@ export default function RoomTypeDetail() {
   const { t, lang } = useI18n();
   const auth = useSelector(selectAuth);
   const navigate = useNavigate();
-  const qc = useQueryClient();
   const canWrite = hasAnyRole(auth, ["super_admin", "admin", "operations_manager", "operations_agent"]);
   const [editing, setEditing] = useState(false);
   const [confirm, setConfirm] = useState<{ action: "archive" | "restore" | "delete" } | null>(null);
+  const qc = useQueryClient();
 
   const [updateRoom] = useUpdateRoomMutation();
   const [deleteRoom] = useDeleteRoomMutation();
@@ -44,16 +43,26 @@ export default function RoomTypeDetail() {
   const q = useGetRoomByIdQuery({ id });
 
   const archiveMut = useMutation({
-    mutationFn: async (action: "archive" | "restore" | "delete") => {
-      if (action === "delete" || action === "archive") {
+    mutationFn: async ({ action, room }: { action: "archive" | "restore" | "delete"; room?: any }) => {
+      if (action === "delete") {
         await deleteRoom(id).unwrap();
       } else {
-        await updateRoom({ id, body: { status: "1" } as any }).unwrap();
+        await updateRoom({ 
+          id, 
+          body: { 
+            name_ar: room?.name_ar,
+            name_en: room?.name_en,
+            hotel_id: room?.hotel_id,
+            room_type_id: room?.room_type_id,
+            view: room?.view || "",
+            status: action === "archive" ? "0" : "1" 
+          } as any 
+        }).unwrap();
       }
     },
-    onSuccess: (_d, action) => {
-      toast.success(action === "restore" ? t("toast.restored") : action === "archive" ? t("toast.archived") : t("toast.deleted"));
-      if (action === "delete") {
+    onSuccess: (_d, v) => {
+      toast.success(v.action === "restore" ? t("toast.restored") : v.action === "archive" ? t("toast.archived") : t("toast.deleted"));
+      if (v.action === "delete") {
         navigate("/room-types");
       } else {
         q.refetch();
@@ -69,6 +78,7 @@ export default function RoomTypeDetail() {
   if (!q.data) return <div className="p-6 text-muted-foreground">{t("room_types.no_found")}</div>;
   const r = q.data as any;
   const name = lang === "ar" ? (r.name_ar || r.name_en) : (r.name_en || r.name_ar);
+  const isActive = r.status === 1 || r.status === "1" || r.status === true;
 
   return (
     <>
@@ -80,19 +90,17 @@ export default function RoomTypeDetail() {
             <Button variant="outline" size="sm" onClick={() => navigate("/room-types")}>
               <ArrowLeft className="h-4 w-4 rtl:rotate-180" />{t("actions.back")}
             </Button>
-            {canWrite && !r.is_archived && (
+            {canWrite && isActive && (
               <Button size="sm" onClick={() => setEditing(true)}><Pencil className="h-4 w-4" />{t("actions.edit")}</Button>
             )}
-            {isAdmin(auth) && (r.is_archived
-              ? <Button variant="outline" size="sm" onClick={() => setConfirm({ action: "restore" })}><RotateCcw className="h-4 w-4" />{t("actions.restore")}</Button>
-              : <Button variant="outline" size="sm" onClick={() => setConfirm({ action: "archive" })}><Archive className="h-4 w-4" />{t("actions.archive")}</Button>
+            {canWrite && (isActive
+              ? <Button variant="outline" size="sm" onClick={() => setConfirm({ action: "archive" })}><Archive className="h-4 w-4" />{t("actions.archive")}</Button>
+              : <Button variant="outline" size="sm" onClick={() => setConfirm({ action: "restore" })}><RotateCcw className="h-4 w-4" />{t("actions.restore")}</Button>
             )}
-            {isAdmin(auth) && r.is_archived && (
+            {canWrite && (
               <Button variant="destructive" size="sm" onClick={() => setConfirm({ action: "delete" })}><Trash2 className="h-4 w-4" />{t("actions.delete")}</Button>
             )}
-            {r.is_archived
-              ? <Badge variant="secondary">{t("status.archived")}</Badge>
-              : <StatusPill status={r.status ? "active" : "inactive"} />}
+            <StatusPill status={isActive ? "active" : "archived"} />
           </div>
         }
       />
@@ -141,7 +149,7 @@ export default function RoomTypeDetail() {
         title={confirm?.action === "restore" ? t("actions.restore") : confirm?.action === "delete" ? t("actions.delete") : t("actions.archive")}
         description={confirm?.action === "delete" ? t("toast.confirm_delete") : confirm?.action === "restore" ? "" : t("toast.confirm_archive")}
         destructive={confirm?.action !== "restore"}
-        onConfirm={() => confirm && archiveMut.mutate(confirm.action)}
+        onConfirm={() => confirm && archiveMut.mutate({ action: confirm.action, room: r })}
       />
     </>
   );

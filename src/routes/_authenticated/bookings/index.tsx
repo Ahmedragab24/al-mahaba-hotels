@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { apiClient } from "@/lib/api/api-client";
+import { useQuery } from "@/store/queryBridge";
+import { apiClient } from "@/store/queryBridge";
 import { useGetBookingsQuery, useDeleteBookingMutation } from "@/store/api";
 import { PageHeader } from "@/components/page-header";
 import { useI18n } from "@/lib/i18n";
@@ -10,39 +10,90 @@ import { selectAuth } from "@/store/features/authSlice";
 import { hasAnyRole } from "@/lib/auth-utils";
 import { useDebounce } from "@/lib/use-debounce";
 import { Card, CardContent } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { DataPagination } from "@/components/data-pagination";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { toast } from "sonner";
 import {
-  Plus, Search, Eye, X, CalendarCheck2, BedDouble, ClipboardList,
-  CheckCircle2, LogIn, CheckCheck, XCircle, DollarSign, FileText, Hotel,
-  Pencil, Trash2,
+  Plus,
+  Search,
+  Eye,
+  X,
+  CalendarCheck2,
+  BedDouble,
+  ClipboardList,
+  CheckCircle2,
+  LogIn,
+  CheckCheck,
+  XCircle,
+  DollarSign,
+  FileText,
+  Hotel,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import { formatDate } from "@/lib/format";
 import { KpiCard, StatusPill, type KpiTone } from "@/components/list-toolkit";
 
-
-
 const PAGE_SIZE = 20;
 export const BK_STATUSES = ["confirmed", "pending", "cancelled"] as const;
-export const BK_WRITE_ROLES = ["super_admin", "admin", "sales_manager", "sales_agent", "operations_manager", "operations_agent"] as const;
+export type BookingStatus = (typeof BK_STATUSES)[number];
+export const BK_WRITE_ROLES = [
+  "super_admin",
+  "admin",
+  "sales_manager",
+  "sales_agent",
+  "operations_manager",
+  "operations_agent",
+] as const;
 
-export function BkStatusBadge({ status, t }: { status: string; t: (k: string, f?: string) => string }) {
-  const variant = status === "cancelled" || status === "no_show" ? "destructive"
-    : status === "pending" || status === "draft" || status === "checked_out" ? "outline"
-      : "default";
-  const cls = status === "confirmed" || status === "checked_in" ? "bg-emerald-600 text-white hover:bg-emerald-600"
-    : status === "pending" || status === "pending_supplier_confirmation" ? "bg-amber-500 text-white hover:bg-amber-500 border-transparent"
-    : undefined;
-  return <Badge variant={variant as any} className={cls}>{t(`bkstatus.${status}`)}</Badge>;
+export function normalizeBookingStatus(status?: string | null): BookingStatus {
+  if (status === "cancelled" || status === "no_show") return "cancelled";
+  if (status === "confirmed" || status === "checked_in" || status === "checked_out")
+    return "confirmed";
+  return "pending";
 }
 
+export function BkStatusBadge({
+  status,
+  t,
+}: {
+  status: string;
+  t: (k: string, f?: string) => string;
+}) {
+  const normalized = normalizeBookingStatus(status);
+  const variant =
+    normalized === "cancelled" ? "destructive" : normalized === "pending" ? "outline" : "default";
+  const cls =
+    normalized === "confirmed"
+      ? "bg-emerald-600 text-white hover:bg-emerald-600"
+      : normalized === "pending"
+        ? "bg-amber-500 text-white hover:bg-amber-500 border-transparent"
+        : undefined;
+  return (
+    <Badge variant={variant as any} className={cls}>
+      {t(`bkstatus.${normalized}`)}
+    </Badge>
+  );
+}
 
 export default function BookingsList() {
   const { t, lang } = useI18n();
@@ -59,41 +110,66 @@ export default function BookingsList() {
   const [page, setPage] = useState(1);
   const dSearch = useDebounce(search, 300);
 
-  const filtersActive = !!(dSearch || customer !== "all" || status !== "all" || hotel !== "all" || from || to);
-  const resetAll = () => { setSearch(""); setCustomer("all"); setStatus("all"); setHotel("all"); setFrom(""); setTo(""); setPage(1); };
+  const filtersActive = !!(
+    dSearch ||
+    customer !== "all" ||
+    status !== "all" ||
+    hotel !== "all" ||
+    from ||
+    to
+  );
+  const resetAll = () => {
+    setSearch("");
+    setCustomer("all");
+    setStatus("all");
+    setHotel("all");
+    setFrom("");
+    setTo("");
+    setPage(1);
+  };
 
   const customers = useQuery({
     queryKey: ["lookup-customers"],
     queryFn: async () => {
       const response = await apiClient.customers.getAll();
-      return Array.isArray(response) ? response : (response?.data?.data || response?.data || []);
+      return Array.isArray(response) ? response : response?.data?.data || response?.data || [];
     },
+    refetchInterval: 2000, // Auto-refresh every 2 seconds
   });
   const hotels = useQuery({
     queryKey: ["lookup-hotels"],
     queryFn: async () => {
       const response = await apiClient.hotels.getAll();
-      return Array.isArray(response) ? response : (response?.data?.data || response?.data || []);
+      return Array.isArray(response) ? response : response?.data?.data || response?.data || [];
     },
+    refetchInterval: 2000, // Auto-refresh every 2 seconds
   });
 
   const customerList = useMemo(() => {
     if (!customers.data) return [];
     if (Array.isArray(customers.data)) return customers.data;
-    const cData = customers.data as any;
-    if (Array.isArray(cData.data)) return cData.data;
+    // Handle { data: { data: [...] } } format
+    if (customers.data?.data && Array.isArray(customers.data.data)) return customers.data.data;
+    // Handle { data: [...] } format
+    if (Array.isArray((customers.data as any)?.data)) return (customers.data as any).data;
     return [];
   }, [customers.data]);
 
   const hotelList = useMemo(() => {
     if (!hotels.data) return [];
     if (Array.isArray(hotels.data)) return hotels.data;
-    const hData = hotels.data as any;
-    if (Array.isArray(hData.data)) return hData.data;
+    // Handle { data: { data: [...] } } format
+    if (hotels.data?.data && Array.isArray(hotels.data.data)) return hotels.data.data;
+    // Handle { data: [...] } format
+    if (Array.isArray((hotels.data as any)?.data)) return (hotels.data as any).data;
     return [];
   }, [hotels.data]);
 
-  const { data: rawBookings, isLoading: isLoadingBookings, refetch } = useGetBookingsQuery();
+  const {
+    data: rawBookings,
+    isLoading: isLoadingBookings,
+    refetch,
+  } = useGetBookingsQuery({}, { pollingInterval: 2000 }); // Auto-refresh bookings every 2 seconds
   const [deleteBooking, { isLoading: isDeleting }] = useDeleteBookingMutation();
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
@@ -121,14 +197,18 @@ export default function BookingsList() {
 
   const metrics = useMemo(() => {
     const backendStats = (rawBookings as any)?.statistics;
-    const by = (...s: string[]) => allBookings.filter((r: any) => s.includes(r.status)).length;
+    const byStatus = (s: BookingStatus) =>
+      allBookings.filter((r: any) => normalizeBookingStatus(r.status) === s).length;
     if (backendStats) {
       return {
         data: {
           total: backendStats.total_bookings_count,
-          pending: by("pending", "pending_supplier_confirmation", "draft"),
-          confirmed: backendStats.confirmed_count,
-          cancelled: backendStats.cancelled_no_show_count || by("cancelled", "no_show"),
+          pending: backendStats.pending_count ?? byStatus("pending"),
+          confirmed: backendStats.confirmed_count ?? byStatus("confirmed"),
+          cancelled:
+            backendStats.cancelled_count ??
+            backendStats.cancelled_no_show_count ??
+            byStatus("cancelled"),
           value: backendStats.total_sales_sar,
           remaining: backendStats.total_remaining_sar,
         },
@@ -136,14 +216,25 @@ export default function BookingsList() {
       };
     }
 
-    const sum = allBookings.reduce((a: number, r: any) => a + (r.total_amount !== undefined ? Number(r.total_amount) : (r.rooms ?? []).reduce((x: number, i: any) => x + Number(i.total_selling), 0)), 0);
-    const remainingSum = allBookings.reduce((a: number, r: any) => a + (r.remaining_amount !== undefined ? Number(r.remaining_amount) : 0), 0);
+    const sum = allBookings.reduce(
+      (a: number, r: any) =>
+        a +
+        (r.total_amount !== undefined
+          ? Number(r.total_amount)
+          : (r.rooms ?? []).reduce((x: number, i: any) => x + Number(i.total_selling), 0)),
+      0,
+    );
+    const remainingSum = allBookings.reduce(
+      (a: number, r: any) =>
+        a + (r.remaining_amount !== undefined ? Number(r.remaining_amount) : 0),
+      0,
+    );
     return {
       data: {
         total: allBookings.length,
-        pending: by("pending", "pending_supplier_confirmation", "draft"),
-        confirmed: by("confirmed"),
-        cancelled: by("cancelled", "no_show"),
+        pending: byStatus("pending"),
+        confirmed: byStatus("confirmed"),
+        cancelled: byStatus("cancelled"),
         value: sum,
         remaining: remainingSum,
       },
@@ -154,19 +245,17 @@ export default function BookingsList() {
   const list = useMemo(() => {
     let rows = allBookings;
     if (status !== "all") {
-      if (status === "pending") {
-        rows = rows.filter((b: any) => ["pending", "pending_supplier_confirmation", "draft"].includes(b.status));
-      } else if (status === "cancelled") {
-        rows = rows.filter((b: any) => ["cancelled", "no_show"].includes(b.status));
-      } else {
-        rows = rows.filter((b: any) => b.status === status);
-      }
+      rows = rows.filter((b: any) => normalizeBookingStatus(b.status) === status);
     }
     if (customer !== "all") {
       rows = rows.filter((b: any) => String(b.customer_id) === String(customer));
     }
     if (hotel !== "all") {
-      rows = rows.filter((b: any) => String(b.hotel_id) === String(hotel) || (b.rooms ?? []).some((r: any) => String(r.hotel_id) === String(hotel)));
+      rows = rows.filter(
+        (b: any) =>
+          String(b.hotel_id) === String(hotel) ||
+          (b.rooms ?? []).some((r: any) => String(r.hotel_id) === String(hotel)),
+      );
     }
     if (from) {
       rows = rows.filter((b: any) => b.booking_date >= from);
@@ -175,7 +264,9 @@ export default function BookingsList() {
       rows = rows.filter((b: any) => b.booking_date <= to);
     }
     if (dSearch.trim()) {
-      rows = rows.filter((b: any) => (b.code || b.booking_no)?.toLowerCase().includes(dSearch.trim().toLowerCase()));
+      rows = rows.filter((b: any) =>
+        (b.code || b.booking_no)?.toLowerCase().includes(dSearch.trim().toLowerCase()),
+      );
     }
 
     const count = rows.length;
@@ -191,19 +282,36 @@ export default function BookingsList() {
 
   const total = list.data?.count ?? 0;
   const fmt = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 0 });
-  const actions = useMemo(() => canWrite && (
-    <Button size="sm" onClick={() => navigate("/bookings/new")}>
-      <Plus className="h-4 w-4" /> {t("bk.new")}
-    </Button>
-  ), [canWrite, navigate, t]);
+  const actions = useMemo(
+    () =>
+      canWrite && (
+        <Button size="sm" onClick={() => navigate("/bookings/new")}>
+          <Plus className="h-4 w-4" /> {t("bk.new")}
+        </Button>
+      ),
+    [canWrite, navigate, t],
+  );
 
-  const setStatusAndReset = (s: string) => { setStatus(s); setPage(1); };
+  const setStatusAndReset = (s: string) => {
+    setStatus(s);
+    setPage(1);
+  };
 
   const quickFilters: { key: string; label: string; count?: number; tone: KpiTone }[] = [
     { key: "all", label: t("filter.all"), count: metrics.data?.total, tone: "primary" },
     { key: "pending", label: t("bkstatus.pending"), count: metrics.data?.pending, tone: "warning" },
-    { key: "confirmed", label: t("bkstatus.confirmed"), count: metrics.data?.confirmed, tone: "success" },
-    { key: "cancelled", label: t("bkstatus.cancelled"), count: metrics.data?.cancelled, tone: "destructive" },
+    {
+      key: "confirmed",
+      label: t("bkstatus.confirmed"),
+      count: metrics.data?.confirmed,
+      tone: "success",
+    },
+    {
+      key: "cancelled",
+      label: t("bkstatus.cancelled"),
+      count: metrics.data?.cancelled,
+      tone: "destructive",
+    },
   ];
 
   return (
@@ -216,19 +324,64 @@ export default function BookingsList() {
       <div className="space-y-5 p-4 sm:p-6">
         {/* KPI cards */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          <KpiCard icon={ClipboardList} tone="primary" label={t("bk.kpi.total")} value={metrics.data?.total} active={status === "all"} onClick={() => setStatusAndReset("all")} />
-          <KpiCard icon={CalendarCheck2} tone="warning" label={t("bkstatus.pending")} value={metrics.data?.pending} active={status === "pending"} onClick={() => setStatusAndReset("pending")} />
-          <KpiCard icon={CheckCircle2} tone="success" label={t("bk.kpi.confirmed")} value={metrics.data?.confirmed} active={status === "confirmed"} onClick={() => setStatusAndReset("confirmed")} />
-          <KpiCard icon={XCircle} tone="destructive" label={t("bk.kpi.cancelled")} value={metrics.data?.cancelled} active={status === "cancelled"} onClick={() => setStatusAndReset("cancelled")} />
-          <KpiCard icon={DollarSign} tone="warning" label={t("bk.kpi.value")} value={metrics.data ? fmt(metrics.data.value) : undefined} />
-          <KpiCard icon={DollarSign} tone="destructive" label={t("bk.kpi.remaining")} value={metrics.data ? fmt(metrics.data.remaining) : undefined} />
+          <KpiCard
+            icon={ClipboardList}
+            tone="primary"
+            label={t("bk.kpi.total")}
+            value={metrics.data?.total}
+            active={status === "all"}
+            onClick={() => setStatusAndReset("all")}
+          />
+          <KpiCard
+            icon={CalendarCheck2}
+            tone="warning"
+            label={t("bkstatus.pending")}
+            value={metrics.data?.pending}
+            active={status === "pending"}
+            onClick={() => setStatusAndReset("pending")}
+          />
+          <KpiCard
+            icon={CheckCircle2}
+            tone="success"
+            label={t("bk.kpi.confirmed")}
+            value={metrics.data?.confirmed}
+            active={status === "confirmed"}
+            onClick={() => setStatusAndReset("confirmed")}
+          />
+          <KpiCard
+            icon={XCircle}
+            tone="destructive"
+            label={t("bk.kpi.cancelled")}
+            value={metrics.data?.cancelled}
+            active={status === "cancelled"}
+            onClick={() => setStatusAndReset("cancelled")}
+          />
+          <KpiCard
+            icon={DollarSign}
+            tone="warning"
+            label={t("bk.kpi.value")}
+            value={metrics.data ? fmt(metrics.data.value) : undefined}
+          />
+          <KpiCard
+            icon={DollarSign}
+            tone="destructive"
+            label={t("bk.kpi.remaining")}
+            value={metrics.data ? fmt(metrics.data.remaining) : undefined}
+          />
         </div>
 
         {/* Quick status pills */}
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs font-medium text-muted-foreground">{t("bk.filter.quick")}:</span>
           {quickFilters.map((q) => (
-            <StatusPill key={q.key} label={q.label} count={q.count} tone={q.tone} active={status === q.key} onClick={() => setStatusAndReset(q.key)} />
+            <StatusPill
+              key={q.key}
+              label={q.label}
+              count={q.count}
+              tone={q.tone}
+              active={status === q.key}
+              onClick={() => setStatusAndReset(q.key)}
+            />
           ))}
         </div>
 
@@ -239,28 +392,60 @@ export default function BookingsList() {
               <Label className="text-muted-foreground">{t("actions.search")}</Label>
               <div className="relative w-full">
                 <Search className="absolute top-2.5 start-2 h-4 w-4 text-muted-foreground" />
-                <Input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder={t("bk.number")} className="ps-8 w-full" />
+                <Input
+                  value={search}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    setPage(1);
+                  }}
+                  placeholder={t("bk.number")}
+                  className="ps-8 w-full"
+                />
               </div>
             </div>
 
             <div className="flex flex-col gap-1.5">
               <Label className="text-muted-foreground">{t("bk.customer")}</Label>
-              <Select value={customer} onValueChange={(v) => { setCustomer(v); setPage(1); }}>
-                <SelectTrigger className="w-full"><SelectValue placeholder={t("bk.customer")} /></SelectTrigger>
+              <Select
+                value={customer}
+                onValueChange={(v) => {
+                  setCustomer(v);
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder={t("bk.customer")} />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t("filter.all")}</SelectItem>
-                  {customerList.map((c: any) => <SelectItem key={c.id} value={c.id}>{lang === "ar" ? (c.name_ar || c.name_en) : (c.name_en || c.name_ar)}</SelectItem>)}
+                  {customerList.map((c: any) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {lang === "ar" ? c.name_ar || c.name_en : c.name_en || c.name_ar}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
 
             <div className="flex flex-col gap-1.5">
               <Label className="text-muted-foreground">{t("filter.hotel")}</Label>
-              <Select value={hotel} onValueChange={(v) => { setHotel(v); setPage(1); }}>
-                <SelectTrigger className="w-full"><SelectValue placeholder={t("quotes.items.hotel")} /></SelectTrigger>
+              <Select
+                value={hotel}
+                onValueChange={(v) => {
+                  setHotel(v);
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder={t("quotes.items.hotel")} />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t("filter.all")}</SelectItem>
-                  {hotelList.map((h: any) => <SelectItem key={h.id} value={h.id}>{lang === "ar" ? (h.name_ar || h.name_en) : (h.name_en || h.name_ar)}</SelectItem>)}
+                  {hotelList.map((h: any) => (
+                    <SelectItem key={h.id} value={h.id}>
+                      {lang === "ar" ? h.name_ar || h.name_en : h.name_en || h.name_ar}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -268,11 +453,27 @@ export default function BookingsList() {
             <div className="grid grid-cols-2 gap-2 sm:col-span-2 xl:col-span-1">
               <div className="flex flex-col gap-1.5">
                 <Label className="text-muted-foreground">{t("filter.from")}</Label>
-                <Input className="w-full justify-center" type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} />
+                <Input
+                  className="w-full justify-center"
+                  type="date"
+                  value={from}
+                  onChange={(e) => {
+                    setFrom(e.target.value);
+                    setPage(1);
+                  }}
+                />
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label className="text-muted-foreground">{t("filter.to")}</Label>
-                <Input className="w-full justify-center" type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} />
+                <Input
+                  className="w-full justify-center"
+                  type="date"
+                  value={to}
+                  onChange={(e) => {
+                    setTo(e.target.value);
+                    setPage(1);
+                  }}
+                />
               </div>
             </div>
 
@@ -298,14 +499,18 @@ export default function BookingsList() {
                   <TableHead>{t("bk.col.checkin")}</TableHead>
                   <TableHead className="text-center">{t("bk.col.nights")}</TableHead>
                   {/* <TableHead>{t("bk.source")}</TableHead> */}
-                  <TableHead >{t("bk.value")}</TableHead>
+                  <TableHead>{t("bk.value")}</TableHead>
                   <TableHead>{t("label.status")}</TableHead>
                   <TableHead className="text-end">{t("label.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {list.isLoading && (
-                  <TableRow><TableCell colSpan={9} className="py-10 text-center text-muted-foreground">{t("label.loading")}</TableCell></TableRow>
+                  <TableRow>
+                    <TableCell colSpan={9} className="py-10 text-center text-muted-foreground">
+                      {t("label.loading")}
+                    </TableCell>
+                  </TableRow>
                 )}
                 {!list.isLoading && (list.data?.rows.length ?? 0) === 0 && (
                   <TableRow>
@@ -315,7 +520,9 @@ export default function BookingsList() {
                           <CalendarCheck2 className="h-7 w-7" />
                         </div>
                         <div className="text-sm font-medium">{t("label.no_results")}</div>
-                        <div className="text-xs text-muted-foreground">{t("bk.no_results_hint")}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {t("bk.no_results_hint")}
+                        </div>
                         {filtersActive && (
                           <Button variant="outline" size="sm" onClick={resetAll}>
                             <X className="h-4 w-4" /> {t("actions.reset")}
@@ -331,25 +538,60 @@ export default function BookingsList() {
                   </TableRow>
                 )}
                 {list.data?.rows.map((b: any) => {
-                  const value = b.total_amount !== undefined ? Number(b.total_amount) : (b.rooms ?? []).reduce((a: number, i: any) => a + Number(i.total_selling), 0);
-                  const earliestCheckIn = b.check_in || (b.rooms ?? [])
-                    .map((r: any) => r.check_in).filter(Boolean).sort()[0];
-                  const latestCheckOut = b.check_out || (b.rooms ?? [])
-                    .map((r: any) => r.check_out).filter(Boolean).sort().slice(-1)[0];
-                  const nights = b.nights || (earliestCheckIn && latestCheckOut
-                    ? Math.max(0, Math.round((new Date(latestCheckOut).getTime() - new Date(earliestCheckIn).getTime()) / 86400000))
-                    : null);
+                  const value =
+                    b.total_amount !== undefined
+                      ? Number(b.total_amount)
+                      : (b.rooms ?? []).reduce(
+                          (a: number, i: any) => a + Number(i.total_selling),
+                          0,
+                        );
+                  const earliestCheckIn =
+                    b.check_in ||
+                    (b.rooms ?? [])
+                      .map((r: any) => r.check_in)
+                      .filter(Boolean)
+                      .sort()[0];
+                  const latestCheckOut =
+                    b.check_out ||
+                    (b.rooms ?? [])
+                      .map((r: any) => r.check_out)
+                      .filter(Boolean)
+                      .sort()
+                      .slice(-1)[0];
+                  const nights =
+                    b.nights ||
+                    (earliestCheckIn && latestCheckOut
+                      ? Math.max(
+                          0,
+                          Math.round(
+                            (new Date(latestCheckOut).getTime() -
+                              new Date(earliestCheckIn).getTime()) /
+                              86400000,
+                          ),
+                        )
+                      : null);
 
                   let hotelNames: string[] = [];
                   if (b.hotel) {
-                    const hName = lang === "ar" ? (b.hotel.name_ar || b.hotel.name_en) : (b.hotel.name_en || b.hotel.name_ar);
+                    const hName =
+                      lang === "ar"
+                        ? b.hotel.name_ar || b.hotel.name_en
+                        : b.hotel.name_en || b.hotel.name_ar;
                     if (hName) hotelNames.push(hName);
                   } else {
-                    hotelNames = Array.from(new Set(
-                      (b.rooms ?? [])
-                        .map((r: any) => r.hotel ? (lang === "ar" ? (r.hotel.name_ar || r.hotel.name_en) : (r.hotel.name_en || r.hotel.name_ar)) : null)
-                        .filter((x: any): x is string => typeof x === "string" && x.length > 0)
-                    ));
+                    hotelNames = Array.from(
+                      new Set(
+                        (b.rooms ?? [])
+                          .map((r: any) =>
+                            r.hotel
+                              ? lang === "ar"
+                                ? r.hotel.name_ar || r.hotel.name_en
+                                : r.hotel.name_en || r.hotel.name_ar
+                              : null,
+                          )
+                          .filter((x: any): x is string => typeof x === "string" && x.length > 0),
+                      ),
+                    );
                   }
                   return (
                     <TableRow
@@ -358,12 +600,20 @@ export default function BookingsList() {
                       onClick={() => navigate(`/bookings/${b.id}`)}
                     >
                       <TableCell className="font-mono text-xs">
-                        <Link to={`/bookings/${b.id}`} className="text-primary hover:underline" onClick={(e) => e.stopPropagation()}>
+                        <Link
+                          to={`/bookings/${b.id}`}
+                          className="text-primary hover:underline"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           {b.code || b.booking_no}
                         </Link>
                       </TableCell>
                       <TableCell className="text-sm font-medium">
-                        {b.customer ? (lang === "ar" ? (b.customer.name_ar || b.customer.name_en) : (b.customer.name_en || b.customer.name_ar)) : "—"}
+                        {b.customer
+                          ? lang === "ar"
+                            ? b.customer.name_ar || b.customer.name_en
+                            : b.customer.name_en || b.customer.name_ar
+                          : "—"}
                       </TableCell>
                       <TableCell className="text-xs max-w-[220px]">
                         {hotelNames.length === 0 ? (
@@ -373,34 +623,54 @@ export default function BookingsList() {
                             <Hotel className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                             <span className="truncate" title={hotelNames.join(", ")}>
                               {hotelNames[0]}
-                              {hotelNames.length > 1 && <span className="text-muted-foreground"> +{hotelNames.length - 1}</span>}
+                              {hotelNames.length > 1 && (
+                                <span className="text-muted-foreground">
+                                  {" "}
+                                  +{hotelNames.length - 1}
+                                </span>
+                              )}
                             </span>
                           </div>
                         )}
                       </TableCell>
                       <TableCell dir="ltr" className="text-xs">
-                        {earliestCheckIn ? formatDate(earliestCheckIn, lang) : <span className="text-muted-foreground">—</span>}
+                        {earliestCheckIn ? (
+                          formatDate(earliestCheckIn, lang)
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
                       </TableCell>
                       <TableCell className="text-center text-xs">
                         {nights !== null ? (
                           <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 font-medium">
                             <BedDouble className="h-3 w-3" /> {nights}
                           </span>
-                        ) : <span className="text-muted-foreground">—</span>}
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
                       </TableCell>
 
                       <TableCell dir="ltr" className="text-end text-xs font-semibold tabular-nums">
-                        {fmt(value)} <span className="text-muted-foreground font-normal">{typeof b.currency === "object" ? b.currency?.code : (b.currency || "SAR")}</span>
+                        {fmt(value)}{" "}
+                        <span className="text-muted-foreground font-normal">
+                          {typeof b.currency === "object" ? b.currency?.code : b.currency || "SAR"}
+                        </span>
                       </TableCell>
-                      <TableCell><BkStatusBadge status={b.status} t={t} /></TableCell>
+                      <TableCell>
+                        <BkStatusBadge status={b.status} t={t} />
+                      </TableCell>
                       <TableCell className="text-end" onClick={(e) => e.stopPropagation()}>
                         <div className="flex justify-end gap-1">
                           <Button asChild variant="ghost" size="icon" title={t("actions.view")}>
-                            <Link to={`/bookings/${b.id}`}><Eye className="h-4 w-4" /></Link>
+                            <Link to={`/bookings/${b.id}`}>
+                              <Eye className="h-4 w-4" />
+                            </Link>
                           </Button>
                           {canWrite && (
                             <Button asChild variant="ghost" size="icon" title={t("actions.edit")}>
-                              <Link to={`/bookings/${b.id}?edit=true`}><Pencil className="h-4 w-4 text-amber-600 dark:text-amber-500" /></Link>
+                              <Link to={`/bookings/${b.id}?edit=true`}>
+                                <Pencil className="h-4 w-4 text-amber-600 dark:text-amber-500" />
+                              </Link>
                             </Button>
                           )}
                           {canWrite && (

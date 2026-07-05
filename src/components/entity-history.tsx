@@ -1,5 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
-import { db } from "@/lib/api/db";
+import { useQuery } from "@/store/queryBridge";
+import { db } from "@/store/queryBridge";
 import { useI18n } from "@/lib/i18n";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";

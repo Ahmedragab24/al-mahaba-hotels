@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@/store/queryBridge";
 import { PageHeader } from "@/components/page-header";
 import { useI18n } from "@/lib/i18n";
 import { useSelector } from "react-redux";
@@ -10,7 +10,7 @@ import { useGetRoomsQuery, useUpdateRoomMutation, useDeleteRoomMutation } from "
 import { useGetRoomTypesQuery } from "@/store/services/attributes/room-types";
 import { useDebounce } from "@/lib/use-debounce";
 import { useHotelsLite } from "@/lib/lookups";
-import { dbErrorMessage } from "@/lib/db-errors";
+import { dbErrorMessage } from "@/store/queryBridge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { DataPagination } from "@/components/data-pagination";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { RoomTypeDialog } from "./-dialog";
+import { StatusPill } from "@/components/status-pill";
 import { Plus, Search, Eye, Pencil, Archive, RotateCcw, Trash2, BedDouble } from "lucide-react";
 import { toast } from "sonner";
 
@@ -42,7 +43,7 @@ export default function RoomTypesList() {
   const [active, setActive] = useState("all");
   const [page, setPage] = useState(1);
   const [dialog, setDialog] = useState<{ open: boolean; initial?: any }>({ open: false });
-  const [confirm, setConfirm] = useState<{ id: string; action: "archive" | "restore" | "delete" } | null>(null);
+  const [confirm, setConfirm] = useState<{ id: string; action: "archive" | "restore" | "delete"; room?: any } | null>(null);
 
   const dSearch = useDebounce(search, 300);
   const hotels = useHotelsLite();
@@ -60,7 +61,7 @@ export default function RoomTypesList() {
     search: dSearch || undefined,
     hotel_id: hotel !== "all" ? hotel : undefined,
     room_type_id: roomType !== "all" ? roomType : undefined,
-    status: active === "active" ? "1" : active === "inactive" ? "0" : active === "archived" ? "archived" : undefined,
+    status: active === "active" ? "1" : active === "archived" ? "0" : undefined,
     page: page,
     per_page: PAGE_SIZE,
     lang: lang,
@@ -70,11 +71,21 @@ export default function RoomTypesList() {
   const [updateRoom] = useUpdateRoomMutation();
 
   const archiveMut = useMutation({
-    mutationFn: async ({ id, action }: { id: string; action: "archive" | "restore" | "delete" }) => {
-      if (action === "delete" || action === "archive") {
+    mutationFn: async ({ id, action, room }: { id: string; action: "archive" | "restore" | "delete"; room?: any }) => {
+      if (action === "delete") {
         await deleteRoom(id).unwrap();
       } else {
-        await updateRoom({ id, body: { status: "1" } as any }).unwrap();
+        await updateRoom({ 
+          id, 
+          body: { 
+            name_ar: room?.name_ar,
+            name_en: room?.name_en,
+            hotel_id: room?.hotel_id,
+            room_type_id: room?.room_type_id,
+            view: room?.view || "",
+            status: action === "archive" ? "0" : "1" 
+          } as any 
+        }).unwrap();
       }
     },
     onSuccess: (_d, v) => {
@@ -129,7 +140,6 @@ export default function RoomTypesList() {
                 <SelectContent>
                   <SelectItem value="all">{t("filter.all")}</SelectItem>
                   <SelectItem value="active">{t("status.active")}</SelectItem>
-                  <SelectItem value="inactive">{t("status.inactive")}</SelectItem>
                   <SelectItem value="archived">{t("status.archived")}</SelectItem>
                 </SelectContent>
               </Select>
@@ -177,10 +187,11 @@ export default function RoomTypesList() {
             const name = lang === "ar" ? (r.name_ar || r.name_en) : (r.name_en || r.name_ar);
             const hotelName = r.hotel ? (lang === "ar" ? (r.hotel.name_ar || r.hotel.name_en) : (r.hotel.name_en || r.hotel.name_ar)) : "—";
             const roomTypeName = r.room_type ? (lang === "ar" ? (r.room_type.name_ar || r.room_type.name_en) : (r.room_type.name_en || r.room_type.name_ar)) : "";
+            const isActive = r.status === 1 || r.status === "1" || r.status === true;
             return (
               <Card
                 key={r.id}
-                className={`group overflow-hidden border transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${r.is_archived ? "opacity-60" : ""}`}
+                className={`group overflow-hidden border transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${!isActive ? "opacity-60" : ""}`}
               >
                 <Link to={`/room-types/${r.id}`} className="relative block aspect-[3/2] overflow-hidden bg-muted">
                   <img
@@ -191,17 +202,15 @@ export default function RoomTypesList() {
                     loading="lazy"
                     className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />
-                  <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-foreground/60 to-transparent" />
+                  <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/60 to-transparent" />
+                  <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/60 to-transparent" />
                   <div className="absolute top-3 start-3 flex items-center gap-2">
-                    {r.is_archived
-                      ? <Badge variant="secondary">{t("status.archived")}</Badge>
-                      : r.status
-                        ? <Badge className="bg-emerald-100 text-emerald-800 border-transparent">{t("status.active")}</Badge>
-                        : <Badge variant="secondary">{t("status.inactive")}</Badge>
-                    }
+                    <div className="shadow-md rounded-full">
+                      <StatusPill status={isActive ? "active" : "archived"} />
+                    </div>
                   </div>
                   <div className="absolute bottom-2 start-3 end-3">
-                    <span className="font-mono text-[11px] text-background/90">{r.code}</span>
+                    <span className="font-mono text-[11px] text-white/90 drop-shadow-sm">{r.code}</span>
                   </div>
                 </Link>
                 <CardContent className="space-y-2 p-4">
@@ -222,17 +231,19 @@ export default function RoomTypesList() {
                       <Button asChild variant="ghost" size="icon" className="h-8 w-8" title={t("actions.view")}>
                         <Link to={`/room-types/${r.id}`}><Eye className="h-4 w-4" /></Link>
                       </Button>
-                      {canWrite && !r.is_archived && (
+                      {canWrite && isActive && (
                         <Button variant="ghost" size="icon" className="h-8 w-8" title={t("actions.edit")} onClick={() => setDialog({ open: true, initial: r })}>
                           <Pencil className="h-4 w-4" />
                         </Button>
                       )}
-                      {isAdmin(auth) && (r.is_archived
-                        ? <Button variant="ghost" size="icon" className="h-8 w-8" title={t("actions.restore")} onClick={() => setConfirm({ id: r.id, action: "restore" })}><RotateCcw className="h-4 w-4" /></Button>
-                        : <Button variant="ghost" size="icon" className="h-8 w-8" title={t("actions.archive")} onClick={() => setConfirm({ id: r.id, action: "archive" })}><Archive className="h-4 w-4" /></Button>
+                      {canWrite && (isActive
+                        ? <Button variant="ghost" size="icon" className="h-8 w-8" title={t("actions.archive")} onClick={() => setConfirm({ id: r.id, action: "archive", room: r })}><Archive className="h-4 w-4" /></Button>
+                        : <Button variant="ghost" size="icon" className="h-8 w-8" title={t("actions.restore")} onClick={() => setConfirm({ id: r.id, action: "restore", room: r })}><RotateCcw className="h-4 w-4" /></Button>
                       )}
-                      {isAdmin(auth) && r.is_archived && (
-                        <Button variant="ghost" size="icon" className="h-8 w-8" title={t("actions.delete")} onClick={() => setConfirm({ id: r.id, action: "delete" })}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                      {canWrite && (
+                        <Button variant="ghost" size="icon" className="h-8 w-8" title={t("actions.delete")} onClick={() => setConfirm({ id: r.id, action: "delete", room: r })}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
                       )}
                     </div>
                   </div>

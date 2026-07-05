@@ -7,32 +7,56 @@ type Dict = Record<string, { ar: string; en: string }>;
 
 export const dict: Dict = {
   // Brand
-  "brand.name": { ar: "شركة دليل المعالم للحج والمعتمرين", en: "Dalil Al-Maalem Company for Hajj and Umrah Pilgrims" },
+  "brand.name": {
+    ar: "شركة دليل المعالم للحج والمعتمرين",
+    en: "Dalil Al-Maalem Company for Hajj and Umrah Pilgrims",
+  },
   "brand.short": { ar: "دليل المعالم", en: "Dalil Al-Maalem" },
-  "brand.tagline": { ar: "نظام إدارة الحج والعمرة والحجوزات", en: "Hajj, Umrah & Reservations Management" },
+  "brand.tagline": {
+    ar: "نظام إدارة الحج والعمرة والحجوزات",
+    en: "Hajj, Umrah & Reservations Management",
+  },
 
   // Auth
   "auth.title": { ar: "تسجيل الدخول", en: "Sign in" },
-  "auth.subtitle": { ar: "أدخل بياناتك للوصول إلى النظام", en: "Enter your credentials to access the system" },
+  "auth.subtitle": {
+    ar: "أدخل بياناتك للوصول إلى النظام",
+    en: "Enter your credentials to access the system",
+  },
   "auth.email": { ar: "البريد الإلكتروني", en: "Email" },
   "auth.password": { ar: "كلمة المرور", en: "Password" },
   "auth.signin": { ar: "دخول", en: "Sign in" },
   "auth.signing_in": { ar: "جاري الدخول...", en: "Signing in..." },
   "auth.signout": { ar: "تسجيل الخروج", en: "Sign out" },
   "auth.invalid": { ar: "بيانات الدخول غير صحيحة", en: "Invalid credentials" },
-  "auth.locked": { ar: "تم قفل الحساب بسبب محاولات فاشلة متعددة. حاول لاحقًا.", en: "Account locked due to too many failed attempts. Try again later." },
-  "auth.setup_first": { ar: "لا يوجد مستخدمون بعد. أنشئ حساب المدير الأول.", en: "No users yet. Create the first administrator account." },
+  "auth.locked": {
+    ar: "تم قفل الحساب بسبب محاولات فاشلة متعددة. حاول لاحقًا.",
+    en: "Account locked due to too many failed attempts. Try again later.",
+  },
+  "auth.setup_first": {
+    ar: "لا يوجد مستخدمون بعد. أنشئ حساب المدير الأول.",
+    en: "No users yet. Create the first administrator account.",
+  },
   "auth.create_first": { ar: "إنشاء حساب المسؤول", en: "Create admin account" },
   "auth.fullname": { ar: "الاسم الكامل", en: "Full name" },
   "auth.create_account": { ar: "إنشاء حساب جديد", en: "Create new account" },
   "auth.already_have": { ar: "لديك حساب بالفعل؟", en: "Already have an account?" },
   "auth.no_account": { ar: "ليس لديك حساب؟", en: "Don't have an account?" },
   "auth.signup": { ar: "إنشاء حساب", en: "Sign up" },
-  "auth.signup_pending": { ar: "تم إنشاء الحساب. يجب على المسؤول تفعيل صلاحياتك قبل الاستخدام.", en: "Account created. An administrator must activate your permissions before use." },
+  "auth.signup_pending": {
+    ar: "تم إنشاء الحساب. يجب على المسؤول تفعيل صلاحياتك قبل الاستخدام.",
+    en: "Account created. An administrator must activate your permissions before use.",
+  },
   "auth.confirm_password": { ar: "تأكيد كلمة المرور", en: "Confirm password" },
   "auth.password_mismatch": { ar: "كلمتا المرور غير متطابقتين", en: "Passwords do not match" },
-  "auth.password_min": { ar: "كلمة المرور يجب أن لا تقل عن 8 أحرف", en: "Password must be at least 8 characters" },
-  "auth.conn_error": { ar: "تعذر الاتصال بالخادم. تحقق من اتصال الإنترنت أو جرّب شبكة أخرى ثم أعد المحاولة.", en: "Could not reach the server. Check your internet connection or try a different network, then retry." },
+  "auth.password_min": {
+    ar: "كلمة المرور يجب أن لا تقل عن 8 أحرف",
+    en: "Password must be at least 8 characters",
+  },
+  "auth.conn_error": {
+    ar: "تعذر الاتصال بالخادم. تحقق من اتصال الإنترنت أو جرّب شبكة أخرى ثم أعد المحاولة.",
+    en: "Could not reach the server. Check your internet connection or try a different network, then retry.",
+  },
   "auth.retry": { ar: "إعادة المحاولة", en: "Retry" },
 
   // Nav
@@ -134,6 +158,7 @@ export const dict: Dict = {
   "status.active": { ar: "نشط", en: "Active" },
   "status.inactive": { ar: "غير نشط", en: "Inactive" },
   "status.archived": { ar: "مؤرشف", en: "Archived" },
+  "status.valid": { ar: "صالح", en: "Valid" },
   "status.draft": { ar: "مسودة", en: "Draft" },
   "status.pending_approval": { ar: "بانتظار الاعتماد", en: "Pending Approval" },
   "status.approved": { ar: "معتمد", en: "Approved" },
@@ -163,13 +188,28 @@ export const dict: Dict = {
   "ctype.agency": { ar: "وكالة", en: "Agency" },
   "ctype.government": { ar: "جهة حكومية", en: "Government" },
   "customers.members": { ar: "الأفراد التابعون", en: "Individuals" },
-  "members.import_title": { ar: "استيراد الأفراد من ملف إكسل", en: "Import individuals from Excel" },
-  "members.import_hint": { ar: "أرفق ملف إكسل يحتوي على بيانات الأفراد (الاسم، البريد، الجوال...) وسيتم تحليله وإدخال الأفراد تلقائياً كعملاء أفراد تابعين لهذا الكيان.", en: "Attach an Excel file with the individuals' data (name, email, mobile...). It will be analyzed and the individuals will be created automatically as customers linked to this entity." },
+  "members.import_title": {
+    ar: "استيراد الأفراد من ملف إكسل",
+    en: "Import individuals from Excel",
+  },
+  "members.import_hint": {
+    ar: "أرفق ملف إكسل يحتوي على بيانات الأفراد (الاسم، البريد، الجوال...) وسيتم تحليله وإدخال الأفراد تلقائياً كعملاء أفراد تابعين لهذا الكيان.",
+    en: "Attach an Excel file with the individuals' data (name, email, mobile...). It will be analyzed and the individuals will be created automatically as customers linked to this entity.",
+  },
   "members.choose_file": { ar: "اختيار ملف إكسل", en: "Choose Excel file" },
   "members.download_template": { ar: "تنزيل النموذج", en: "Download template" },
-  "members.empty_file": { ar: "الملف فارغ أو لا يحتوي على بيانات صالحة", en: "The file is empty or has no valid data" },
-  "members.no_name_column": { ar: "لم يتم العثور على عمود الاسم في الملف", en: "No name column found in the file" },
-  "members.parse_error": { ar: "تعذر قراءة الملف، تأكد أنه ملف إكسل صالح", en: "Could not read the file. Make sure it is a valid Excel file" },
+  "members.empty_file": {
+    ar: "الملف فارغ أو لا يحتوي على بيانات صالحة",
+    en: "The file is empty or has no valid data",
+  },
+  "members.no_name_column": {
+    ar: "لم يتم العثور على عمود الاسم في الملف",
+    en: "No name column found in the file",
+  },
+  "members.parse_error": {
+    ar: "تعذر قراءة الملف، تأكد أنه ملف إكسل صالح",
+    en: "Could not read the file. Make sure it is a valid Excel file",
+  },
   "members.missing_name": { ar: "الاسم مفقود", en: "Missing name" },
   "members.valid_rows": { ar: "صف جاهز", en: "valid rows" },
   "members.invalid_rows": { ar: "صف غير صالح", en: "invalid rows" },
@@ -177,8 +217,14 @@ export const dict: Dict = {
   "members.more_rows": { ar: "صفوف إضافية", en: "more rows" },
   "members.import_now": { ar: "استيراد الأفراد", en: "Import individuals" },
   "members.imported": { ar: "تم استيراد الأفراد بنجاح", en: "Individuals imported successfully" },
-  "members.list_title": { ar: "الأفراد المسجلون تحت هذا الكيان", en: "Individuals registered under this entity" },
-  "members.none": { ar: "لا يوجد أفراد مسجلون بعد — قم برفع ملف إكسل لاستيرادهم", en: "No individuals yet — upload an Excel file to import them" },
+  "members.list_title": {
+    ar: "الأفراد المسجلون تحت هذا الكيان",
+    en: "Individuals registered under this entity",
+  },
+  "members.none": {
+    ar: "لا يوجد أفراد مسجلون بعد — قم برفع ملف إكسل لاستيرادهم",
+    en: "No individuals yet — upload an Excel file to import them",
+  },
 
   // Supplier types
   "stype.hotel_supplier": { ar: "مورد فنادق", en: "Hotel Supplier" },
@@ -203,7 +249,6 @@ export const dict: Dict = {
   "board.full_board": { ar: "إقامة كاملة", en: "Full Board" },
   "board.all_inclusive": { ar: "شامل الكل", en: "All Inclusive" },
 
-
   // Supplier types
   "supplier.type.direct_hotel": { ar: "فندق مباشر", en: "Direct Hotel" },
   "supplier.type.wholesaler": { ar: "تاجر جملة", en: "Wholesaler" },
@@ -213,7 +258,10 @@ export const dict: Dict = {
 
   // Supplier apply (public)
   "supplier.apply.title": { ar: "طلب الانضمام كمورد", en: "Apply as a Supplier" },
-  "supplier.apply.subtitle": { ar: "املأ النموذج وسيراجع المسؤول طلبك ثم نرسل لك بيانات الدخول", en: "Fill the form. An administrator will review and send you login credentials." },
+  "supplier.apply.subtitle": {
+    ar: "املأ النموذج وسيراجع المسؤول طلبك ثم نرسل لك بيانات الدخول",
+    en: "Fill the form. An administrator will review and send you login credentials.",
+  },
   "supplier.apply.type": { ar: "نوع المورد", en: "Supplier Type" },
   "supplier.apply.contact_name": { ar: "اسم جهة الاتصال", en: "Contact Name" },
   "supplier.apply.contact_position": { ar: "المنصب", en: "Position" },
@@ -224,23 +272,38 @@ export const dict: Dict = {
   "supplier.apply.step0_desc": { ar: "بيانات الشركة الأساسية", en: "Basic company info" },
   "supplier.apply.step1_desc": { ar: "تفاصيل قانونية واختيارية", en: "Legal & optional details" },
   "supplier.apply.step2_desc": { ar: "كيف نتواصل معك", en: "How we'll reach you" },
-  "supplier.apply.step3_desc": { ar: "تأكد من البيانات قبل الإرسال", en: "Confirm before submitting" },
+  "supplier.apply.step3_desc": {
+    ar: "تأكد من البيانات قبل الإرسال",
+    en: "Confirm before submitting",
+  },
   "supplier.apply.next": { ar: "التالي", en: "Next" },
   "supplier.apply.submit": { ar: "إرسال الطلب", en: "Submit application" },
-  "supplier.apply.review_note": { ar: "بإرسال الطلب أنت توافق على شروط المنصة.", en: "By submitting, you agree to the platform terms." },
+  "supplier.apply.review_note": {
+    ar: "بإرسال الطلب أنت توافق على شروط المنصة.",
+    en: "By submitting, you agree to the platform terms.",
+  },
   "supplier.apply.have_account": { ar: "لديك حساب؟ تسجيل الدخول", en: "Have an account? Sign in" },
   "supplier.apply.back_to_signin": { ar: "العودة لتسجيل الدخول", en: "Back to sign-in" },
   "supplier.apply.success_title": { ar: "تم استلام طلبك بنجاح", en: "Application received" },
   "supplier.apply.request_id": { ar: "رقم الطلب", en: "Request ID" },
-  "supplier.apply.success_desc": { ar: "سيراجع المسؤول طلبك خلال 24-48 ساعة وسيتم الرد عليك.", en: "An administrator will review your request within 24-48 hours and will respond to you." },
-  "supplier.apply.err_duplicate": { ar: "يوجد طلب سابق بنفس البريد الإلكتروني.", en: "An application with this email already exists." },
+  "supplier.apply.success_desc": {
+    ar: "سيراجع المسؤول طلبك خلال 24-48 ساعة وسيتم الرد عليك.",
+    en: "An administrator will review your request within 24-48 hours and will respond to you.",
+  },
+  "supplier.apply.err_duplicate": {
+    ar: "يوجد طلب سابق بنفس البريد الإلكتروني.",
+    en: "An application with this email already exists.",
+  },
   "supplier.apply.err_email": { ar: "بريد إلكتروني غير صالح.", en: "Invalid email address." },
   "supplier.apply.err_missing": { ar: "حقول مطلوبة ناقصة.", en: "Required fields are missing." },
   "supplier.apply_cta": { ar: "تقديم كمورد", en: "Apply as supplier" },
 
   // Supplier applications (admin)
   "supplier.applications.title": { ar: "طلبات الموردين", en: "Supplier Applications" },
-  "supplier.applications.subtitle": { ar: "مراجعة طلبات الانضمام للموردين", en: "Review supplier onboarding requests" },
+  "supplier.applications.subtitle": {
+    ar: "مراجعة طلبات الانضمام للموردين",
+    en: "Review supplier onboarding requests",
+  },
   "supplier.applications.empty": { ar: "لا توجد طلبات", en: "No applications" },
   "supplier.applications.tab_pending": { ar: "قيد المراجعة", en: "Pending" },
   "supplier.applications.tab_approved": { ar: "مقبولة", en: "Approved" },
@@ -251,18 +314,33 @@ export const dict: Dict = {
   "supplier.applications.status_approved": { ar: "مقبول", en: "Approved" },
   "supplier.applications.status_accepted": { ar: "مقبول", en: "Accepted" },
   "supplier.applications.status_rejected": { ar: "مرفوض", en: "Rejected" },
-  "supplier.applications.approved": { ar: "تمت الموافقة وإنشاء الحساب", en: "Approved and account created" },
+  "supplier.applications.approved": {
+    ar: "تمت الموافقة وإنشاء الحساب",
+    en: "Approved and account created",
+  },
   "supplier.applications.rejected": { ar: "تم رفض الطلب", en: "Application rejected" },
   "supplier.applications.reject_title": { ar: "رفض الطلب", en: "Reject application" },
-  "supplier.applications.reject_desc": { ar: "اكتب سبب الرفض ليتم إبلاغ المتقدم", en: "Provide a reason for the applicant" },
+  "supplier.applications.reject_desc": {
+    ar: "اكتب سبب الرفض ليتم إبلاغ المتقدم",
+    en: "Provide a reason for the applicant",
+  },
   "supplier.applications.reason_placeholder": { ar: "سبب الرفض...", en: "Rejection reason..." },
   "supplier.applications.rejection_reason": { ar: "سبب الرفض", en: "Rejection reason" },
   "supplier.applications.creds_title": { ar: "بيانات دخول المورد", en: "Supplier credentials" },
-  "supplier.applications.creds_desc": { ar: "احفظ كلمة المرور المؤقتة وأرسلها للمورد، سيُطلب منه تغييرها عند أول دخول.", en: "Save the temporary password and share it with the supplier. They will be asked to change it on first sign-in." },
+  "supplier.applications.creds_desc": {
+    ar: "احفظ كلمة المرور المؤقتة وأرسلها للمورد، سيُطلب منه تغييرها عند أول دخول.",
+    en: "Save the temporary password and share it with the supplier. They will be asked to change it on first sign-in.",
+  },
 
   // Supplier portal
-  "supplier.portal.no_link_title": { ar: "حسابك غير مرتبط بمورد", en: "Account not linked to a supplier" },
-  "supplier.portal.no_link_desc": { ar: "تواصل مع المسؤول لإكمال الربط.", en: "Contact your administrator to complete the link." },
+  "supplier.portal.no_link_title": {
+    ar: "حسابك غير مرتبط بمورد",
+    en: "Account not linked to a supplier",
+  },
+  "supplier.portal.no_link_desc": {
+    ar: "تواصل مع المسؤول لإكمال الربط.",
+    en: "Contact your administrator to complete the link.",
+  },
   "supplier.portal.profile": { ar: "ملف المورد", en: "Supplier Profile" },
   "supplier.portal.outstanding": { ar: "مستحقات معلقة", en: "Outstanding" },
   "supplier.portal.tab_overview": { ar: "نظرة عامة", en: "Overview" },
@@ -272,7 +350,6 @@ export const dict: Dict = {
   "supplier.portal.empty_payables": { ar: "لا توجد مستحقات", en: "No payables" },
   "nav.supplier_applications": { ar: "طلبات الموردين", en: "Supplier Applications" },
   "nav.supplier_portal": { ar: "بوابة المورد", en: "Supplier Portal" },
-
 
   // Modules headings
   "customers.title": { ar: "العملاء", en: "Customers" },
@@ -298,15 +375,24 @@ export const dict: Dict = {
   "hotels.images": { ar: "الصور", en: "Images" },
   "hotels.upload_images": { ar: "رفع الصور", en: "Upload Images" },
   "hotels.click_to_upload": { ar: "انقر هنا لرفع الصور", en: "Click here to upload images" },
-  "hotels.supported_formats": { ar: "الصيغ المدعومة: JPG, PNG, WEBP", en: "Supported formats: JPG, PNG, WEBP" },
+  "hotels.supported_formats": {
+    ar: "الصيغ المدعومة: JPG, PNG, WEBP",
+    en: "Supported formats: JPG, PNG, WEBP",
+  },
   "hotels.contacts": { ar: "جهات الاتصال", en: "Contacts" },
   "hotels.bookings": { ar: "سجل الحجوزات", en: "Booking History" },
   "hotels.rates_history": { ar: "سجل الأسعار", en: "Rates History" },
   "hotels.location": { ar: "الموقع والعنوان", en: "Location & Address" },
   "hotels.contact_info": { ar: "بيانات الاتصال", en: "Contact Information" },
   "hotels.policies": { ar: "السياسات والوصف", en: "Policies & Description" },
-  "hotels.no_bookings": { ar: "لا توجد حجوزات لهذا الفندق بعد.", en: "No bookings recorded for this hotel yet." },
-  "hotels.no_rates": { ar: "لا توجد أسعار مسجلة لهذا الفندق.", en: "No rates recorded for this hotel." },
+  "hotels.no_bookings": {
+    ar: "لا توجد حجوزات لهذا الفندق بعد.",
+    en: "No bookings recorded for this hotel yet.",
+  },
+  "hotels.no_rates": {
+    ar: "لا توجد أسعار مسجلة لهذا الفندق.",
+    en: "No rates recorded for this hotel.",
+  },
   "label.department": { ar: "القسم", en: "Department" },
   "label.whatsapp": { ar: "واتساب", en: "WhatsApp" },
   "label.district": { ar: "الحي/المنطقة", en: "District" },
@@ -338,7 +424,6 @@ export const dict: Dict = {
   "label.legal_name": { ar: "الاسم القانوني", en: "Legal name" },
   "label.tags": { ar: "الوسوم", en: "Tags" },
   "label.file": { ar: "ملف", en: "File" },
-
 
   "rates.title": { ar: "الأسعار", en: "Rates" },
   "rates.new": { ar: "سعر جديد", en: "New Rate" },
@@ -396,7 +481,10 @@ export const dict: Dict = {
   // Multi-rate / versioning / direct
   "rates.compare": { ar: "مقارنة الأسعار", en: "Compare Rates" },
   "rates.compare_title": { ar: "مقارنة الأسعار بين الموردين", en: "Rates Comparison" },
-  "rates.compare_hint": { ar: "اختر الفندق والفترة لعرض جميع الأسعار المتاحة. أفضل سعر يظهر بالأعلى.", en: "Select hotel and dates to see all available rates. The best price is shown at the top." },
+  "rates.compare_hint": {
+    ar: "اختر الفندق والفترة لعرض جميع الأسعار المتاحة. أفضل سعر يظهر بالأعلى.",
+    en: "Select hotel and dates to see all available rates. The best price is shown at the top.",
+  },
   "rates.source": { ar: "المصدر", en: "Source" },
   "rates.source.direct": { ar: "الفندق مباشرة", en: "Hotel direct" },
   "rates.is_direct": { ar: "سعر مباشر من الفندق", en: "Direct from hotel" },
@@ -404,7 +492,10 @@ export const dict: Dict = {
   "rates.meals_included": { ar: "السعر شامل الوجبات", en: "Price includes meals" },
   "rates.meals_not_included": { ar: "السعر غير شامل الوجبات", en: "Price does not include meals" },
   "rates.extra_bed.title": { ar: "اضافه سرير اضافي", en: "Add extra bed" },
-  "rates.extra_bed.description": { ar: "يمكن اضافة سرير اضافي مقابل رسوم", en: "An extra bed can be added for a fee" },
+  "rates.extra_bed.description": {
+    ar: "يمكن اضافة سرير اضافي مقابل رسوم",
+    en: "An extra bed can be added for a fee",
+  },
   "rates.extra_bed.limit": { ar: "عدد الاسرة الاضافية", en: "Number of extra beds" },
   "rates.extra_bed.max_limit_disclaimer": { ar: "الحد الاقصى سرير واحد", en: "Maximum 1 bed" },
   "rates.extra_bed.per_night": { ar: "لكل ليلة", en: "per night" },
@@ -416,19 +507,31 @@ export const dict: Dict = {
   "rates.entered_by": { ar: "أدخل بواسطة", en: "Entered by" },
   "rates.latest_only": { ar: "أحدث نسخة فقط", en: "Latest version only" },
   "rates.create_new_version": { ar: "إنشاء نسخة جديدة", en: "Create new version" },
-  "rates.versioned_saved": { ar: "تم إنشاء نسخة جديدة من السعر (مسودة).", en: "A new draft version of the rate has been created." },
+  "rates.versioned_saved": {
+    ar: "تم إنشاء نسخة جديدة من السعر (مسودة).",
+    en: "A new draft version of the rate has been created.",
+  },
   "rates.best_price": { ar: "أفضل سعر", en: "Best price" },
   "rates.select_for_quote": { ar: "اختيار لعرض السعر", en: "Select for quotation" },
   "rates.superseded": { ar: "مستبدل", en: "Superseded" },
   "rates.history": { ar: "سجل النسخ", en: "Version history" },
-  "rates.archive_old_btn": { ar: "أرشفة الأسعار الأقدم من سنة", en: "Archive rates older than 1 year" },
+  "rates.archive_old_btn": {
+    ar: "أرشفة الأسعار الأقدم من سنة",
+    en: "Archive rates older than 1 year",
+  },
   "rates.archived_count": { ar: "تمت أرشفة {n} سعر", en: "{n} rates archived" },
   // Hotels: direct supplier
-  "hotels.is_direct_supplier": { ar: "هذا الفندق يقدم أسعاراً مباشرة (مورد مباشر)", en: "This hotel offers direct rates (acts as a supplier)" },
+  "hotels.is_direct_supplier": {
+    ar: "هذا الفندق يقدم أسعاراً مباشرة (مورد مباشر)",
+    en: "This hotel offers direct rates (acts as a supplier)",
+  },
   // Approval thresholds
   "nav.approval_thresholds": { ar: "عتبات الموافقة المالية", en: "Approval Thresholds" },
   "thresholds.title": { ar: "عتبات الموافقة المزدوجة", en: "Maker-Checker Thresholds" },
-  "thresholds.subtitle": { ar: "تحدد المبالغ التي تستوجب موافقة شخص ثانٍ (مبدأ فصل المهام).", en: "Amounts that require a second approver (segregation of duties)." },
+  "thresholds.subtitle": {
+    ar: "تحدد المبالغ التي تستوجب موافقة شخص ثانٍ (مبدأ فصل المهام).",
+    en: "Amounts that require a second approver (segregation of duties).",
+  },
   "thresholds.entity_type": { ar: "نوع العملية", en: "Operation type" },
   "thresholds.amount": { ar: "المبلغ", en: "Amount" },
   "thresholds.requires_second": { ar: "يتطلب موافقة ثانية", en: "Requires second approver" },
@@ -447,14 +550,23 @@ export const dict: Dict = {
   "occupancy.INF": { ar: "رضيع (INF)", en: "Infant (INF)" },
   "occupancy.active": { ar: "نشط", en: "Active" },
   "occupancy.inactive": { ar: "غير نشط", en: "Inactive" },
-  "occupancy.core_required": { ar: "يجب إضافة سعر مفرد ومزدوج نشط قبل اعتماد السعر", en: "Active SGL and DBL prices are required before rate activation" },
+  "occupancy.core_required": {
+    ar: "يجب إضافة سعر مفرد ومزدوج نشط قبل اعتماد السعر",
+    en: "Active SGL and DBL prices are required before rate activation",
+  },
   "occupancy.err_type_required": { ar: "اختر نوع الإشغال", en: "Select an occupancy type" },
-  "occupancy.err_duplicate": { ar: "نوع الإشغال مضاف مسبقًا لهذا السعر", en: "This occupancy type already exists for this rate" },
-  "occupancy.err_negative": { ar: "لا يسمح بقيم سالبة أو فارغة", en: "Negative or empty values are not allowed" },
-  "occupancy.err_sell_below_cost": { ar: "سعر البيع لا يمكن أن يكون أقل من التكلفة", en: "Selling price cannot be lower than cost price" },
-
-
-
+  "occupancy.err_duplicate": {
+    ar: "نوع الإشغال مضاف مسبقًا لهذا السعر",
+    en: "This occupancy type already exists for this rate",
+  },
+  "occupancy.err_negative": {
+    ar: "لا يسمح بقيم سالبة أو فارغة",
+    en: "Negative or empty values are not allowed",
+  },
+  "occupancy.err_sell_below_cost": {
+    ar: "سعر البيع لا يمكن أن يكون أقل من التكلفة",
+    en: "Selling price cannot be lower than cost price",
+  },
 
   // Dashboard
   "dash.welcome": { ar: "مرحبًا بك", en: "Welcome" },
@@ -482,9 +594,6 @@ export const dict: Dict = {
   "kpi.expiring_soon": { ar: "تنتهي قريباً", en: "Expiring Soon" },
   "kpi.expired": { ar: "منتهية", en: "Expired" },
   "kpi.draft": { ar: "مسودة", en: "Draft" },
-
-
-
 
   // Users
   "users.title": { ar: "إدارة المستخدمين", en: "User Management" },
@@ -519,8 +628,14 @@ export const dict: Dict = {
   "settings.company_name_en": { ar: "اسم الشركة بالإنجليزية", en: "Company Name (English)" },
   "settings.default_currency": { ar: "العملة الافتراضية للعملاء", en: "Default Customer Currency" },
   "settings.base_currency": { ar: "عملة الأساس للتقارير المالية", en: "Reporting Base Currency" },
-  "settings.approval_threshold": { ar: "حد الاعتماد التلقائي لعروض الأسعار", en: "Quotation Auto-approval Threshold" },
-  "settings.approval_threshold_desc": { ar: "عروض الأسعار التي تساوي أو تتجاوز هذه القيمة تتطلب اعتماداً يدوياً قبل إمكانية إرسالها للعملاء.", en: "Quotations equal to or exceeding this amount require manual approval before being sent to customers." },
+  "settings.approval_threshold": {
+    ar: "حد الاعتماد التلقائي لعروض الأسعار",
+    en: "Quotation Auto-approval Threshold",
+  },
+  "settings.approval_threshold_desc": {
+    ar: "عروض الأسعار التي تساوي أو تتجاوز هذه القيمة تتطلب اعتماداً يدوياً قبل إمكانية إرسالها للعملاء.",
+    en: "Quotations equal to or exceeding this amount require manual approval before being sent to customers.",
+  },
   "settings.saving_settings": { ar: "جاري حفظ الإعدادات...", en: "Saving settings..." },
 
   // Toasts
@@ -531,7 +646,10 @@ export const dict: Dict = {
   "toast.archived": { ar: "تمت الأرشفة بنجاح", en: "Archived successfully" },
   "toast.restored": { ar: "تمت الاستعادة بنجاح", en: "Restored successfully" },
   "toast.error": { ar: "حدث خطأ", en: "An error occurred" },
-  "toast.confirm_delete": { ar: "هل أنت متأكد من الحذف؟", en: "Are you sure you want to delete this?" },
+  "toast.confirm_delete": {
+    ar: "هل أنت متأكد من الحذف؟",
+    en: "Are you sure you want to delete this?",
+  },
   "toast.confirm_archive": { ar: "تأكيد الأرشفة؟", en: "Archive this record?" },
   "pagination.prev": { ar: "السابق", en: "Previous" },
   "pagination.next": { ar: "التالي", en: "Next" },
@@ -628,7 +746,10 @@ export const dict: Dict = {
   "room_types.no_found": { ar: "نوع الغرفة غير موجود", en: "Room type not found" },
   "room_types.tab.profile": { ar: "البيانات", en: "Profile" },
   "room_types.tab.history": { ar: "السجل", en: "History" },
-  "room_types.err_occupancy": { ar: "أقصى إشغال يجب أن يكون بين عدد الكبار ومجموع الكبار والأطفال", en: "Max occupancy must be between adults and adults + children" },
+  "room_types.err_occupancy": {
+    ar: "أقصى إشغال يجب أن يكون بين عدد الكبار ومجموع الكبار والأطفال",
+    en: "Max occupancy must be between adults and adults + children",
+  },
   "room_types.desc_en": { ar: "الوصف (إنجليزي)", en: "Description (English)" },
   "room_types.desc_ar": { ar: "الوصف (عربي)", en: "Description (Arabic)" },
 
@@ -645,15 +766,27 @@ export const dict: Dict = {
   "contracts.tab.profile": { ar: "البيانات", en: "Profile" },
   "contracts.tab.rates": { ar: "الأسعار المرتبطة", en: "Linked Rates" },
   "contracts.tab.history": { ar: "سجل العقد", en: "Contract History" },
-  "contracts.no_rates": { ar: "لا توجد أسعار مرتبطة بهذا العقد.", en: "No rates linked to this contract." },
+  "contracts.no_rates": {
+    ar: "لا توجد أسعار مرتبطة بهذا العقد.",
+    en: "No rates linked to this contract.",
+  },
   "contracts.activate": { ar: "تفعيل", en: "Activate" },
   "contracts.suspend": { ar: "إيقاف مؤقت", en: "Suspend" },
   "contracts.resume": { ar: "استئناف", en: "Resume" },
   "contracts.close": { ar: "إغلاق", en: "Close" },
   "contracts.mark_expired": { ar: "تحديد كمنتهي", en: "Mark Expired" },
-  "contracts.confirm_status": { ar: "تأكيد تغيير حالة العقد؟", en: "Confirm contract status change?" },
-  "contracts.err_overlap": { ar: "تواريخ العقد تتداخل مع عقد آخر لنفس المورد والفندق", en: "Contract dates overlap with an existing contract for the same supplier and hotel" },
-  "contracts.err_not_active": { ar: "لا يمكن اعتماد الأسعار إلا ضمن عقد نشط", en: "Rates can only be approved under an active contract" },
+  "contracts.confirm_status": {
+    ar: "تأكيد تغيير حالة العقد؟",
+    en: "Confirm contract status change?",
+  },
+  "contracts.err_overlap": {
+    ar: "تواريخ العقد تتداخل مع عقد آخر لنفس المورد والفندق",
+    en: "Contract dates overlap with an existing contract for the same supplier and hotel",
+  },
+  "contracts.err_not_active": {
+    ar: "لا يمكن اعتماد الأسعار إلا ضمن عقد نشط",
+    en: "Rates can only be approved under an active contract",
+  },
   "ctrtype.allotment": { ar: "حصة غرف", en: "Allotment" },
   "ctrtype.free_sale": { ar: "بيع حر", en: "Free Sale" },
   "ctrtype.on_request": { ar: "عند الطلب", en: "On Request" },
@@ -665,8 +798,14 @@ export const dict: Dict = {
   "seasons.new": { ar: "موسم جديد", en: "New Season" },
   "seasons.edit": { ar: "تعديل الموسم", en: "Edit Season" },
   "seasons.type": { ar: "نوع الموسم", en: "Season Type" },
-  "seasons.err_duplicate": { ar: "يوجد موسم بنفس الاسم مسبقًا", en: "A season with the same name already exists" },
-  "seasons.err_overlap": { ar: "تواريخ الموسم تتداخل مع موسم آخر من نفس النوع", en: "Season dates overlap with an existing season of the same type" },
+  "seasons.err_duplicate": {
+    ar: "يوجد موسم بنفس الاسم مسبقًا",
+    en: "A season with the same name already exists",
+  },
+  "seasons.err_overlap": {
+    ar: "تواريخ الموسم تتداخل مع موسم آخر من نفس النوع",
+    en: "Season dates overlap with an existing season of the same type",
+  },
   "season_type.low": { ar: "موسم منخفض", en: "Low Season" },
   "season_type.high": { ar: "موسم مرتفع", en: "High Season" },
   "season_type.peak": { ar: "موسم الذروة", en: "Peak Season" },
@@ -682,8 +821,14 @@ export const dict: Dict = {
   "taxes.edit": { ar: "تعديل الضريبة / الرسم", en: "Edit Tax / Fee" },
   "taxes.calc_method": { ar: "طريقة الاحتساب", en: "Calculation Method" },
   "taxes.effective_date": { ar: "تاريخ السريان", en: "Effective Date" },
-  "taxes.err_pct": { ar: "النسبة المئوية لا يمكن أن تتجاوز 100", en: "Percentage value cannot exceed 100" },
-  "taxes.err_currency": { ar: "الرسوم الثابتة تتطلب تحديد العملة", en: "Fixed amount fees require a currency" },
+  "taxes.err_pct": {
+    ar: "النسبة المئوية لا يمكن أن تتجاوز 100",
+    en: "Percentage value cannot exceed 100",
+  },
+  "taxes.err_currency": {
+    ar: "الرسوم الثابتة تتطلب تحديد العملة",
+    en: "Fixed amount fees require a currency",
+  },
   "taxtype.vat": { ar: "ضريبة القيمة المضافة", en: "VAT" },
   "taxtype.municipality_fee": { ar: "رسوم البلدية", en: "Municipality Fee" },
   "taxtype.tourism_fee": { ar: "رسوم السياحة", en: "Tourism Fee" },
@@ -698,20 +843,32 @@ export const dict: Dict = {
   "scope.per_stay": { ar: "لكل إقامة", en: "Per Stay" },
   "taxes.expiry_date": { ar: "تاريخ الانتهاء", en: "Expiry Date" },
   "taxes.apply_scope": { ar: "نطاق التطبيق", en: "Applies Per" },
-  "taxes.err_dates": { ar: "تاريخ الانتهاء لا يمكن أن يسبق تاريخ السريان", en: "Expiry date cannot be before the effective date" },
+  "taxes.err_dates": {
+    ar: "تاريخ الانتهاء لا يمكن أن يسبق تاريخ السريان",
+    en: "Expiry date cannot be before the effective date",
+  },
   "taxes.no_found": { ar: "الضريبة / الرسم غير موجود", en: "Tax / fee not found" },
   "contracts.commission_type": { ar: "نوع العمولة", en: "Commission Type" },
   "contracts.terminate": { ar: "إنهاء العقد", en: "Terminate" },
-  "contracts.err_overlap_dates": { ar: "تاريخ النهاية يجب أن يكون بعد تاريخ البداية", en: "End date must be after start date" },
+  "contracts.err_overlap_dates": {
+    ar: "تاريخ النهاية يجب أن يكون بعد تاريخ البداية",
+    en: "End date must be after start date",
+  },
   "seasons.no_found": { ar: "الموسم غير موجود", en: "Season not found" },
-  "room_types.err_linked_rates": { ar: "لا يمكن حذف أو أرشفة نوع الغرفة لارتباطه بأسعار نشطة", en: "Cannot delete or archive: room type is linked to active rates" },
+  "room_types.err_linked_rates": {
+    ar: "لا يمكن حذف أو أرشفة نوع الغرفة لارتباطه بأسعار نشطة",
+    en: "Cannot delete or archive: room type is linked to active rates",
+  },
 
   // Audit / history
   "history.action": { ar: "الإجراء", en: "Action" },
   "history.user": { ar: "المستخدم", en: "User" },
   "history.time": { ar: "الوقت", en: "Time" },
   "history.changes": { ar: "التغييرات", en: "Changes" },
-  "history.empty": { ar: "لا يوجد سجل تغييرات (قد يتطلب صلاحية مدير).", en: "No history records (admin permission may be required)." },
+  "history.empty": {
+    ar: "لا يوجد سجل تغييرات (قد يتطلب صلاحية مدير).",
+    en: "No history records (admin permission may be required).",
+  },
   "history.action.create": { ar: "إنشاء", en: "Create" },
   "history.action.update": { ar: "تعديل", en: "Update" },
   "history.action.delete": { ar: "حذف", en: "Delete" },
@@ -735,9 +892,18 @@ export const dict: Dict = {
   "attach.preview": { ar: "معاينة", en: "Preview" },
   "attach.download": { ar: "تنزيل", en: "Download" },
   "attach.empty": { ar: "لا توجد مرفقات.", en: "No attachments." },
-  "attach.hint": { ar: "الملفات المسموحة: PDF / DOCX / XLSX / JPG / PNG — بحد أقصى 25 ميجابايت.", en: "Allowed files: PDF / DOCX / XLSX / JPG / PNG — maximum 25 MB." },
-  "attach.err_type": { ar: "نوع الملف غير مدعوم. الأنواع المسموحة: PDF / DOCX / XLSX / JPG / PNG", en: "Unsupported file type. Allowed: PDF / DOCX / XLSX / JPG / PNG" },
-  "attach.err_size": { ar: "حجم الملف يتجاوز الحد الأقصى (25 ميجابايت)", en: "File exceeds the maximum size (25 MB)" },
+  "attach.hint": {
+    ar: "الملفات المسموحة: PDF / DOCX / XLSX / JPG / PNG — بحد أقصى 25 ميجابايت.",
+    en: "Allowed files: PDF / DOCX / XLSX / JPG / PNG — maximum 25 MB.",
+  },
+  "attach.err_type": {
+    ar: "نوع الملف غير مدعوم. الأنواع المسموحة: PDF / DOCX / XLSX / JPG / PNG",
+    en: "Unsupported file type. Allowed: PDF / DOCX / XLSX / JPG / PNG",
+  },
+  "attach.err_size": {
+    ar: "حجم الملف يتجاوز الحد الأقصى (25 ميجابايت)",
+    en: "File exceeds the maximum size (25 MB)",
+  },
   "attach.confirm_archive": { ar: "أرشفة هذا المرفق؟", en: "Archive this attachment?" },
 
   // Approval workflow engine
@@ -748,7 +914,10 @@ export const dict: Dict = {
   "approval.reject": { ar: "رفض", en: "Reject" },
   "approval.return": { ar: "إعادة للمراجعة", en: "Return for Revision" },
   "approval.notes": { ar: "ملاحظات الاعتماد", en: "Approval Notes" },
-  "approval.notes_placeholder": { ar: "سبب الرفض أو الإعادة…", en: "Reason for rejection or return…" },
+  "approval.notes_placeholder": {
+    ar: "سبب الرفض أو الإعادة…",
+    en: "Reason for rejection or return…",
+  },
   "approval.submitted_by": { ar: "مقدم الطلب", en: "Submitted By" },
   "approval.submitted_at": { ar: "تاريخ الإرسال", en: "Submitted At" },
   "approval.decided_by": { ar: "تم البت بواسطة", en: "Decided By" },
@@ -761,17 +930,36 @@ export const dict: Dict = {
   "approval.status.rejected": { ar: "مرفوض", en: "Rejected" },
   "approval.status.returned": { ar: "معاد للمراجعة", en: "Returned" },
   "approval.status.archived": { ar: "مؤرشف", en: "Archived" },
-  "approval.err_transition": { ar: "لا يمكن تنفيذ هذا الانتقال في حالة الطلب الحالية", en: "This status transition is not allowed for the current request" },
-  "approval.err_forbidden": { ar: "هذا الإجراء متاح للمديرين والمسؤولين فقط", en: "Only managers or admins can perform this action" },
-  "approval.err_notes": { ar: "الملاحظات مطلوبة عند الرفض أو الإعادة", en: "Notes are required when rejecting or returning a request" },
-  "approval.err_open_exists": { ar: "يوجد طلب اعتماد مفتوح بالفعل لهذا السجل", en: "An open approval request already exists for this record" },
+  "approval.err_transition": {
+    ar: "لا يمكن تنفيذ هذا الانتقال في حالة الطلب الحالية",
+    en: "This status transition is not allowed for the current request",
+  },
+  "approval.err_forbidden": {
+    ar: "هذا الإجراء متاح للمديرين والمسؤولين فقط",
+    en: "Only managers or admins can perform this action",
+  },
+  "approval.err_notes": {
+    ar: "الملاحظات مطلوبة عند الرفض أو الإعادة",
+    en: "Notes are required when rejecting or returning a request",
+  },
+  "approval.err_open_exists": {
+    ar: "يوجد طلب اعتماد مفتوح بالفعل لهذا السجل",
+    en: "An open approval request already exists for this record",
+  },
   "err.not_allowed": { ar: "هذا الإجراء غير مسموح", en: "This action is not allowed" },
-  "err.no_immutable": { ar: "رقم المستند لا يمكن تغييره", en: "The document number cannot be changed" },
+  "err.no_immutable": {
+    ar: "رقم المستند لا يمكن تغييره",
+    en: "The document number cannot be changed",
+  },
   "err.record_missing": { ar: "السجل غير موجود", en: "Record not found" },
-  "rates.err_below_cost": { ar: "سعر البيع لا يمكن أن يقل عن سعر التكلفة", en: "Selling price cannot be lower than cost price" },
-  "rates.err_missing_occupancy": { ar: "يتطلب التفعيل أسعار إشغال نشطة (مفرد ومزدوج) على الأقل", en: "Activation requires active SGL and DBL occupancy prices" },
-
-
+  "rates.err_below_cost": {
+    ar: "سعر البيع لا يمكن أن يقل عن سعر التكلفة",
+    en: "Selling price cannot be lower than cost price",
+  },
+  "rates.err_missing_occupancy": {
+    ar: "يتطلب التفعيل أسعار إشغال نشطة (مفرد ومزدوج) على الأقل",
+    en: "Activation requires active SGL and DBL occupancy prices",
+  },
 
   // Quotations module
   "quotes.title": { ar: "عروض الأسعار", en: "Quotations" },
@@ -788,12 +976,21 @@ export const dict: Dict = {
   "label.employee": { ar: "الموظف", en: "Employee" },
   "label.recorded_at": { ar: "وقت التسجيل", en: "Recorded At" },
   "perm.denied_title": { ar: "لا تملك صلاحية الوصول", en: "Access Denied" },
-  "perm.denied_desc": { ar: "تم إخفاء هذا القسم من حسابك. تواصل مع المدير العام إذا كنت بحاجة للوصول.", en: "This section has been hidden from your account. Contact the general manager if you need access." },
+  "perm.denied_desc": {
+    ar: "تم إخفاء هذا القسم من حسابك. تواصل مع المدير العام إذا كنت بحاجة للوصول.",
+    en: "This section has been hidden from your account. Contact the general manager if you need access.",
+  },
   "perm.manage": { ar: "إدارة الصلاحيات", en: "Manage Permissions" },
-  "perm.dialog_desc": { ar: "أوقف أي قسم لإخفائه عن هذا الموظف فوراً.", en: "Toggle off any section to hide it from this employee immediately." },
+  "perm.dialog_desc": {
+    ar: "أوقف أي قسم لإخفائه عن هذا الموظف فوراً.",
+    en: "Toggle off any section to hide it from this employee immediately.",
+  },
   "perm.visible": { ar: "ظاهر", en: "Visible" },
   "perm.hidden": { ar: "مخفي", en: "Hidden" },
-  "perm.super_admin_note": { ar: "لا يمكن تقييد صلاحيات المدير العام.", en: "The super admin's access cannot be restricted." },
+  "perm.super_admin_note": {
+    ar: "لا يمكن تقييد صلاحيات المدير العام.",
+    en: "The super admin's access cannot be restricted.",
+  },
   "label.user_type": { ar: "نوع المستخدم", en: "User Type" },
   "usertype.super_admin": { ar: "مدير عام", en: "Super Admin" },
   "usertype.sales_manager": { ar: "مدير مبيعات", en: "Sales Manager" },
@@ -808,12 +1005,27 @@ export const dict: Dict = {
   "quotes.tab.history": { ar: "سجل التغييرات", en: "History" },
   "quotes.submit": { ar: "إرسال للاعتماد", en: "Submit for Approval" },
   "quotes.send": { ar: "إرسال للعميل", en: "Send to Customer" },
+  "quotes.send_supplier": { ar: "إرسال للمورد", en: "Send to Supplier" },
+  "quotes.print_customer": { ar: "طباعة للعميل", en: "Print for Customer" },
+  "quotes.print_supplier": { ar: "طباعة للمورد", en: "Print for Supplier" },
+  "quotes.print_with_prices": { ar: "مع الأسعار", en: "With Prices" },
+  "quotes.print_no_prices": { ar: "بدون أسعار", en: "Without Prices" },
+  "quotes.hide_prices": { ar: "إخفاء الأسعار", en: "Hide Prices" },
+  "quotes.show_prices": { ar: "إظهار الأسعار", en: "Show Prices" },
+  "quotes.select_supplier": { ar: "اختر المورد", en: "Select Supplier" },
+  "quotes.supplier_required": {
+    ar: "لا يوجد مورد مرتبط ببنود هذا العرض",
+    en: "No supplier is linked to this quotation's items",
+  },
   "quotes.accept": { ar: "تحديد كمقبول", en: "Mark Accepted" },
   "quotes.expire_action": { ar: "تحديد كمنتهي", en: "Mark Expired" },
   "quotes.cancel": { ar: "إلغاء العرض", en: "Cancel Quotation" },
   "quotes.reopen": { ar: "إعادة فتح كمسودة", en: "Reopen as Draft" },
   "quotes.print": { ar: "طباعة / PDF", en: "Print / PDF" },
-  "quotes.confirm_status": { ar: "تأكيد تغيير حالة عرض السعر؟", en: "Confirm quotation status change?" },
+  "quotes.confirm_status": {
+    ar: "تأكيد تغيير حالة عرض السعر؟",
+    en: "Confirm quotation status change?",
+  },
   "quotes.items.add": { ar: "إضافة بند", en: "Add Item" },
   "quotes.items.edit": { ar: "تعديل البند", en: "Edit Item" },
   "quotes.items.hotel": { ar: "الفندق", en: "Hotel" },
@@ -830,23 +1042,54 @@ export const dict: Dict = {
   "quotes.items.margin": { ar: "الهامش", en: "Margin" },
   "quotes.items.total_cost": { ar: "إجمالي التكلفة", en: "Total Cost" },
   "quotes.items.total_selling": { ar: "إجمالي البيع", en: "Total Selling" },
-  "quotes.items.empty": { ar: "لا توجد بنود. أضف بندًا واحدًا على الأقل.", en: "No items. Add at least one item." },
-  "quotes.items.locked": { ar: "البنود قابلة للتعديل فقط في حالة المسودة أو المرفوض.", en: "Items are editable only while the quotation is draft or rejected." },
-  "quotes.items.price_hint": { ar: "سيتم سحب الأسعار تلقائيًا من محرك تسعير الإشغال.", en: "Prices are pulled automatically from the occupancy pricing engine." },
+  "quotes.items.empty": {
+    ar: "لا توجد بنود. أضف بندًا واحدًا على الأقل.",
+    en: "No items. Add at least one item.",
+  },
+  "quotes.items.locked": {
+    ar: "البنود قابلة للتعديل فقط في حالة المسودة أو المرفوض.",
+    en: "Items are editable only while the quotation is draft or rejected.",
+  },
+  "quotes.items.price_hint": {
+    ar: "سيتم سحب الأسعار تلقائيًا من محرك تسعير الإشغال.",
+    en: "Prices are pulled automatically from the occupancy pricing engine.",
+  },
   "quotes.pricing.room_total": { ar: "إجمالي الغرف (بيع)", en: "Rooms Total (Selling)" },
   "quotes.pricing.total_cost": { ar: "إجمالي التكلفة", en: "Total Cost" },
   "quotes.pricing.taxes": { ar: "إجمالي الضرائب", en: "Total Taxes" },
   "quotes.pricing.fees": { ar: "إجمالي الرسوم", en: "Total Fees" },
   "quotes.pricing.margin": { ar: "إجمالي الهامش", en: "Total Margin" },
   "quotes.pricing.grand_total": { ar: "الإجمالي النهائي", en: "Grand Total" },
-  "quotes.err_transition": { ar: "لا يمكن تنفيذ هذا الانتقال في حالة العرض الحالية", en: "This status transition is not allowed for the current quotation" },
-  "quotes.err_no_items": { ar: "يجب إضافة بند واحد على الأقل قبل الإرسال", en: "At least one item is required before submitting or sending" },
-  "quotes.err_locked": { ar: "لا يمكن تعديل البنود إلا في حالة المسودة أو المرفوض", en: "Items can only be modified while the quotation is draft or rejected" },
-  "quotes.err_no_price": { ar: "لا يوجد سعر إشغال نشط لهذا السعر ونوع الإشغال", en: "No active occupancy price found for this rate and occupancy type" },
-  "quotes.err_price_required": { ar: "التكلفة وسعر البيع مطلوبان (اختر سعرًا أو أدخلهما يدويًا)", en: "Cost and selling prices are required (select a rate or enter manually)" },
-  "quotes.err_dates": { ar: "تاريخ الخروج يجب أن يكون بعد تاريخ الدخول", en: "Check-out must be after check-in" },
-  "quotes.err_approval_required": { ar: "هذا العرض يتجاوز حد الاعتماد ويجب اعتماده قبل الإرسال", en: "This quotation exceeds the approval threshold and must be approved before sending" },
+  "quotes.err_transition": {
+    ar: "لا يمكن تنفيذ هذا الانتقال في حالة العرض الحالية",
+    en: "This status transition is not allowed for the current quotation",
+  },
+  "quotes.err_no_items": {
+    ar: "يجب إضافة بند واحد على الأقل قبل الإرسال",
+    en: "At least one item is required before submitting or sending",
+  },
+  "quotes.err_locked": {
+    ar: "لا يمكن تعديل البنود إلا في حالة المسودة أو المرفوض",
+    en: "Items can only be modified while the quotation is draft or rejected",
+  },
+  "quotes.err_no_price": {
+    ar: "لا يوجد سعر إشغال نشط لهذا السعر ونوع الإشغال",
+    en: "No active occupancy price found for this rate and occupancy type",
+  },
+  "quotes.err_price_required": {
+    ar: "التكلفة وسعر البيع مطلوبان (اختر سعرًا أو أدخلهما يدويًا)",
+    en: "Cost and selling prices are required (select a rate or enter manually)",
+  },
+  "quotes.err_dates": {
+    ar: "تاريخ الخروج يجب أن يكون بعد تاريخ الدخول",
+    en: "Check-out must be after check-in",
+  },
+  "quotes.err_approval_required": {
+    ar: "هذا العرض يتجاوز حد الاعتماد ويجب اعتماده قبل الإرسال",
+    en: "This quotation exceeds the approval threshold and must be approved before sending",
+  },
   "qstatus.draft": { ar: "مسودة", en: "Draft" },
+  "qstatus.valid": { ar: "صالح", en: "Valid" },
   "qstatus.pending": { ar: "قيد الانتظار", en: "Pending" },
   "qstatus.pending_approval": { ar: "بانتظار الاعتماد", en: "Pending Approval" },
   "qstatus.approved": { ar: "معتمد", en: "Approved" },
@@ -869,21 +1112,48 @@ export const dict: Dict = {
   "quotes.print.to": { ar: "مقدم إلى", en: "Presented To" },
   "quotes.print.valid_until": { ar: "صالح حتى", en: "Valid Until" },
   "quotes.print.notes": { ar: "ملاحظات", en: "Notes" },
-  "quotes.print.footer": { ar: "شكرًا لتعاملكم معنا. هذا العرض صالح حتى التاريخ المذكور أعلاه.", en: "Thank you for your business. This quotation is valid until the date stated above." },
-  "quotes.expiring_soon": { ar: "عروض ستنتهي صلاحيتها خلال 7 أيام", en: "quotations expiring within 7 days" },
+  "quotes.print.footer": {
+    ar: "شكرًا لتعاملكم معنا. هذا العرض صالح حتى التاريخ المذكور أعلاه.",
+    en: "Thank you for your business. This quotation is valid until the date stated above.",
+  },
+  "quotes.expiring_soon": {
+    ar: "عروض ستنتهي صلاحيتها خلال 7 أيام",
+    en: "quotations expiring within 7 days",
+  },
   "quotes.items.contract": { ar: "العقد", en: "Contract" },
   "quotes.items.room_type": { ar: "نوع الغرفة", en: "Room Type" },
   "quotes.items.season": { ar: "الموسم", en: "Season" },
   "quotes.items.season_any": { ar: "بدون موسم محدد", en: "No specific season" },
-  "quotes.items.no_contracts": { ar: "لا توجد عقود نشطة لهذا الفندق", en: "No active contracts for this hotel" },
-  "quotes.items.no_rates": { ar: "لا توجد أسعار معتمدة لهذا العقد", en: "No approved rates for this contract" },
-  "quotes.items.no_occ": { ar: "لا توجد أسعار إشغال نشطة لهذا السعر", en: "No active occupancy prices for this rate" },
+  "quotes.items.no_contracts": {
+    ar: "لا توجد عقود نشطة لهذا الفندق",
+    en: "No active contracts for this hotel",
+  },
+  "quotes.items.no_rates": {
+    ar: "لا توجد أسعار معتمدة لهذا العقد",
+    en: "No approved rates for this contract",
+  },
+  "quotes.items.no_occ": {
+    ar: "لا توجد أسعار إشغال نشطة لهذا السعر",
+    en: "No active occupancy prices for this rate",
+  },
   "quotes.items.preview": { ar: "معاينة التسعير", en: "Pricing Preview" },
-  "quotes.items.pricing_auto": { ar: "الأسعار تُسحب تلقائيًا من محرك تسعير الإشغال ولا يمكن إدخالها يدويًا.", en: "Prices are pulled automatically from the Occupancy Pricing engine and cannot be entered manually." },
+  "quotes.items.pricing_auto": {
+    ar: "الأسعار تُسحب تلقائيًا من محرك تسعير الإشغال ولا يمكن إدخالها يدويًا.",
+    en: "Prices are pulled automatically from the Occupancy Pricing engine and cannot be entered manually.",
+  },
   "quotes.items.grand": { ar: "إجمالي البند", en: "Item Total" },
-  "quotes.err_duplicate": { ar: "يوجد بند لنفس الفندق ونوع الغرفة والإشغال في نفس الفترة", en: "An item for the same hotel, room type and occupancy already covers these dates" },
-  "quotes.err_expiry": { ar: "تاريخ انتهاء الصلاحية يجب أن يكون بعد تاريخ العرض", en: "Expiry date must be after the quotation date" },
-  "quotes.err_locked_edit": { ar: "لا يمكن تعديل بيانات العرض إلا في حالة المسودة أو المرفوض", en: "Quotation details can only be edited while draft or rejected" },
+  "quotes.err_duplicate": {
+    ar: "يوجد بند لنفس الفندق ونوع الغرفة والإشغال في نفس الفترة",
+    en: "An item for the same hotel, room type and occupancy already covers these dates",
+  },
+  "quotes.err_expiry": {
+    ar: "تاريخ انتهاء الصلاحية يجب أن يكون بعد تاريخ العرض",
+    en: "Expiry date must be after the quotation date",
+  },
+  "quotes.err_locked_edit": {
+    ar: "لا يمكن تعديل بيانات العرض إلا في حالة المسودة أو المرفوض",
+    en: "Quotation details can only be edited while draft or rejected",
+  },
   "quotes.return": { ar: "إعادة للمسودة", en: "Return to Draft" },
   "quotes.pdf_ok": { ar: "تم إنشاء نسخة الطباعة", en: "Print view generated" },
   "dash.quotes_expired": { ar: "منتهية", en: "Expired" },
@@ -934,15 +1204,27 @@ export const dict: Dict = {
   "rfq.items.quantity": { ar: "عدد الغرف", en: "Quantity" },
   "rfq.items.meal_plan": { ar: "نظام الوجبات", en: "Meal Plan" },
   "rfq.items.special": { ar: "طلبات خاصة", en: "Special Requests" },
-  "rfq.items.empty": { ar: "لا توجد بنود. أضف بندًا واحدًا على الأقل.", en: "No items. Add at least one item." },
-  "rfq.items.locked": { ar: "البنود قابلة للتعديل فقط في حالة المسودة.", en: "Items are editable only while the RFQ is in draft." },
+  "rfq.items.empty": {
+    ar: "لا توجد بنود. أضف بندًا واحدًا على الأقل.",
+    en: "No items. Add at least one item.",
+  },
+  "rfq.items.locked": {
+    ar: "البنود قابلة للتعديل فقط في حالة المسودة.",
+    en: "Items are editable only while the RFQ is in draft.",
+  },
   "rfq.sup.add": { ar: "إضافة مورد", en: "Add Supplier" },
   "rfq.sup.due": { ar: "موعد الرد", en: "Response Due" },
   "rfq.sup.sent_at": { ar: "تاريخ الإرسال", en: "Sent At" },
   "rfq.sup.overdue": { ar: "متأخر عن الموعد", en: "Overdue" },
   "rfq.sup.empty": { ar: "لم تتم إضافة موردين بعد.", en: "No suppliers added yet." },
-  "rfq.sup.locked": { ar: "الموردون قابلون للتعديل فقط في حالة المسودة.", en: "Suppliers are editable only while the RFQ is in draft." },
-  "rfq.sup.email_note": { ar: "سيتم تفعيل إرسال البريد الإلكتروني للموردين بعد إعداد نطاق البريد.", en: "Automatic supplier emails will activate once an email domain is configured." },
+  "rfq.sup.locked": {
+    ar: "الموردون قابلون للتعديل فقط في حالة المسودة.",
+    en: "Suppliers are editable only while the RFQ is in draft.",
+  },
+  "rfq.sup.email_note": {
+    ar: "سيتم تفعيل إرسال البريد الإلكتروني للموردين بعد إعداد نطاق البريد.",
+    en: "Automatic supplier emails will activate once an email domain is configured.",
+  },
   "rfq.resp.add": { ar: "تسجيل رد", en: "Record Response" },
   "rfq.resp.supplier": { ar: "المورد", en: "Supplier" },
   "rfq.resp.item": { ar: "البند", en: "Item" },
@@ -957,8 +1239,14 @@ export const dict: Dict = {
   "rfq.cmp.empty": { ar: "لا توجد ردود للمقارنة.", en: "No responses to compare." },
   "rfq.to_quote": { ar: "إنشاء عرض سعر", en: "Create Quotation" },
   "rfq.to_quote_markup": { ar: "نسبة الربح %", en: "Markup %" },
-  "rfq.to_quote_hint": { ar: "سيتم إنشاء عرض سعر من أفضل الردود المعتمدة لكل بند دون إعادة إدخال الأسعار.", en: "A quotation will be created from the best approved response per item — no manual re-entry of prices." },
-  "rfq.to_quote_ok": { ar: "تم إنشاء عرض السعر من ردود الموردين", en: "Quotation created from supplier responses" },
+  "rfq.to_quote_hint": {
+    ar: "سيتم إنشاء عرض سعر من أفضل الردود المعتمدة لكل بند دون إعادة إدخال الأسعار.",
+    en: "A quotation will be created from the best approved response per item — no manual re-entry of prices.",
+  },
+  "rfq.to_quote_ok": {
+    ar: "تم إنشاء عرض السعر من ردود الموردين",
+    en: "Quotation created from supplier responses",
+  },
   "rfq.to_quote_expiry": { ar: "تاريخ انتهاء العرض", en: "Quotation Expiry Date" },
   "dash.rfq_metrics": { ar: "مؤشرات طلبات الأسعار", en: "RFQ Metrics" },
   "dash.rfq_total": { ar: "طلبات منشأة", en: "RFQs Created" },
@@ -967,18 +1255,54 @@ export const dict: Dict = {
   "dash.rfq_approved": { ar: "معتمدة", en: "Approved" },
   "dash.rfq_expired": { ar: "منتهية", en: "Expired" },
   "dash.rfq_avg_response": { ar: "متوسط زمن الرد (أيام)", en: "Avg Response Time (days)" },
-  "rfq.err_transition": { ar: "لا يمكن تنفيذ هذا الانتقال في حالة الطلب الحالية", en: "This status transition is not allowed for the current RFQ" },
-  "rfq.err_no_items": { ar: "يجب إضافة بند واحد على الأقل قبل الإرسال", en: "At least one item is required before sending" },
-  "rfq.err_no_supplier": { ar: "لا يمكن إرسال طلب سعر بدون مورد واحد على الأقل", en: "An RFQ cannot be sent without at least one supplier" },
-  "rfq.err_locked": { ar: "البنود قابلة للتعديل فقط في حالة المسودة", en: "Items can only be modified while the RFQ is in draft" },
-  "rfq.err_item_dates": { ar: "تاريخ الخروج يجب أن يكون بعد تاريخ الدخول", en: "Check-out must be after check-in" },
-  "rfq.err_resp_closed": { ar: "لا تُقبل الردود إلا أثناء انتظار الردود", en: "Responses are only accepted while the RFQ is awaiting responses" },
-  "rfq.err_resp_overdue": { ar: "انتهى الموعد النهائي للرد", en: "The response deadline has passed" },
-  "rfq.err_resp_price": { ar: "سعر التكلفة مطلوب عند توفر الغرف", en: "Cost price is required when rooms are available" },
-  "rfq.err_resp_not_avail": { ar: "يمكن اعتماد الردود المتاحة فقط", en: "Only available responses can be approved" },
-  "rfq.err_no_approved_resp": { ar: "يجب اعتماد رد مورد واحد على الأقل أولاً", en: "At least one supplier response must be approved first" },
-  "rfq.err_qitem_not_approved": { ar: "لا يمكن إنشاء بنود عرض سعر إلا من ردود معتمدة", en: "Quotation items can only be created from approved RFQ responses" },
-  "rfq.err_duplicate_supplier": { ar: "هذا المورد مضاف بالفعل لهذا الطلب", en: "This supplier is already added to this RFQ" },
+  "rfq.err_transition": {
+    ar: "لا يمكن تنفيذ هذا الانتقال في حالة الطلب الحالية",
+    en: "This status transition is not allowed for the current RFQ",
+  },
+  "rfq.err_no_items": {
+    ar: "يجب إضافة بند واحد على الأقل قبل الإرسال",
+    en: "At least one item is required before sending",
+  },
+  "rfq.err_no_supplier": {
+    ar: "لا يمكن إرسال طلب سعر بدون مورد واحد على الأقل",
+    en: "An RFQ cannot be sent without at least one supplier",
+  },
+  "rfq.err_locked": {
+    ar: "البنود قابلة للتعديل فقط في حالة المسودة",
+    en: "Items can only be modified while the RFQ is in draft",
+  },
+  "rfq.err_item_dates": {
+    ar: "تاريخ الخروج يجب أن يكون بعد تاريخ الدخول",
+    en: "Check-out must be after check-in",
+  },
+  "rfq.err_resp_closed": {
+    ar: "لا تُقبل الردود إلا أثناء انتظار الردود",
+    en: "Responses are only accepted while the RFQ is awaiting responses",
+  },
+  "rfq.err_resp_overdue": {
+    ar: "انتهى الموعد النهائي للرد",
+    en: "The response deadline has passed",
+  },
+  "rfq.err_resp_price": {
+    ar: "سعر التكلفة مطلوب عند توفر الغرف",
+    en: "Cost price is required when rooms are available",
+  },
+  "rfq.err_resp_not_avail": {
+    ar: "يمكن اعتماد الردود المتاحة فقط",
+    en: "Only available responses can be approved",
+  },
+  "rfq.err_no_approved_resp": {
+    ar: "يجب اعتماد رد مورد واحد على الأقل أولاً",
+    en: "At least one supplier response must be approved first",
+  },
+  "rfq.err_qitem_not_approved": {
+    ar: "لا يمكن إنشاء بنود عرض سعر إلا من ردود معتمدة",
+    en: "Quotation items can only be created from approved RFQ responses",
+  },
+  "rfq.err_duplicate_supplier": {
+    ar: "هذا المورد مضاف بالفعل لهذا الطلب",
+    en: "This supplier is already added to this RFQ",
+  },
 
   // ===== Bookings (Section 14) =====
   "bk.title": { ar: "إدارة الحجوزات", en: "Booking Management" },
@@ -992,7 +1316,10 @@ export const dict: Dict = {
   "bk.source_quotation": { ar: "من عرض سعر", en: "From Quotation" },
   "bk.quotation": { ar: "عرض السعر", en: "Quotation" },
   "bk.pick_quotation": { ar: "اختر عرض سعر مقبول", en: "Select an accepted quotation" },
-  "bk.no_accepted_quotes": { ar: "لا توجد عروض أسعار مقبولة غير محوّلة", en: "No accepted, unconverted quotations available" },
+  "bk.no_accepted_quotes": {
+    ar: "لا توجد عروض أسعار مقبولة غير محوّلة",
+    en: "No accepted, unconverted quotations available",
+  },
   "bk.create_from_quote": { ar: "إنشاء حجز", en: "Create Booking" },
   "bk.special_requests": { ar: "طلبات خاصة", en: "Special Requests" },
   "bk.no_found": { ar: "الحجز غير موجود", en: "Booking not found" },
@@ -1007,7 +1334,10 @@ export const dict: Dict = {
   // statuses
   "bkstatus.draft": { ar: "مسودة", en: "Draft" },
   "bkstatus.pending": { ar: "قيد الانتظار", en: "Pending" },
-  "bkstatus.pending_supplier_confirmation": { ar: "بانتظار تأكيد المورد", en: "Pending Supplier Confirmation" },
+  "bkstatus.pending_supplier_confirmation": {
+    ar: "بانتظار تأكيد المورد",
+    en: "Pending Supplier Confirmation",
+  },
   "bkstatus.confirmed": { ar: "مؤكد", en: "Confirmed" },
   "bkstatus.checked_in": { ar: "تم تسجيل الوصول", en: "Checked-In" },
   "bkstatus.checked_out": { ar: "تم تسجيل المغادرة", en: "Checked-Out" },
@@ -1028,7 +1358,10 @@ export const dict: Dict = {
   "bk.rooms.add": { ar: "إضافة غرفة", en: "Add Room" },
   "bk.rooms.edit": { ar: "تعديل الغرفة", en: "Edit Room" },
   "bk.rooms.empty": { ar: "لا توجد غرف بعد", en: "No rooms yet" },
-  "bk.rooms.locked": { ar: "الغرف قابلة للتعديل فقط في حالة المسودة", en: "Rooms can only be modified while the booking is draft" },
+  "bk.rooms.locked": {
+    ar: "الغرف قابلة للتعديل فقط في حالة المسودة",
+    en: "Rooms can only be modified while the booking is draft",
+  },
   "bk.rooms.supplier": { ar: "المورد", en: "Supplier" },
   "bk.rooms.confirmation": { ar: "تأكيد المورد", en: "Supplier Confirmation" },
   "bk.rooms.confirmation_no": { ar: "رقم التأكيد", en: "Confirmation No." },
@@ -1048,7 +1381,10 @@ export const dict: Dict = {
   "bk.guests.room": { ar: "الغرفة", en: "Room" },
   "bk.guests.lead": { ar: "النزيل الرئيسي", en: "Lead Guest" },
   "bk.guests.set_lead": { ar: "تعيين كنزيل رئيسي", en: "Set as Lead" },
-  "bk.guests.locked": { ar: "النزلاء قابلون للتعديل قبل تسجيل الدخول فقط", en: "Guests can only be modified before check-in" },
+  "bk.guests.locked": {
+    ar: "النزلاء قابلون للتعديل قبل تسجيل الدخول فقط",
+    en: "Guests can only be modified before check-in",
+  },
   "gtype.adult": { ar: "بالغ", en: "Adult" },
   "gtype.child": { ar: "طفل", en: "Child" },
   "gtype.infant": { ar: "رضيع", en: "Infant" },
@@ -1066,29 +1402,86 @@ export const dict: Dict = {
   "bk.col.checkin": { ar: "الوصول", en: "Check-in" },
   "bk.col.nights": { ar: "ليالٍ", en: "Nights" },
   "bk.filter.quick": { ar: "تصفية سريعة", en: "Quick filter" },
-  "bk.no_results_hint": { ar: "لا توجد حجوزات تطابق التصفية الحالية. جرّب تعديل المعايير أو إنشاء حجز جديد.", en: "No bookings match the current filters. Adjust the criteria or create a new booking." },
+  "bk.no_results_hint": {
+    ar: "لا توجد حجوزات تطابق التصفية الحالية. جرّب تعديل المعايير أو إنشاء حجز جديد.",
+    en: "No bookings match the current filters. Adjust the criteria or create a new booking.",
+  },
   "actions.reset": { ar: "إعادة تعيين", en: "Reset" },
   // errors
-  "bk.err_transition": { ar: "لا يمكن تنفيذ هذا الانتقال في حالة الحجز الحالية", en: "This status transition is not allowed for the current booking" },
-  "bk.err_no_rooms": { ar: "يجب إضافة غرفة واحدة على الأقل", en: "A booking requires at least one room" },
-  "bk.err_no_lead": { ar: "يجب تحديد نزيل رئيسي قبل التأكيد", en: "A lead guest is required before confirmation" },
-  "bk.err_supplier_unconfirmed": { ar: "يجب تسجيل تأكيد المورد لكل الغرف قبل تأكيد الحجز", en: "Every room requires a supplier confirmation before the booking can be confirmed" },
-  "bk.err_early_checkin": { ar: "تسجيل الدخول متاح فقط في تاريخ الوصول أو بعده", en: "Check-in is only allowed on or after the arrival date" },
-  "bk.err_no_show_early": { ar: "لا يمكن تسجيل عدم الحضور قبل تاريخ الوصول", en: "No-show can only be recorded on or after the arrival date" },
+  "bk.err_transition": {
+    ar: "لا يمكن تنفيذ هذا الانتقال في حالة الحجز الحالية",
+    en: "This status transition is not allowed for the current booking",
+  },
+  "bk.err_no_rooms": {
+    ar: "يجب إضافة غرفة واحدة على الأقل",
+    en: "A booking requires at least one room",
+  },
+  "bk.err_no_lead": {
+    ar: "يجب تحديد نزيل رئيسي قبل التأكيد",
+    en: "A lead guest is required before confirmation",
+  },
+  "bk.err_supplier_unconfirmed": {
+    ar: "يجب تسجيل تأكيد المورد لكل الغرف قبل تأكيد الحجز",
+    en: "Every room requires a supplier confirmation before the booking can be confirmed",
+  },
+  "bk.err_early_checkin": {
+    ar: "تسجيل الدخول متاح فقط في تاريخ الوصول أو بعده",
+    en: "Check-in is only allowed on or after the arrival date",
+  },
+  "bk.err_no_show_early": {
+    ar: "لا يمكن تسجيل عدم الحضور قبل تاريخ الوصول",
+    en: "No-show can only be recorded on or after the arrival date",
+  },
   "bk.err_cancel_reason": { ar: "سبب الإلغاء مطلوب", en: "A cancellation reason is required" },
-  "bk.err_locked": { ar: "الحجوزات المكتملة أو الملغاة لا يمكن تعديلها", en: "Completed or cancelled bookings cannot be edited" },
-  "bk.err_locked_edit": { ar: "بيانات العميل والعملة قابلة للتعديل في حالة المسودة فقط", en: "Customer and currency can only be edited while the booking is draft" },
-  "bk.err_rooms_locked": { ar: "الغرف قابلة للتعديل في حالة المسودة فقط", en: "Rooms can only be modified while the booking is draft" },
-  "bk.err_guests_locked": { ar: "النزلاء قابلون للتعديل قبل تسجيل الدخول فقط", en: "Guests can only be modified before check-in" },
-  "bk.err_room_dates": { ar: "تاريخ الخروج يجب أن يكون بعد تاريخ الدخول", en: "Check-out must be after check-in" },
-  "bk.err_no_price": { ar: "لا يوجد سعر إشغال نشط لهذا النوع", en: "No active occupancy price found for this rate and occupancy type" },
-  "bk.err_price_required": { ar: "أسعار التكلفة والبيع مطلوبة", en: "Cost and selling prices are required" },
-  "bk.err_confirmation_no": { ar: "رقم تأكيد المورد مطلوب", en: "A supplier confirmation number is required" },
-  "bk.err_lead_unique": { ar: "يوجد نزيل رئيسي واحد فقط لكل حجز", en: "Only one lead guest is allowed per booking" },
+  "bk.err_locked": {
+    ar: "الحجوزات المكتملة أو الملغاة لا يمكن تعديلها",
+    en: "Completed or cancelled bookings cannot be edited",
+  },
+  "bk.err_locked_edit": {
+    ar: "بيانات العميل والعملة قابلة للتعديل في حالة المسودة فقط",
+    en: "Customer and currency can only be edited while the booking is draft",
+  },
+  "bk.err_rooms_locked": {
+    ar: "الغرف قابلة للتعديل في حالة المسودة فقط",
+    en: "Rooms can only be modified while the booking is draft",
+  },
+  "bk.err_guests_locked": {
+    ar: "النزلاء قابلون للتعديل قبل تسجيل الدخول فقط",
+    en: "Guests can only be modified before check-in",
+  },
+  "bk.err_room_dates": {
+    ar: "تاريخ الخروج يجب أن يكون بعد تاريخ الدخول",
+    en: "Check-out must be after check-in",
+  },
+  "bk.err_no_price": {
+    ar: "لا يوجد سعر إشغال نشط لهذا النوع",
+    en: "No active occupancy price found for this rate and occupancy type",
+  },
+  "bk.err_price_required": {
+    ar: "أسعار التكلفة والبيع مطلوبة",
+    en: "Cost and selling prices are required",
+  },
+  "bk.err_confirmation_no": {
+    ar: "رقم تأكيد المورد مطلوب",
+    en: "A supplier confirmation number is required",
+  },
+  "bk.err_lead_unique": {
+    ar: "يوجد نزيل رئيسي واحد فقط لكل حجز",
+    en: "Only one lead guest is allowed per booking",
+  },
   "bk.err_quote_missing": { ar: "عرض السعر غير موجود", en: "Quotation not found" },
-  "bk.err_quote_not_accepted": { ar: "يمكن تحويل عروض الأسعار المقبولة فقط إلى حجوزات", en: "Only accepted quotations can be converted to bookings" },
-  "bk.err_quote_converted": { ar: "تم تحويل عرض السعر هذا إلى حجز بالفعل", en: "This quotation has already been converted to a booking" },
-  "bk.err_no_immutable": { ar: "رقم الحجز لا يمكن تغييره", en: "The booking number cannot be changed" },
+  "bk.err_quote_not_accepted": {
+    ar: "يمكن تحويل عروض الأسعار المقبولة فقط إلى حجوزات",
+    en: "Only accepted quotations can be converted to bookings",
+  },
+  "bk.err_quote_converted": {
+    ar: "تم تحويل عرض السعر هذا إلى حجز بالفعل",
+    en: "This quotation has already been converted to a booking",
+  },
+  "bk.err_no_immutable": {
+    ar: "رقم الحجز لا يمكن تغييره",
+    en: "The booking number cannot be changed",
+  },
   "bk.history.empty": { ar: "لا يوجد سجل حالات", en: "No status history" },
   "bk.history.from": { ar: "من", en: "From" },
   "bk.history.to": { ar: "إلى", en: "To" },
@@ -1128,9 +1521,15 @@ export const dict: Dict = {
   "inv.send_email": { ar: "إرسال بالبريد", en: "Send by Email" },
   "inv.send_whatsapp": { ar: "إرسال واتساب", en: "Send via WhatsApp" },
   "quotes.send_whatsapp": { ar: "إرسال واتساب", en: "Send via WhatsApp" },
-  "wa.no_template": { ar: "لا يوجد قالب معتمد لهذه اللغة — لا يمكن الإرسال", en: "No approved template exists for this language — sending blocked" },
+  "wa.no_template": {
+    ar: "لا يوجد قالب معتمد لهذه اللغة — لا يمكن الإرسال",
+    en: "No approved template exists for this language — sending blocked",
+  },
   "wa.sent": { ar: "تم تجهيز رسالة واتساب وتسجيلها", en: "WhatsApp message prepared and logged" },
-  "doc.missing_translations": { ar: "ترجمات إلزامية مفقودة — لا يمكن إنشاء PDF", en: "Mandatory translations missing — PDF generation blocked" },
+  "doc.missing_translations": {
+    ar: "ترجمات إلزامية مفقودة — لا يمكن إنشاء PDF",
+    en: "Mandatory translations missing — PDF generation blocked",
+  },
   "hotels.preview_info": { ar: "معاينة معلومات الفندق", en: "Preview Hotel Info" },
   "hotels.print_info": { ar: "طباعة / PDF", en: "Print / PDF" },
   "hotels.send_whatsapp": { ar: "إرسال واتساب", en: "Send via WhatsApp" },
@@ -1140,7 +1539,10 @@ export const dict: Dict = {
   "wa.select_customer": { ar: "اختر العميل قبل الإرسال", en: "Select a customer before sending" },
   "wa.message_preview": { ar: "معاينة الرسالة", en: "Message preview" },
   "wa.send": { ar: "إرسال", en: "Send" },
-  "wa.failed": { ar: "فشل تسجيل الرسالة — تم تسجيل الفشل في سجل التدقيق", en: "Failed to log message — failure recorded in Audit Log" },
+  "wa.failed": {
+    ar: "فشل تسجيل الرسالة — تم تسجيل الفشل في سجل التدقيق",
+    en: "Failed to log message — failure recorded in Audit Log",
+  },
   "actions.close": { ar: "إغلاق", en: "Close" },
   "inv.history": { ar: "السجل", en: "History" },
   "inv.payments": { ar: "المدفوعات", en: "Payments" },
@@ -1164,19 +1566,52 @@ export const dict: Dict = {
   "inv.kpi.paid": { ar: "مدفوعة", en: "Paid" },
   "inv.kpi.draft": { ar: "مسودة", en: "Draft" },
   "inv.email_subject": { ar: "فاتورة رقم", en: "Invoice" },
-  "inv.email_body": { ar: "تحية طيبة، مرفق تفاصيل الفاتورة", en: "Dear customer, please find your invoice details" },
-  "inv.err_transition": { ar: "انتقال حالة الفاتورة غير صالح", en: "Invalid invoice status transition" },
-  "inv.err_no_items": { ar: "الفاتورة تتطلب بنداً واحداً على الأقل قبل الإصدار", en: "An invoice requires at least one item before issuing" },
-  "inv.err_due_date": { ar: "تاريخ الاستحقاق لا يمكن أن يسبق تاريخ الفاتورة", en: "Due date cannot be before the invoice date" },
-  "inv.err_locked_edit": { ar: "بيانات الفاتورة قابلة للتعديل في حالة المسودة فقط", en: "Invoice details can only be edited while draft" },
-  "inv.err_items_locked": { ar: "البنود قابلة للتعديل في حالة المسودة فقط", en: "Items can only be modified while the invoice is draft" },
-  "inv.err_cancel_paid": { ar: "لا يمكن إلغاء فاتورة عليها مدفوعات", en: "Invoices with recorded payments cannot be cancelled" },
+  "inv.email_body": {
+    ar: "تحية طيبة، مرفق تفاصيل الفاتورة",
+    en: "Dear customer, please find your invoice details",
+  },
+  "inv.err_transition": {
+    ar: "انتقال حالة الفاتورة غير صالح",
+    en: "Invalid invoice status transition",
+  },
+  "inv.err_no_items": {
+    ar: "الفاتورة تتطلب بنداً واحداً على الأقل قبل الإصدار",
+    en: "An invoice requires at least one item before issuing",
+  },
+  "inv.err_due_date": {
+    ar: "تاريخ الاستحقاق لا يمكن أن يسبق تاريخ الفاتورة",
+    en: "Due date cannot be before the invoice date",
+  },
+  "inv.err_locked_edit": {
+    ar: "بيانات الفاتورة قابلة للتعديل في حالة المسودة فقط",
+    en: "Invoice details can only be edited while draft",
+  },
+  "inv.err_items_locked": {
+    ar: "البنود قابلة للتعديل في حالة المسودة فقط",
+    en: "Items can only be modified while the invoice is draft",
+  },
+  "inv.err_cancel_paid": {
+    ar: "لا يمكن إلغاء فاتورة عليها مدفوعات",
+    en: "Invoices with recorded payments cannot be cancelled",
+  },
   "inv.err_cancel_reason": { ar: "سبب الإلغاء مطلوب", en: "A cancellation reason is required" },
   "inv.err_booking_missing": { ar: "الحجز غير موجود", en: "Booking not found" },
-  "inv.err_booking_not_confirmed": { ar: "الفواتير تُنشأ للحجوزات المؤكدة فقط", en: "Invoices can only be created for confirmed bookings" },
-  "inv.err_already_invoiced": { ar: "هذا الحجز له فاتورة نشطة بالفعل", en: "This booking already has an active invoice" },
-  "inv.err_no_immutable": { ar: "رقم الفاتورة لا يمكن تغييره", en: "The invoice number cannot be changed" },
-  "inv.err_paid_protected": { ar: "المبلغ المدفوع يُحدَّث عبر تخصيص سندات القبض فقط", en: "Paid amount is maintained by receipt allocations" },
+  "inv.err_booking_not_confirmed": {
+    ar: "الفواتير تُنشأ للحجوزات المؤكدة فقط",
+    en: "Invoices can only be created for confirmed bookings",
+  },
+  "inv.err_already_invoiced": {
+    ar: "هذا الحجز له فاتورة نشطة بالفعل",
+    en: "This booking already has an active invoice",
+  },
+  "inv.err_no_immutable": {
+    ar: "رقم الفاتورة لا يمكن تغييره",
+    en: "The invoice number cannot be changed",
+  },
+  "inv.err_paid_protected": {
+    ar: "المبلغ المدفوع يُحدَّث عبر تخصيص سندات القبض فقط",
+    en: "Paid amount is maintained by receipt allocations",
+  },
 
   // ===== Receipts =====
   "rct.title": { ar: "سندات القبض", en: "Receipts" },
@@ -1208,16 +1643,43 @@ export const dict: Dict = {
   "pm.cheque": { ar: "شيك", en: "Cheque" },
   "pm.card": { ar: "بطاقة", en: "Card" },
   "pm.online": { ar: "دفع إلكتروني", en: "Online" },
-  "rct.err_not_confirmed": { ar: "يمكن تخصيص السندات المؤكدة فقط", en: "Only confirmed receipts can be allocated" },
-  "rct.err_invoice_status": { ar: "التخصيص متاح للفواتير الصادرة أو المرسلة أو المدفوعة جزئياً فقط", en: "Allocations are only allowed on issued, sent or partially paid invoices" },
-  "rct.err_currency": { ar: "عملة السند والفاتورة يجب أن تتطابق", en: "Receipt and invoice currencies must match" },
-  "rct.err_customer": { ar: "السند والفاتورة لعميلين مختلفين", en: "Receipt and invoice belong to different customers" },
-  "rct.err_over_allocated": { ar: "التخصيص يتجاوز المبلغ غير المخصص من السند", en: "Allocation exceeds the unallocated receipt amount" },
-  "rct.err_exceeds_balance": { ar: "التخصيص يتجاوز رصيد الفاتورة المستحق", en: "Allocation exceeds the invoice balance due" },
-  "rct.err_cancel_allocated": { ar: "أزل التخصيصات قبل إلغاء السند", en: "Remove allocations before cancelling the receipt" },
+  "rct.err_not_confirmed": {
+    ar: "يمكن تخصيص السندات المؤكدة فقط",
+    en: "Only confirmed receipts can be allocated",
+  },
+  "rct.err_invoice_status": {
+    ar: "التخصيص متاح للفواتير الصادرة أو المرسلة أو المدفوعة جزئياً فقط",
+    en: "Allocations are only allowed on issued, sent or partially paid invoices",
+  },
+  "rct.err_currency": {
+    ar: "عملة السند والفاتورة يجب أن تتطابق",
+    en: "Receipt and invoice currencies must match",
+  },
+  "rct.err_customer": {
+    ar: "السند والفاتورة لعميلين مختلفين",
+    en: "Receipt and invoice belong to different customers",
+  },
+  "rct.err_over_allocated": {
+    ar: "التخصيص يتجاوز المبلغ غير المخصص من السند",
+    en: "Allocation exceeds the unallocated receipt amount",
+  },
+  "rct.err_exceeds_balance": {
+    ar: "التخصيص يتجاوز رصيد الفاتورة المستحق",
+    en: "Allocation exceeds the invoice balance due",
+  },
+  "rct.err_cancel_allocated": {
+    ar: "أزل التخصيصات قبل إلغاء السند",
+    en: "Remove allocations before cancelling the receipt",
+  },
   "rct.err_cancel_reason": { ar: "سبب الإلغاء مطلوب", en: "A cancellation reason is required" },
-  "rct.err_locked": { ar: "السندات الملغاة لا يمكن تعديلها", en: "Cancelled receipts cannot be edited" },
-  "rct.err_amount_below": { ar: "المبلغ لا يمكن أن يقل عن إجمالي التخصيصات", en: "Amount cannot be lower than the allocated total" },
+  "rct.err_locked": {
+    ar: "السندات الملغاة لا يمكن تعديلها",
+    en: "Cancelled receipts cannot be edited",
+  },
+  "rct.err_amount_below": {
+    ar: "المبلغ لا يمكن أن يقل عن إجمالي التخصيصات",
+    en: "Amount cannot be lower than the allocated total",
+  },
 
   // ===== Supplier Payables =====
   "pyb.title": { ar: "مستحقات الموردين", en: "Supplier Payables" },
@@ -1239,15 +1701,36 @@ export const dict: Dict = {
   "pybstatus.partially_paid": { ar: "مدفوع جزئياً", en: "Partially Paid" },
   "pybstatus.paid": { ar: "مدفوع", en: "Paid" },
   "pybstatus.cancelled": { ar: "ملغى", en: "Cancelled" },
-  "pyb.err_locked": { ar: "المستحقات المدفوعة لا يمكن تعديلها", en: "Paid payables cannot be edited" },
-  "pyb.err_cancel_paid": { ar: "لا يمكن إلغاء مستحق عليه مدفوعات", en: "Payables with recorded payments cannot be cancelled" },
+  "pyb.err_locked": {
+    ar: "المستحقات المدفوعة لا يمكن تعديلها",
+    en: "Paid payables cannot be edited",
+  },
+  "pyb.err_cancel_paid": {
+    ar: "لا يمكن إلغاء مستحق عليه مدفوعات",
+    en: "Payables with recorded payments cannot be cancelled",
+  },
   "pyb.err_cancel_reason": { ar: "سبب الإلغاء مطلوب", en: "A cancellation reason is required" },
-  "pyb.err_amount_below": { ar: "المبلغ لا يمكن أن يقل عن المدفوع", en: "Amount cannot be lower than the paid total" },
+  "pyb.err_amount_below": {
+    ar: "المبلغ لا يمكن أن يقل عن المدفوع",
+    en: "Amount cannot be lower than the paid total",
+  },
   "pyb.err_missing": { ar: "المستحق غير موجود", en: "Payable not found" },
-  "pyb.err_exceeds_balance": { ar: "التخصيص يتجاوز رصيد المستحق", en: "Allocation exceeds the payable balance" },
-  "pyb.err_not_confirmed": { ar: "المستحقات تُنشأ للحجوزات المؤكدة فقط", en: "Payables can only be created for confirmed bookings" },
-  "pyb.err_nothing": { ar: "كل الغرف لها مستحقات بالفعل أو لا يوجد مورد محدد", en: "All rooms already have payables or no supplier is set" },
-  "pyb.err_paid_protected": { ar: "المبلغ المدفوع يُحدَّث عبر تخصيص المدفوعات فقط", en: "Paid amount is maintained by payment allocations" },
+  "pyb.err_exceeds_balance": {
+    ar: "التخصيص يتجاوز رصيد المستحق",
+    en: "Allocation exceeds the payable balance",
+  },
+  "pyb.err_not_confirmed": {
+    ar: "المستحقات تُنشأ للحجوزات المؤكدة فقط",
+    en: "Payables can only be created for confirmed bookings",
+  },
+  "pyb.err_nothing": {
+    ar: "كل الغرف لها مستحقات بالفعل أو لا يوجد مورد محدد",
+    en: "All rooms already have payables or no supplier is set",
+  },
+  "pyb.err_paid_protected": {
+    ar: "المبلغ المدفوع يُحدَّث عبر تخصيص المدفوعات فقط",
+    en: "Paid amount is maintained by payment allocations",
+  },
 
   // ===== Payment Orders =====
   "po.number": { ar: "رقم أمر الدفع", en: "Order No." },
@@ -1266,16 +1749,43 @@ export const dict: Dict = {
   "postatus.rejected": { ar: "مرفوض", en: "Rejected" },
   "postatus.paid": { ar: "مدفوع", en: "Paid" },
   "postatus.cancelled": { ar: "ملغى", en: "Cancelled" },
-  "po.err_transition": { ar: "انتقال حالة أمر الدفع غير صالح", en: "Invalid payment order status transition" },
-  "po.err_no_items": { ar: "أمر الدفع يتطلب مستحقاً واحداً على الأقل", en: "A payment order requires at least one payable" },
+  "po.err_transition": {
+    ar: "انتقال حالة أمر الدفع غير صالح",
+    en: "Invalid payment order status transition",
+  },
+  "po.err_no_items": {
+    ar: "أمر الدفع يتطلب مستحقاً واحداً على الأقل",
+    en: "A payment order requires at least one payable",
+  },
   "po.err_reject_reason": { ar: "سبب الرفض مطلوب", en: "A rejection reason is required" },
-  "po.err_items_locked": { ar: "بنود الأمر قابلة للتعديل في حالة المسودة فقط", en: "Order items can only be modified while the order is draft" },
-  "po.err_supplier_mismatch": { ar: "المستحق يخص مورداً آخر", en: "Payable belongs to a different supplier" },
-  "po.err_currency_mismatch": { ar: "عملة المستحق والأمر يجب أن تتطابق", en: "Payable and order currencies must match" },
-  "po.err_exceeds_balance": { ar: "المبلغ يتجاوز رصيد المستحق المتبقي", en: "Amount exceeds the remaining payable balance" },
-  "po.err_payable_closed": { ar: "هذا المستحق مدفوع أو ملغى بالفعل", en: "This payable is already paid or cancelled" },
-  "po.err_locked_edit": { ar: "بيانات الأمر قابلة للتعديل في حالة المسودة أو المرفوض فقط", en: "Order details can only be edited while draft or rejected" },
-  "po.err_paid_protected": { ar: "يُحدَّد الأمر كمدفوع تلقائياً عند اكتمال المدفوعات", en: "Orders are marked paid automatically when payments cover the total" },
+  "po.err_items_locked": {
+    ar: "بنود الأمر قابلة للتعديل في حالة المسودة فقط",
+    en: "Order items can only be modified while the order is draft",
+  },
+  "po.err_supplier_mismatch": {
+    ar: "المستحق يخص مورداً آخر",
+    en: "Payable belongs to a different supplier",
+  },
+  "po.err_currency_mismatch": {
+    ar: "عملة المستحق والأمر يجب أن تتطابق",
+    en: "Payable and order currencies must match",
+  },
+  "po.err_exceeds_balance": {
+    ar: "المبلغ يتجاوز رصيد المستحق المتبقي",
+    en: "Amount exceeds the remaining payable balance",
+  },
+  "po.err_payable_closed": {
+    ar: "هذا المستحق مدفوع أو ملغى بالفعل",
+    en: "This payable is already paid or cancelled",
+  },
+  "po.err_locked_edit": {
+    ar: "بيانات الأمر قابلة للتعديل في حالة المسودة أو المرفوض فقط",
+    en: "Order details can only be edited while draft or rejected",
+  },
+  "po.err_paid_protected": {
+    ar: "يُحدَّد الأمر كمدفوع تلقائياً عند اكتمال المدفوعات",
+    en: "Orders are marked paid automatically when payments cover the total",
+  },
   "po.err_missing": { ar: "أمر الدفع غير موجود", en: "Payment order not found" },
 
   // ===== Supplier Payments =====
@@ -1285,13 +1795,34 @@ export const dict: Dict = {
   "spy.cancel": { ar: "إلغاء الدفعة", en: "Cancel Payment" },
   "spystatus.confirmed": { ar: "مؤكدة", en: "Confirmed" },
   "spystatus.cancelled": { ar: "ملغاة", en: "Cancelled" },
-  "spy.err_not_approved": { ar: "المدفوعات تُسجل على أوامر دفع معتمدة فقط", en: "Payments can only be recorded against approved payment orders" },
-  "spy.err_exceeds_order": { ar: "إجمالي المدفوعات لا يمكن أن يتجاوز إجمالي الأمر", en: "Total payments cannot exceed the order total" },
-  "spy.err_currency": { ar: "عملة الدفعة والأمر يجب أن تتطابق", en: "Payment and order currencies must match" },
-  "spy.err_not_confirmed": { ar: "يمكن تخصيص الدفعات المؤكدة فقط", en: "Only confirmed payments can be allocated" },
-  "spy.err_over_allocated": { ar: "التخصيص يتجاوز المبلغ غير المخصص من الدفعة", en: "Allocation exceeds the unallocated payment amount" },
-  "spy.err_cancel_allocated": { ar: "أزل التخصيصات قبل إلغاء الدفعة", en: "Remove allocations before cancelling the payment" },
-  "spy.err_locked": { ar: "الدفعات الملغاة لا يمكن تعديلها", en: "Cancelled payments cannot be edited" },
+  "spy.err_not_approved": {
+    ar: "المدفوعات تُسجل على أوامر دفع معتمدة فقط",
+    en: "Payments can only be recorded against approved payment orders",
+  },
+  "spy.err_exceeds_order": {
+    ar: "إجمالي المدفوعات لا يمكن أن يتجاوز إجمالي الأمر",
+    en: "Total payments cannot exceed the order total",
+  },
+  "spy.err_currency": {
+    ar: "عملة الدفعة والأمر يجب أن تتطابق",
+    en: "Payment and order currencies must match",
+  },
+  "spy.err_not_confirmed": {
+    ar: "يمكن تخصيص الدفعات المؤكدة فقط",
+    en: "Only confirmed payments can be allocated",
+  },
+  "spy.err_over_allocated": {
+    ar: "التخصيص يتجاوز المبلغ غير المخصص من الدفعة",
+    en: "Allocation exceeds the unallocated payment amount",
+  },
+  "spy.err_cancel_allocated": {
+    ar: "أزل التخصيصات قبل إلغاء الدفعة",
+    en: "Remove allocations before cancelling the payment",
+  },
+  "spy.err_locked": {
+    ar: "الدفعات الملغاة لا يمكن تعديلها",
+    en: "Cancelled payments cannot be edited",
+  },
 
   // ===== Aging buckets =====
   "aging.current": { ar: "غير مستحقة", en: "Current" },
@@ -1307,9 +1838,18 @@ export const dict: Dict = {
   "nav.rpt_tax": { ar: "تقرير الضرائب", en: "Tax Report" },
   "nav.rpt_templates": { ar: "قوالب التقارير", en: "Report Templates" },
   "rpt.title": { ar: "المؤشر العام", en: "Overview" },
-  "rpt.subtitle_dash": { ar: "مؤشرات أداء حية محسوبة من البيانات التشغيلية والمالية", en: "Live KPIs computed from operational and financial data" },
-  "rpt.no_access": { ar: "ليس لديك صلاحية لعرض هذا القسم", en: "You do not have permission to view this section" },
-  "rpt.base_note": { ar: "جميع المبالغ محوّلة إلى الريال السعودي بأحدث أسعار الصرف", en: "All amounts are converted to SAR using the latest exchange rates" },
+  "rpt.subtitle_dash": {
+    ar: "مؤشرات أداء حية محسوبة من البيانات التشغيلية والمالية",
+    en: "Live KPIs computed from operational and financial data",
+  },
+  "rpt.no_access": {
+    ar: "ليس لديك صلاحية لعرض هذا القسم",
+    en: "You do not have permission to view this section",
+  },
+  "rpt.base_note": {
+    ar: "جميع المبالغ محوّلة إلى الريال السعودي بأحدث أسعار الصرف",
+    en: "All amounts are converted to SAR using the latest exchange rates",
+  },
   "rpt.tab_executive": { ar: "اللوحة التنفيذية", en: "Executive" },
   "rpt.tab_sales": { ar: "المبيعات", en: "Sales" },
   "rpt.tab_bookings": { ar: "الحجوزات", en: "Bookings" },
@@ -1358,11 +1898,20 @@ export const dict: Dict = {
   "rpt.private": { ar: "خاص", en: "Private" },
   "rpt.generated_at": { ar: "تاريخ الإصدار", en: "Generated at" },
   "rpt.operational_title": { ar: "التقرير التشغيلي", en: "Operational Report" },
-  "rpt.operational_sub": { ar: "نشاط الحجوزات حسب الفترة والحالة", en: "Booking activity by period and status" },
+  "rpt.operational_sub": {
+    ar: "نشاط الحجوزات حسب الفترة والحالة",
+    en: "Booking activity by period and status",
+  },
   "rpt.financial_title": { ar: "التقرير المالي", en: "Financial Report" },
-  "rpt.financial_sub": { ar: "ملخص شهري للفواتير والتحصيل والمستحقات", en: "Monthly summary of invoicing, collections and payables" },
+  "rpt.financial_sub": {
+    ar: "ملخص شهري للفواتير والتحصيل والمستحقات",
+    en: "Monthly summary of invoicing, collections and payables",
+  },
   "rpt.tax_title": { ar: "تقرير الضرائب", en: "Tax Report" },
-  "rpt.tax_sub": { ar: "ضريبة القيمة المضافة المحصلة من الفواتير", en: "VAT/taxes collected from invoices" },
+  "rpt.tax_sub": {
+    ar: "ضريبة القيمة المضافة المحصلة من الفواتير",
+    en: "VAT/taxes collected from invoices",
+  },
   "rpt.from": { ar: "من تاريخ", en: "From" },
   "rpt.to": { ar: "إلى تاريخ", en: "To" },
   "rpt.month": { ar: "الشهر", en: "Month" },
@@ -1374,11 +1923,17 @@ export const dict: Dict = {
   "rpt.paid": { ar: "المدفوع", en: "Paid" },
   "rpt.records": { ar: "سجل", en: "records" },
   "rpt.templates_title": { ar: "قوالب التقارير والجدولة", en: "Report Templates & Scheduling" },
-  "rpt.templates_sub": { ar: "احفظ إعدادات التقارير وجدولها للتشغيل الدوري", en: "Save report configurations and schedule recurring runs" },
+  "rpt.templates_sub": {
+    ar: "احفظ إعدادات التقارير وجدولها للتشغيل الدوري",
+    en: "Save report configurations and schedule recurring runs",
+  },
   "rpt.templates": { ar: "القوالب المحفوظة", en: "Saved Templates" },
   "rpt.schedules": { ar: "الجدولة", en: "Schedules" },
   "rpt.report_type": { ar: "نوع التقرير", en: "Report Type" },
-  "rpt.no_templates": { ar: "لا توجد قوالب محفوظة — احفظ قالبًا من أي تقرير", en: "No saved templates — save one from any report screen" },
+  "rpt.no_templates": {
+    ar: "لا توجد قوالب محفوظة — احفظ قالبًا من أي تقرير",
+    en: "No saved templates — save one from any report screen",
+  },
   "rpt.no_schedules": { ar: "لا توجد جدولة", en: "No schedules" },
   "rpt.add_schedule": { ar: "إضافة جدولة", en: "Add Schedule" },
   "rpt.frequency": { ar: "التكرار", en: "Frequency" },
@@ -1396,33 +1951,114 @@ export const dict: Dict = {
   "rpt.schedule_saved": { ar: "تم حفظ الجدولة", en: "Schedule saved" },
 
   // Page descriptions (shown under page titles)
-  "pagedesc.dashboard": { ar: "نظرة عامة على مؤشرات الأداء والعمليات اليومية للمنصة من حجوزات وعقود وإيرادات.", en: "Overview of the platform's KPIs and daily operations across bookings, contracts, and revenue." },
-  "pagedesc.customers": { ar: "إدارة بيانات العملاء (أفراد وشركات ومجموعات)، وملفاتهم وسجل تعاملاتهم.", en: "Manage customer records (individuals, companies, and groups), their profiles, and transaction history." },
-  "pagedesc.hotels": { ar: "قاعدة بيانات الفنادق المتعاقد معها مع الصور والتصنيف والمواقع وأنواع الغرف.", en: "Database of contracted hotels with images, ratings, locations, and room types." },
-  "pagedesc.suppliers": { ar: "إدارة الموردين (مباشر ووسيط) مع التقييمات والعملات والشروط التجارية.", en: "Manage suppliers (direct and intermediary) with ratings, currencies, and commercial terms." },
-  "pagedesc.supplier_applications": { ar: "مراجعة طلبات انضمام الموردين الجدد واعتمادها أو رفضها وإنشاء حسابات الدخول.", en: "Review new supplier onboarding applications, approve or reject them, and provision portal accounts." },
-  "pagedesc.supplier_portal": { ar: "بوابة المورد لمتابعة الفنادق المرتبطة، العقود، الأسعار، الحجوزات والمستحقات.", en: "Supplier portal to track linked hotels, contracts, rates, bookings, and outstanding payables." },
-  "pagedesc.rates": { ar: "إدارة قوائم الأسعار التعاقدية للموردين بحسب الموسم ونوع الغرفة والإشغال.", en: "Manage contracted supplier rate plans by season, room type, and occupancy." },
-  "pagedesc.rates_compare": { ar: "مقارنة أسعار الموردين لفندق وفترة محددة لاختيار العرض الأفضل.", en: "Compare supplier rates for a given hotel and period to pick the best offer." },
-  "pagedesc.contracts": { ar: "عقود التوريد مع الموردين، تواريخ السريان، العمولات والشروط المالية.", en: "Supplier contracts with validity dates, commissions, and financial terms." },
-  "pagedesc.rfqs": { ar: "طلبات الأسعار المرسلة للموردين ومتابعة الردود واعتماد العروض.", en: "Requests for quotation sent to suppliers with response tracking and offer approval." },
-  "pagedesc.quotations": { ar: "عروض الأسعار المقدّمة للعملاء، حالات الاعتماد والقبول والتحويل إلى حجوزات.", en: "Customer-facing price quotations with approval, acceptance, and conversion to bookings." },
-  "pagedesc.bookings": { ar: "حجوزات العملاء، تفاصيل الغرف والضيوف، حالات التأكيد والتعديل والإلغاء.", en: "Customer bookings with room and guest details, plus confirmation, modification, and cancellation states." },
-  "pagedesc.invoices": { ar: "فواتير العملاء، حالات الدفع، المتأخرات والربط بالحجوزات.", en: "Customer invoices, payment status, overdue tracking, and booking links." },
-  "pagedesc.receipts": { ar: "سندات القبض من العملاء وربطها بالفواتير وطرق الدفع.", en: "Customer receipts with invoice allocations and payment methods." },
-  "pagedesc.payables": { ar: "المستحقات للموردين، تواريخ الاستحقاق، الدفعات والأرصدة المتبقية.", en: "Amounts payable to suppliers with due dates, payments, and outstanding balances." },
-  "pagedesc.reports": { ar: "مركز التقارير: مالية، تشغيلية، ضريبية ولوحات تنفيذية.", en: "Reports hub: financial, operational, tax, and executive dashboards." },
-  "pagedesc.reports_financial": { ar: "تقارير مالية تشمل الإيرادات، الأرباح، المدينين والدائنين.", en: "Financial reports covering revenue, profit, receivables, and payables." },
-  "pagedesc.reports_operational": { ar: "تقارير تشغيلية للحجوزات، الإشغال وأداء الموردين والوكلاء.", en: "Operational reports on bookings, occupancy, and supplier/agent performance." },
-  "pagedesc.reports_tax": { ar: "تقارير الضرائب: ضريبة القيمة المضافة والمخرجات والمدخلات.", en: "Tax reports: VAT, output, and input tax summaries." },
-  "pagedesc.reports_templates": { ar: "قوالب التقارير المجدولة وإعداداتها والمستلمين.", en: "Scheduled report templates with settings and recipients." },
-  "pagedesc.room_types": { ar: "تعريف أنواع الغرف المعتمدة في النظام (Standard, Deluxe, Suite ...).", en: "Standard room type definitions used across the system (Standard, Deluxe, Suite...)." },
-  "pagedesc.seasons": { ar: "تعريف المواسم وتواريخها لربطها بأسعار الموردين والعقود.", en: "Define seasons and their dates to link with supplier rates and contracts." },
-  "pagedesc.taxes": { ar: "تعريف الضرائب والرسوم وقواعد احتسابها على الأسعار والفواتير.", en: "Define taxes and fees and the rules used to compute them on rates and invoices." },
-  "pagedesc.users": { ar: "إدارة مستخدمي النظام، أدوارهم وصلاحياتهم وحالة حساباتهم.", en: "Manage system users, their roles, permissions, and account status." },
-  "pagedesc.audit": { ar: "سجل تدقيق شامل لجميع العمليات الحساسة لأغراض الحوكمة والامتثال.", en: "Full audit trail of sensitive operations for governance and compliance." },
-  "pagedesc.settings": { ar: "إعدادات المنصة العامة: الهوية، اللغة، العملات، والتكاملات.", en: "Global platform settings: identity, language, currencies, and integrations." },
-  "pagedesc.approval_thresholds": { ar: "إعداد حدود الاعتماد المالي ومسارات الموافقة حسب الدور والقيمة.", en: "Configure financial approval thresholds and routing by role and amount." },
+  "pagedesc.dashboard": {
+    ar: "نظرة عامة على مؤشرات الأداء والعمليات اليومية للمنصة من حجوزات وعقود وإيرادات.",
+    en: "Overview of the platform's KPIs and daily operations across bookings, contracts, and revenue.",
+  },
+  "pagedesc.customers": {
+    ar: "إدارة بيانات العملاء (أفراد وشركات ومجموعات)، وملفاتهم وسجل تعاملاتهم.",
+    en: "Manage customer records (individuals, companies, and groups), their profiles, and transaction history.",
+  },
+  "pagedesc.hotels": {
+    ar: "قاعدة بيانات الفنادق المتعاقد معها مع الصور والتصنيف والمواقع وأنواع الغرف.",
+    en: "Database of contracted hotels with images, ratings, locations, and room types.",
+  },
+  "pagedesc.suppliers": {
+    ar: "إدارة الموردين (مباشر ووسيط) مع التقييمات والعملات والشروط التجارية.",
+    en: "Manage suppliers (direct and intermediary) with ratings, currencies, and commercial terms.",
+  },
+  "pagedesc.supplier_applications": {
+    ar: "مراجعة طلبات انضمام الموردين الجدد واعتمادها أو رفضها وإنشاء حسابات الدخول.",
+    en: "Review new supplier onboarding applications, approve or reject them, and provision portal accounts.",
+  },
+  "pagedesc.supplier_portal": {
+    ar: "بوابة المورد لمتابعة الفنادق المرتبطة، العقود، الأسعار، الحجوزات والمستحقات.",
+    en: "Supplier portal to track linked hotels, contracts, rates, bookings, and outstanding payables.",
+  },
+  "pagedesc.rates": {
+    ar: "إدارة قوائم الأسعار التعاقدية للموردين بحسب الموسم ونوع الغرفة والإشغال.",
+    en: "Manage contracted supplier rate plans by season, room type, and occupancy.",
+  },
+  "pagedesc.rates_compare": {
+    ar: "مقارنة أسعار الموردين لفندق وفترة محددة لاختيار العرض الأفضل.",
+    en: "Compare supplier rates for a given hotel and period to pick the best offer.",
+  },
+  "pagedesc.contracts": {
+    ar: "عقود التوريد مع الموردين، تواريخ السريان، العمولات والشروط المالية.",
+    en: "Supplier contracts with validity dates, commissions, and financial terms.",
+  },
+  "pagedesc.rfqs": {
+    ar: "طلبات الأسعار المرسلة للموردين ومتابعة الردود واعتماد العروض.",
+    en: "Requests for quotation sent to suppliers with response tracking and offer approval.",
+  },
+  "pagedesc.quotations": {
+    ar: "عروض الأسعار المقدّمة للعملاء، حالات الاعتماد والقبول والتحويل إلى حجوزات.",
+    en: "Customer-facing price quotations with approval, acceptance, and conversion to bookings.",
+  },
+  "pagedesc.bookings": {
+    ar: "حجوزات العملاء، تفاصيل الغرف والضيوف، حالات التأكيد والتعديل والإلغاء.",
+    en: "Customer bookings with room and guest details, plus confirmation, modification, and cancellation states.",
+  },
+  "pagedesc.invoices": {
+    ar: "فواتير العملاء، حالات الدفع، المتأخرات والربط بالحجوزات.",
+    en: "Customer invoices, payment status, overdue tracking, and booking links.",
+  },
+  "pagedesc.receipts": {
+    ar: "سندات القبض من العملاء وربطها بالفواتير وطرق الدفع.",
+    en: "Customer receipts with invoice allocations and payment methods.",
+  },
+  "pagedesc.payables": {
+    ar: "المستحقات للموردين، تواريخ الاستحقاق، الدفعات والأرصدة المتبقية.",
+    en: "Amounts payable to suppliers with due dates, payments, and outstanding balances.",
+  },
+  "pagedesc.reports": {
+    ar: "مركز التقارير: مالية، تشغيلية، ضريبية ولوحات تنفيذية.",
+    en: "Reports hub: financial, operational, tax, and executive dashboards.",
+  },
+  "pagedesc.reports_financial": {
+    ar: "تقارير مالية تشمل الإيرادات، الأرباح، المدينين والدائنين.",
+    en: "Financial reports covering revenue, profit, receivables, and payables.",
+  },
+  "pagedesc.reports_operational": {
+    ar: "تقارير تشغيلية للحجوزات، الإشغال وأداء الموردين والوكلاء.",
+    en: "Operational reports on bookings, occupancy, and supplier/agent performance.",
+  },
+  "pagedesc.reports_tax": {
+    ar: "تقارير الضرائب: ضريبة القيمة المضافة والمخرجات والمدخلات.",
+    en: "Tax reports: VAT, output, and input tax summaries.",
+  },
+  "pagedesc.reports_templates": {
+    ar: "قوالب التقارير المجدولة وإعداداتها والمستلمين.",
+    en: "Scheduled report templates with settings and recipients.",
+  },
+  "pagedesc.room_types": {
+    ar: "تعريف أنواع الغرف المعتمدة في النظام (Standard, Deluxe, Suite ...).",
+    en: "Standard room type definitions used across the system (Standard, Deluxe, Suite...).",
+  },
+  "pagedesc.seasons": {
+    ar: "تعريف المواسم وتواريخها لربطها بأسعار الموردين والعقود.",
+    en: "Define seasons and their dates to link with supplier rates and contracts.",
+  },
+  "pagedesc.taxes": {
+    ar: "تعريف الضرائب والرسوم وقواعد احتسابها على الأسعار والفواتير.",
+    en: "Define taxes and fees and the rules used to compute them on rates and invoices.",
+  },
+  "pagedesc.users": {
+    ar: "إدارة مستخدمي النظام، أدوارهم وصلاحياتهم وحالة حساباتهم.",
+    en: "Manage system users, their roles, permissions, and account status.",
+  },
+  "pagedesc.audit": {
+    ar: "سجل تدقيق شامل لجميع العمليات الحساسة لأغراض الحوكمة والامتثال.",
+    en: "Full audit trail of sensitive operations for governance and compliance.",
+  },
+  "pagedesc.settings": {
+    ar: "إعدادات المنصة العامة: الهوية، اللغة، العملات، والتكاملات.",
+    en: "Global platform settings: identity, language, currencies, and integrations.",
+  },
+  "pagedesc.approval_thresholds": {
+    ar: "إعداد حدود الاعتماد المالي ومسارات الموافقة حسب الدور والقيمة.",
+    en: "Configure financial approval thresholds and routing by role and amount.",
+  },
 
   // Rates Form
   "rates.profit_margin": { ar: "هامش الربح", en: "Profit Margin" },
@@ -1432,16 +2068,30 @@ export const dict: Dict = {
   "val.required": { ar: "هذا الحقل مطلوب", en: "This field is required" },
   "val.required_hotel": { ar: "الفندق مطلوب", en: "Hotel is required" },
   "val.required_room": { ar: "الغرفة مطلوبة", en: "Room is required" },
-  "val.required_supplier": { ar: "المورد مطلوب عند عدم التحديد المباشر", en: "Supplier is required unless the rate is direct" },
+  "val.required_supplier": {
+    ar: "المورد مطلوب عند عدم التحديد المباشر",
+    en: "Supplier is required unless the rate is direct",
+  },
   "val.required_currency": { ar: "العملة مطلوبة", en: "Currency is required" },
   "val.required_date_from": { ar: "تاريخ البداية مطلوب", en: "Start date is required" },
   "val.required_date_to": { ar: "تاريخ النهاية مطلوب", en: "End date is required" },
   "val.required_cost": { ar: "سعر التكلفة مطلوب", en: "Cost price is required" },
-  "val.date_range": { ar: "تاريخ النهاية يجب أن يكون مساوياً لتاريخ البداية أو بعده", en: "End date must be on or after the start date" },
-  "val.nonnegative": { ar: "يجب أن تكون القيمة صفراً أو أكثر", en: "Value must be zero or greater" },
+  "val.date_range": {
+    ar: "تاريخ النهاية يجب أن يكون مساوياً لتاريخ البداية أو بعده",
+    en: "End date must be on or after the start date",
+  },
+  "val.nonnegative": {
+    ar: "يجب أن تكون القيمة صفراً أو أكثر",
+    en: "Value must be zero or greater",
+  },
   "val.max_2000": { ar: "الحد الأقصى 2000 حرف", en: "Maximum 2000 characters allowed" },
   "val.max_4000": { ar: "الحد الأقصى 4000 حرف", en: "Maximum 4000 characters allowed" },
-
+  "val.required_days": { ar: "يجب اختيار يوم واحد على الأقل", en: "Select at least one day" },
+  "rates.wd_we_title": { ar: "أسعار W.D and W.E", en: "W.D and W.E Rates" },
+  "rates.we_rates": { ar: "أسعار W.E", en: "W.E Rates" },
+  "rates.wd_rates": { ar: "أسعار W.D", en: "W.D Rates" },
+  "rates.price": { ar: "السعر", en: "Price" },
+  "rates.no_meals": { ar: "بدون وجبات (إقامة فقط)", en: "No Meals (Room Only)" },
 };
 
 type I18nCtx = {
@@ -1465,7 +2115,9 @@ export function I18nProvider({ children }: { children: ReactNode }) {
 
   const setLang = (l: Lang) => {
     setLangState(l);
-    try { localStorage.setItem(STORAGE_KEY, l); } catch { }
+    try {
+      localStorage.setItem(STORAGE_KEY, l);
+    } catch {}
   };
 
   useEffect(() => {

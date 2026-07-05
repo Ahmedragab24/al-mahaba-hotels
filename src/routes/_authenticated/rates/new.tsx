@@ -21,7 +21,11 @@ export default function CreateRate() {
         </Button>
       } />
       <div className="p-6">
-        <RateForm initial={editData} onSaved={(id) => navigate(`/rates/${id}`)} />
+        {editId && !editData ? (
+          <div className="text-muted-foreground">{t("label.loading")}</div>
+        ) : (
+          <RateForm initial={editData} onSaved={(id) => navigate(`/rates/${id}`)} />
+        )}
       </div>
     </>
   );

@@ -1,7 +1,5 @@
-import { useNavigate, Link, useParams } from "react-router-dom";
-import { useState, useRef, useMemo } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { db } from "@/lib/api/db";
+import { useNavigate,  useParams } from "react-router-dom";
+import { useState, useRef } from "react";
 import { useGetBookingByIdQuery, useUpdateBookingMutation } from "@/store/api";
 import { useI18n } from "@/lib/i18n";
 import { useSelector } from "react-redux";
@@ -21,10 +19,9 @@ import {
 } from "lucide-react";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { toast } from "sonner";
-import { dbErrorMessage } from "@/lib/db-errors";
-import { BookingForm } from "./-form";
 import { useBookingRooms } from "./-rooms";
 import { BkStatusBadge, BK_WRITE_ROLES } from "./index";
+import { BookingForm } from "./-form";
 
 
 
@@ -181,7 +178,7 @@ function PrintInvoice({
         minHeight: "297mm",
         boxSizing: "border-box",
       }}
-    >
+    > 
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8mm", paddingBottom: "5mm", borderBottom: "2px solid #b5862b" }}>
         <div>
@@ -194,7 +191,7 @@ function PrintInvoice({
         </div>
         <div style={{ textAlign: lang === "ar" ? "left" : "right" }}>
           <div style={{ fontSize: "18pt", fontWeight: "bold", color: "#1a1a2e" }}>
-            {ar("إيصال / فاتورة حجز", "Booking Receipt / Invoice")}
+            {ar("تأكيد الحجز", "Booking Confirmation")}
           </div>
           <div style={{ fontSize: "10pt", color: "#444", marginTop: "1mm" }}>
             <span style={{ fontWeight: "bold" }}>
@@ -268,7 +265,7 @@ function PrintInvoice({
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "8.5pt" }}>
               <thead>
                 <tr style={{ background: "#f9fafb" }}>
-                  {[ar("الفندق", "Hotel"), ar("نوع الغرفة", "Room Type"), ar("الإشغال", "Occupancy"), ar("الوصول", "Check-in"), ar("المغادرة", "Check-out"), ar("الليالي", "Nights"), ar("الغرف", "Rooms"), ar("المبلغ", "Amount")].map((h, i) => (
+                  {[ar("الفندق", "Hotel"), ar("نوع الغرفة", "Room Type"), ar("الإشغال", "Occupancy"), ar("الوصول", "Check-in"), ar("المغادرة", "Check-out"), ar("الليالي", "Nights"), ar("الغرف", "Rooms")].map((h, i) => (
                     <th key={i} style={{ padding: "2mm 3mm", textAlign: lang === "ar" ? "right" : "left", borderBottom: "1px solid #e5e7eb", fontWeight: "600", color: "#374151" }}>{h}</th>
                   ))}
                 </tr>
@@ -284,7 +281,6 @@ function PrintInvoice({
                   const roomCheckOut = isItem ? formatDate(booking.check_out) : formatDate(room.check_out);
                   const roomNights = isItem ? booking.nights : room.nights;
                   const roomCount = isItem ? room.room_count : room.rooms;
-                  const subtotal = isItem ? room.subtotal : room.total_selling;
 
                   return (
                     <tr key={i} style={{ borderBottom: "1px solid #f3f4f6" }}>
@@ -295,7 +291,6 @@ function PrintInvoice({
                       <td style={{ padding: "2mm 3mm", direction: "ltr" }}>{roomCheckOut}</td>
                       <td style={{ padding: "2mm 3mm", textAlign: "center" }}>{roomNights}</td>
                       <td style={{ padding: "2mm 3mm", textAlign: "center" }}>{roomCount}</td>
-                      <td style={{ padding: "2mm 3mm", direction: "ltr", fontWeight: "600" }}>{fmt(subtotal)}</td>
                     </tr>
                   );
                 })}
@@ -311,34 +306,7 @@ function PrintInvoice({
         </div>
       )}
 
-      {/* Financial summary */}
-      <div style={{ border: "2px solid #b5862b", borderRadius: "6px", overflow: "hidden", marginBottom: "6mm" }}>
-        <div style={{ background: "#7c5e14", padding: "2mm 4mm", fontSize: "9pt", fontWeight: "bold", color: "#fff" }}>
-          {ar("ملخص المدفوعات", "Payment Summary")}
-        </div>
-        <div style={{ padding: "3mm 4mm" }}>
-          <table style={{ width: "100%", fontSize: "10pt" }}>
-            <tbody>
-              <tr>
-                <td style={{ padding: "1.5mm 0", color: "#374151" }}>{ar("المبلغ الإجمالي للحجز:", "Total Booking Amount:")}</td>
-                <td style={{ textAlign: lang === "ar" ? "left" : "right", fontWeight: "bold", direction: "ltr" }}>{fmt(total)} {currency}</td>
-              </tr>
-              <tr>
-                <td style={{ padding: "1.5mm 0", color: "#065f46" }}>{ar("المبلغ المدفوع:", "Amount Paid:")}</td>
-                <td style={{ textAlign: lang === "ar" ? "left" : "right", fontWeight: "bold", color: "#065f46", direction: "ltr" }}>{fmt(paid)} {currency}</td>
-              </tr>
-              <tr style={{ borderTop: "1.5px solid #e5e7eb" }}>
-                <td style={{ padding: "2mm 0", fontWeight: "bold", fontSize: "11pt", color: remaining > 0 ? "#dc2626" : "#065f46" }}>
-                  {ar(remaining > 0 ? "المبلغ المتبقي:" : "الحالة:", remaining > 0 ? "Remaining Balance:" : "Status:")}
-                </td>
-                <td style={{ textAlign: lang === "ar" ? "left" : "right", fontWeight: "bold", fontSize: "11pt", color: remaining > 0 ? "#dc2626" : "#065f46", direction: "ltr" }}>
-                  {remaining > 0 ? `${fmt(remaining)} ${currency}` : (ar("✓ مدفوع بالكامل", "✓ Fully Paid"))}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {/* Note: Payment summary hidden from booking confirmation */}
       {/* Notes */}
       {(booking.special_requests || booking.notes) && (
         <div style={{ border: "1px solid #e5e7eb", borderRadius: "6px", padding: "3mm 4mm", marginBottom: "6mm", fontSize: "8.5pt", color: "#374151" }}>
@@ -351,7 +319,7 @@ function PrintInvoice({
       {/* Footer */}
       <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: "4mm", display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
         <div style={{ fontSize: "7.5pt", color: "#9ca3af" }}>
-          <div>{ar("هذه الوثيقة تمثل إيصال الحجز الرسمي", "This document represents the official booking receipt")}</div>
+          <div>{ar("هذه الوثيقة تمثل تأكيد الحجز الرسمي", "This document represents the official booking confirmation")}</div>
           <div>{ar("شركة دليل المعالم للحج والعمرة — جميع الحقوق محفوظة", "Daleel Almaalem Hajj & Umrah Co. — All rights reserved")}</div>
         </div>
         <div style={{ textAlign: lang === "ar" ? "left" : "right", fontSize: "8pt", color: "#374151" }}>
@@ -371,16 +339,12 @@ export default function BookingDetail() {
   const { t, lang } = useI18n();
   const auth = useSelector(selectAuth);
   const navigate = useNavigate();
-  const qc = useQueryClient();
   const printRef = useRef<HTMLDivElement>(null);
   const canWrite = hasAnyRole(auth, [...BK_WRITE_ROLES]);
   const canManage = hasAnyRole(auth, ["super_admin", "admin", "sales_manager", "operations_manager"]);
   const { search } = window.location;
   const hasEditParam = new URLSearchParams(search).get("edit") === "true";
   const [editing, setEditing] = useState(hasEditParam);
-  const [confirmStatus, setConfirmStatus] = useState<string | null>(null);
-  const [cancelOpen, setCancelOpen] = useState<"cancelled" | "no_show" | null>(null);
-  const [cancelReason, setCancelReason] = useState("");
   const [showInvoice, setShowInvoice] = useState(false);
 
   const ar = (a: string, e: string) => (lang === "ar" ? a : e);
@@ -388,42 +352,9 @@ export default function BookingDetail() {
   const b = useGetBookingByIdQuery({ id: id || "", lang });
   const rooms = useBookingRooms(id || "");
 
-  const history = useQuery({
-    queryKey: ["booking-status-history", id],
-    queryFn: async () => {
-      const { data, error } = await db
-        .from("booking_status_history")
-        .select("*")
-        .eq("booking_id", id)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
 
-  const statusMut = useMutation({
-    mutationFn: async ({ status, reason }: { status: string; reason?: string }) => {
-      const patch: any = { status };
-      if (reason !== undefined) patch.cancellation_reason = reason;
-      const { error } = await db.from("bookings").update(patch).eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success(t("toast.saved"));
-      setConfirmStatus(null);
-      setCancelOpen(null);
-      setCancelReason("");
-      b.refetch();
-      qc.invalidateQueries({ queryKey: ["booking", id] });
-      qc.invalidateQueries({ queryKey: ["booking-status-history", id] });
-      qc.invalidateQueries({ queryKey: ["bookings-metrics"] });
-      qc.invalidateQueries({ queryKey: ["entity-history", "bookings", id] });
-    },
-    onError: (e: any) => {
-      setConfirmStatus(null);
-      toast.error(dbErrorMessage(e, t));
-    },
-  });
+
+
 
   // Print handler
   const handlePrint = () => {
@@ -519,14 +450,14 @@ export default function BookingDetail() {
             {/* Print Invoice Button */}
             <Button size="sm" variant="outline" onClick={() => setShowInvoice(true)}>
               <Printer className="h-4 w-4" />
-              {ar("إصدار فاتورة", "Print Invoice")}
+              {ar("طباعة", "Print")}
             </Button>
             {actions.filter((a) => a.show).map((a) => (
               <Button
                 key={a.key}
                 size="sm"
                 variant={(a.variant as any) ?? "default"}
-                onClick={() => (a.needsReason ? setCancelOpen(a.status as any) : setConfirmStatus(a.status))}
+                onClick={() => {}}
               >
                 <a.icon className="h-4 w-4" />
                 {a.label}
@@ -542,7 +473,6 @@ export default function BookingDetail() {
             initial={r}
             onSaved={() => {
               setEditing(false);
-              qc.invalidateQueries({ queryKey: ["booking", id] });
             }}
           />
         ) : (
@@ -884,18 +814,50 @@ export default function BookingDetail() {
           <DialogHeader className="px-6 pt-5 pb-3 border-b sticky top-0 bg-background z-10">
             <DialogTitle className="flex items-center gap-2">
               <Receipt className="w-5 h-5 text-primary" />
-              {ar("فاتورة / إيصال الحجز", "Booking Invoice / Receipt")}
+              {ar("تأكيد الحجز", "Booking Confirmation")}
             </DialogTitle>
           </DialogHeader>
 
-          <div className="px-4 py-2 bg-muted/30 border-b flex items-center justify-between">
+          <div className="px-4 py-2 bg-muted/30 border-b flex items-center justify-between flex-wrap gap-2">
             <span className="text-sm text-muted-foreground">
-              {ar("معاينة الفاتورة — جاهزة للطباعة", "Invoice Preview — Ready to print")}
+              {ar("معاينة التأكيد — جاهزة للطباعة والإرسال", "Preview — Ready to print and send")}
             </span>
-            <Button size="sm" onClick={handlePrint}>
-              <Printer className="h-4 w-4" />
-              {ar("طباعة", "Print")}
-            </Button>
+            <div className="flex gap-2 flex-wrap">
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={() => {
+                  if (r.customer?.phone) {
+                    const msg = `${ar("تأكيد الحجز - رقم الحجز:", "Booking Confirmation - Booking #")}: ${r.booking_no}`;
+                    const phoneNumber = r.customer.phone.replace(/\D/g, '');
+                    window.open(`https://wa.me/${phoneNumber}?text=${encodeURIComponent(msg)}`);
+                  } else {
+                    toast.error(ar("لا يوجد رقم هاتف للعميل", "No phone number for customer"));
+                  }
+                }}
+              >
+                <Send className="h-4 w-4" />
+                {ar("واتس", "WhatsApp")}
+              </Button>
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={() => {
+                  if (r.customer?.email) {
+                    window.open(`mailto:${r.customer.email}?subject=${encodeURIComponent(ar("تأكيد الحجز", "Booking Confirmation") + " - " + r.booking_no)}`);
+                  } else {
+                    toast.error(ar("لا يوجد بريد إلكتروني للعميل", "No email for customer"));
+                  }
+                }}
+              >
+                <Mail className="h-4 w-4" />
+                {ar("بريد", "Email")}
+              </Button>
+              <Button size="sm" onClick={handlePrint}>
+                <Printer className="h-4 w-4" />
+                {ar("طباعة", "Print")}
+              </Button>
+            </div>
           </div>
 
           {/* Invoice preview */}
@@ -912,49 +874,6 @@ export default function BookingDetail() {
             <Button onClick={handlePrint}>
               <Printer className="h-4 w-4" />
               {ar("طباعة الفاتورة", "Print Invoice")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* ── Status Confirm Dialog ── */}
-      <ConfirmDialog
-        open={!!confirmStatus}
-        onOpenChange={(v) => !v && setConfirmStatus(null)}
-        title={t("bk.confirm_status")}
-        description={confirmStatus ? t(`bkstatus.${confirmStatus}`) : ""}
-        onConfirm={() => confirmStatus && statusMut.mutate({ status: confirmStatus })}
-      />
-
-      {/* ── Cancel/No-show Dialog ── */}
-      <Dialog
-        open={!!cancelOpen}
-        onOpenChange={(v) => {
-          if (!v) {
-            setCancelOpen(null);
-            setCancelReason("");
-          }
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {cancelOpen === "no_show" ? t("bk.no_show_action") : t("bk.cancel")}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-1.5">
-            <label className="text-sm">{t("bk.cancel_reason")} *</label>
-            <Textarea rows={3} value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} />
-          </div>
-          <DialogFooter>
-            <Button
-              variant="destructive"
-              disabled={!cancelReason.trim() || statusMut.isPending}
-              onClick={() =>
-                cancelOpen && statusMut.mutate({ status: cancelOpen, reason: cancelReason.trim() })
-              }
-            >
-              {cancelOpen === "no_show" ? t("bk.no_show_action") : t("bk.cancel")}
             </Button>
           </DialogFooter>
         </DialogContent>

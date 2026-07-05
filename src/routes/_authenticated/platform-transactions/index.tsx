@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@/store/queryBridge";
 import { PageHeader } from "@/components/page-header";
 import { useI18n } from "@/lib/i18n";
 import { useSelector } from "react-redux";
@@ -50,7 +50,7 @@ import {
   useUpdatePlatformTransactionMutation,
   useDeletePlatformTransactionMutation,
 } from "@/store/api";
-import { apiClient } from "@/lib/api/api-client";
+import { apiClient } from "@/store/queryBridge";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 
 const PAGE_SIZE = 15;

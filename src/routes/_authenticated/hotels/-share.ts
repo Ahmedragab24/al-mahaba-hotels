@@ -1,9 +1,9 @@
 // Hotel Information sharing engine — multilingual preview / print / PDF document.
 // BRD: Hotel Information output in Arabic, English, Indonesian, Urdu (RTL/LTR aware).
-import { supabase } from "@/integrations/supabase/client";
+import { db as supabase } from "@/store/queryBridge";
 import logoUrl from "@/assets/daleel-logo-transparent.png";
 import { DOC_LANGS, HOTEL_RES, missingDocKeys, type DocLang } from "@/lib/doc-lang";
-import { apiClient } from "@/lib/api/api-client";
+import { apiClient } from "@/store/queryBridge";
 
 function esc(s: unknown): string {
   return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");

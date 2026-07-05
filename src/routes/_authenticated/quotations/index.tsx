@@ -1,16 +1,14 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useState, useMemo } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiClient } from "@/lib/api/api-client";
+import { useMutation, useQueryClient, apiClient, useQuery } from "@/store/queryBridge";
+import { useGetQuotationsQuery, useDeleteQuotationMutation, useUpdateQuotationMutation } from "@/store/api";
 import { PageHeader } from "@/components/page-header";
 import { useI18n } from "@/lib/i18n";
 import { useSelector } from "react-redux";
 import { selectAuth } from "@/store/features/authSlice";
 import { hasAnyRole } from "@/lib/auth-utils";
-import { useDebounce } from "@/lib/use-debounce";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,24 +17,24 @@ import { DataPagination } from "@/components/data-pagination";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { toast } from "sonner";
 import {
-  Plus, Search, Eye, X, FileText, Clock, CheckCircle2, ThumbsUp, XCircle, DollarSign,
-  CalendarClock, AlertTriangle, Pencil, Trash2,
+  Plus, Eye, X, FileText, ThumbsUp, Pencil, Trash2,
 } from "lucide-react";
-import { formatDate, formatDateTime } from "@/lib/format";
-import { cn } from "@/lib/utils";
-import { KpiCard, StatusPill, type KpiTone } from "@/components/list-toolkit";
+import { formatDate } from "@/lib/format";
 
 
 
 const PAGE_SIZE = 20;
 
 
-export function QStatusBadge({ status, t }: { status: string; t: (k: string, f?: string) => string }) {
-  const variant = status === "rejected" || status === "cancelled" ? "destructive"
-    : status === "draft" || status === "expired" ? "outline"
+export function QStatusBadge({ status, status_text, is_expired, t, lang }: { status: string; status_text?: string; is_expired?: boolean; t: (k: string, f?: string) => string; lang: string }) {
+  // Use status_text from API if available, otherwise use is_expired to determine display
+  const displayText = status_text || (is_expired ? (lang === "ar" ? "منتهي" : "Expired") : (lang === "ar" ? "صالح" : "Valid"));
+  
+  const variant = is_expired || status === "rejected" || status === "cancelled" ? "destructive"
+    : status === "draft" ? "outline"
       : "default";
-  const cls = status === "approved" || status === "accepted" ? "bg-emerald-600 text-white hover:bg-emerald-600" : undefined;
-  return <Badge variant={variant as any} className={cls}>{t(`qstatus.${status}`)}</Badge>;
+  const cls = status === "approved" || status === "accepted" || (!is_expired && status === "valid") ? "bg-emerald-600 text-white hover:bg-emerald-600" : undefined;
+  return <Badge variant={variant as any} className={cls}>{displayText}</Badge>;
 }
 
 export default function QuotationsList() {
@@ -51,19 +49,7 @@ export default function QuotationsList() {
   const [page, setPage] = useState(1);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
-  const qc = useQueryClient();
-  const { mutate: deleteQuote } = useMutation({
-    mutationFn: (id: string) => apiClient.quotations.delete(id),
-    onSuccess: () => {
-      toast.success(lang === "ar" ? "تم الحذف بنجاح" : "Deleted successfully");
-      qc.invalidateQueries({ queryKey: ["quotations"] });
-      setConfirmDelete(null);
-    },
-    onError: (e: any) => {
-      toast.error(e?.message || (lang === "ar" ? "حدث خطأ" : "Error occurred"));
-      setConfirmDelete(null);
-    }
-  });
+  const [deleteQuotation] = useDeleteQuotationMutation();
 
   const filtersActive = !!(customer !== "all" || status !== "all" || hotel !== "all");
   const resetAll = () => { setCustomer("all"); setStatus("all"); setHotel("all"); setPage(1); };
@@ -86,49 +72,13 @@ export default function QuotationsList() {
     },
   });
 
-  const list = useQuery({
-    queryKey: ["quotations", { lang, status, hotel, customer, page }],
-    queryFn: async () => {
-      const params: any = { lang };
-      
-      // Apply filters only if they are not "all"
-      if (status !== "all") params.status = status;
-      if (hotel !== "all") params.hotel_id = hotel;
-      if (customer !== "all") params.customer_id = customer;
-      
-      const response = await apiClient.quotations.getAll(params);
-      
-      // Extract data from API response structure
-      // api-client already unwraps { data: ... } so response is either the array or the full object
-      let data: any[] = [];
-      let totalCount = 0;
-      
-      if (Array.isArray(response)) {
-        data = response;
-        totalCount = data.length;
-      } else if (response?.data && Array.isArray(response.data)) {
-        data = response.data;
-        totalCount = response.total || response.statistics?.total_count || data.length;
-      }
-      
-      // If no filters applied, return all data with pagination on client side
-      if (status === "all" && hotel === "all" && customer === "all") {
-        const f = (page - 1) * PAGE_SIZE;
-        return {
-          rows: data.slice(f, f + PAGE_SIZE),
-          count: totalCount,
-        };
-      }
-      
-      // If paginated response from API
-      return {
-        rows: data,
-        count: totalCount,
-      };
-    },
-  });
+  const list = useGetQuotationsQuery({ lang, status: status !== "all" ? status : undefined, hotel_id: hotel !== "all" ? hotel : undefined, customer_id: customer !== "all" ? customer : undefined });
 
-  const total = list.data?.count ?? 0;
+  // Handle response structure - data may be nested in a data property
+  const rows = Array.isArray(list.data)
+    ? list.data
+    : (Array.isArray((list.data as any)?.data) ? (list.data as any).data : []);
+  const total = rows.length;
   const fmt = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 0 });
   const actions = useMemo(() => canWrite && (
     <Button size="sm" onClick={() => navigate("/quotations/new")}>
@@ -179,6 +129,8 @@ export default function QuotationsList() {
                 <SelectTrigger><SelectValue placeholder={t("filter.all")} /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t("filter.all")}</SelectItem>
+                  <SelectItem value="valid">{lang === "ar" ? "صالح" : "Valid"}</SelectItem>
+                  <SelectItem value="expired">{lang === "ar" ? "منتهي" : "Expired"}</SelectItem>
                   <SelectItem value="draft">{t("qstatus.draft")}</SelectItem>
                   <SelectItem value="pending">{t("qstatus.pending")}</SelectItem>
                   <SelectItem value="approved">{t("qstatus.approved")}</SelectItem>
@@ -209,7 +161,7 @@ export default function QuotationsList() {
                 {list.isLoading && (
                   <TableRow><TableCell colSpan={8} className="py-10 text-center text-muted-foreground">{t("label.loading")}</TableCell></TableRow>
                 )}
-                {!list.isLoading && (list.data?.rows.length ?? 0) === 0 && (
+                {!list.isLoading && rows.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={8} className="py-16">
                       <div className="mx-auto flex max-w-sm flex-col items-center gap-3 text-center">
@@ -230,7 +182,12 @@ export default function QuotationsList() {
                     </TableCell>
                   </TableRow>
                 )}
-                {list.data?.rows.map((q: any) => {
+                {rows.map((q: any) => {
+                  const customerName = q.customer ? (lang === "ar" ? (q.customer.name_ar || q.customer.name_en) : (q.customer.name_en || q.customer.name_ar)) : "—";
+                  const hotelName = q.hotel ? (lang === "ar" ? (q.hotel.name_ar || q.hotel.name_en) : (q.hotel.name_en || q.hotel.name_ar)) : "—";
+                  const currencyCode = typeof q.currency === 'object' ? q.currency?.code : q.currency;
+                  const currencySymbol = lang === "ar" ? (typeof q.currency === 'object' ? q.currency?.symbol_ar : q.currency) : (typeof q.currency === 'object' ? q.currency?.symbol_en : q.currency);
+                  
                   return (
                     <TableRow
                       key={q.id}
@@ -250,14 +207,14 @@ export default function QuotationsList() {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className="text-sm font-medium">{q.customer ? (lang === "ar" ? (q.customer.name_ar || q.customer.name_en) : (q.customer.name_en || q.customer.name_ar)) : "—"}</TableCell>
-                      <TableCell className="text-sm">{q.hotel ? (lang === "ar" ? (q.hotel.name_ar || q.hotel.name_en) : (q.hotel.name_en || q.hotel.name_ar)) : "—"}</TableCell>
+                      <TableCell className="text-sm font-medium">{customerName}</TableCell>
+                      <TableCell className="text-sm">{hotelName}</TableCell>
                       <TableCell style={{ direction: 'ltr' }} className="text-xs">{formatDate(q.start_date, lang)}</TableCell>
                       <TableCell style={{ direction: 'ltr' }} className="text-xs">{formatDate(q.end_date, lang)}</TableCell>
                       <TableCell dir="ltr" style={{ direction: 'ltr' }} className="text-xs font-semibold tabular-nums">
-                        {fmt(q.total_value || 0)} <span className="text-muted-foreground font-normal">{typeof q.currency === 'object' ? q.currency?.code : q.currency}</span>
+                        {fmt(q.total_value || 0)} <span className="text-muted-foreground font-normal">{currencySymbol || currencyCode}</span>
                       </TableCell>
-                      <TableCell><QStatusBadge status={q.status} t={t} /></TableCell>
+                      <TableCell><QStatusBadge status={q.status} status_text={q.status_text} is_expired={q.is_expired} t={t} lang={lang} /></TableCell>
                       <TableCell className="text-end" onClick={(e) => e.stopPropagation()}>
                         <Button asChild variant="ghost" size="icon" title={t("actions.view")}>
                           <Link to={`/quotations/${q.id}`}><Eye className="h-4 w-4" /></Link>
@@ -289,7 +246,13 @@ export default function QuotationsList() {
         title={t("actions.delete")}
         description={t("toast.confirm_delete", "هل أنت متأكد من الحذف؟")}
         destructive={true}
-        onConfirm={() => confirmDelete && deleteQuote(confirmDelete)}
+        onConfirm={() => confirmDelete && deleteQuotation({ id: confirmDelete, lang }).unwrap().then(() => {
+          toast.success(lang === "ar" ? "تم الحذف بنجاح" : "Deleted successfully");
+          setConfirmDelete(null);
+        }).catch((e: any) => {
+          toast.error(e?.message || (lang === "ar" ? "حدث خطأ" : "Error occurred"));
+          setConfirmDelete(null);
+        })}
       />
     </>
   );

@@ -1,8 +1,6 @@
 // Invoice list — Section 15 (BR-INV). KPIs, filters, create from booking or manual.
 import { Link, useNavigate } from "react-router-dom";
-import { db } from "@/store/queryBridge";
 import { apiClient } from "@/store/queryBridge";
-import { getCurrentUserId } from "@/store/queryBridge";
 import { useState, useMemo } from "react";
 import { useQuery } from "@/store/queryBridge";
 import {
@@ -14,7 +12,7 @@ import { PageHeader } from "@/components/page-header";
 import { useI18n } from "@/lib/i18n";
 import { useSelector } from "react-redux";
 import { selectAuth } from "@/store/features/authSlice";
-import { hasRole, hasAnyRole, isAdmin, canAccessModule } from "@/lib/auth-utils";
+import { canWriteModule } from "@/lib/auth-utils";
 import { useDebounce } from "@/lib/use-debounce";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -45,7 +43,7 @@ export default function InvoicesList() {
   const { t, lang, dir } = useI18n();
   const auth = useSelector(selectAuth);
   const navigate = useNavigate();
-  const canWrite = hasAnyRole(auth, [...FINANCE_WRITE]);
+  const canWrite = canWriteModule(auth, "invoices");
 
   const [search, setSearch] = useState("");
   const [customer, setCustomer] = useState("all");
@@ -156,14 +154,7 @@ export default function InvoicesList() {
             active={status === "draft"} onClick={() => { setStatus("draft"); setPage(1); }} />
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <StatusPill label={t("filter.all")} tone="primary" active={status === "all"} onClick={() => { setStatus("all"); setPage(1); }} />
-          {STATUSES.map(s => (
-            <StatusPill key={s} label={t(`invstatus.${s}`)}
-              tone={(s as string) === "paid" ? "success" : (s as string) === "cancelled" ? "destructive" : (s as string) === "partially_paid" ? "warning" : (s as string) === "draft" ? "muted" : "info"}
-              active={status === s} onClick={() => { setStatus(s); setPage(1); }} />
-          ))}
-        </div>
+
 
 
         <Card>
@@ -214,17 +205,17 @@ export default function InvoicesList() {
           <CardContent className="p-0 overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="whitespace-nowrap">
-                  <TableHead>{t("inv.number")}</TableHead>
-                  <TableHead>{lang === "ar" ? "رقم الحجز" : "Booking Code"}</TableHead>
-                  <TableHead>{t("inv.customer")}</TableHead>
-                  <TableHead>{t("inv.date")}</TableHead>
-                  <TableHead>{t("inv.due_date")}</TableHead>
-                  <TableHead className="text-end">{t("inv.total")}</TableHead>
-                  <TableHead className="text-end">{t("inv.paid")}</TableHead>
-                  <TableHead className="text-end">{t("inv.balance")}</TableHead>
-                  <TableHead>{t("label.status")}</TableHead>
-                  <TableHead className="text-end">{t("label.actions")}</TableHead>
+                <TableRow>
+                  <TableHead className="whitespace-nowrap">{t("inv.number")}</TableHead>
+                  <TableHead className="whitespace-nowrap">{lang === "ar" ? "رقم الحجز" : "Booking Code"}</TableHead>
+                  <TableHead className="min-w-[150px]">{t("inv.customer")}</TableHead>
+                  <TableHead className="whitespace-nowrap">{t("inv.date")}</TableHead>
+                  <TableHead className="whitespace-nowrap">{t("inv.due_date")}</TableHead>
+                  <TableHead className="text-end whitespace-nowrap">{t("inv.total")}</TableHead>
+                  <TableHead className="text-end whitespace-nowrap">{t("inv.paid")}</TableHead>
+                  <TableHead className="text-end whitespace-nowrap">{t("inv.balance")}</TableHead>
+                  <TableHead className="whitespace-nowrap">{t("label.status")}</TableHead>
+                  <TableHead className="text-end whitespace-nowrap">{t("label.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -233,21 +224,21 @@ export default function InvoicesList() {
                 {listRows.map((r: any) => {
                   const currencyCode = typeof r.currency === "object" ? r.currency?.code : (r.currency ?? "SAR");
                   return (
-                    <TableRow key={r.id} className="whitespace-nowrap">
-                      <TableCell className="font-mono text-xs">
-                        <Link to={`/invoices/${r.id}`} className="hover:underline">{r.invoice_number || r.invoice_no}</Link>
+                    <TableRow key={r.id}>
+                      <TableCell className="font-mono text-xs whitespace-nowrap">
+                        <Link to={`/invoices/${r.id}`} className="hover:underline text-primary font-semibold">{r.invoice_number || r.invoice_no}</Link>
                       </TableCell>
-                      <TableCell className="font-mono text-xs text-muted-foreground">
+                      <TableCell className="font-mono text-xs text-muted-foreground whitespace-nowrap">
                         {r.booking_code || r.booking?.code || "—"}
                       </TableCell>
-                      <TableCell className="text-sm">{name(r.customer)}</TableCell>
-                      <TableCell dir="ltr" className="text-xs">{formatDate(r.invoice_date, lang)}</TableCell>
-                      <TableCell dir="ltr" className="text-xs">{formatDate(r.due_date, lang)}</TableCell>
-                      <TableCell dir="ltr" className="text-end text-xs tabular-nums">{fmt(Number(r.total_amount))} {currencyCode}</TableCell>
-                      <TableCell dir="ltr" className="text-end text-xs tabular-nums">{fmt(Number(r.paid_amount))}</TableCell>
-                      <TableCell dir="ltr" className="text-end text-xs tabular-nums">{fmt(Number(r.total_amount) - Number(r.paid_amount))}</TableCell>
-                      <TableCell><InvStatusBadge status={r.status} t={t} /></TableCell>
-                      <TableCell className="text-end">
+                      <TableCell className="text-sm font-medium">{name(r.customer)}</TableCell>
+                      <TableCell dir="ltr" className="text-xs text-muted-foreground whitespace-nowrap">{formatDate(r.invoice_date, lang)}</TableCell>
+                      <TableCell dir="ltr" className="text-xs text-muted-foreground whitespace-nowrap">{formatDate(r.due_date, lang)}</TableCell>
+                      <TableCell dir="ltr" className="text-end text-xs tabular-nums font-semibold whitespace-nowrap">{fmt(Number(r.total_amount))} <span className="text-muted-foreground font-normal">{currencyCode}</span></TableCell>
+                      <TableCell dir="ltr" className="text-end text-xs tabular-nums whitespace-nowrap text-muted-foreground">{fmt(Number(r.paid_amount))}</TableCell>
+                      <TableCell dir="ltr" className="text-end text-xs tabular-nums whitespace-nowrap text-destructive">{fmt(Number(r.total_amount) - Number(r.paid_amount))}</TableCell>
+                      <TableCell className="whitespace-nowrap"><InvStatusBadge status={r.status} t={t} /></TableCell>
+                      <TableCell className="text-end whitespace-nowrap">
                         <div className="flex items-center justify-end gap-1">
                           <Button asChild variant="ghost" size="icon" title={t("actions.view")}>
                             <Link to={`/invoices/${r.id}`}><Eye className="h-4 w-4" /></Link>

@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import { useI18n } from "@/lib/i18n";
 import { useSelector } from "react-redux";
 import { selectAuth } from "@/store/features/authSlice";
-import { hasRole, hasAnyRole, isAdmin, canAccessModule } from "@/lib/auth-utils";
+import { canAccessModule } from "@/lib/auth-utils";
 import { exportCSV, exportExcel, exportPDF, type ReportColumn, type ReportRow } from "@/lib/report-export";
 
 export function ReportToolbar({

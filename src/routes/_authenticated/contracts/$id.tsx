@@ -7,7 +7,7 @@ import { useQuery, useMutation, useQueryClient } from "@/store/queryBridge";
 import { useI18n } from "@/lib/i18n";
 import { useSelector } from "react-redux";
 import { selectAuth } from "@/store/features/authSlice";
-import { hasRole, hasAnyRole, isAdmin, canAccessModule } from "@/lib/auth-utils";
+import { canWriteModule, canApproveModule } from "@/lib/auth-utils";
 import { PageHeader } from "@/components/page-header";
 import { EntityHistory } from "@/components/entity-history";
 import { EntityAttachments } from "@/components/entity-attachments";
@@ -61,8 +61,8 @@ export default function ContractDetail() {
   const auth = useSelector(selectAuth);
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const canWrite = hasAnyRole(auth, ["super_admin", "admin", "operations_manager", "operations_agent"]);
-  const canApprove = hasAnyRole(auth, ["super_admin", "admin", "operations_manager"]);
+  const canWrite = canWriteModule(auth, "rates");
+  const canApprove = canApproveModule(auth, "rates");
   const [editing, setEditing] = useState(!!search.edit);
   const [pendingStatus, setPendingStatus] = useState<CStatus | null>(null);
 

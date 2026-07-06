@@ -34,6 +34,13 @@ export interface Price {
   
   tax_type?: "inclusive_tax" | "exclusive_tax";
   tax_rate?: number;
+  
+  is_weekend_weekday?: boolean;
+  price_type?: string;
+  days?: string[];
+  weekend_cost_per_night?: number;
+  weekend_selling_price?: number;
+  weekend_days?: string[];
 
   status: any;
   notes_ar: string | null;

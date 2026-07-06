@@ -7,7 +7,7 @@ import { PageHeader } from "@/components/page-header";
 import { useI18n } from "@/lib/i18n";
 import { useSelector } from "react-redux";
 import { selectAuth } from "@/store/features/authSlice";
-import { hasRole, hasAnyRole, isAdmin, canAccessModule } from "@/lib/auth-utils";
+import { canWriteModule, isAdmin } from "@/lib/auth-utils";
 import { useDebounce } from "@/lib/use-debounce";
 import { useHotels } from "@/lib/lookups";
 import { dbErrorMessage } from "@/store/queryBridge";
@@ -32,7 +32,7 @@ export default function TaxesList() {
   const { t, lang } = useI18n();
   const auth = useSelector(selectAuth);
   const qc = useQueryClient();
-  const canWrite = hasAnyRole(auth, ["super_admin", "admin", "operations_manager", "operations_agent", "finance_manager", "finance_agent"]);
+  const canWrite = canWriteModule(auth, "settings");
 
   const [search, setSearch] = useState("");
   const [hotel, setHotel] = useState("all");

@@ -39,10 +39,22 @@ export function calcNights(checkIn: string | null | undefined, checkOut: string 
 }
 
 export function getStayDates(quotation: any): { checkIn: string; checkOut: string; nights: number } {
-  const checkIn = quotation.check_in || quotation.start_date;
-  const checkOut = quotation.check_out || quotation.end_date;
+  let checkIn = quotation.check_in || quotation.start_date;
+  let checkOut = quotation.check_out || quotation.end_date;
+
+  if (Array.isArray(quotation.items) && quotation.items.length > 0) {
+    const dates = quotation.items.map((i: any) => i.start_date).filter(Boolean);
+    const endDates = quotation.items.map((i: any) => i.end_date).filter(Boolean);
+    if (dates.length > 0) {
+      checkIn = dates.reduce((min: string, d: string) => d < min ? d : min, dates[0]);
+    }
+    if (endDates.length > 0) {
+      checkOut = endDates.reduce((max: string, d: string) => d > max ? d : max, endDates[0]);
+    }
+  }
+
   const nights = calcNights(checkIn, checkOut);
-  return { checkIn, checkOut, nights: nights || 1 };
+  return { checkIn: checkIn || "", checkOut: checkOut || "", nights: nights || 1 };
 }
 
 export function resolveItemHotel(item: any, quotation: any) {
@@ -94,9 +106,9 @@ export function mapQuotationItemsForPrint(
   items: any[],
   printLang: DocLang,
   mealLabel: (type: string) => string,
+  hotels?: any[],
 ): MappedPrintItem[] {
   const rtl = DOC_LANGS[printLang].dir === "rtl";
-  const { checkIn, checkOut, nights } = getStayDates(quotation);
 
   return items.map((item) => {
     const pd = item.price_details ?? {};
@@ -106,10 +118,35 @@ export function mapQuotationItemsForPrint(
       ? subtotal - subtotal / (1 + taxRate / 100)
       : 0;
 
+    let hotel = resolveItemHotel(item, quotation);
+    if (!hotel && hotels) {
+      const hid = item.hotel_id || pd.hotel_id;
+      hotel = hotels.find((h: any) => String(h.id) === String(hid)) || null;
+    }
+
+    const checkIn = item.start_date || quotation.check_in || quotation.start_date;
+    const checkOut = item.end_date || quotation.check_out || quotation.end_date;
+    const nights = calcNights(checkIn, checkOut) || 1;
+
+    let mealPlanStr = "";
+    if (Array.isArray(pd.meal_plan_details) && pd.meal_plan_details.length > 0) {
+      mealPlanStr = pd.meal_plan_details
+        .map((m: any) => mealLabel(m.key || m) || m.label || m.key || String(m))
+        .filter(Boolean)
+        .join(" + ");
+    } else {
+      const mType = pd.meal_plan_type || "inclusive";
+      if (mType === "exclusive") {
+        mealPlanStr = rtl ? "بدون وجبات (إقامة فقط)" : "No Meals (Room Only)";
+      } else {
+        mealPlanStr = mealLabel(mType);
+      }
+    }
+
     return {
-      hotel: resolveItemHotel(item, quotation),
+      hotel,
       room_type: pd.room,
-      meal_plan: mealLabel(pd.meal_plan_type || "inclusive"),
+      meal_plan: mealPlanStr,
       occupancy_type: pd.price_type || "standard",
       check_in: checkIn,
       check_out: checkOut,

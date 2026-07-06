@@ -7,7 +7,7 @@ import { PageHeader } from "@/components/page-header";
 import { useI18n } from "@/lib/i18n";
 import { useSelector } from "react-redux";
 import { selectAuth } from "@/store/features/authSlice";
-import { hasRole, hasAnyRole, isAdmin, canAccessModule } from "@/lib/auth-utils";
+import { canWriteModule, canApproveModule } from "@/lib/auth-utils";
 import { dbErrorMessage } from "@/store/queryBridge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -33,8 +33,8 @@ export default function ReceiptsPage() {
   const { t, lang, dir } = useI18n();
   const auth = useSelector(selectAuth);
   const qc = useQueryClient();
-  const canWrite = hasAnyRole(auth, [...FINANCE_WRITE]);
-  const canAdjust = hasAnyRole(auth, [...ADJ_WRITE]);
+  const canWrite = canWriteModule(auth, "invoices");
+  const canAdjust = canApproveModule(auth, "invoices");
 
   const fmt = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 2 });
   const name = (c: any) => (c ? (lang === "ar" ? c.name_ar || c.name_en : c.name_en || c.name_ar) : "—");

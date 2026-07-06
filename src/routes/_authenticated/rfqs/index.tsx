@@ -7,7 +7,7 @@ import { PageHeader } from "@/components/page-header";
 import { useI18n } from "@/lib/i18n";
 import { useSelector } from "react-redux";
 import { selectAuth } from "@/store/features/authSlice";
-import { hasRole, hasAnyRole, isAdmin, canAccessModule } from "@/lib/auth-utils";
+import { canWriteModule } from "@/lib/auth-utils";
 import { useDebounce } from "@/lib/use-debounce";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -38,7 +38,7 @@ export default function RfqList() {
   const { t, lang } = useI18n();
   const auth = useSelector(selectAuth);
   const navigate = useNavigate();
-  const canWrite = hasAnyRole(auth, ["super_admin", "admin", "sales_manager", "sales_agent", "operations_manager", "operations_agent"]);
+  const canWrite = canWriteModule(auth, "quotations");
 
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");

@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@/store/queryBridge";
 import { useI18n } from "@/lib/i18n";
 import { useSelector } from "react-redux";
 import { selectAuth } from "@/store/features/authSlice";
-import { hasRole, hasAnyRole, isAdmin, canAccessModule } from "@/lib/auth-utils";
+import { canWriteModule } from "@/lib/auth-utils";
 import { useFacilities, useHotelViews } from "@/lib/lookups";
 import { useGetRoomsQuery } from "@/store/services/rooms/roomsService";
 import {
@@ -72,12 +72,7 @@ export default function HotelDetail() {
   const auth = useSelector(selectAuth);
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const canWrite = hasAnyRole(auth, [
-    "super_admin",
-    "admin",
-    "operations_manager",
-    "operations_agent",
-  ]);
+  const canWrite = canWriteModule(auth, "hotels");
   const [editing, setEditing] = useState(!!search.edit);
 
   const hotel = useQuery({

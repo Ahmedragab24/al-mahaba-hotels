@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useGetCitiesQuery, useGetCountriesQuery } from "@/store/api";
+import { useGetSupplierTypesQuery } from "@/store/services/attributes/supplier-types";
 import { useI18n } from "@/lib/i18n";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -95,6 +96,8 @@ export function Component() {
     () => extractArray(citiesQuery.data),
     [citiesQuery.data],
   );
+  const supplierTypesQuery = useGetSupplierTypesQuery({ lang });
+  const supplierTypes = extractArray(supplierTypesQuery.data);
 
   const [submitJoinRequest] = useSubmitJoinRequestMutation();
 
@@ -102,7 +105,9 @@ export function Component() {
 
   const validStep0 = form.company_name_ar.trim() && form.company_name_en.trim() && form.supplier_type_id > 0;
   const validStep1 = form.country_id > 0 && form.city_id > 0;
-  const validStep2 = form.contact_name.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.contact_email) && form.contact_phone.trim().length >= 8;
+  const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.contact_email.trim());
+  const isValidPhone = /^\+[1-9]\d{1,14}$/.test(form.contact_phone.trim());
+  const validStep2 = form.contact_name.trim() && isValidEmail && isValidPhone;
 
   async function handleSubmit() {
     setError(null);
@@ -211,11 +216,11 @@ export function Component() {
                   <Select value={form.supplier_type_id.toString()} onValueChange={(v) => set("supplier_type_id", Number(v))}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="1">DMC</SelectItem>
-                      <SelectItem value="2">Hotel Supplier</SelectItem>
-                      <SelectItem value="3">Direct Hotel</SelectItem>
-                      <SelectItem value="4">Wholesaler</SelectItem>
-                      <SelectItem value="5">Other</SelectItem>
+                      {supplierTypes.map((st: any) => (
+                        <SelectItem key={st.id} value={st.id.toString()}>
+                          {lang === "ar" ? st.name_ar : st.name_en}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -255,11 +260,27 @@ export function Component() {
                   <Input value={form.contact_name} onChange={(e) => set("contact_name", e.target.value)} required /></div>
                 <div className="space-y-2"><Label>{t("supplier.apply.contact_position")}</Label>
                   <Input value={form.contact_position} onChange={(e) => set("contact_position", e.target.value)} /></div>
-                <div className="space-y-2"><Label>{t("label.email")} *</Label>
-                  <Input type="email" dir="ltr" value={form.contact_email} onChange={(e) => set("contact_email", e.target.value)} required /></div>
-                <div className="space-y-2"><Label>{t("label.phone")} *</Label>
-                  <Input dir="ltr" value={form.contact_phone} onChange={(e) => set("contact_phone", e.target.value)} required /></div>
-              </div>
+                 <div className="space-y-2">
+                   <Label>{t("label.email")} *</Label>
+                   <Input type="email" dir="ltr" value={form.contact_email} onChange={(e) => set("contact_email", e.target.value)} required />
+                   {form.contact_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.contact_email.trim()) && (
+                     <p className="text-[11px] text-destructive">
+                       {lang === "ar" ? "البريد الإلكتروني غير صالح" : "Invalid email address"}
+                     </p>
+                   )}
+                 </div>
+                 <div className="space-y-2">
+                   <Label>{t("label.phone")} *</Label>
+                   <Input dir="ltr" value={form.contact_phone} onChange={(e) => set("contact_phone", e.target.value)} placeholder="+966500000000" required />
+                   {form.contact_phone && !/^\+[1-9]\d{1,14}$/.test(form.contact_phone.trim()) && (
+                     <p className="text-[11px] text-destructive">
+                       {lang === "ar"
+                         ? "يجب أن يبدأ رقم الهاتف بـ + ومفتاح الدولة (مثال: +966500000000)"
+                         : "Phone must start with + and country code (e.g., +966500000000)"}
+                     </p>
+                   )}
+                 </div>
+               </div>
             )}
             {step === 3 && (
               <div className="space-y-3 text-sm">
@@ -268,7 +289,14 @@ export function Component() {
                   <div className="grid grid-cols-2 gap-2 text-muted-foreground">
                     <div>{t("label.name_ar")}:</div><div className="text-foreground">{form.company_name_ar}</div>
                     <div>{t("label.name_en")}:</div><div className="text-foreground">{form.company_name_en}</div>
-                    <div>{t("supplier.apply.type")}:</div><div className="text-foreground">{form.supplier_type_id}</div>
+                    <div>{t("supplier.apply.type")}:</div>
+                    <div className="text-foreground">
+                      {(() => {
+                        const st = supplierTypes.find((st: any) => st.id === form.supplier_type_id);
+                        if (!st) return form.supplier_type_id;
+                        return lang === "ar" ? st.name_ar : st.name_en;
+                      })()}
+                    </div>
                   </div>
                 </div>
                 <div className="rounded-md border p-3">

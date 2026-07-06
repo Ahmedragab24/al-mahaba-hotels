@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/page-header";
 import { useI18n } from "@/lib/i18n";
 import { useSelector } from "react-redux";
 import { selectAuth } from "@/store/features/authSlice";
-import { hasAnyRole } from "@/lib/auth-utils";
+import { canWriteModule } from "@/lib/auth-utils";
 import { useDebounce } from "@/lib/use-debounce";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -40,6 +40,8 @@ import {
   CheckCircle2,
   FileText,
   Coins,
+  Percent,
+  Scale,
 } from "lucide-react";
 import { formatDate } from "@/lib/format";
 import { toast } from "sonner";
@@ -60,7 +62,7 @@ const CATEGORIES = ["rent", "salaries", "utilities", "electricity", "maintenance
 export default function PlatformTransactionsList() {
   const { t, lang, dir } = useI18n();
   const auth = useSelector(selectAuth);
-  const canWrite = hasAnyRole(auth, [...WRITE_ROLES]);
+  const canWrite = canWriteModule(auth, "transactions");
 
   // Filters state
   const [search, setSearch] = useState("");
@@ -227,6 +229,8 @@ export default function PlatformTransactionsList() {
   const notScheduledCount = statsData?.invoices_profit?.not_scheduled?.count ?? 0;
   const notScheduledProfit = statsData?.invoices_profit?.not_scheduled?.profit_sar ?? 0;
   const totalPlatformProfit = statsData?.total_platform_profit_sar ?? 0;
+  const marginProfit = statsData?.margin_profit_sar ?? 0;
+  const taxPlatformProfit = totalPlatformProfit - marginProfit;
 
   const monthlyData = useMemo(() => {
     if (!statsData?.monthly_breakdown) return [];
@@ -266,7 +270,7 @@ export default function PlatformTransactionsList() {
 
       <div className="space-y-5 p-4 sm:p-6" dir={dir}>
         {/* Statistics / KPIs */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           <Card className="bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900/30">
             <CardContent className="p-5 flex items-center gap-4">
               <div className="p-3 bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 rounded-full">
@@ -327,6 +331,38 @@ export default function PlatformTransactionsList() {
             </CardContent>
           </Card>
 
+          <Card className="bg-purple-50 dark:bg-purple-950/20 border-purple-200 dark:border-purple-900/30">
+            <CardContent className="p-5 flex items-center gap-4">
+              <div className="p-3 bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-400 rounded-full">
+                <Percent className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-purple-600/80 dark:text-purple-400/80 uppercase tracking-wider">
+                  {ar("أرباح هامش الربح", "Margin Profit")}
+                </p>
+                <p className="text-2xl font-bold text-purple-700 dark:text-purple-300 tabular-nums mt-1">
+                  {statsData ? fmt(marginProfit) + " SAR" : "—"}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-teal-50 dark:bg-teal-950/20 border-teal-200 dark:border-teal-900/30">
+            <CardContent className="p-5 flex items-center gap-4">
+              <div className="p-3 bg-teal-100 dark:bg-teal-900/50 text-teal-600 dark:text-teal-400 rounded-full">
+                <Scale className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-teal-600/80 dark:text-teal-400/80 uppercase tracking-wider">
+                  {ar("أرباح المنصة من الضريبة", "Platform Tax Profit")}
+                </p>
+                <p className="text-2xl font-bold text-teal-700 dark:text-teal-300 tabular-nums mt-1">
+                  {statsData ? fmt(taxPlatformProfit) + " SAR" : "—"}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
           <Card className="bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/30">
             <CardContent className="p-5 flex items-center gap-4">
               <div className="p-3 bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400 rounded-full">
@@ -381,7 +417,7 @@ export default function PlatformTransactionsList() {
 
             {/* Invoices Breakdown Card */}
             <div className="space-y-6">
-              <Card>
+              {/* <Card>
                 <CardHeader>
                   <CardTitle className="text-base font-semibold flex items-center gap-2">
                     <FileText className="w-5 h-5 text-indigo-500" />
@@ -406,6 +442,29 @@ export default function PlatformTransactionsList() {
                   <div className="flex justify-between items-center pt-2 font-bold text-primary">
                     <span className="text-sm">{ar("إجمالي الأرباح", "Total Profit")}</span>
                     <span className="text-base">{fmt(invoiceProfit)} SAR</span>
+                  </div>
+                </CardContent>
+              </Card> */}
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base font-semibold flex items-center gap-2">
+                    <Coins className="w-5 h-5 text-amber-500" />
+                    {ar("تفاصيل أرباح المنصة", "Platform Profit Breakdown")}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex justify-between items-center pb-2 border-b border-border">
+                    <span className="text-sm text-muted-foreground">{ar("أرباح هامش الربح", "Margin Profit")}</span>
+                    <span className="text-sm font-bold text-foreground">{fmt(marginProfit)} SAR</span>
+                  </div>
+                  <div className="flex justify-between items-center pb-2 border-b border-border">
+                    <span className="text-sm text-muted-foreground">{ar("أرباح المنصة من الضريبة", "Platform Tax Profit")}</span>
+                    <span className="text-sm font-bold text-foreground">{fmt(taxPlatformProfit)} SAR</span>
+                  </div>
+                  <div className="flex justify-between items-center pt-2 font-bold text-primary">
+                    <span className="text-sm">{ar("إجمالي أرباح المنصة", "Total Platform Profit")}</span>
+                    <span className="text-base">{fmt(totalPlatformProfit)} SAR</span>
                   </div>
                 </CardContent>
               </Card>
@@ -489,15 +548,15 @@ export default function PlatformTransactionsList() {
                     <SelectItem key={c} value={c}>
                       {ar(
                         c === "rent" ? "إيجار"
-                        : c === "salaries" ? "رواتب"
-                        : c === "utilities" ? "خدمات ومرافق"
-                        : c === "electricity" ? "كهرباء"
-                        : c === "maintenance" ? "صيانة"
-                        : c === "marketing" ? "تسويق"
-                        : c === "office_supplies" ? "أدوات مكتبية"
-                        : c === "hotel_booking" ? "حجز فندق"
-                        : c === "supplier_payout" ? "مستحقات موردين"
-                        : "أخرى",
+                          : c === "salaries" ? "رواتب"
+                            : c === "utilities" ? "خدمات ومرافق"
+                              : c === "electricity" ? "كهرباء"
+                                : c === "maintenance" ? "صيانة"
+                                  : c === "marketing" ? "تسويق"
+                                    : c === "office_supplies" ? "أدوات مكتبية"
+                                      : c === "hotel_booking" ? "حجز فندق"
+                                        : c === "supplier_payout" ? "مستحقات موردين"
+                                          : "أخرى",
                         c
                       )}
                     </SelectItem>
@@ -698,22 +757,20 @@ export default function PlatformTransactionsList() {
                     <button
                       type="button"
                       onClick={() => setFormType("expense")}
-                      className={`flex-1 rounded-md border py-2 text-sm font-medium transition-colors ${
-                        formType === "expense"
+                      className={`flex-1 rounded-md border py-2 text-sm font-medium transition-colors ${formType === "expense"
                           ? "bg-red-500 border-red-500 text-white"
                           : "border-border bg-background text-muted-foreground hover:bg-muted/50"
-                      }`}
+                        }`}
                     >
                       {ar("مصروف", "Expense")}
                     </button>
                     <button
                       type="button"
                       onClick={() => setFormType("income")}
-                      className={`flex-1 rounded-md border py-2 text-sm font-medium transition-colors ${
-                        formType === "income"
+                      className={`flex-1 rounded-md border py-2 text-sm font-medium transition-colors ${formType === "income"
                           ? "bg-emerald-500 border-emerald-500 text-white"
                           : "border-border bg-background text-muted-foreground hover:bg-muted/50"
-                      }`}
+                        }`}
                     >
                       {ar("إيراد", "Income")}
                     </button>

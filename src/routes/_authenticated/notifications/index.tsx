@@ -18,24 +18,23 @@ import { CheckCheck, Trash2, Bell, Inbox, AlertTriangle, Loader2 } from "lucide-
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { NotificationCard } from "@/components/notification-card";
 
 export default function NotificationsPage() {
   const { t, lang, dir } = useI18n();
   const [activeTab, setActiveTab] = useState<"all" | "unread">("all");
   const [showConfirmDeleteAll, setShowConfirmDeleteAll] = useState(false);
 
-  const { data: notifications = [], isLoading, refetch } = useGetNotificationsQuery();
-  const { data: unreadData, refetch: refetchCount } = useGetUnreadNotificationsCountQuery();
+  const { data: notifications = [], isLoading } = useGetNotificationsQuery();
+  const { data: unreadCount = 0 } = useGetUnreadNotificationsCountQuery();
   const [markAsRead, { isLoading: isMarking }] = useMarkNotificationAsReadMutation();
   const [markAllRead, { isLoading: isMarkingAll }] = useMarkAllNotificationsAsReadMutation();
   const [deleteNotification, { isLoading: isDeleting }] = useDeleteNotificationMutation();
   const [deleteAllNotifications, { isLoading: isDeletingAll }] = useDeleteAllNotificationsMutation();
 
-  const unreadCount = typeof unreadData === "object" ? unreadData?.count : (unreadData ?? 0);
-
   const filteredNotifications = useMemo(() => {
     if (activeTab === "unread") {
-      return notifications.filter((n) => n.read_at === null);
+      return notifications.filter((n) => (n as any).read_at === undefined || (n as any).read_at === null);
     }
     return notifications;
   }, [notifications, activeTab]);
@@ -44,8 +43,6 @@ export default function NotificationsPage() {
     try {
       await markAsRead(id).unwrap();
       toast.success(lang === "ar" ? "تم تحديد الإشعار كمقروء" : "Notification marked as read");
-      refetch();
-      refetchCount();
     } catch {
       toast.error(lang === "ar" ? "حدث خطأ ما" : "Failed to mark notification as read");
     }
@@ -55,8 +52,6 @@ export default function NotificationsPage() {
     try {
       await markAllRead().unwrap();
       toast.success(lang === "ar" ? "تم تحديد كل الإشعارات كمقروءة" : "All notifications marked as read");
-      refetch();
-      refetchCount();
     } catch {
       toast.error(lang === "ar" ? "حدث خطأ ما" : "Failed to mark all notifications as read");
     }
@@ -66,8 +61,6 @@ export default function NotificationsPage() {
     try {
       await deleteNotification(id).unwrap();
       toast.success(lang === "ar" ? "تم حذف الإشعار" : "Notification deleted");
-      refetch();
-      refetchCount();
     } catch {
       toast.error(lang === "ar" ? "حدث خطأ ما" : "Failed to delete notification");
     }
@@ -78,8 +71,6 @@ export default function NotificationsPage() {
       await deleteAllNotifications().unwrap();
       toast.success(lang === "ar" ? "تم حذف كل الإشعارات" : "All notifications deleted");
       setShowConfirmDeleteAll(false);
-      refetch();
-      refetchCount();
     } catch {
       toast.error(lang === "ar" ? "حدث خطأ ما" : "Failed to delete all notifications");
     }
@@ -180,73 +171,17 @@ export default function NotificationsPage() {
             )}
 
             {!isLoading && filteredNotifications.length > 0 && (
-              <div className="divide-y divide-border/60">
-                {filteredNotifications.map((n) => {
-                  const isRead = n.read_at !== null;
-                  return (
-                    <div
-                      key={n.id}
-                      className={cn(
-                        "flex items-start justify-between gap-4 p-4 sm:p-5 transition-colors text-start",
-                        !isRead && "bg-primary/5 hover:bg-primary/10"
-                      )}
-                    >
-                      <div className="flex gap-3 min-w-0">
-                        <div
-                          className={cn(
-                            "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg mt-0.5",
-                            isRead
-                              ? "bg-muted text-muted-foreground/60"
-                              : "bg-primary/15 text-primary"
-                          )}
-                        >
-                          <Bell className="h-4 w-4" />
-                        </div>
-                        <div className="space-y-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <h4 className={cn("text-sm font-semibold text-foreground truncate", !isRead && "text-primary")}>
-                              {lang === "ar" ? n.title : n.title_en}
-                            </h4>
-                            {!isRead && (
-                              <span className="h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
-                            )}
-                          </div>
-                          <p className="text-xs text-muted-foreground leading-relaxed break-words whitespace-pre-wrap max-w-2xl">
-                            {lang === "ar" ? n.message : n.message_en}
-                          </p>
-                          <div className="text-[10px] text-muted-foreground font-medium pt-0.5">
-                            {formatDateTime(n.created_at, lang)}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        {!isRead && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            title={ar("تحديد كمقروء", "Mark as read")}
-                            disabled={isMarking}
-                            onClick={() => handleMarkAsRead(n.id)}
-                            className="h-8 w-8 text-primary hover:bg-primary/10"
-                          >
-                            <CheckCheck className="h-4 w-4" />
-                          </Button>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          title={ar("حذف", "Delete")}
-                          disabled={isDeleting}
-                          onClick={() => handleDelete(n.id)}
-                          className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                })}
+              <div className="flex flex-col gap-3 p-4 sm:p-5">
+                {filteredNotifications.map((n) => (
+                  <NotificationCard
+                    key={n.id || (n as any).user_id}
+                    notification={n}
+                    onMarkAsRead={handleMarkAsRead}
+                    onDelete={handleDelete}
+                    isMarkingRead={isMarking}
+                    isDeleting={isDeleting}
+                  />
+                ))}
               </div>
             )}
           </CardContent>

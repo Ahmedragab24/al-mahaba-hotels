@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/page-header";
 import { useI18n } from "@/lib/i18n";
 import { useSelector } from "react-redux";
 import { selectAuth } from "@/store/features/authSlice";
-import { hasRole, hasAnyRole, isAdmin, canAccessModule } from "@/lib/auth-utils";
+import { canWriteModule } from "@/lib/auth-utils";
 import { useGetRoomsQuery, useUpdateRoomMutation, useDeleteRoomMutation } from "@/store/services/rooms/roomsService";
 import { useGetRoomTypesQuery } from "@/store/services/attributes/room-types";
 import { useDebounce } from "@/lib/use-debounce";
@@ -35,7 +35,7 @@ export default function RoomTypesList() {
   const { t, lang } = useI18n();
   const auth = useSelector(selectAuth);
   const qc = useQueryClient();
-  const canWrite = hasAnyRole(auth, ["super_admin", "financial_manager", "sales_manager", "employee", "viewer"]);
+  const canWrite = canWriteModule(auth, "room_types");
 
   const [search, setSearch] = useState("");
   const [hotel, setHotel] = useState("all");
@@ -75,16 +75,16 @@ export default function RoomTypesList() {
       if (action === "delete") {
         await deleteRoom(id).unwrap();
       } else {
-        await updateRoom({ 
-          id, 
-          body: { 
+        await updateRoom({
+          id,
+          body: {
             name_ar: room?.name_ar,
             name_en: room?.name_en,
             hotel_id: room?.hotel_id,
             room_type_id: room?.room_type_id,
             view: room?.view || "",
-            status: action === "archive" ? "0" : "1" 
-          } as any 
+            status: action === "archive" ? "0" : "1"
+          } as any
         }).unwrap();
       }
     },
@@ -116,7 +116,7 @@ export default function RoomTypesList() {
       <div className="space-y-4 p-6">
         <Card>
           <CardContent className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            <div className="flex flex-col gap-1.5 sm:col-span-2 lg:col-span-3 xl:col-span-4">
+            <div className="flex flex-col gap-1.5">
               <Label className="text-muted-foreground">{t("actions.search")}</Label>
               <div className="relative w-full">
                 <Search className="absolute top-2.5 start-2 h-4 w-4 text-muted-foreground" />
@@ -164,94 +164,83 @@ export default function RoomTypesList() {
         </Card>
 
         {list.isLoading && (
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <Card key={i} className="overflow-hidden">
-                <Skeleton className="aspect-[3/2] w-full rounded-none" />
-                <CardContent className="space-y-3 p-4">
-                  <Skeleton className="h-5 w-3/4" />
-                  <Skeleton className="h-4 w-1/2" />
-                  <Skeleton className="h-4 w-2/3" />
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          <Card>
+            <CardContent className="p-0 space-y-2 p-6">
+              <Skeleton className="h-8 w-full" />
+              <Skeleton className="h-8 w-full" />
+              <Skeleton className="h-8 w-full" />
+            </CardContent>
+          </Card>
         )}
 
         {!list.isLoading && rows.length === 0 && (
           <Card><CardContent className="py-16 text-center text-muted-foreground">{t("label.no_results")}</CardContent></Card>
         )}
 
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
-          {rows.map((r: any) => {
-            const name = lang === "ar" ? (r.name_ar || r.name_en) : (r.name_en || r.name_ar);
-            const hotelName = r.hotel ? (lang === "ar" ? (r.hotel.name_ar || r.hotel.name_en) : (r.hotel.name_en || r.hotel.name_ar)) : "—";
-            const roomTypeName = r.room_type ? (lang === "ar" ? (r.room_type.name_ar || r.room_type.name_en) : (r.room_type.name_en || r.room_type.name_ar)) : "";
-            const isActive = r.status === 1 || r.status === "1" || r.status === true;
-            return (
-              <Card
-                key={r.id}
-                className={`group overflow-hidden border transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${!isActive ? "opacity-60" : ""}`}
-              >
-                <Link to={`/room-types/${r.id}`} className="relative block aspect-[3/2] overflow-hidden bg-muted">
-                  <img
-                    src={r.cover_image}
-                    alt={name}
-                    width={768}
-                    height={512}
-                    loading="lazy"
-                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  />
-                  <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/60 to-transparent" />
-                  <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/60 to-transparent" />
-                  <div className="absolute top-3 start-3 flex items-center gap-2">
-                    <div className="shadow-md rounded-full">
-                      <StatusPill status={isActive ? "active" : "archived"} />
-                    </div>
-                  </div>
-                  <div className="absolute bottom-2 start-3 end-3">
-                    <span className="font-mono text-[11px] text-white/90 drop-shadow-sm">{r.code}</span>
-                  </div>
-                </Link>
-                <CardContent className="space-y-2 p-4">
-                  <div className="flex items-start justify-between gap-2">
-                    <Link to={`/room-types/${r.id}`} className="line-clamp-1 text-base font-semibold hover:underline">
-                      {name}
-                    </Link>
-                  </div>
-                  <div className="text-xs font-medium text-primary">{hotelName}</div>
-                  {roomTypeName && (
-                    <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                      <BedDouble className="h-3.5 w-3.5 shrink-0" />
-                      <span>{roomTypeName}</span>
-                    </div>
-                  )}
-                  <div className="flex items-center justify-end border-t pt-3">
-                    <div className="flex gap-1">
-                      <Button asChild variant="ghost" size="icon" className="h-8 w-8" title={t("actions.view")}>
-                        <Link to={`/room-types/${r.id}`}><Eye className="h-4 w-4" /></Link>
-                      </Button>
-                      {canWrite && isActive && (
-                        <Button variant="ghost" size="icon" className="h-8 w-8" title={t("actions.edit")} onClick={() => setDialog({ open: true, initial: r })}>
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                      )}
-                      {canWrite && (isActive
-                        ? <Button variant="ghost" size="icon" className="h-8 w-8" title={t("actions.archive")} onClick={() => setConfirm({ id: r.id, action: "archive", room: r })}><Archive className="h-4 w-4" /></Button>
-                        : <Button variant="ghost" size="icon" className="h-8 w-8" title={t("actions.restore")} onClick={() => setConfirm({ id: r.id, action: "restore", room: r })}><RotateCcw className="h-4 w-4" /></Button>
-                      )}
-                      {canWrite && (
-                        <Button variant="ghost" size="icon" className="h-8 w-8" title={t("actions.delete")} onClick={() => setConfirm({ id: r.id, action: "delete", room: r })}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+        {!list.isLoading && rows.length > 0 && (
+          <Card className="overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-sm">
+                <thead>
+                  <tr className="border-b bg-muted/40 text-slate-500 font-semibold">
+                    <th className="py-3 px-4 text-start font-medium">{lang === "ar" ? "الرمز" : "Code"}</th>
+                    <th className="py-3 px-4 text-start font-medium">{lang === "ar" ? "الاسم" : "Name"}</th>
+                    <th className="py-3 px-4 text-start font-medium">{lang === "ar" ? "الفندق" : "Hotel"}</th>
+                    <th className="py-3 px-4 text-center font-medium">{lang === "ar" ? "نوع الغرفة" : "Room Type"}</th>
+                    <th className="py-3 px-4 text-center font-medium">{lang === "ar" ? "الحالة" : "Status"}</th>
+                    <th className="py-3 px-4 text-end font-medium">{lang === "ar" ? "الإجراءات" : "Actions"}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((r: any) => {
+                    const name = lang === "ar" ? (r.name_ar || r.name_en) : (r.name_en || r.name_ar);
+                    const hotelName = r.hotel ? (lang === "ar" ? (r.hotel.name_ar || r.hotel.name_en) : (r.hotel.name_en || r.hotel.name_ar)) : "—";
+                    const roomTypeName = r.room_type ? (lang === "ar" ? (r.room_type.name_ar || r.room_type.name_en) : (r.room_type.name_en || r.room_type.name_ar)) : "";
+                    const isActive = r.status === 1 || r.status === "1" || r.status === true;
+                    return (
+                      <tr key={r.id} className={`border-b transition-colors hover:bg-muted/30 ${!isActive ? "opacity-60" : ""}`}>
+                        <td className="py-3 px-4 font-mono text-xs">{r.code}</td>
+                        <td className="py-3 px-4 font-semibold text-foreground">
+                          <Link to={`/room-types/${r.id}`} className="hover:underline">
+                            {name}
+                          </Link>
+                        </td>
+                        <td className="py-3 px-4 text-primary">{hotelName}</td>
+                        <td className="py-3 px-4 text-center text-muted-foreground">{roomTypeName || "—"}</td>
+                        <td className="py-3 px-4 text-center">
+                          <div className="inline-flex justify-center">
+                            <StatusPill status={isActive ? "active" : "archived"} />
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="flex gap-1 justify-end">
+                            <Button asChild variant="ghost" size="icon" className="h-8 w-8" title={t("actions.view")}>
+                              <Link to={`/room-types/${r.id}`}><Eye className="h-4 w-4" /></Link>
+                            </Button>
+                            {canWrite && isActive && (
+                              <Button variant="ghost" size="icon" className="h-8 w-8" title={t("actions.edit")} onClick={() => setDialog({ open: true, initial: r })}>
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {canWrite && (isActive
+                              ? <Button variant="ghost" size="icon" className="h-8 w-8" title={t("actions.archive")} onClick={() => setConfirm({ id: r.id, action: "archive", room: r })}><Archive className="h-4 w-4" /></Button>
+                              : <Button variant="ghost" size="icon" className="h-8 w-8" title={t("actions.restore")} onClick={() => setConfirm({ id: r.id, action: "restore", room: r })}><RotateCcw className="h-4 w-4" /></Button>
+                            )}
+                            {canWrite && (
+                              <Button variant="ghost" size="icon" className="h-8 w-8" title={t("actions.delete")} onClick={() => setConfirm({ id: r.id, action: "delete", room: r })}>
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        )}
 
         <DataPagination page={page} pageSize={PAGE_SIZE} total={total} onPage={setPage} />
       </div>

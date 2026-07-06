@@ -66,6 +66,7 @@ export interface PlatformTransactionsStatistics {
   category_breakdown: PlatformTransactionCategoryBreakdown[];
   invoices_profit?: InvoicesProfit;
   total_platform_profit_sar?: number;
+  margin_profit_sar?: number;
   // Legacy aliases (kept for safety)
   income?: number;
   expense?: number;

@@ -18,7 +18,7 @@ import { ShieldOff, Plus, Loader2, Pencil, Trash2, AlertTriangle, Eye, User } fr
 import { toast } from "sonner";
 import { useSelector } from "react-redux";
 import { selectAuth } from "@/store/features/authSlice";
-import { hasRole, hasAnyRole, isAdmin, canAccessModule } from "@/lib/auth-utils";
+import { canWriteModule, canAccessModule } from "@/lib/auth-utils";
 import { MODULES } from "@/lib/modules";
 import { formatDateTime } from "@/lib/format";
 import { createStaffUser } from "@/lib/users.functions";
@@ -139,7 +139,6 @@ export default function UsersPage() {
     },
   });
 
-  const isSuperAdmin = hasRole(auth, "super_admin");
 
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -332,7 +331,7 @@ export default function UsersPage() {
                   <TableHead>{t("label.email")}</TableHead>
                   <TableHead>{t("label.user_type")}</TableHead>
                   <TableHead>{t("label.status")}</TableHead>
-                  {isSuperAdmin && <TableHead className="text-end w-32">{t("perm.manage")}</TableHead>}
+                  <TableHead className="text-end w-32">{t("perm.manage")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -409,7 +408,7 @@ export default function UsersPage() {
                         </Badge>
                       )}
                     </TableCell>
-                    {isSuperAdmin && (
+                   
                       <TableCell className="text-end">
                         <div className="flex justify-end gap-2">
                           <Button
@@ -452,7 +451,7 @@ export default function UsersPage() {
                           </Button>
                         </div>
                       </TableCell>
-                    )}
+               
                   </TableRow>
                 ))}
               </TableBody>
@@ -460,7 +459,7 @@ export default function UsersPage() {
           </CardContent>
         </Card>
 
-        {isSuperAdmin && <PermissionsDialog user={permUser} onClose={() => setPermUser(null)} />}
+       <PermissionsDialog user={permUser} onClose={() => setPermUser(null)} />
 
         {/* View User Dialog */}
         <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>

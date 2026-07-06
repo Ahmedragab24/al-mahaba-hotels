@@ -33,18 +33,15 @@ import {
 import logoUrl from "@/assets/daleel-logo-transparent.png";
 import logoDarkUrl from "@/assets/daleel-logo-dark.png";
 import { useI18n } from "@/lib/i18n";
-import { type AppRole } from "@/hooks/use-auth";
 import { useSelector } from "react-redux";
 import { selectAuth } from "@/store/features/authSlice";
-import { hasRole, hasAnyRole, isAdmin, canAccessModule } from "@/lib/auth-utils";
-import { pathToModule } from "@/lib/modules";
+import { canAccessModule } from "@/lib/auth-utils";
 
 type NavItem = {
   to: string;
   labelKey: string;
   icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
-  roles?: AppRole[];
-  permission?: string;
+  permission: string;
 };
 
 const operational: NavItem[] = [
@@ -107,6 +104,7 @@ const finance: NavItem[] = [
     to: "/invoices",
     labelKey: "nav.invoices",
     icon: ReceiptText,
+    permission: "invoices",
   },
   {
     to: "/platform-transactions",
@@ -132,14 +130,14 @@ const reports: NavItem[] = [
 ];
 
 const admin: NavItem[] = [
-  { to: "/users", labelKey: "nav.users", icon: ShieldCheck },
+  { to: "/users", labelKey: "nav.users", icon: ShieldCheck, permission: "users" },
   {
     to: "/tasks",
     labelKey: "nav.tasks",
     icon: ClipboardList,
     permission: "tasks",
   },
-  { to: "/settings", labelKey: "nav.settings", icon: Settings },
+  { to: "/settings", labelKey: "nav.settings", icon: Settings, permission: "settings" },
 ];
 
 const supplierNav: NavItem[] = [];
@@ -150,48 +148,11 @@ export function AppSidebar() {
   const { pathname } = useLocation();
   const { open: isOpen } = useSidebar();
 
-  const isSupplierOnly =
-    hasRole(auth, "supplier") &&
-    !hasAnyRole(auth, [
-      "super_admin",
-      "admin",
-      "sales_manager",
-      "sales_agent",
-      "operations_manager",
-      "operations_agent",
-      "finance_manager",
-      "finance_agent",
-      "viewer",
-    ]);
+  const isSupplierOnly = canAccessModule(auth, "rates") && 
+    !canAccessModule(auth, "dashboard");
 
   const canSee = (item: NavItem) => {
-    console.log('[canSee] Checking item:', item.to, 'permission:', item.permission);
-    console.log('[canSee] Auth profile:', auth.profile);
-    console.log('[canSee] Auth roles:', auth.roles);
-    
-    // Check permission if specified
-    if (item.permission) {
-      const permissions = (auth.profile as any)?.permissions;
-      console.log('[canSee] Permissions:', permissions);
-      if (permissions) {
-        // Handle both object format (from API) and array format
-        const hasPermission = typeof permissions === 'object' 
-          ? permissions[item.permission] === 'true' || permissions[item.permission] === true
-          : Array.isArray(permissions) && permissions.includes(item.permission);
-        
-        console.log('[canSee] Has permission for', item.permission, ':', hasPermission);
-        if (!hasPermission) return false;
-      }
-    }
-
-    // المنطق الافتراضي للمسارات
-    const result = (
-      hasRole(auth, "super_admin") ||
-      ((!item.roles || item.roles.length === 0 || hasAnyRole(auth, item.roles)) &&
-        canAccessModule(auth, pathToModule(item.to)))
-    );
-    console.log('[canSee] Final result for', item.to, ':', result);
-    return result;
+    return canAccessModule(auth, item.permission);
   };
 
   const visibleOperational = isSupplierOnly ? [] : operational.filter(canSee);

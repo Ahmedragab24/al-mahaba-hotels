@@ -2,7 +2,8 @@ import { Link, Navigate, type LinkProps } from "react-router-dom";
 import { useI18n } from "@/lib/i18n";
 import { useSelector } from "react-redux";
 import { selectAuth } from "@/store/features/authSlice";
-import { hasRole, hasAnyRole } from "@/lib/auth-utils";
+import { canAccessModule } from "@/lib/auth-utils";
+import type { UserProfile } from "@/types/api";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { KPI_TONE, type KpiTone } from "@/components/list-toolkit";
@@ -17,7 +18,7 @@ import {
   Coins,
   Wallet,
 } from "lucide-react";
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo } from "react";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -33,13 +34,12 @@ import {
   CartesianGrid,
 } from "recharts";
 import { useGetHomeDataQuery } from "@/store/services/home";
+import { requestPermission } from "@/lib/firebaseMessaging";
+import { useUpdateUserMutation } from "@/store/api";
 
 export default function DashboardOrRedirect() {
   const auth = useSelector(selectAuth);
-  if (
-    hasRole(auth, "viewer") &&
-    !hasAnyRole(auth, ["super_admin", "sales_manager", "financial_manager", "employee", "viewer"])
-  ) {
+  if (!canAccessModule(auth, "dashboard")) {
     return <Navigate to="/supplier-portal" replace />;
   }
   return <Dashboard />;
@@ -68,6 +68,7 @@ function KPIStatCard({
   };
   const tone = KPI_TONE[toneByBadge[badgeType]];
 
+
   const card = (
     <Card className="group h-full overflow-hidden border-border/70 bg-card transition-all hover:-translate-y-0.5 hover:shadow-md hover:shadow-primary/5">
       <CardContent className="relative p-4">
@@ -82,7 +83,7 @@ function KPIStatCard({
           </span>
         </div>
         <div className="space-y-0.5">
-          <div className="text-2xl font-bold leading-tight tracking-tight text-foreground">
+          <div className="text-2xl font-extrabold leading-tight tracking-tight text-foreground font-sans tabular-nums">
             {value}
           </div>
           <div className="text-sm font-medium text-muted-foreground">{label}</div>
@@ -105,11 +106,38 @@ function KPIStatCard({
 
 function Dashboard() {
   const { t, lang } = useI18n();
+  const auth = useSelector(selectAuth);
+  const [updateUser] = useUpdateUserMutation();
+
+  useEffect(() => {
+    requestPermission().then((token) => {
+      if (token) {
+        console.log("FCM Token obtained:", token);
+        const profile = auth.profile as UserProfile | null;
+        const userId = auth.user?.id;
+        const currentFcm = profile?.fcm;
+        if (userId && token !== currentFcm) {
+          updateUser({ id: userId, body: { fcm: token } })
+            .unwrap()
+            .then(() => {
+              console.log("FCM Token updated on backend successfully.");
+            })
+            .catch((err) => {
+              console.error("Failed to update FCM token on backend:", err);
+            });
+        }
+      }
+    });
+  }, [auth.profile, auth.user, updateUser]);
 
   const { data: dData, isLoading: isDashboardLoading } = useGetHomeDataQuery();
 
   const formatCurrency = (amount: number) => {
-    return lang === "ar" ? `${amount}ر.س` : `${amount} SAR`;
+    const formatted = Number(amount).toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+    return `${formatted} ${t("dashboard.sar")}`;
   };
 
   const getBadgeInfo = (change?: number) => {
@@ -132,6 +160,8 @@ function Dashboard() {
   const totalCustomers = cards?.total_customers?.value ?? 0;
   const outstandingAR = cards?.receivables_sar?.value ?? 0;
   const totalCollected = cards?.payments_sar?.value ?? 0;
+  const netProfit = cards?.net_profit_sar?.value ?? 0;
+  const monthlyMarginProfit = cards?.monthly_margin_profit_sar?.value ?? 0;
 
   const cardData = useMemo(() => {
     const c = dData?.cards;
@@ -146,11 +176,15 @@ function Dashboard() {
     const b7 = getBadgeInfo(c?.total_customers?.change_percentage);
     const b8 = getBadgeInfo(c?.receivables_sar?.change_percentage);
     const b9 = getBadgeInfo(c?.payments_sar?.change_percentage);
+    const b10 = getBadgeInfo(c?.net_profit_sar?.change_percentage);
+    const b11 = getBadgeInfo(c?.monthly_margin_profit_sar?.change_percentage);
+
+    const ar = (a: string, e: string) => (lang === "ar" ? a : e);
 
     return [
       {
         icon: BookOpen,
-        label: lang === "ar" ? "إجمالي الحجوزات" : "Total Bookings",
+        label: t("dashboard.total_bookings"),
         value: totalBookings.toLocaleString("en-US"),
         badgeText: b1.text,
         badgeType: b1.type,
@@ -158,7 +192,7 @@ function Dashboard() {
       },
       {
         icon: FileText,
-        label: lang === "ar" ? "عروض معلقة" : "Pending Offers",
+        label: t("dashboard.pending_offers"),
         value: pendingOffers.toLocaleString("en-US"),
         badgeText: b2.text,
         badgeType: b2.type,
@@ -166,7 +200,7 @@ function Dashboard() {
       },
       {
         icon: CheckCircle2,
-        label: lang === "ar" ? "حجوزات مؤكدة" : "Confirmed Bookings",
+        label: t("dashboard.confirmed_bookings"),
         value: confirmedBookings.toLocaleString("en-US"),
         badgeText: b3.text,
         badgeType: b3.type,
@@ -174,7 +208,7 @@ function Dashboard() {
       },
       {
         icon: Briefcase,
-        label: lang === "ar" ? "موردين نشطين" : "Active Suppliers",
+        label: t("dashboard.active_suppliers"),
         value: activeSuppliers.toLocaleString("en-US"),
         badgeText: b4.text,
         badgeType: b4.type,
@@ -182,7 +216,7 @@ function Dashboard() {
       },
       {
         icon: Hotel,
-        label: lang === "ar" ? "فنادق نشطة" : "Active Hotels",
+        label: t("dashboard.active_hotels"),
         value: activeHotels.toLocaleString("en-US"),
         badgeText: b5.text,
         badgeType: b5.type,
@@ -190,7 +224,7 @@ function Dashboard() {
       },
       {
         icon: Bed,
-        label: lang === "ar" ? "عدد الغرف" : "Rooms Count",
+        label: t("dashboard.rooms_count"),
         value: totalRooms.toLocaleString("en-US"),
         badgeText: b6.text,
         badgeType: b6.type,
@@ -198,7 +232,7 @@ function Dashboard() {
       },
       {
         icon: Users,
-        label: lang === "ar" ? "إجمالي العملاء" : "Total Customers",
+        label: t("dashboard.total_customers"),
         value: totalCustomers.toLocaleString("en-US"),
         badgeText: b7.text,
         badgeType: b7.type,
@@ -206,7 +240,7 @@ function Dashboard() {
       },
       {
         icon: Coins,
-        label: lang === "ar" ? "مستحقات مالية" : "Financial Receivables",
+        label: t("dashboard.financial_receivables"),
         value: formatCurrency(outstandingAR),
         badgeText: b8.text,
         badgeType: b8.type,
@@ -214,11 +248,27 @@ function Dashboard() {
       },
       {
         icon: Wallet,
-        label: lang === "ar" ? "مدفوعات مالية" : "Financial Payments",
+        label: t("dashboard.financial_payments"),
         value: formatCurrency(totalCollected),
         badgeText: b9.text,
         badgeType: b9.type,
         to: "/receipts" as const,
+      },
+      {
+        icon: Coins,
+        label: ar("صافي أرباح المنصة", "Net Platform Profit"),
+        value: formatCurrency(netProfit),
+        badgeText: b10.text,
+        badgeType: b10.type,
+        to: "/platform-transactions" as const,
+      },
+      {
+        icon: Wallet,
+        label: ar("أرباح هامش الربح الشهري", "Monthly Margin Profit"),
+        value: formatCurrency(monthlyMarginProfit),
+        badgeText: b11.text,
+        badgeType: b11.type,
+        to: "/platform-transactions" as const,
       },
     ];
   }, [
@@ -232,7 +282,10 @@ function Dashboard() {
     totalCustomers,
     outstandingAR,
     totalCollected,
+    netProfit,
+    monthlyMarginProfit,
     dData,
+    t,
   ]);
 
   const chartColors = {
@@ -247,33 +300,19 @@ function Dashboard() {
   // Annual financial performance data mapping
   const annualPerformanceData = useMemo(() => {
     const apiTrend = dData?.charts?.annual_financial_performance || [];
-    const monthNamesAr = [
-      "يناير",
-      "فبراير",
-      "مارس",
-      "أبريل",
-      "مايو",
-      "يونيو",
-      "يوليو",
-      "أغسطس",
-      "سبتمبر",
-      "أكتوبر",
-      "نوفمبر",
-      "ديسمبر",
-    ];
-    const monthNamesEn = [
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "May",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Oct",
-      "Nov",
-      "Dec",
+    const monthKeys = [
+      "month.jan",
+      "month.feb",
+      "month.mar",
+      "month.apr",
+      "month.may",
+      "month.jun",
+      "month.jul",
+      "month.aug",
+      "month.sep",
+      "month.oct",
+      "month.nov",
+      "month.dec",
     ];
     const defaultValues = [
       95000, 110000, 85000, 130000, 160000, 150000, 180000, 200000, 190000, 210000, 220000, 250000,
@@ -283,13 +322,13 @@ function Dashboard() {
       const monthNum = i + 1;
       const apiMonth = apiTrend.find((m: any) => m.month_num === monthNum);
       return {
-        name: lang === "ar" ? monthNamesAr[i] : monthNamesEn[i],
+        name: t(monthKeys[i]),
         value: apiMonth
           ? apiMonth.bookings_revenue + (apiMonth.other_income || 0)
           : defaultValues[i],
       };
     });
-  }, [lang, dData]);
+  }, [t, dData]);
 
   // Booking status data mapping
   const bookingStatusData = useMemo(() => {
@@ -302,36 +341,38 @@ function Dashboard() {
     };
 
     const labels = {
-      confirmed: lang === "ar" ? "مؤكد" : "Confirmed",
-      pending: lang === "ar" ? "قيد الانتظار" : "Pending",
-      cancelled: lang === "ar" ? "ملغي" : "Cancelled",
+      confirmed: t("dashboard.confirmed"),
+      pending: t("dashboard.pending"),
+      cancelled: t("dashboard.cancelled"),
     };
 
     return apiDist.map((item: any) => ({
-      name: item.label || labels[item.status as keyof typeof labels] || item.status,
+      name: labels[item.status as keyof typeof labels] || item.label || item.status,
       value: item.count,
       color: colors[item.status as keyof typeof colors] || "var(--muted-foreground)",
     }));
-  }, [lang, dData]);
+  }, [t, dData]);
 
   // Weekly booking trend data mapping
   const weeklyTrendData = useMemo(() => {
     const apiTrend = dData?.charts?.weekly_bookings_trend || [];
     if (apiTrend.length > 0) {
-      return apiTrend.map((item: any) => ({
-        name: item.week_label,
-        value: item.count,
-      }));
+      return apiTrend.map((item: any, idx: number) => {
+        return {
+          name: item.week_label || `${t("dashboard.week")} ${idx + 1}`,
+          value: item.count,
+        };
+      });
     }
     // Fallback if empty
     const scaleFactor = totalBookings / 2845;
     const defaultWeeklyValues = [120, 150, 180, 168, 210, 245, 235, 290];
 
     return Array.from({ length: 8 }, (_, i) => ({
-      name: lang === "ar" ? `أسبوع ${i + 1}` : `Week ${i + 1}`,
+      name: `${t("dashboard.week")} ${i + 1}`,
       value: Math.round(defaultWeeklyValues[i] * scaleFactor),
     }));
-  }, [lang, totalBookings, dData]);
+  }, [t, totalBookings, dData]);
 
   // Skeleton loading screen
   if (isDashboardLoading) {
@@ -339,7 +380,7 @@ function Dashboard() {
       <div className="space-y-8 p-6 animate-pulse" dir={lang === "ar" ? "rtl" : "ltr"}>
         <div className="h-10 w-48 bg-muted rounded-xl mb-6" />
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {Array.from({ length: 9 }).map((_, i) => (
+          {Array.from({ length: 11 }).map((_, i) => (
             <div key={i} className="h-32 bg-muted rounded-2xl" />
           ))}
         </div>
@@ -352,11 +393,9 @@ function Dashboard() {
 
   return (
     <div className="min-h-screen" dir={lang === "ar" ? "rtl" : "ltr"}>
-      <PageHeader title={lang === "ar" ? "لوحة التحكم" : "Dashboard"}>
+      <PageHeader title={t("dashboard.title")}>
         <div className="rounded-2xl border border-border bg-muted/50 px-4 py-2 text-xs font-semibold text-muted-foreground">
-          {lang === "ar"
-            ? "مرحباً بعودتك، نظرة عامة على عمليات اليوم."
-            : "Welcome back, here is today's overview."}
+          {t("dashboard.welcome")}
         </div>
       </PageHeader>
 
@@ -376,7 +415,7 @@ function Dashboard() {
           <Card className="">
             <div className="flex items-center justify-between border-b border-border/60 px-6 py-5">
               <h3 className="text-sm font-bold text-foreground">
-                {lang === "ar" ? "الأداء المالي السنوي" : "Annual Financial Performance"}
+                {t("dashboard.annual_financial_performance")}
               </h3>
             </div>
             <CardContent className="p-6">
@@ -411,16 +450,14 @@ function Dashboard() {
                       tickFormatter={(val) =>
                         val === 0
                           ? "0"
-                          : lang === "ar"
-                            ? `${val / 1000}K ر.س`
-                            : `${val / 1000}K SAR`
+                          : `${val / 1000}K ${t("dashboard.sar")}`
                       }
                       dx={lang === "ar" ? 10 : -10}
                     />
                     <Tooltip
                       formatter={(value: any) => [
                         formatCurrency(value),
-                        lang === "ar" ? "الإيرادات" : "Revenue",
+                        t("dashboard.revenue"),
                       ]}
                       contentStyle={{
                         borderRadius: "16px",
@@ -449,7 +486,7 @@ function Dashboard() {
           <Card className="">
             <div className="border-b border-border/60 px-6 py-5">
               <h3 className="text-sm font-bold text-foreground">
-                {lang === "ar" ? "حالة الحجوزات" : "Booking Status"}
+                {t("dashboard.booking_status")}
               </h3>
             </div>
             <CardContent className="p-6">
@@ -472,7 +509,7 @@ function Dashboard() {
                           ))}
                         </Pie>
                         <Tooltip
-                          formatter={(value: any) => [value, lang === "ar" ? "حجز" : "Bookings"]}
+                          formatter={(value: any) => [value, t("dashboard.booking_count_label")]}
                           contentStyle={{
                             borderRadius: "16px",
                             border: "1px solid var(--border)",
@@ -504,7 +541,7 @@ function Dashboard() {
           <Card className="">
             <div className="border-b border-border/60 px-6 py-5">
               <h3 className="text-sm font-bold text-foreground">
-                {lang === "ar" ? "اتجاه الحجوزات الأسبوعي" : "Weekly Booking Trend"}
+                {t("dashboard.weekly_booking_trend")}
               </h3>
             </div>
             <CardContent className="p-6">
@@ -533,7 +570,7 @@ function Dashboard() {
                       dx={lang === "ar" ? 10 : -10}
                     />
                     <Tooltip
-                      formatter={(value: any) => [value, lang === "ar" ? "حجز" : "Bookings"]}
+                      formatter={(value: any) => [value, t("dashboard.booking_count_label")]}
                       contentStyle={{
                         borderRadius: "16px",
                         border: "1px solid var(--border)",

@@ -48,6 +48,10 @@ export interface HomeResponse {
             net_profit_sar: {
                 value: number,
                 change_percentage: number
+            },
+            monthly_margin_profit_sar?: {
+                value: number,
+                change_percentage: number
             }
         },
         charts: {

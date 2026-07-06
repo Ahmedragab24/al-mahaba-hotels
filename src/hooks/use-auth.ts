@@ -1,6 +1,7 @@
 import { useSelector } from "react-redux";
 import { selectAuth } from "@/store/features/authSlice";
-import { hasAnyRole, hasRole, isAdmin } from "@/lib/auth-utils";
+import { hasAnyRole, hasRole, isAdmin, canAccessModule, canWriteModule, canApproveModule } from "@/lib/auth-utils";
+import type { PermissionKey } from "@/types/permissions";
 
 export type AppRole =
   | "super_admin"
@@ -22,6 +23,11 @@ export function useAuth() {
     hasAnyRole: (roles: AppRole[]) => hasAnyRole(auth, roles),
     hasRole: (role: AppRole) => hasRole(auth, role),
     isAdmin: () => isAdmin(auth),
+    // Permission-based checks
+    hasPermission: (permission: PermissionKey) => canAccessModule(auth, permission),
+    canAccess: (permission: PermissionKey) => canAccessModule(auth, permission),
+    canWrite: (permission: PermissionKey) => canWriteModule(auth, permission),
+    canApprove: (permission: PermissionKey) => canApproveModule(auth, permission),
     loading: false,
   };
 }

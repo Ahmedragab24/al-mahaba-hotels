@@ -1,10 +1,8 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@/store/queryBridge";
-import { apiClient } from "@/store/queryBridge";
+import { useState, useMemo } from "react";
 import { useI18n } from "@/lib/i18n";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,12 +10,22 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
-import { Loader2, Check, X, Mail, Phone, Building2, FileText } from "lucide-react";
 import {
-  listSupplierApplications,
-  approveSupplierApplication,
-  rejectSupplierApplication,
-} from "@/lib/supplier-applications.functions";
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Loader2, Check, X, Mail, Phone, Building2, FileText, Trash2 } from "lucide-react";
+import {
+  useGetSupplierRequestsQuery,
+  useUpdateSupplierRequestStatusMutation,
+  useDeleteSupplierRequestMutation,
+} from "@/store/services/supplier-requests/supplierRequestsService";
 import { toast } from "sonner";
 
 type App = {
@@ -44,101 +52,84 @@ type App = {
 };
 
 export default function SupplierApplicationsPage() {
-  const { t, lang } = useI18n(); 
-  const qc = useQueryClient();
+  const { t, lang } = useI18n();
   const [tab, setTab] = useState<"all" | "pending" | "accepted" | "rejected">("pending");
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<App | null>(null);
   const [rejecting, setRejecting] = useState<App | null>(null);
   const [reason, setReason] = useState("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["supplier-applications", tab, search, lang],
-    queryFn: async () => {
-      try {
-        const params: any = { lang };
-        if (tab !== "all") params.status = tab;
-        if (search) params.search = search;
-        const apps = await apiClient.supplierRequests.getAll(params);
-        const appsArray = Array.isArray(apps) 
-          ? apps 
-          : (Array.isArray(apps?.data) ? apps.data : []);
-        // Format to match standard App structure
-        return {
-          rows: appsArray.map((a: any) => ({
-            id: a.id,
-            company_name_ar: a.company_name_ar || a.name_ar || "",
-            company_name_en: a.company_name_en || a.name_en || "",
-            supplier_type_id: a.supplier_type_id || 1,
-            tax_number: a.tax_number || "",
-            commercial_register: a.commercial_register || "",
-            country_id: a.country_id || 0,
-            city_id: a.city_id || 0,
-            address: a.address || "",
-            website: a.website || "",
-            contact_name: a.contact_name || "",
-            contact_position: a.contact_position || "",
-            contact_email: a.contact_email || "",
-            contact_phone: a.contact_phone || "",
-            status: a.status || "pending",
-            submitted_at: a.created_at || new Date().toISOString(),
-            rejection_reason: a.rejection_reason || null,
-            country_name: lang === "ar" ? (a.country?.name_ar || a.country?.name || "") : (a.country?.name_en || a.country?.name || ""),
-            city_name: lang === "ar" ? (a.city?.name_ar || a.city?.name || "") : (a.city?.name_en || a.city?.name || ""),
-            supplier_type_name: lang === "ar" ? (a.supplier_type?.name_ar || a.supplier_type?.name || "") : (a.supplier_type?.name_en || a.supplier_type?.name || ""),
-          }))
-        };
-      } catch (err) {
-        console.warn("apiClient listSupplierApplications failed, falling back to server fn", err);
-        return await listSupplierApplications();
-      }
-    },
+  const { data: appsArray, isLoading } = useGetSupplierRequestsQuery({
+    lang,
+    search: search || undefined,
   });
 
-  const approve = useMutation({
-    mutationFn: async (id: string) => {
-      try {
-        await apiClient.supplierRequests.updateStatus(id, { status: "accepted" });
-      } catch (err) {
-        console.warn("apiClient approve failed, falling back to server fn", err);
-        await approveSupplierApplication({ data: { id } });
-      }
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["supplier-applications", tab, search, lang] });
+  const [updateStatus, { isLoading: isUpdating }] = useUpdateSupplierRequestStatusMutation();
+  const [deleteRequest, { isLoading: isDeleting }] = useDeleteSupplierRequestMutation();
+
+  const handleApprove = async (id: string) => {
+    try {
+      await updateStatus({ id, body: { status: "accepted" } }).unwrap();
       setSelected(null);
       toast.success(t("supplier.applications.approved"));
-    },
-    onError: (e) => toast.error(e instanceof Error ? e.message : String(e)),
-  });
+    } catch (err: any) {
+      toast.error(err?.data?.message || err?.message || String(err));
+    }
+  };
 
-  const reject = useMutation({
-    mutationFn: async () => {
-      try {
-        await apiClient.supplierRequests.updateStatus(rejecting!.id, { status: "rejected", rejection_reason: reason });
-      } catch (err) {
-        console.warn("apiClient reject failed, falling back to server fn", err);
-        await rejectSupplierApplication({ data: { id: rejecting!.id, reason } });
-      }
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["supplier-applications", tab, search, lang] });
-      setRejecting(null); setReason("");
+  const handleReject = async () => {
+    if (!rejecting) return;
+    try {
+      await updateStatus({ id: rejecting.id, body: { status: "rejected", rejection_reason: reason } }).unwrap();
+      setRejecting(null);
+      setReason("");
       toast.success(t("supplier.applications.rejected"));
-    },
-    onError: (e) => toast.error(e instanceof Error ? e.message : String(e)),
-  });
+    } catch (err: any) {
+      toast.error(err?.data?.message || err?.message || String(err));
+    }
+  };
 
-  const allRows = (data?.rows ?? []) as App[];
+  const handleDelete = (id: string) => {
+    setDeletingId(id);
+  };
 
-  const filteredRows = tab === "all" 
-    ? allRows 
+  const allRows: App[] = useMemo(() => {
+    const arr = Array.isArray(appsArray)
+      ? appsArray
+      : (Array.isArray((appsArray as any)?.data) ? (appsArray as any).data : []);
+    return arr.map((a: any) => ({
+      id: a.id,
+      company_name_ar: a.company_name_ar || a.name_ar || "",
+      company_name_en: a.company_name_en || a.name_en || "",
+      supplier_type_id: a.supplier_type_id || 1,
+      tax_number: a.tax_number || "",
+      commercial_register: a.commercial_register || "",
+      country_id: a.country_id || 0,
+      city_id: a.city_id || 0,
+      address: a.address || "",
+      website: a.website || "",
+      contact_name: a.contact_name || "",
+      contact_position: a.contact_position || "",
+      contact_email: a.contact_email || "",
+      contact_phone: a.contact_phone || "",
+      status: a.status || "pending",
+      submitted_at: a.created_at || new Date().toISOString(),
+      rejection_reason: a.rejection_reason || null,
+      country_name: lang === "ar" ? (a.country?.name_ar || a.country?.name || "") : (a.country?.name_en || a.country?.name || ""),
+      city_name: lang === "ar" ? (a.city?.name_ar || a.city?.name || "") : (a.city?.name_en || a.city?.name || ""),
+      supplier_type_name: lang === "ar" ? (a.supplier_type?.name_ar || a.supplier_type?.name || "") : (a.supplier_type?.name_en || a.supplier_type?.name || ""),
+    }));
+  }, [appsArray, lang]);
+
+  const filteredRows = tab === "all"
+    ? allRows
     : allRows.filter((r) => {
-        if (tab === "pending") return r.status === "pending" || r.status === "under_review";
-        if (tab === "accepted") return r.status === "accepted";
-        if (tab === "rejected") return r.status === "rejected";
-        return true;
-      });
+      if (tab === "pending") return r.status === "pending" || r.status === "under_review";
+      if (tab === "accepted") return r.status === "accepted";
+      if (tab === "rejected") return r.status === "rejected";
+      return true;
+    });
 
   const counts = {
     pending: allRows.filter((r) => r.status === "pending" || r.status === "under_review").length,
@@ -184,16 +175,21 @@ export default function SupplierApplicationsPage() {
                         <span>{new Date(app.submitted_at).toLocaleDateString(lang === "ar" ? "ar-SA" : "en-US")}</span>
                       </div>
                     </div>
-                    {(app.status === "pending" || app.status === "under_review") && (
-                      <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                        <Button size="sm" onClick={() => approve.mutate(app.id)} disabled={approve.isPending}>
-                          <Check className="h-4 w-4 me-1" />{t("actions.approve")}
-                        </Button>
-                        <Button size="sm" variant="outline" onClick={() => setRejecting(app)}>
-                          <X className="h-4 w-4 me-1" />{t("actions.reject")}
-                        </Button>
-                      </div>
-                    )}
+                    <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                      {(app.status === "pending" || app.status === "under_review") && (
+                        <>
+                          <Button size="sm" onClick={() => handleApprove(app.id)} disabled={isUpdating || isDeleting}>
+                            <Check className="h-4 w-4 me-1" />{t("actions.approve")}
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => setRejecting(app)} disabled={isUpdating || isDeleting}>
+                            <X className="h-4 w-4 me-1" />{t("actions.reject")}
+                          </Button>
+                        </>
+                      )}
+                      <Button size="sm" variant="destructive" onClick={() => handleDelete(app.id)} disabled={isUpdating || isDeleting}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
               ))}
@@ -228,17 +224,22 @@ export default function SupplierApplicationsPage() {
                   <Field icon={<FileText className="h-4 w-4 text-destructive" />} label={t("supplier.applications.rejection_reason")} value={selected.rejection_reason} />
                 )}
               </div>
-              {(selected.status === "pending" || selected.status === "under_review") && (
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => { setRejecting(selected); setSelected(null); }}>
-                    <X className="h-4 w-4 me-1" />{t("actions.reject")}
-                  </Button>
-                  <Button onClick={() => approve.mutate(selected.id)} disabled={approve.isPending}>
-                    {approve.isPending ? <Loader2 className="h-4 w-4 me-1 animate-spin" /> : <Check className="h-4 w-4 me-1" />}
-                    {t("actions.approve")}
-                  </Button>
-                </DialogFooter>
-              )}
+              <DialogFooter className="flex flex-row justify-between items-center gap-2">
+                <Button variant="destructive" size="sm" onClick={() => handleDelete(selected.id)} disabled={isUpdating || isDeleting}>
+                  <Trash2 className="h-4 w-4 me-1" />{t("actions.delete") || (lang === "ar" ? "حذف" : "Delete")}
+                </Button>
+                {(selected.status === "pending" || selected.status === "under_review") && (
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => { setRejecting(selected); setSelected(null); }}>
+                      <X className="h-4 w-4 me-1" />{t("actions.reject")}
+                    </Button>
+                    <Button size="sm" onClick={() => handleApprove(selected.id)} disabled={isUpdating || isDeleting}>
+                      {isUpdating ? <Loader2 className="h-4 w-4 me-1 animate-spin" /> : <Check className="h-4 w-4 me-1" />}
+                      {t("actions.approve")}
+                    </Button>
+                  </div>
+                )}
+              </DialogFooter>
             </>
           )}
         </DialogContent>
@@ -254,13 +255,54 @@ export default function SupplierApplicationsPage() {
           <Textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={4} placeholder={t("supplier.applications.reason_placeholder")} />
           <DialogFooter>
             <Button variant="ghost" onClick={() => setRejecting(null)}>{t("actions.cancel")}</Button>
-            <Button variant="destructive" onClick={() => reject.mutate()} disabled={!reason.trim() || reject.isPending}>
-              {reject.isPending && <Loader2 className="h-4 w-4 me-1 animate-spin" />}
+            <Button variant="destructive" onClick={() => handleReject()} disabled={!reason.trim() || isUpdating}>
+              {isUpdating && <Loader2 className="h-4 w-4 me-1 animate-spin" />}
               {t("actions.reject")}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={!!deletingId} onOpenChange={(o) => !o && setDeletingId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {lang === "ar" ? "هل أنت متأكد من حذف هذا الطلب؟" : "Are you sure you want to delete this request?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {lang === "ar"
+                ? "لا يمكن التراجع عن هذا الإجراء بعد إتمامه."
+                : "This action cannot be undone."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex flex-row justify-end gap-2">
+            <AlertDialogCancel disabled={isDeleting}>
+              {lang === "ar" ? "إلغاء" : "Cancel"}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className={buttonVariants({ variant: "destructive" })}
+              disabled={isDeleting}
+              onClick={async (e) => {
+                e.preventDefault();
+                if (deletingId) {
+                  try {
+                    await deleteRequest(deletingId).unwrap();
+                    setDeletingId(null);
+                    setSelected(null);
+                    toast.success(lang === "ar" ? "تم حذف الطلب بنجاح" : "Request deleted successfully");
+                  } catch (err: any) {
+                    toast.error(err?.data?.message || err?.message || String(err));
+                  }
+                }
+              }}
+            >
+              {isDeleting && <Loader2 className="h-4 w-4 me-1 animate-spin" />}
+              {lang === "ar" ? "حذف" : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, db, apiClient, dbErrorMessage } from "@/store/queryBridge";
-import { useGetQuotationsQuery } from "@/store/api";
+import { useGetQuotationsQuery } from "@/store/services/quotations/quotationsService";
 import { useI18n } from "@/lib/i18n";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent } from "@/components/ui/card";
@@ -70,6 +70,44 @@ export default function NewBooking() {
     const used = new Set((convertedQuery.data ?? []).map((b: any) => String(b.quotation_id)));
     return list.filter((q: any) => !used.has(String(q.id)));
   }, [rawQuotes, convertedQuery.data]);
+
+  const selectedQuote = useMemo(() => {
+    return selectedQuoteQuery.data || quotesList.find((q: any) => String(q.id) === String(quoteId));
+  }, [selectedQuoteQuery.data, quotesList, quoteId]);
+
+  const initialData = useMemo(() => {
+    if (!selectedQuote) return null;
+    const currCode = typeof selectedQuote?.currency === "object" ? selectedQuote.currency?.code : (selectedQuote?.currency ?? "SAR");
+    const firstItem = selectedQuote?.items?.[0];
+    const pd = firstItem?.price_details || {};
+    
+    const allStartDates = selectedQuote?.items?.map((it: any) => it.start_date).filter(Boolean) ?? [];
+    const allEndDates = selectedQuote?.items?.map((it: any) => it.end_date).filter(Boolean) ?? [];
+    const checkIn = allStartDates.length > 0 ? allStartDates.sort()[0] : (selectedQuote?.check_in || selectedQuote?.start_date || "");
+    const checkOut = allEndDates.length > 0 ? allEndDates.sort().reverse()[0] : (selectedQuote?.check_out || selectedQuote?.end_date || "");
+    
+    const hotelId = selectedQuote?.hotel_id || pd.hotel_id || firstItem?.hotel_id || "";
+    const countryId = selectedQuote?.hotel?.country_id || pd.hotel?.country_id || "";
+    const cityId = selectedQuote?.hotel?.city_id || pd.hotel?.city_id || "";
+
+    return {
+      currency: currCode,
+      customer_id: selectedQuote?.customer_id,
+      currency_id: selectedQuote?.currency_id,
+      hotel_id: hotelId,
+      country_id: countryId,
+      city_id: cityId,
+      check_in: checkIn,
+      check_out: checkOut,
+      notes: selectedQuote?.notes,
+      total_amount: selectedQuote?.total_value != null ? Math.round(Number(selectedQuote.total_value)) : undefined,
+      rooms: selectedQuote?.items?.reduce((sum: number, it: any) => sum + (it.room_count || 1), 0) ?? 1,
+      group_size: selectedQuote?.group_size ?? 1,
+      is_direct: false,
+      quotation_id: quoteId,
+      items: selectedQuote?.items,
+    };
+  }, [selectedQuote, quoteId]);
 
   const convert = useMutation({
     mutationFn: async () => {
@@ -202,34 +240,14 @@ export default function NewBooking() {
                 <div className="p-6 text-center text-muted-foreground">{t("label.loading")}</div>
               )}
 
-              {quoteId && !selectedQuoteQuery.isLoading && (() => {
-                const selected = selectedQuoteQuery.data || quotesList.find((q: any) => String(q.id) === String(quoteId));
-                const currCode = typeof selected?.currency === "object" ? selected.currency?.code : (selected?.currency ?? "SAR");
-                return (
-                  <BookingForm
-                    key={quoteId || "quotation-booking"}
-                    isQuotationConfirm={true}
-                    initial={{
-                      currency: currCode,
-                      customer_id: selected?.customer_id,
-                      currency_id: selected?.currency_id,
-                      hotel_id: selected?.hotel_id,
-                      country_id: selected?.hotel?.country_id,
-                      city_id: selected?.hotel?.city_id,
-                      check_in: selected?.start_date,
-                      check_out: selected?.end_date,
-                      notes: selected?.notes,
-                      total_amount: selected?.total_value,
-                      rooms: selected?.items?.reduce((sum: number, it: any) => sum + (it.room_count || 1), 0) ?? 1,
-                      group_size: selected?.group_size ?? 1,
-                      is_direct: false,
-                      quotation_id: quoteId,
-                      items: selected?.items,
-                    }}
-                    onSaved={(id) => navigate(`/bookings/${id}`)}
-                  />
-                );
-              })()}
+              {quoteId && !selectedQuoteQuery.isLoading && initialData && (
+                <BookingForm
+                  key={quoteId || "quotation-booking"}
+                  isQuotationConfirm={true}
+                  initial={initialData}
+                  onSaved={(id) => navigate(`/bookings/${id}`)}
+                />
+              )}
             </div>
           </TabsContent>
         </Tabs>

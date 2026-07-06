@@ -4,7 +4,7 @@ import { useGetBookingByIdQuery, useUpdateBookingMutation } from "@/store/api";
 import { useI18n } from "@/lib/i18n";
 import { useSelector } from "react-redux";
 import { selectAuth } from "@/store/features/authSlice";
-import { hasRole, hasAnyRole, isAdmin, canAccessModule } from "@/lib/auth-utils";
+import { canWriteModule, canApproveModule } from "@/lib/auth-utils";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -262,40 +262,62 @@ function PrintInvoice({
             {ar("تفاصيل الغرفة والفندق", "Hotel & Room Details")}
           </div>
           {(rooms.length > 0 || (booking.items && booking.items.length > 0)) ? (
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "8.5pt" }}>
-              <thead>
-                <tr style={{ background: "#f9fafb" }}>
-                  {[ar("الفندق", "Hotel"), ar("نوع الغرفة", "Room Type"), ar("الإشغال", "Occupancy"), ar("الوصول", "Check-in"), ar("المغادرة", "Check-out"), ar("الليالي", "Nights"), ar("الغرف", "Rooms")].map((h, i) => (
-                    <th key={i} style={{ padding: "2mm 3mm", textAlign: lang === "ar" ? "right" : "left", borderBottom: "1px solid #e5e7eb", fontWeight: "600", color: "#374151" }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {((booking.items && booking.items.length > 0) ? booking.items : rooms).map((room: any, i: number) => {
-                  const isItem = !!room.price;
-                  const hotelName = isItem ? (lang === "ar" ? booking.hotel?.name_ar : booking.hotel?.name_en) : (lang === "ar" ? room.hotel?.name_ar || room.hotel?.name_en : room.hotel?.name_en || room.hotel?.name_ar);
-                  const roomTypeName = isItem ? (lang === "ar" ? room.price?.room?.name_ar || room.price?.room?.name || room.price?.room?.name_en : room.price?.room?.name_en || room.price?.room?.name || room.price?.room?.name_ar) : (lang === "ar" ? room.room_type?.name_ar || room.room_type?.name || room.room_type?.name_en : room.room_type?.name_en || room.room_type?.name || room.room_type?.name_ar);
-                  const viewName = isItem ? (lang === "ar" ? room.price?.view?.name_ar || room.price?.view?.name || room.price?.view?.name_en : room.price?.view?.name_en || room.price?.view?.name || room.price?.view?.name_ar) : (lang === "ar" ? room.view?.name_ar || room.view?.name || room.view?.name_en : room.view?.name_en || room.view?.name || room.view?.name_ar);
-                  const occupancy = isItem ? "—" : room.occupancy_type;
-                  const roomCheckIn = isItem ? formatDate(booking.check_in) : formatDate(room.check_in);
-                  const roomCheckOut = isItem ? formatDate(booking.check_out) : formatDate(room.check_out);
-                  const roomNights = isItem ? booking.nights : room.nights;
-                  const roomCount = isItem ? room.room_count : room.rooms;
+            <>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "8.5pt" }}>
+                <thead>
+                  <tr style={{ background: "#f9fafb" }}>
+                    {[ar("الفندق", "Hotel"), ar("نوع الغرفة", "Room Type"), ar("الوصول", "Check-in"), ar("المغادرة", "Check-out"), ar("الليالي", "Nights"), ar("الغرف", "Rooms"), ar("سعر الليلة", "Rate/Night"), ar("الإجمالي", "Subtotal")].map((h, i) => (
+                      <th key={i} style={{ padding: "2mm 3mm", textAlign: lang === "ar" ? "right" : "left", borderBottom: "1px solid #e5e7eb", fontWeight: "600", color: "#374151" }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {((booking.items && booking.items.length > 0) ? booking.items : rooms).map((room: any, i: number) => {
+                    const isItem = !!room.price;
+                    const hotelName = isItem ? (lang === "ar" ? booking.hotel?.name_ar : booking.hotel?.name_en) : (lang === "ar" ? room.hotel?.name_ar || room.hotel?.name_en : room.hotel?.name_en || room.hotel?.name_ar);
+                    const roomTypeName = isItem ? (lang === "ar" ? room.price?.room?.name_ar || room.price?.room?.name || room.price?.room?.name_en : room.price?.room?.name_en || room.price?.room?.name || room.price?.room?.name_ar) : (lang === "ar" ? room.room_type?.name_ar || room.room_type?.name || room.room_type?.name_en : room.room_type?.name_en || room.room_type?.name || room.room_type?.name_ar);
+                    const viewName = isItem ? (room.price?.room?.view || room.price?.view?.name_ar || room.price?.view?.name || room.price?.view?.name_en) : (lang === "ar" ? room.view?.name_ar || room.view?.name || room.view?.name_en : room.view?.name_en || room.view?.name || room.view?.name_ar);
+                    const roomCheckIn = isItem ? formatDate(booking.check_in) : formatDate(room.check_in);
+                    const roomCheckOut = isItem ? formatDate(booking.check_out) : formatDate(room.check_out);
+                    const roomNights = isItem ? booking.nights : room.nights;
+                    const roomCount = isItem ? room.room_count : room.rooms;
+                    const ratePerNight = isItem ? (room.night_price || room.price?.selling_price || 0) : (room.selling_price || 0);
+                    const subtotal = isItem ? (room.subtotal || ratePerNight * roomCount * roomNights) : (room.total_selling || ratePerNight * roomCount * roomNights);
 
-                  return (
-                    <tr key={i} style={{ borderBottom: "1px solid #f3f4f6" }}>
-                      <td style={{ padding: "2mm 3mm" }}>{hotelName ?? "—"}</td>
-                      <td style={{ padding: "2mm 3mm" }}>{roomTypeName ?? "—"} ({viewName ?? "—"})</td>
-                      <td style={{ padding: "2mm 3mm" }}>{occupancy ?? "—"}</td>
-                      <td style={{ padding: "2mm 3mm", direction: "ltr" }}>{roomCheckIn}</td>
-                      <td style={{ padding: "2mm 3mm", direction: "ltr" }}>{roomCheckOut}</td>
-                      <td style={{ padding: "2mm 3mm", textAlign: "center" }}>{roomNights}</td>
-                      <td style={{ padding: "2mm 3mm", textAlign: "center" }}>{roomCount}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                    return (
+                      <tr key={i} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                        <td style={{ padding: "2mm 3mm" }}>{hotelName ?? "—"}</td>
+                        <td style={{ padding: "2mm 3mm" }}>{roomTypeName ?? "—"} {viewName ? `(${viewName})` : ""}</td>
+                        <td style={{ padding: "2mm 3mm", direction: "ltr" }}>{roomCheckIn}</td>
+                        <td style={{ padding: "2mm 3mm", direction: "ltr" }}>{roomCheckOut}</td>
+                        <td style={{ padding: "2mm 3mm", textAlign: "center" }}>{roomNights}</td>
+                        <td style={{ padding: "2mm 3mm", textAlign: "center" }}>{roomCount}</td>
+                        <td style={{ padding: "2mm 3mm", textAlign: lang === "ar" ? "left" : "right" }}>{fmt(ratePerNight)} {currency}</td>
+                        <td style={{ padding: "2mm 3mm", textAlign: lang === "ar" ? "left" : "right", fontWeight: "bold" }}>{fmt(subtotal)} {currency}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+
+              {/* Totals Summary */}
+              <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "4mm", marginBottom: "4mm" }}>
+                <div style={{ width: "65mm", fontSize: "8.5pt", lineHeight: 2, border: "1px solid #e5e7eb", borderRadius: "6px", overflow: "hidden" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", padding: "1.5mm 3mm", borderBottom: "1px solid #f3f4f6" }}>
+                    <span>{ar("المبلغ الإجمالي:", "Total Amount:")}</span>
+                    <span style={{ fontWeight: "bold" }}>{fmt(total)} {currency}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", padding: "1.5mm 3mm", borderBottom: "1px solid #f3f4f6", color: "#10b981" }}>
+                    <span>{ar("المبلغ المدفوع:", "Amount Paid:")}</span>
+                    <span style={{ fontWeight: "bold" }}>{fmt(paid)} {currency}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", padding: "1.5mm 3mm", background: remaining > 0 ? "#fee2e2" : "#d1fae5", color: remaining > 0 ? "#b91c1c" : "#047857" }}>
+                    <span>{ar("المبلغ المتبقي:", "Remaining:")}</span>
+                    <span style={{ fontWeight: "bold" }}>{fmt(remaining)} {currency}</span>
+                  </div>
+                </div>
+              </div>
+            </>
           ) : (
             <div style={{ padding: "3mm 4mm", fontSize: "9pt", lineHeight: 2 }}>
               {booking.room_type_id && <div><strong>{ar("نوع الغرفة:", "Room Type:")}</strong> {booking.room_type_id}</div>}
@@ -340,14 +362,40 @@ export default function BookingDetail() {
   const auth = useSelector(selectAuth);
   const navigate = useNavigate();
   const printRef = useRef<HTMLDivElement>(null);
-  const canWrite = hasAnyRole(auth, [...BK_WRITE_ROLES]);
-  const canManage = hasAnyRole(auth, ["super_admin", "admin", "sales_manager", "operations_manager"]);
+  const canWrite = canWriteModule(auth, "bookings");
+  const canManage = canApproveModule(auth, "bookings");
   const { search } = window.location;
   const hasEditParam = new URLSearchParams(search).get("edit") === "true";
   const [editing, setEditing] = useState(hasEditParam);
   const [showInvoice, setShowInvoice] = useState(false);
+  const [updateBooking, { isLoading: isUpdating }] = useUpdateBookingMutation();
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   const ar = (a: string, e: string) => (lang === "ar" ? a : e);
+
+  const handleUpdateStatus = async (status: string, notes?: string) => {
+    try {
+      await updateBooking({
+        id: id || "",
+        body: {
+          status: status as any,
+          notes: notes || undefined,
+        },
+      }).unwrap();
+      toast.success(
+        status === "cancelled"
+          ? ar("تم إلغاء الحجز بنجاح", "Booking cancelled successfully")
+          : ar("تم تأكيد الحجز بنجاح", "Booking confirmed successfully")
+      );
+      setShowCancelDialog(false);
+      setShowConfirmDialog(false);
+      setCancelReason("");
+    } catch (err: any) {
+      toast.error(err?.data?.message || ar("حدث خطأ أثناء تحديث حالة الحجز", "Failed to update booking status"));
+    }
+  };
 
   const b = useGetBookingByIdQuery({ id: id || "", lang });
   const rooms = useBookingRooms(id || "");
@@ -399,12 +447,12 @@ export default function BookingDetail() {
       : r.hotel?.name_en || r.hotel?.name || r.hotel?.name_ar;
   const roomTypeName =
     lang === "ar"
-      ? r.room_type?.name_ar || r.room_type?.name || r.room_type?.name_en
-      : r.room_type?.name_en || r.room_type?.name || r.room_type?.name_ar;
+      ? r.room_type?.name_ar || r.room_type?.name || r.room_type?.name_en || r.items?.[0]?.price?.room?.name
+      : r.room_type?.name_en || r.room_type?.name || r.room_type?.name_ar || r.items?.[0]?.price?.room?.name;
   const viewName =
     lang === "ar"
-      ? r.view?.name_ar || r.view?.name || r.view?.name_en
-      : r.view?.name_en || r.view?.name || r.view?.name_ar;
+      ? r.view?.name_ar || r.view?.name || r.view?.name_en || r.items?.[0]?.price?.room?.view
+      : r.view?.name_en || r.view?.name || r.view?.name_ar || r.items?.[0]?.price?.room?.view;
 
   const editableHeader = canWrite && ["pending", "pending_supplier_confirmation", "draft"].includes(r.status) && !r.deleted_at;
   const editableRooms = canWrite && ["pending", "pending_supplier_confirmation", "draft"].includes(r.status) && !r.deleted_at;
@@ -426,10 +474,7 @@ export default function BookingDetail() {
     variant?: "destructive" | "outline";
     show: boolean;
     needsReason?: boolean;
-  }[] = [
-      { key: "confirm", label: t("bk.confirm"), status: "confirmed", icon: Check, show: canWrite && ["pending", "pending_supplier_confirmation", "draft"].includes(r.status) },
-      { key: "cancel", label: t("bk.cancel"), status: "cancelled", icon: Ban, variant: "destructive", show: canWrite && ["pending", "pending_supplier_confirmation", "draft", "confirmed"].includes(r.status), needsReason: true },
-    ];
+  }[] = [];
 
   return (
     <>
@@ -457,7 +502,13 @@ export default function BookingDetail() {
                 key={a.key}
                 size="sm"
                 variant={(a.variant as any) ?? "default"}
-                onClick={() => {}}
+                onClick={() => {
+                  if (a.key === "cancel") {
+                    setShowCancelDialog(true);
+                  } else if (a.key === "confirm") {
+                    setShowConfirmDialog(true);
+                  }
+                }}
               >
                 <a.icon className="h-4 w-4" />
                 {a.label}
@@ -576,7 +627,7 @@ export default function BookingDetail() {
                     <tbody className="divide-y divide-border/60">
                       {r.items.map((item: any, idx: number) => {
                         const roomName = lang === "ar" ? item.price?.room?.name_ar || item.price?.room?.name || item.price?.room?.name_en || "—" : item.price?.room?.name_en || item.price?.room?.name || item.price?.room?.name_ar || "—";
-                        const viewName = lang === "ar" ? item.price?.view?.name_ar || item.price?.view?.name || item.price?.view?.name_en || "—" : item.price?.view?.name_en || item.price?.view?.name || item.price?.view?.name_ar || "—";
+                        const viewName = lang === "ar" ? item.price?.room?.view || item.price?.view?.name_ar || item.price?.view?.name || item.price?.view?.name_en || "—" : item.price?.room?.view || item.price?.view?.name_en || item.price?.view?.name || item.price?.view?.name_ar || "—";
                         return (
                           <tr key={item.id || idx} className="hover:bg-muted/30">
                             <td className="py-3 px-4 font-medium text-foreground">{roomName}</td>
@@ -878,6 +929,54 @@ export default function BookingDetail() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ── Cancel Booking Dialog ── */}
+      <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Ban className="w-5 h-5" />
+              {ar("إلغاء الحجز", "Cancel Booking")}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4 space-y-3">
+            <p className="text-sm text-muted-foreground">
+              {ar(
+                "الرجاء كتابة سبب إلغاء هذا الحجز لتسجيله في النظام:",
+                "Please specify the reason for cancelling this booking:",
+              )}
+            </p>
+            <Textarea
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              placeholder={ar("سبب الإلغاء...", "Cancellation reason...")}
+              className="min-h-[100px] resize-none"
+            />
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setShowCancelDialog(false)}>
+              {t("actions.cancel")}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => handleUpdateStatus("cancelled", cancelReason)}
+              disabled={isUpdating}
+            >
+              {isUpdating ? t("label.loading") : ar("تأكيد الإلغاء", "Confirm Cancellation")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Confirm Booking Dialog ── */}
+      <ConfirmDialog
+        open={showConfirmDialog}
+        onOpenChange={setShowConfirmDialog}
+        title={ar("تأكيد الحجز", "Confirm Booking")}
+        description={ar("هل أنت متأكد من رغبتك في تأكيد هذا الحجز؟", "Are you sure you want to confirm this booking?")}
+        destructive={false}
+        onConfirm={() => handleUpdateStatus("confirmed")}
+      />
     </>
   );
 }

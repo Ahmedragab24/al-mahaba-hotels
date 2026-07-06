@@ -8,10 +8,10 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { selectAuth, clearAuth } from "@/store/features/authSlice";
 import { useGetProfileQuery, useLogoutMutation } from "@/store/api";
-import { canAccessModule, hasAnyRole } from "@/lib/auth-utils";
+import { canAccessModule } from "@/lib/auth-utils";
 import { useI18n } from "@/lib/i18n";
 import { LogOut, ShieldOff, Loader2 } from "lucide-react";
-import { pathToModule, moduleRoles } from "@/lib/modules";
+import { pathToModule } from "@/lib/modules";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -60,11 +60,9 @@ export default function AuthenticatedLayout() {
   }
 
   const currentModule = pathToModule(pathname);
-  const requiredRoles = moduleRoles(currentModule);
   const blocked =
     auth.roles.length > 0 &&
-    (!canAccessModule(auth, currentModule) ||
-      (requiredRoles !== null && !hasAnyRole(auth, requiredRoles)));
+    !canAccessModule(auth, currentModule);
 
   async function handleSignOut() {
     try {

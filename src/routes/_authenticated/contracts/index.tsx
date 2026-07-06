@@ -7,7 +7,7 @@ import { PageHeader } from "@/components/page-header";
 import { useI18n } from "@/lib/i18n";
 import { useSelector } from "react-redux";
 import { selectAuth } from "@/store/features/authSlice";
-import { hasRole, hasAnyRole, isAdmin } from "@/lib/auth-utils";
+import { canWriteModule, isAdmin } from "@/lib/auth-utils";
 import { useDebounce } from "@/lib/use-debounce";
 import { useHotelsLite, useSuppliersLite } from "@/lib/lookups";
 import { dbErrorMessage } from "@/store/queryBridge";
@@ -34,7 +34,7 @@ export default function ContractsList() {
   const auth = useSelector(selectAuth);
   const qc = useQueryClient();
   const navigate = useNavigate();
-  const canWrite = hasAnyRole(auth, ["super_admin", "admin", "operations_manager", "operations_agent"]);
+  const canWrite = canWriteModule(auth, "rates");
 
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");

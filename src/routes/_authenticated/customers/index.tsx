@@ -3,7 +3,7 @@ import { PageHeader } from "@/components/page-header";
 import { useI18n } from "@/lib/i18n";
 import { useSelector } from "react-redux";
 import { selectAuth } from "@/store/features/authSlice";
-import { hasRole, hasAnyRole, isAdmin, canAccessModule } from "@/lib/auth-utils";
+import { canWriteModule, isAdmin } from "@/lib/auth-utils";
 import { useDebounce } from "@/lib/use-debounce";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -60,13 +60,7 @@ function CustomersList() {
   const { t, lang } = useI18n();
   const auth = useSelector(selectAuth);
   const navigate = useNavigate();
-  const canWrite = hasAnyRole(auth, [
-    "super_admin",
-    "financial_manager",
-    "sales_manager",
-    "employee",
-    "viewer",
-  ]);
+  const canWrite = canWriteModule(auth, "customers");
 
   const [search, setSearch] = useState("");
   const [type, setType] = useState<string>("all");

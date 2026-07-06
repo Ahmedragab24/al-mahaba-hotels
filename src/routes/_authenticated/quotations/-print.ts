@@ -48,33 +48,56 @@ export async function openQuotationPrint(opts: {
   const locale = DOC_LANGS[lang].locale;
   const rtl = dir === "rtl";
   const symbol = q.currency_symbol || q.currency;
-
   const money = (n: number) =>
     `${Number(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${symbol}`;
 
-  const d = (v: string | null | undefined) => {
-    const parsed = parseApiDate(v ?? null);
-    return parsed ? parsed.toLocaleDateString(locale) : "—";
+  const formatDateCustom = (dateStr: string | null | undefined, includeTime = false) => {
+    const parsed = parseApiDate(dateStr ?? null);
+    if (!parsed) return "—";
+    const day = String(parsed.getDate()).padStart(2, "0");
+    const month = String(parsed.getMonth() + 1).padStart(2, "0");
+    const year = parsed.getFullYear();
+    
+    let result = `${year}-${month}-${day}`;
+    
+    if (includeTime) {
+      const hours = String(parsed.getHours()).padStart(2, "0");
+      const minutes = String(parsed.getMinutes()).padStart(2, "0");
+      result += ` ${hours}:${minutes}`;
+    }
+    return result;
   };
 
-  const dTime = (v: string | null | undefined) => {
-    const parsed = parseApiDate(v ?? null);
-    return parsed
-      ? parsed.toLocaleString(locale, { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
-      : "—";
-  };
+  const d = (v: string | null | undefined) => formatDateCustom(v);
+
+  const dTime = (v: string | null | undefined) => formatDateCustom(v, true);
 
   const name = (o?: { name_en?: string | null; name_ar?: string | null; name?: string | null } | null) =>
     localizedName(o, rtl);
 
-  const hotel = q.hotel;
+  const hotel = q.hotel || items[0]?.hotel;
   const coverImage = hotel?.cover_image;
-  const hotelLocation = [localizedName(hotel?.city, rtl), localizedName(hotel?.country, rtl)].filter((x) => x !== "—").join(" · ");
+  const hotelLocation = hotel ? [localizedName(hotel?.city, rtl), localizedName(hotel?.country, rtl)].filter((x) => x !== "—").join(" · ") : "";
   const stars = Number(hotel?.stars ?? 0);
   const starsHtml = stars > 0 ? `<span class="stars">${"★".repeat(stars)}</span>` : "";
-  const policies = rtl
-    ? hotel?.policies_ar || hotel?.policies || hotel?.policies_en
-    : hotel?.policies_en || hotel?.policies || hotel?.policies_ar;
+  const policies = hotel
+    ? (rtl
+      ? hotel?.policies_ar || hotel?.policies || hotel?.policies_en
+      : hotel?.policies_en || hotel?.policies || hotel?.policies_ar)
+    : "";
+
+  let overallCheckIn = q.check_in || q.travel_date;
+  let overallCheckOut = q.check_out || q.expiry_date;
+  if (items.length > 0) {
+    const dates = items.map(i => parseApiDate(i.check_in)).filter(Boolean) as Date[];
+    const endDates = items.map(i => parseApiDate(i.check_out)).filter(Boolean) as Date[];
+    if (dates.length > 0) {
+      overallCheckIn = new Date(Math.min(...dates.map(d => d.getTime()))).toISOString();
+    }
+    if (endDates.length > 0) {
+      overallCheckOut = new Date(Math.max(...endDates.map(d => d.getTime()))).toISOString();
+    }
+  }
 
   const priceCell = (value: string) => (hidePrices ? "—" : value);
 
@@ -89,21 +112,17 @@ export async function openQuotationPrint(opts: {
         <td class="c">${i.nights}</td>
         <td class="c">${i.rooms}</td>
         ${hidePrices ? "" : `<td class="n">${priceCell(money(Number(i.selling_price ?? 0)))}</td>
-        <td class="n">${priceCell(money(Number(i.taxes)))}</td>
         <td class="n b">${priceCell(money(Number(i.total_selling)))}</td>`}
       </tr>`,
     )
     .join("");
 
   const roomsTotal = items.reduce((a, i) => a + Number(i.selling_price ?? 0) * i.nights * i.rooms, 0);
-  const taxes = items.reduce((a, i) => a + Number(i.taxes), 0);
   const grand = items.reduce((a, i) => a + Number(i.total_selling), 0);
 
   const totalsBlock = hidePrices
     ? `<div class="notice">${esc(rtl ? "هذا المستند لا يتضمن الأسعار." : "This document does not include pricing.")}</div>`
     : `<div class="totals">
-    <div class="row"><span>${esc(s.rooms_total)}</span><b dir="ltr">${money(roomsTotal)}</b></div>
-    <div class="row"><span>${esc(s.total_taxes)}</span><b dir="ltr">${money(taxes)}</b></div>
     <div class="row grand"><span>${esc(s.grand_total)}</span><b dir="ltr">${money(grand)}</b></div>
   </div>`;
 
@@ -138,13 +157,15 @@ export async function openQuotationPrint(opts: {
   .box .k { font-size: 11px; color: ${T.muted}; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
   .box .v { font-weight: 600; margin-top: 2px; color: ${T.dark}; }
   h2 { font-size: 15px; color: ${T.goldDeep}; margin: 20px 0 8px; font-weight: 700; border-bottom: 1px solid ${T.goldLight}; padding-bottom: 4px; }
-  table { width: 100%; border-collapse: collapse; border: 1px solid ${T.border}; border-radius: 8px; overflow: hidden; }
-  th, td { border-bottom: 1px solid ${T.border}; padding: 8px 9px; text-align: ${rtl ? "right" : "left"}; }
+  table { width: 100%; border-collapse: collapse; border: 1px solid ${T.border}; border-radius: 12px; overflow: hidden; margin-top: 12px; }
+  th { background: ${T.goldDeep}; color: #fff; font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; padding: 12px 14px; }
+  td { border-bottom: 1px solid ${T.border}; padding: 12px 14px; text-align: ${rtl ? "right" : "left"}; font-size: 12.5px; color: #334155; vertical-align: middle; }
+  tr:nth-child(even) { background-color: #fcfbf9; }
+  tr:hover { background-color: #faf7f2; }
   tr:last-child td { border-bottom: none; }
-  th { background: ${T.goldDeep}; color: #fff; font-size: 11px; font-weight: 600; }
-  td.c { text-align: center; }
-  td.n { text-align: ${rtl ? "left" : "right"}; direction: ltr; white-space: nowrap; }
-  td.b { font-weight: 700; }
+  td.c { text-align: center; font-weight: 600; }
+  td.n { text-align: ${rtl ? "left" : "right"}; direction: ltr; white-space: nowrap; font-family: 'Inter', sans-serif; font-weight: 600; color: #1e293b; }
+  td.b { font-weight: 700; color: ${T.goldDeep}; }
   .stars { color: ${T.gold}; letter-spacing: 1px; }
   .totals { margin-top: 14px; width: 340px; margin-${rtl ? "right" : "left"}: auto; }
   .totals .row { display: flex; justify-content: space-between; padding: 7px 12px; border-bottom: 1px solid ${T.border}; }
@@ -189,9 +210,9 @@ export async function openQuotationPrint(opts: {
     <div class="box"><div class="k">${recipientLabel}</div><div class="v">${esc(recipientName)}</div></div>
     <div class="box"><div class="k">${esc(s.date)}</div><div class="v" dir="ltr">${dTime(q.quotation_date)}</div></div>
     <div class="box"><div class="k">${esc(s.valid_until)}</div><div class="v" dir="ltr">${dTime(q.expiry_date)}</div></div>
-    <div class="box"><div class="k">${esc(s.travel_date)}</div><div class="v" dir="ltr">${d(q.check_in || q.travel_date)} → ${d(q.check_out || q.expiry_date)}</div></div>
-    ${q.group_size ? `<div class="box"><div class="k">${rtl ? "حجم المجموعة" : "Group Size"}</div><div class="v">${esc(q.group_size)}</div></div>` : ""}
-    <div class="box"><div class="k">${esc(s.generated)}</div><div class="v" dir="ltr">${new Date().toLocaleString(locale)}</div></div>
+    <div class="box"><div class="k">${esc(rtl ? "تاريخ الإقامة" : "Stay Period")}</div><div class="v" dir="ltr">${d(overallCheckIn)} → ${d(overallCheckOut)}</div></div>
+    ${q.group_size ? `<div class="box"><div class="k">${rtl ? "عدد الأشخاص" : "Number of Persons"}</div><div class="v">${esc(q.group_size)}</div></div>` : ""}
+    <div class="box"><div class="k">${esc(s.generated)}</div><div class="v" dir="ltr">${dTime(new Date().toISOString())}</div></div>
   </div>
 
   <h2>${esc(s.breakdown)}</h2>
@@ -199,16 +220,14 @@ export async function openQuotationPrint(opts: {
     <thead><tr>
       <th>${esc(s.hotel)}</th><th>${esc(s.room)}</th><th>${esc(s.meal)}</th>
       <th>${esc(s.check_in)}</th><th>${esc(s.check_out)}</th><th>${esc(s.nights)}</th><th>${esc(s.rooms)}</th>
-      ${hidePrices ? "" : `<th>${esc(s.unit)}</th><th>${esc(s.taxes)}</th><th>${esc(s.line_total)}</th>`}
+      ${hidePrices ? "" : `<th>${esc(s.unit)}</th><th>${esc(s.line_total)}</th>`}
     </tr></thead>
-    <tbody>${rows || `<tr><td colspan="${hidePrices ? 7 : 10}" style="text-align:center;color:${T.muted}">—</td></tr>`}</tbody>
+    <tbody>${rows || `<tr><td colspan="${hidePrices ? 7 : 9}" style="text-align:center;color:${T.muted}">—</td></tr>`}</tbody>
   </table>
 
   ${totalsBlock}
 
   ${q.notes ? `<h2>${esc(s.notes)}</h2><div class="terms">${esc(q.notes)}</div>` : ""}
-
-  ${policies ? `<h2>${esc(s.terms)}</h2><div class="terms">${esc(policies)}</div>` : `<h2>${esc(s.terms)}</h2><div class="terms">${esc(s.terms_text)}</div>`}
 
   <div class="foot">${esc(s.footer)}</div>
 </body>
@@ -267,29 +286,53 @@ export async function generateQuotationPdfBlob(opts: {
   const money = (n: number) =>
     `${Number(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${symbol}`;
 
-  const d = (v: string | null | undefined) => {
-    const parsed = parseApiDate(v ?? null);
-    return parsed ? parsed.toLocaleDateString(locale) : "—";
+  const formatDateCustom = (dateStr: string | null | undefined, includeTime = false) => {
+    const parsed = parseApiDate(dateStr ?? null);
+    if (!parsed) return "—";
+    const day = String(parsed.getDate()).padStart(2, "0");
+    const month = String(parsed.getMonth() + 1).padStart(2, "0");
+    const year = parsed.getFullYear();
+    
+    let result = `${year}-${month}-${day}`;
+    
+    if (includeTime) {
+      const hours = String(parsed.getHours()).padStart(2, "0");
+      const minutes = String(parsed.getMinutes()).padStart(2, "0");
+      result += ` ${hours}:${minutes}`;
+    }
+    return result;
   };
 
-  const dTime = (v: string | null | undefined) => {
-    const parsed = parseApiDate(v ?? null);
-    return parsed
-      ? parsed.toLocaleString(locale, { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
-      : "—";
-  };
+  const d = (v: string | null | undefined) => formatDateCustom(v);
+
+  const dTime = (v: string | null | undefined) => formatDateCustom(v, true);
 
   const name = (o?: { name_en?: string | null; name_ar?: string | null; name?: string | null } | null) =>
     localizedName(o, rtl);
 
-  const hotel = q.hotel;
+  const hotel = q.hotel || items[0]?.hotel;
   const coverImage = hotel?.cover_image;
-  const hotelLocation = [localizedName(hotel?.city, rtl), localizedName(hotel?.country, rtl)].filter((x) => x !== "—").join(" · ");
+  const hotelLocation = hotel ? [localizedName(hotel?.city, rtl), localizedName(hotel?.country, rtl)].filter((x) => x !== "—").join(" · ") : "";
   const stars = Number(hotel?.stars ?? 0);
   const starsHtml = stars > 0 ? `<span class="stars">${"★".repeat(stars)}</span>` : "";
-  const policies = rtl
-    ? hotel?.policies_ar || hotel?.policies || hotel?.policies_en
-    : hotel?.policies_en || hotel?.policies || hotel?.policies_ar;
+  const policies = hotel
+    ? (rtl
+      ? hotel?.policies_ar || hotel?.policies || hotel?.policies_en
+      : hotel?.policies_en || hotel?.policies || hotel?.policies_ar)
+    : "";
+
+  let overallCheckIn = q.check_in || q.travel_date;
+  let overallCheckOut = q.check_out || q.expiry_date;
+  if (items.length > 0) {
+    const dates = items.map(i => parseApiDate(i.check_in)).filter(Boolean) as Date[];
+    const endDates = items.map(i => parseApiDate(i.check_out)).filter(Boolean) as Date[];
+    if (dates.length > 0) {
+      overallCheckIn = new Date(Math.min(...dates.map(d => d.getTime()))).toISOString();
+    }
+    if (endDates.length > 0) {
+      overallCheckOut = new Date(Math.max(...endDates.map(d => d.getTime()))).toISOString();
+    }
+  }
 
   const priceCell = (value: string) => (hidePrices ? "—" : value);
 
@@ -304,21 +347,17 @@ export async function generateQuotationPdfBlob(opts: {
         <td class="c">${i.nights}</td>
         <td class="c">${i.rooms}</td>
         ${hidePrices ? "" : `<td class="n">${priceCell(money(Number(i.selling_price ?? 0)))}</td>
-        <td class="n">${priceCell(money(Number(i.taxes)))}</td>
         <td class="n b">${priceCell(money(Number(i.total_selling)))}</td>`}
       </tr>`,
     )
     .join("");
 
   const roomsTotal = items.reduce((a, i) => a + Number(i.selling_price ?? 0) * i.nights * i.rooms, 0);
-  const taxes = items.reduce((a, i) => a + Number(i.taxes), 0);
   const grand = items.reduce((a, i) => a + Number(i.total_selling), 0);
 
   const totalsBlock = hidePrices
     ? `<div class="notice">${esc(rtl ? "هذا المستند لا يتضمن الأسعار." : "This document does not include pricing.")}</div>`
     : `<div class="totals">
-    <div class="row"><span>${esc(s.rooms_total)}</span><b dir="ltr">${money(roomsTotal)}</b></div>
-    <div class="row"><span>${esc(s.total_taxes)}</span><b dir="ltr">${money(taxes)}</b></div>
     <div class="row grand"><span>${esc(s.grand_total)}</span><b dir="ltr">${money(grand)}</b></div>
   </div>`;
 
@@ -397,9 +436,9 @@ export async function generateQuotationPdfBlob(opts: {
       <div class="pdf-box"><div class="k">${recipientLabel}</div><div class="v">${esc(recipientName)}</div></div>
       <div class="pdf-box"><div class="k">${esc(s.date)}</div><div class="v" dir="ltr">${dTime(q.quotation_date)}</div></div>
       <div class="pdf-box"><div class="k">${esc(s.valid_until)}</div><div class="v" dir="ltr">${dTime(q.expiry_date)}</div></div>
-      <div class="pdf-box"><div class="k">${esc(s.travel_date)}</div><div class="v" dir="ltr">${d(q.check_in || q.travel_date)} → ${d(q.check_out || q.expiry_date)}</div></div>
-      ${q.group_size ? `<div class="pdf-box"><div class="k">${rtl ? "حجم المجموعة" : "Group Size"}</div><div class="v">${esc(q.group_size)}</div></div>` : ""}
-      <div class="pdf-box"><div class="k">${esc(s.generated)}</div><div class="v" dir="ltr">${new Date().toLocaleString(locale)}</div></div>
+      <div class="pdf-box"><div class="k">${esc(rtl ? "تاريخ الإقامة" : "Stay Period")}</div><div class="v" dir="ltr">${d(overallCheckIn)} → ${d(overallCheckOut)}</div></div>
+      ${q.group_size ? `<div class="pdf-box"><div class="k">${rtl ? "عدد الأشخاص" : "Number of Persons"}</div><div class="v">${esc(q.group_size)}</div></div>` : ""}
+      <div class="pdf-box"><div class="k">${esc(s.generated)}</div><div class="v" dir="ltr">${dTime(new Date().toISOString())}</div></div>
     </div>
 
     <h2 class="pdf-h2">${esc(s.breakdown)}</h2>
@@ -407,16 +446,14 @@ export async function generateQuotationPdfBlob(opts: {
       <thead><tr>
         <th>${esc(s.hotel)}</th><th>${esc(s.room)}</th><th>${esc(s.meal)}</th>
         <th>${esc(s.check_in)}</th><th>${esc(s.check_out)}</th><th>${esc(s.nights)}</th><th>${esc(s.rooms)}</th>
-        ${hidePrices ? "" : `<th>${esc(s.unit)}</th><th>${esc(s.taxes)}</th><th>${esc(s.line_total)}</th>`}
+        ${hidePrices ? "" : `<th>${esc(s.unit)}</th><th>${esc(s.line_total)}</th>`}
       </tr></thead>
-      <tbody>${rows || `<tr><td colspan="${hidePrices ? 7 : 10}" style="text-align:center;color:${T.muted}">—</td></tr>`}</tbody>
+      <tbody>${rows || `<tr><td colspan="${hidePrices ? 7 : 9}" style="text-align:center;color:${T.muted}">—</td></tr>`}</tbody>
     </table>
 
     ${totalsBlock}
 
     ${q.notes ? `<h2 class="pdf-h2">${esc(s.notes)}</h2><div class="terms">${esc(q.notes)}</div>` : ""}
-
-    ${policies ? `<h2 class="pdf-h2">${esc(s.terms)}</h2><div class="terms">${esc(policies)}</div>` : `<h2 class="pdf-h2">${esc(s.terms)}</h2><div class="terms">${esc(s.terms_text)}</div>`}
 
     <div class="pdf-foot">${esc(s.footer)}</div>
   `;

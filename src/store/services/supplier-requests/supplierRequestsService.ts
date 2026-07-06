@@ -7,10 +7,10 @@ export const supplierRequestsApi = api.injectEndpoints({
       query: (body) => ({ url: "/supplier-requests", method: "POST", body }),
       invalidatesTags: ["SupplierRequests"],
     }),
-    getSupplierRequests: build.query<SupplierRequest[], { lang?: string; status?: string; search?: string } | void>({
+    getSupplierRequests: build.query<SupplierRequest[], { lang?: string; status?: "pending" | "accepted" | "rejected"; search?: string } | void>({
       query: (params) => ({ url: "/supplier-requests", params: params || undefined }),
       providesTags: ["SupplierRequests"],
-    }),
+    }), 
     getSupplierRequestById: build.query<SupplierRequest, { id: string | number; lang?: string }>({
       query: ({ id, lang }) => ({ url: `/supplier-requests/${id}`, params: { lang } }),
       providesTags: (result, error, { id }) => [{ type: "SupplierRequests", id }],

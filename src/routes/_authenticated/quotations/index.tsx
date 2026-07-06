@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/page-header";
 import { useI18n } from "@/lib/i18n";
 import { useSelector } from "react-redux";
 import { selectAuth } from "@/store/features/authSlice";
-import { hasAnyRole } from "@/lib/auth-utils";
+import { canWriteModule } from "@/lib/auth-utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Label } from "@/components/ui/label";
@@ -28,12 +28,11 @@ const PAGE_SIZE = 20;
 
 export function QStatusBadge({ status, status_text, is_expired, t, lang }: { status: string; status_text?: string; is_expired?: boolean; t: (k: string, f?: string) => string; lang: string }) {
   // Use status_text from API if available, otherwise use is_expired to determine display
-  const displayText = status_text || (is_expired ? (lang === "ar" ? "منتهي" : "Expired") : (lang === "ar" ? "صالح" : "Valid"));
+  const isActuallyExpired = is_expired || status === "expired";
+  const displayText = status_text || (isActuallyExpired ? (lang === "ar" ? "منتهي" : "Expired") : (lang === "ar" ? "صالح" : "Valid"));
   
-  const variant = is_expired || status === "rejected" || status === "cancelled" ? "destructive"
-    : status === "draft" ? "outline"
-      : "default";
-  const cls = status === "approved" || status === "accepted" || (!is_expired && status === "valid") ? "bg-emerald-600 text-white hover:bg-emerald-600" : undefined;
+  const variant = isActuallyExpired ? "destructive" : "default";
+  const cls = !isActuallyExpired ? "bg-emerald-600 text-white hover:bg-emerald-600" : undefined;
   return <Badge variant={variant as any} className={cls}>{displayText}</Badge>;
 }
 
@@ -41,7 +40,7 @@ export default function QuotationsList() {
   const { t, lang } = useI18n();
   const auth = useSelector(selectAuth);
   const navigate = useNavigate();
-  const canWrite = hasAnyRole(auth, ["super_admin", "admin", "sales_manager", "sales_agent"]);
+  const canWrite = canWriteModule(auth, "quotations");
 
   const [customer, setCustomer] = useState("all");
   const [status, setStatus] = useState("all");
@@ -77,7 +76,11 @@ export default function QuotationsList() {
   // Handle response structure - data may be nested in a data property
   const rows = Array.isArray(list.data)
     ? list.data
-    : (Array.isArray((list.data as any)?.data) ? (list.data as any).data : []);
+    : (Array.isArray((list.data as any)?.data)
+        ? (list.data as any).data
+        : (Array.isArray((list.data as any)?.data?.data)
+            ? (list.data as any).data.data
+            : []));
   const total = rows.length;
   const fmt = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 0 });
   const actions = useMemo(() => canWrite && (
@@ -131,10 +134,6 @@ export default function QuotationsList() {
                   <SelectItem value="all">{t("filter.all")}</SelectItem>
                   <SelectItem value="valid">{lang === "ar" ? "صالح" : "Valid"}</SelectItem>
                   <SelectItem value="expired">{lang === "ar" ? "منتهي" : "Expired"}</SelectItem>
-                  <SelectItem value="draft">{t("qstatus.draft")}</SelectItem>
-                  <SelectItem value="pending">{t("qstatus.pending")}</SelectItem>
-                  <SelectItem value="approved">{t("qstatus.approved")}</SelectItem>
-                  <SelectItem value="sent">{t("qstatus.sent")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -184,7 +183,23 @@ export default function QuotationsList() {
                 )}
                 {rows.map((q: any) => {
                   const customerName = q.customer ? (lang === "ar" ? (q.customer.name_ar || q.customer.name_en) : (q.customer.name_en || q.customer.name_ar)) : "—";
-                  const hotelName = q.hotel ? (lang === "ar" ? (q.hotel.name_ar || q.hotel.name_en) : (q.hotel.name_en || q.hotel.name_ar)) : "—";
+                  
+                  const uniqueHotelIds = Array.from(new Set((q.items || []).map((item: any) => item.hotel_id).filter(Boolean)));
+                  const hotelNames = uniqueHotelIds
+                    .map((hid: any) => {
+                      const hObj = hotels.data?.find((h: any) => h.id === Number(hid));
+                      if (!hObj) return null;
+                      return lang === "ar" ? hObj.name_ar || hObj.name_en : hObj.name_en || hObj.name_ar;
+                    })
+                    .filter((x: any): x is string => typeof x === "string" && x.length > 0)
+                    .join(lang === "ar" ? "، " : ", ");
+                  const hotelName = hotelNames || "—";
+
+                  const itemStartDates = (q.items || []).map((item: any) => item.start_date).filter(Boolean);
+                  const itemEndDates = (q.items || []).map((item: any) => item.end_date).filter(Boolean);
+                  const startDate = itemStartDates.length > 0 ? itemStartDates.sort()[0] : null;
+                  const endDate = itemEndDates.length > 0 ? itemEndDates.sort().reverse()[0] : null;
+
                   const currencyCode = typeof q.currency === 'object' ? q.currency?.code : q.currency;
                   const currencySymbol = lang === "ar" ? (typeof q.currency === 'object' ? q.currency?.symbol_ar : q.currency) : (typeof q.currency === 'object' ? q.currency?.symbol_en : q.currency);
                   
@@ -208,9 +223,9 @@ export default function QuotationsList() {
                         </div>
                       </TableCell>
                       <TableCell className="text-sm font-medium">{customerName}</TableCell>
-                      <TableCell className="text-sm">{hotelName}</TableCell>
-                      <TableCell style={{ direction: 'ltr' }} className="text-xs">{formatDate(q.start_date, lang)}</TableCell>
-                      <TableCell style={{ direction: 'ltr' }} className="text-xs">{formatDate(q.end_date, lang)}</TableCell>
+                      <TableCell className="text-sm max-w-[200px] truncate" title={hotelName}>{hotelName}</TableCell>
+                      <TableCell style={{ direction: 'ltr' }} className="text-xs">{startDate ? formatDate(startDate, lang) : "—"}</TableCell>
+                      <TableCell style={{ direction: 'ltr' }} className="text-xs">{endDate ? formatDate(endDate, lang) : "—"}</TableCell>
                       <TableCell dir="ltr" style={{ direction: 'ltr' }} className="text-xs font-semibold tabular-nums">
                         {fmt(q.total_value || 0)} <span className="text-muted-foreground font-normal">{currencySymbol || currencyCode}</span>
                       </TableCell>

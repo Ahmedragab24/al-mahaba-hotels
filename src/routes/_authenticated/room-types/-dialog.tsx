@@ -22,7 +22,6 @@ export function RoomTypeDialog({ open, onOpenChange, initial, onSaved, fixedHote
   const { t, lang } = useI18n();
   const hotels = useHotels({}, { refetchInterval: 2000 });
   const [v, setV] = useState<any>({});
-  const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
   const isEdit = !!initial?.id;
   const { token } = useAuth();
 
@@ -47,7 +46,6 @@ export function RoomTypeDialog({ open, onOpenChange, initial, onSaved, fixedHote
   useEffect(() => {
     if (open) {
       setV(initial ?? (fixedHotelId ? { hotel_id: fixedHotelId } : {}));
-      setCoverImageFile(null);
     }
   }, [open, initial, fixedHotelId]);
 
@@ -72,10 +70,6 @@ export function RoomTypeDialog({ open, onOpenChange, initial, onSaved, fixedHote
       const statusValue = (v.status === undefined || v.status === true || v.status === 1 || v.status === "1") ? "1" : "0";
       formData.append("status", statusValue);
 
-      if (coverImageFile) {
-        formData.append("cover_image", coverImageFile);
-      }
-
       if (isEdit) {
         await updateRoom({ id: initial.id, body: formData }).unwrap();
         toast.success(t("toast.updated"));
@@ -85,7 +79,6 @@ export function RoomTypeDialog({ open, onOpenChange, initial, onSaved, fixedHote
       }
       onSaved();
       onOpenChange(false);
-      setCoverImageFile(null);
     } catch (e: any) {
       toast.error(dbErrorMessage(e));
     }
@@ -174,45 +167,6 @@ export function RoomTypeDialog({ open, onOpenChange, initial, onSaved, fixedHote
                   <SelectItem value="0">{lang === "ar" ? "غير نشط" : "Inactive"}</SelectItem>
                 </SelectContent>
               </Select>
-            </Field>
-
-            <Field label={lang === "ar" ? "صورة الغرفة" : "Room Image"}>
-              <Input
-                type="file"
-                accept="image/*"
-                className="h-10"
-                onChange={(e) => {
-                  const file = e.target.files?.[0] || null;
-                  if (file) {
-                    if (file.size > 5 * 1024 * 1024) {
-                      toast.error(lang === "ar" ? "حجم الصورة يجب ألا يتجاوز 5 ميجابايت" : "Image size must not exceed 5MB");
-                      e.target.value = "";
-                      setCoverImageFile(null);
-                      return;
-                    }
-                    const allowedTypes = ["image/jpeg", "image/png", "image/jpg", "image/webp"];
-                    if (!allowedTypes.includes(file.type)) {
-                      toast.error(lang === "ar" ? "امتداد الصورة غير مدعوم" : "Unsupported image format");
-                      e.target.value = "";
-                      setCoverImageFile(null);
-                      return;
-                    }
-                  }
-                  setCoverImageFile(file);
-                }}
-              />
-              {v.cover_image && !coverImageFile && (
-                <div className="mt-2 flex flex-col gap-1">
-                  <span className="text-[11px] text-muted-foreground">{lang === "ar" ? "الصورة الحالية:" : "Current Image:"}</span>
-                  <img src={v.cover_image} alt="Current cover" className="h-16 w-24 object-cover rounded border" />
-                </div>
-              )}
-              {coverImageFile && (
-                <div className="mt-2 flex flex-col gap-1">
-                  <span className="text-[11px] text-muted-foreground">{lang === "ar" ? "معاينة الصورة الجديدة:" : "New Image Preview:"}</span>
-                  <img src={URL.createObjectURL(coverImageFile)} alt="New cover preview" className="h-16 w-24 object-cover rounded border" />
-                </div>
-              )}
             </Field>
           </div>
         </div>

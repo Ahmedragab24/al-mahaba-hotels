@@ -6,7 +6,8 @@ import { useQuery, useMutation, useQueryClient } from "@/store/queryBridge";
 import { useI18n } from "@/lib/i18n";
 import { useSelector } from "react-redux";
 import { selectAuth } from "@/store/features/authSlice";
-import { hasAnyRole } from "@/lib/auth-utils";
+import { canWriteModule, canApproveModule } from "@/lib/auth-utils";
+import { PermissionGate, WriteGate, ApproveGate } from "@/components/permission-gate";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -23,7 +24,7 @@ import { toast } from "sonner";
 import { dbErrorMessage } from "@/store/queryBridge";
 import { QuotationForm } from "./-form";
 import { openQuotationPrint, generateQuotationPdfBlob } from "./-print";
-import { collectSuppliers, getStayDates, localizedName, mapQuotationItemsForPrint, type QuotationRecipient } from "./-helpers";
+import { collectSuppliers, getStayDates, localizedName, mapQuotationItemsForPrint, type QuotationRecipient, calcNights } from "./-helpers";
 import { DOC_LANG_LIST, DOC_LANGS, toDocLang, renderWaTemplate, waTemplateExists, missingDocKeys, type DocLang } from "@/lib/doc-lang";
 
 export default function QuotationDetail() {
@@ -33,8 +34,8 @@ export default function QuotationDetail() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [searchParams] = useSearchParams();
-  const canWrite = hasAnyRole(auth, ["super_admin", "admin", "sales_manager", "sales_agent"]);
-  const canApprove = hasAnyRole(auth, ["super_admin", "admin", "sales_manager"]);
+  const canWrite = canWriteModule(auth, "quotations");
+  const canApprove = canApproveModule(auth, "quotations");
   const [editing, setEditing] = useState(searchParams.get("edit") === "1");
   const [confirmStatus, setConfirmStatus] = useState<string | null>(null);
   const [hidePrices, setHidePrices] = useState(false);
@@ -42,9 +43,26 @@ export default function QuotationDetail() {
   const [selectedSupplierId, setSelectedSupplierId] = useState("");
   const [sendingPdf, setSendingPdf] = useState(false);
 
+  // مثال على استخدام نظام الصلاحيات الجديد
+  // const { canAccess, canWrite, canApprove } = useAuth();
+  // const hasQuotationAccess = canAccess("quotations");
+  // const canEditQuotation = canWrite("quotations");
+  // const canApproveQuotation = canApprove("quotations");
+
   const q = useQuery({
     queryKey: ["quotation", id],
     queryFn: async () => apiClient.quotations.getById(id),
+  });
+
+  const hotelsQuery = useQuery({
+    queryKey: ["lookup-hotels"],
+    queryFn: async () => {
+      const response = await apiClient.hotels.getAll();
+      const data = Array.isArray(response)
+        ? response
+        : response?.data?.data || response?.data || [];
+      return data;
+    },
   });
 
   const statusMut = useMutation({
@@ -71,9 +89,23 @@ export default function QuotationDetail() {
   const suppliers = useMemo(() => collectSuppliers(apiItems), [apiItems]);
   const stay = useMemo(() => (q.data ? getStayDates(q.data) : null), [q.data]);
 
+  const uniqueHotels = useMemo(() => {
+    const hotelIds = Array.from(
+      new Set(apiItems.map((item: any) => String(item.hotel_id || item.price_details?.hotel_id)))
+    ).filter(Boolean);
+    const hotelsList = Array.isArray(hotelsQuery.data) ? hotelsQuery.data : [];
+    const resolved = hotelIds
+      .map((id) => hotelsList.find((h: any) => String(h.id) === id))
+      .filter(Boolean);
+    if (resolved.length === 0 && q.data?.hotel) {
+      return [q.data.hotel];
+    }
+    return resolved;
+  }, [apiItems, hotelsQuery.data, q.data?.hotel]);
+
   const buildPrintPayload = (printLang: DocLang) => {
     if (!q.data) return null;
-    const printItems = mapQuotationItemsForPrint(q.data, apiItems, printLang, mealLabel);
+    const printItems = mapQuotationItemsForPrint(q.data, apiItems, printLang, mealLabel, hotelsQuery.data);
     const currency = q.data.currency;
     return {
       printItems,
@@ -120,9 +152,9 @@ export default function QuotationDetail() {
         quotation_no: q.data.code,
         status: q.data.status,
         status_text: q.data.status_text,
-        quotation_date: q.data.created_at || q.data.start_date,
+        quotation_date: q.data.valid_from || q.data.created_at,
         travel_date: q.data.check_in || q.data.start_date,
-        expiry_date: q.data.end_date,
+        expiry_date: q.data.valid_to,
         check_in: q.data.check_in || q.data.start_date,
         check_out: q.data.check_out || q.data.end_date,
         group_size: q.data.group_size,
@@ -186,7 +218,12 @@ export default function QuotationDetail() {
     const cName = localizedName(r.customer, docRtl);
     const hotels = apiItems
       .map((i: any) => {
-        const hotel = i.price_details?.hotel || i.price_details?.room?.hotel || r.hotel;
+        const pd = i.price_details ?? {};
+        const hid = i.hotel_id || pd.hotel_id;
+        const hotelFromList = Array.isArray(hotelsQuery.data)
+          ? hotelsQuery.data.find((h: any) => String(h.id) === String(hid))
+          : null;
+        const hotel = pd.hotel || pd.room?.hotel || r.hotel || hotelFromList;
         const hotelName = localizedName(hotel, docRtl);
         return `• ${hotelName} (${i.room_count} ${docRtl ? "غرف" : "rooms"})`;
       })
@@ -299,9 +336,9 @@ export default function QuotationDetail() {
           quotation_no: q.data.code,
           status: q.data.status,
           status_text: q.data.status_text,
-          quotation_date: q.data.created_at || q.data.start_date,
+          quotation_date: q.data.valid_from || q.data.created_at,
           travel_date: q.data.check_in || q.data.start_date,
-          expiry_date: q.data.end_date,
+          expiry_date: q.data.valid_to,
           check_in: q.data.check_in || q.data.start_date,
           check_out: q.data.check_out || q.data.end_date,
           group_size: q.data.group_size,
@@ -419,14 +456,15 @@ export default function QuotationDetail() {
 
   const r = q.data;
   const customerName = localizedName(r.customer, rtl);
-  const hotelName = localizedName(r.hotel, rtl);
-  const countryName = localizedName(r.hotel?.country, rtl);
-  const cityName = localizedName(r.hotel?.city, rtl);
+
+  const hotelName = uniqueHotels.map((h) => localizedName(h, rtl)).join(" · ") || localizedName(r.hotel, rtl);
+  const countryName = uniqueHotels.map((h) => localizedName(h?.country || h?.country_lite, rtl)).filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join(" · ") || localizedName(r.hotel?.country, rtl);
+  const cityName = uniqueHotels.map((h) => localizedName(h?.city || h?.city_lite, rtl)).filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join(" · ") || localizedName(r.hotel?.city, rtl);
   const currencyCode = typeof r.currency === "object" ? r.currency?.code : r.currency;
   const currencySymbol = rtl
     ? (typeof r.currency === "object" ? r.currency?.symbol_ar || r.currency?.code : r.currency)
     : (typeof r.currency === "object" ? r.currency?.symbol_en || r.currency?.code : r.currency);
-  const editable = canWrite && (r.status === "draft" || r.status === "rejected") && !r.deleted_at;
+  const editable = canWrite && r.status === "valid" && !r.deleted_at;
   const preferredLang = toDocLang(r.language?.code || r.customer?.preferred_language);
   const langOrder: DocLang[] = [preferredLang, ...DOC_LANG_LIST.filter((l) => l !== preferredLang)];
 
@@ -436,23 +474,15 @@ export default function QuotationDetail() {
       : `${Number(n ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currencySymbol}`;
 
   const actions: { key: string; label: string; status: string; icon: React.ComponentType<{ className?: string }>; variant?: "destructive" | "outline"; show: boolean }[] = [
-    { key: "submit", label: t("quotes.submit"), status: "pending_approval", icon: Send, show: canWrite && r.status === "draft" },
-    { key: "send_direct", label: t("quotes.send"), status: "sent", icon: Send, variant: "outline", show: canWrite && r.status === "draft" },
-    { key: "approve", label: t("actions.approve"), status: "approved", icon: Check, show: canApprove && r.status === "pending_approval" },
-    { key: "reject", label: t("actions.reject"), status: "rejected", icon: X, variant: "destructive", show: canApprove && r.status === "pending_approval" },
-    { key: "return", label: t("quotes.return"), status: "draft", icon: Undo2, variant: "outline", show: canApprove && r.status === "pending_approval" },
-    { key: "send", label: t("quotes.send"), status: "sent", icon: Send, show: canWrite && r.status === "approved" },
-    { key: "reopen", label: t("quotes.reopen"), status: "draft", icon: RotateCcw, variant: "outline", show: canWrite && r.status === "rejected" },
-    { key: "accept", label: t("quotes.accept"), status: "accepted", icon: Check, show: canWrite && r.status === "sent" },
-    { key: "expire", label: t("quotes.expire_action"), status: "expired", icon: Clock, variant: "outline", show: canWrite && r.status === "sent" },
-    { key: "cancel", label: t("quotes.cancel"), status: "cancelled", icon: Ban, variant: "destructive", show: canWrite && ["draft", "approved", "rejected", "sent"].includes(r.status) },
+    { key: "expire", label: t("quotes.expire_action", "إنتهاء الصلاحية"), status: "expired", icon: Clock, variant: "destructive", show: canWrite && r.status === "valid" },
+    { key: "reopen", label: t("quotes.reopen", "إعادة تفعيل"), status: "valid", icon: RotateCcw, variant: "outline", show: canWrite && r.status === "expired" },
   ];
 
   return (
     <>
       <PageHeader
         title={`${r.code} — ${customerName}`}
-        subtitle={`${formatDateTime(r.start_date, lang)} → ${formatDateTime(r.end_date, lang)} · ${currencyCode} · ${r.status_text || r.status} `}
+        subtitle={`${formatDateTime(r.valid_from, lang)} → ${formatDateTime(r.valid_to, lang)} · ${currencyCode} · ${r.status_text || r.status} `}
         children={
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => navigate("/quotations")}>
@@ -460,7 +490,7 @@ export default function QuotationDetail() {
               {t("actions.back")}
             </Button>
             <Button variant="outline" size="sm" onClick={() => setHidePrices((v) => !v)}>
-              {hidePrices ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+              {hidePrices ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               {hidePrices ? t("quotes.show_prices") : t("quotes.hide_prices")}
             </Button>
             <DropdownMenu>
@@ -560,18 +590,32 @@ export default function QuotationDetail() {
                   <KV k={rtl ? "رقم هاتف العميل" : "Customer Phone"} v={r.customer?.phone ?? "—"} />
                   <KV k={rtl ? "بريد العميل" : "Customer Email"} v={r.customer?.email ?? "—"} />
 
-                  <KV k={rtl ? "بداية صلاحية العرض" : "Offer Valid From"} v={formatDateTime(r.start_date, lang)} />
-                  <KV k={rtl ? "نهاية صلاحية العرض" : "Offer Valid Until"} v={formatDateTime(r.end_date, lang)} />
-                  <KV k={rtl ? "تاريخ الوصول" : "Check-in Date"} v={r.check_in ? formatDate(r.check_in, lang) : stay ? formatDate(stay.checkIn, lang) : "—"} />
-                  <KV k={rtl ? "تاريخ المغادرة" : "Check-out Date"} v={r.check_out ? formatDate(r.check_out, lang) : stay ? formatDate(stay.checkOut, lang) : "—"} />
-                  {stay && stay.nights > 0 && <KV k={rtl ? "عدد الليالي" : "Nights"} v={stay.nights} />}
-                  {r.valid_from && <KV k={rtl ? "صالح من" : "Valid From"} v={formatDate(r.valid_from, lang)} />}
-                  {r.valid_to && <KV k={rtl ? "صالح حتى" : "Valid To"} v={formatDate(r.valid_to, lang)} />}
+                  <KV k={rtl ? "بداية صلاحية العرض" : "Offer Valid From"} v={formatDateTime(r.valid_from, lang)} />
+                  <KV k={rtl ? "نهاية صلاحية العرض" : "Offer Valid Until"} v={formatDateTime(r.valid_to, lang)} />
+                  <KV k={rtl ? "تاريخ الوصول (الإجمالي)" : "Check-in Date (Overall)"} v={stay ? formatDate(stay.checkIn, lang) : "—"} />
+                  <KV k={rtl ? "تاريخ المغادرة (الإجمالي)" : "Check-out Date (Overall)"} v={stay ? formatDate(stay.checkOut, lang) : "—"} />
+                  {stay && stay.nights > 0 && <KV k={rtl ? "عدد الليالي الإجمالي" : "Total Stay Nights"} v={stay.nights} />}
 
-                  <KV k={rtl ? "الفندق" : "Hotel"} v={hotelName} />
-                  <KV k={rtl ? "الدولة" : "Country"} v={countryName} />
-                  <KV k={rtl ? "المدينة" : "City"} v={cityName} />
-                  <KV k={rtl ? "نجوم الفندق" : "Hotel Stars"} v={r.hotel?.stars ? "★".repeat(r.hotel.stars) : "—"} />
+                  <KV
+                    k={rtl ? "الفنادق المختارة" : "Selected Hotels"}
+                    v={
+                      <div className="flex flex-col gap-1.5 mt-1">
+                        {uniqueHotels.map((h: any, idx: number) => {
+                          const hName = localizedName(h, rtl);
+                          const cName = localizedName(h?.country || h?.country_lite, rtl);
+                          const cityName = localizedName(h?.city || h?.city_lite, rtl);
+                          const stars = h?.stars || h?.star_rating;
+                          return (
+                            <div key={h.id || idx} className="text-sm font-semibold flex flex-col gap-0.5 border-l-2 border-[#B48443] pl-2 rtl:border-l-0 rtl:border-r-2 rtl:pr-2">
+                              <span>{hName} {stars ? "★".repeat(stars) : ""}</span>
+                              <span className="text-xs text-muted-foreground font-normal">{cityName} — {cName}</span>
+                            </div>
+                          );
+                        })}
+                        {uniqueHotels.length === 0 && "—"}
+                      </div>
+                    }
+                  />
 
                   <KV k={rtl ? "حجم المجموعة" : "Group Size"} v={r.group_size ?? "—"} />
                   <KV k={rtl ? "اللغة" : "Language"} v={localizedName(r.language, rtl)} />
@@ -620,11 +664,10 @@ export default function QuotationDetail() {
                           <TableHeader>
                             <TableRow className="bg-muted/40">
                               <TableHead className="w-8 text-center">#</TableHead>
-                              <TableHead>{rtl ? "الغرفة" : "Room"}</TableHead>
+                              <TableHead>{rtl ? "الفندق والغرفة" : "Hotel & Room"}</TableHead>
                               <TableHead>{rtl ? "كود السعر" : "Price Code"}</TableHead>
                               <TableHead className="text-center">{rtl ? "خطة الوجبات" : "Meal Plan"}</TableHead>
                               <TableHead className="text-center">{rtl ? "المصدر" : "Source"}</TableHead>
-                              <TableHead className="text-center">{rtl ? "الضريبة" : "Tax"}</TableHead>
                               <TableHead className="text-center">{rtl ? "عدد الغرف" : "Rooms"}</TableHead>
                               <TableHead className="text-center">{rtl ? "الليالي" : "Nights"}</TableHead>
                               <TableHead className="text-center">{rtl ? "سعر الليلة" : "Night Price"}</TableHead>
@@ -634,9 +677,12 @@ export default function QuotationDetail() {
                           <TableBody>
                             {apiItems.map((item: any, idx: number) => {
                               const pd = item.price_details ?? {};
-                              const { nights: itemNights } = getStayDates(r);
+                              const itemCheckIn = item.start_date || r.check_in || r.start_date;
+                              const itemCheckOut = item.end_date || r.check_out || r.end_date;
+                              const itemNights = calcNights(itemCheckIn, itemCheckOut) || 1;
                               const roomName = localizedName(pd.room, rtl);
                               const mealPlan = pd.meal_plan_type || "inclusive";
+                              const isExclusiveEmpty = mealPlan === "exclusive" && (!pd.meal_plan_details || pd.meal_plan_details.length === 0);
                               const taxRate = pd.tax_rate ?? 0;
                               const taxType = pd.tax_type || "";
 
@@ -647,12 +693,25 @@ export default function QuotationDetail() {
                                     {idx + 1}
                                   </TableCell>
 
-                                  {/* Room Name */}
+                                  {/* Hotel & Room Name */}
                                   <TableCell>
                                     <div className="flex flex-col gap-0.5">
-                                      <span className="font-semibold text-sm">{roomName}</span>
+                                      <span className="font-semibold text-xs text-[#B48443]">
+                                        {(() => {
+                                          const hid = item.hotel_id || pd.hotel_id;
+                                          const hotelsList = Array.isArray(hotelsQuery.data) ? hotelsQuery.data : [];
+                                          const hObj = hotelsList.find((h: any) => String(h.id) === String(hid)) || pd.hotel || pd.room?.hotel || r.hotel;
+                                          return localizedName(hObj, rtl);
+                                        })()}
+                                      </span>
+                                      <span className="font-medium text-sm text-foreground">{roomName}</span>
                                       {pd.room?.code && (
                                         <span className="text-[10px] text-muted-foreground font-mono">{pd.room.code}</span>
+                                      )}
+                                      {itemCheckIn && itemCheckOut && (
+                                        <span className="text-[10px] text-amber-600 dark:text-amber-400 font-mono mt-0.5">
+                                          📅 {formatDate(itemCheckIn, lang)} → {formatDate(itemCheckOut, lang)}
+                                        </span>
                                       )}
                                     </div>
                                   </TableCell>
@@ -675,12 +734,29 @@ export default function QuotationDetail() {
                                       variant="outline"
                                       className={`text-[11px] font-medium ${mealPlan === "inclusive"
                                         ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-800"
-                                        : mealPlan === "room_only"
+                                        : mealPlan === "room_only" || isExclusiveEmpty
                                           ? "bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800/50 dark:text-slate-400 dark:border-slate-700"
                                           : "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-400 dark:border-blue-800"
                                         }`}
                                     >
-                                      {mealLabel(mealPlan)}
+                                      {isExclusiveEmpty ? (
+                                        rtl ? "بدون وجبات (إقامة فقط)" : "No Meals (Room Only)"
+                                      ) : mealPlan === "inclusive" && Array.isArray(pd.meal_plan_details) && pd.meal_plan_details.length > 0 ? (
+                                        (() => {
+                                          const detailsStr = pd.meal_plan_details
+                                            .map((m: any) => {
+                                              const label = rtl 
+                                                ? (m.label || m.name_ar || t(`board.${m.key}`, m.key))
+                                                : (m.name_en || m.label || t(`board.${m.key}`, m.key));
+                                              return label || m.key;
+                                            })
+                                            .filter(Boolean)
+                                            .join(rtl ? " + " : " + ");
+                                          return rtl ? `وجبات مشمولة (${detailsStr})` : `Inclusive (${detailsStr})`;
+                                        })()
+                                      ) : (
+                                        mealLabel(mealPlan)
+                                      )}
                                     </Badge>
                                   </TableCell>
 
@@ -695,22 +771,6 @@ export default function QuotationDetail() {
                                         {localizedName(pd.supplier, rtl) || (pd.supplier_id ? `#${pd.supplier_id}` : "—")}
                                       </Badge>
                                     )}
-                                  </TableCell>
-
-                                  {/* Tax */}
-                                  <TableCell className="text-center">
-                                    <div className="flex flex-col items-center gap-0.5">
-                                      <span className="text-xs font-medium">{taxRate}%</span>
-                                      {taxType && (
-                                        <span className="text-[10px] text-muted-foreground">
-                                          {taxType === "inclusive_tax"
-                                            ? (rtl ? "شامل" : "Incl.")
-                                            : taxType === "exclusive_tax"
-                                              ? (rtl ? "غير شامل" : "Excl.")
-                                              : taxType}
-                                        </span>
-                                      )}
-                                    </div>
                                   </TableCell>
 
                                   {/* Rooms Count */}

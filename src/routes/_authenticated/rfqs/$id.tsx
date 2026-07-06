@@ -6,7 +6,7 @@ import { useQuery, useMutation, useQueryClient } from "@/store/queryBridge";
 import { useI18n } from "@/lib/i18n";
 import { useSelector } from "react-redux";
 import { selectAuth } from "@/store/features/authSlice";
-import { hasRole, hasAnyRole, isAdmin, canAccessModule } from "@/lib/auth-utils";
+import { canWriteModule, canApproveModule } from "@/lib/auth-utils";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -35,20 +35,8 @@ export default function RfqDetail() {
   const auth = useSelector(selectAuth);
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const canWrite = hasAnyRole(auth, [
-    "super_admin",
-    "admin",
-    "sales_manager",
-    "sales_agent",
-    "operations_manager",
-    "operations_agent",
-  ]);
-  const canApprove = hasAnyRole(auth, [
-    "super_admin",
-    "admin",
-    "sales_manager",
-    "operations_manager",
-  ]);
+  const canWrite = canWriteModule(auth, "quotations");
+  const canApprove = canApproveModule(auth, "quotations");
   const [editing, setEditing] = useState(false);
   const [confirmStatus, setConfirmStatus] = useState<string | null>(null);
 

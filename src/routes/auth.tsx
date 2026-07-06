@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useI18n } from "@/lib/i18n";
 import { selectAuth } from "@/store/features/authSlice";
 import { useLoginMutation } from "@/store/api";
+import { requestPermission } from "@/lib/firebaseMessaging";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,10 +41,18 @@ export default function LoginPage() {
     try {
       const emailClean = email.trim().toLowerCase();
 
+      let fcmToken: string | null = null;
+      try {
+        fcmToken = await requestPermission();
+      } catch (err) {
+        console.warn("Failed to retrieve FCM token before login:", err);
+      }
+
       const res = await login({
         email: emailClean,
         password: password,
         type: type,
+        ...(fcmToken ? { fcm: fcmToken, fcm_token: fcmToken } : {}),
       }).unwrap();
 
       // Handle API response structure: { data: { user, access_token }, ... }

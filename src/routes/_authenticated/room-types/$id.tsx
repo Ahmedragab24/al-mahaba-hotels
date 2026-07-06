@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useI18n } from "@/lib/i18n";
 import { useSelector } from "react-redux";
 import { selectAuth } from "@/store/features/authSlice";
-import { hasAnyRole, isAdmin } from "@/lib/auth-utils";
+import { canWriteModule } from "@/lib/auth-utils";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -32,7 +32,7 @@ export default function RoomTypeDetail() {
   const { t, lang } = useI18n();
   const auth = useSelector(selectAuth);
   const navigate = useNavigate();
-  const canWrite = hasAnyRole(auth, ["super_admin", "admin", "operations_manager", "operations_agent"]);
+  const canWrite = canWriteModule(auth, "room_types");
   const [editing, setEditing] = useState(false);
   const [confirm, setConfirm] = useState<{ action: "archive" | "restore" | "delete" } | null>(null);
   const qc = useQueryClient();

@@ -26,4 +26,5 @@ export interface UserProfile {
   type: UserType | null;
   updated_at: string;
   username: string | null;
+  fcm?: string | null;
 }

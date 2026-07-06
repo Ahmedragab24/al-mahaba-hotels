@@ -15,18 +15,8 @@ export const bookingsApi = api.injectEndpoints({
       query: (body) => ({ url: "/bookings", method: "POST", body }),
       invalidatesTags: ["Bookings"],
     }),
-    updateBooking: build.mutation<Booking, { id: string | number; body: FormData | Partial<Booking> }>({
-      query: ({ id, body }) => {
-        let finalBody: any = body;
-        if (body instanceof FormData) {
-          if (!body.has("_method")) {
-            body.append("_method", "PUT");
-          }
-        } else if (typeof body === "object" && body !== null) {
-          finalBody = { ...body, _method: "PUT" };
-        }
-        return { url: `/bookings/${id}`, method: "POST", body: finalBody };
-      },
+    updateBooking: build.mutation<Booking, { id: string | number; body: {} | Partial<Booking> }>({
+      query: ({ id, body }) => ({ url: `/bookings/${id}`, method: "PUT", body }),
       invalidatesTags: ["Bookings"],
     }),
     deleteBooking: build.mutation<void, string | number>({

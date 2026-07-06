@@ -54,6 +54,7 @@ export interface Invoice {
   invoice_number?: string;
   total_amount_sar?: number;
   status_text?: string;
+  payment_method_text?: string;
   creator?: { id: number; name: string };
   customer?: {
     id: number;
@@ -61,12 +62,17 @@ export interface Invoice {
     name_ar: string;
     email?: string;
     phone?: string;
+    tax_number?: string;
+    address?: string;
+    country?: { name?: string; name_en?: string; name_ar?: string };
+    commercial_register?: string;
   };
   booking?: {
     id: number;
     booking_no: string;
     status?: string;
     code?: string;
+    payment_method_text?: string;
   };
   items?: InvoiceItem[];
   allocs?: any[];

@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@/store/queryBridge";
 import { useI18n } from "@/lib/i18n";
 import { useSelector } from "react-redux";
 import { selectAuth } from "@/store/features/authSlice";
-import { hasRole, hasAnyRole, isAdmin, canAccessModule } from "@/lib/auth-utils";
+import { canAccessModule } from "@/lib/auth-utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -33,8 +33,6 @@ const EXT_MIME: Record<string, string> = {
   png: "image/png",
 };
 
-const UPLOAD_ROLES = ["super_admin", "admin", "sales_manager", "sales_agent", "operations_manager", "operations_agent", "finance_manager", "finance_agent"] as const;
-const MANAGE_ROLES = ["super_admin", "admin", "sales_manager", "operations_manager", "finance_manager"] as const;
 
 function formatBytes(n: number): string {
   if (n < 1024) return `${n} B`;
@@ -57,8 +55,8 @@ export function EntityAttachments({ entityType, entityId }: { entityType: Attach
   const [uploading, setUploading] = useState(false);
   const [archiveId, setArchiveId] = useState<string | null>(null);
 
-  const canUpload = hasAnyRole(auth, [...UPLOAD_ROLES]);
-  const canManage = hasAnyRole(auth, [...MANAGE_ROLES]);
+  const canUpload = canAccessModule(auth, "quotations");
+  const canManage = canAccessModule(auth, "quotations");
 
   const list = useQuery({
     queryKey: ["attachments", entityType, entityId, showArchived],

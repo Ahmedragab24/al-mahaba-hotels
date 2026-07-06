@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/page-header";
 import { useI18n } from "@/lib/i18n";
 import { useSelector } from "react-redux";
 import { selectAuth } from "@/store/features/authSlice";
-import { hasRole, hasAnyRole, isAdmin, canAccessModule } from "@/lib/auth-utils";
+import { canWriteModule, isAdmin } from "@/lib/auth-utils";
 import { useDebounce } from "@/lib/use-debounce";
 import { useCountries, useCities } from "@/lib/lookups";
 import {
@@ -70,13 +70,7 @@ export default function HotelsList() {
   const { t, lang } = useI18n();
   const auth = useSelector(selectAuth);
   const navigate = useNavigate();
-  const canWrite = hasAnyRole(auth, [
-    "super_admin",
-    "financial_manager",
-    "sales_manager",
-    "employee",
-    "viewer",
-  ]);
+  const canWrite = canWriteModule(auth, "hotels");
 
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<string>("all");
@@ -197,13 +191,13 @@ export default function HotelsList() {
         const h = hotelsList.find((x: any) => String(x.id) === String(id));
         const body = h
           ? {
-              name_en: h.name_en,
-              name_ar: h.name_ar,
-              stars: h.stars,
-              city_id: h.city_id,
-              country_id: h.country_id,
-              is_archived: action === "archive" ? 1 : 0,
-            }
+            name_en: h.name_en,
+            name_ar: h.name_ar,
+            stars: h.stars,
+            city_id: h.city_id,
+            country_id: h.country_id,
+            is_archived: action === "archive" ? 1 : 0,
+          }
           : { is_archived: action === "archive" ? 1 : 0 };
 
         await updateHotel({ id, body: body as any }).unwrap();
@@ -508,7 +502,7 @@ export default function HotelsList() {
                           </Link>
                         </Button>
                       )}
-                      {isAdmin(auth) &&
+                      {
                         (h.is_archived ? (
                           <Button
                             variant="ghost"
@@ -530,17 +524,17 @@ export default function HotelsList() {
                             <Archive className="h-4 w-4" />
                           </Button>
                         ))}
-                      {isAdmin(auth) && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          title={t("actions.delete")}
-                          onClick={() => setConfirm({ id: h.id, action: "delete" })}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      )}
+
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        title={t("actions.delete")}
+                        onClick={() => setConfirm({ id: h.id, action: "delete" })}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+
                     </div>
                   </div>
                 </CardContent>

@@ -7,7 +7,7 @@ import { PageHeader } from "@/components/page-header";
 import { useI18n } from "@/lib/i18n";
 import { useSelector } from "react-redux";
 import { selectAuth } from "@/store/features/authSlice";
-import { hasAnyRole } from "@/lib/auth-utils";
+import { canWriteModule } from "@/lib/auth-utils";
 import { useDebounce } from "@/lib/use-debounce";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -99,7 +99,7 @@ export default function BookingsList() {
   const { t, lang } = useI18n();
   const auth = useSelector(selectAuth);
   const navigate = useNavigate();
-  const canWrite = hasAnyRole(auth, BK_WRITE_ROLES as any);
+  const canWrite = canWriteModule(auth, "bookings");
 
   const [search, setSearch] = useState("");
   const [customer, setCustomer] = useState("all");
@@ -538,23 +538,24 @@ export default function BookingsList() {
                   </TableRow>
                 )}
                 {list.data?.rows.map((b: any) => {
+                  const bookingItems = b.items || b.rooms || [];
                   const value =
                     b.total_amount !== undefined
                       ? Number(b.total_amount)
-                      : (b.rooms ?? []).reduce(
-                          (a: number, i: any) => a + Number(i.total_selling),
+                      : bookingItems.reduce(
+                          (a: number, i: any) => a + Number(i.total_selling || i.subtotal || 0),
                           0,
                         );
                   const earliestCheckIn =
                     b.check_in ||
-                    (b.rooms ?? [])
-                      .map((r: any) => r.check_in)
+                    bookingItems
+                      .map((r: any) => r.check_in || r.start_date)
                       .filter(Boolean)
                       .sort()[0];
                   const latestCheckOut =
                     b.check_out ||
-                    (b.rooms ?? [])
-                      .map((r: any) => r.check_out)
+                    bookingItems
+                      .map((r: any) => r.check_out || r.end_date)
                       .filter(Boolean)
                       .sort()
                       .slice(-1)[0];
@@ -579,19 +580,22 @@ export default function BookingsList() {
                         : b.hotel.name_en || b.hotel.name_ar;
                     if (hName) hotelNames.push(hName);
                   } else {
-                    hotelNames = Array.from(
+                    const hotelIds = Array.from(
                       new Set(
-                        (b.rooms ?? [])
-                          .map((r: any) =>
-                            r.hotel
-                              ? lang === "ar"
-                                ? r.hotel.name_ar || r.hotel.name_en
-                                : r.hotel.name_en || r.hotel.name_ar
-                              : null,
-                          )
-                          .filter((x: any): x is string => typeof x === "string" && x.length > 0),
-                      ),
+                        bookingItems
+                          .map((r: any) => r.hotel_id || r.price?.hotel_id || r.price_details?.hotel_id)
+                          .filter(Boolean)
+                      )
                     );
+                    hotelNames = hotelIds
+                      .map((hid: any) => {
+                        const hObj = hotelList.find((h: any) => h.id === Number(hid));
+                        if (!hObj) return null;
+                        return lang === "ar"
+                          ? hObj.name_ar || hObj.name_en
+                          : hObj.name_en || hObj.name_ar;
+                      })
+                      .filter((x: any): x is string => typeof x === "string" && x.length > 0);
                   }
                   return (
                     <TableRow

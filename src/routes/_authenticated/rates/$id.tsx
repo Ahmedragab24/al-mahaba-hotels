@@ -3,6 +3,9 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@/store/queryBridge";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/hooks/use-auth";
+import { useSelector } from "react-redux";
+import { selectAuth } from "@/store/features/authSlice";
+import { canWriteModule, canApproveModule } from "@/lib/auth-utils";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,11 +24,11 @@ export default function RateDetail() {
   const [searchParams] = useSearchParams();
   const search = Object.fromEntries(searchParams.entries()) as any;
   const { t, lang } = useI18n();
-  const auth = useAuth();
+  const auth = useSelector(selectAuth);
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const canWrite = auth.hasAnyRole(["super_admin", "admin", "operations_manager", "operations_agent"]);
-  const canApprove = auth.hasAnyRole(["super_admin", "admin", "operations_manager"]);
+  const canWrite = canWriteModule(auth, "rates");
+  const canApprove = canApproveModule(auth, "rates");
   const [rejectOpen, setRejectOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
   const [submitConfirm, setSubmitConfirm] = useState(false);
@@ -49,7 +52,6 @@ export default function RateDetail() {
         meal_plan_type: r.meal_plan_type || "inclusive",
         cost_per_night: Number(r.cost_per_night),
         selling_price: r.selling_price ? Number(r.selling_price) : null,
-        profit_margin: r.profit_margin ? Number(r.profit_margin) : null,
         tax_type: r.tax_type || "inclusive_tax",
         tax_rate: r.tax_rate !== undefined && r.tax_rate !== null ? Number(r.tax_rate) : 15,
         status: "valid",
@@ -89,7 +91,6 @@ export default function RateDetail() {
         meal_plan_type: r.meal_plan_type || "inclusive",
         cost_per_night: Number(r.cost_per_night),
         selling_price: r.selling_price ? Number(r.selling_price) : null,
-        profit_margin: r.profit_margin ? Number(r.profit_margin) : null,
         tax_type: r.tax_type || "inclusive_tax",
         tax_rate: r.tax_rate !== undefined && r.tax_rate !== null ? Number(r.tax_rate) : 15,
         status: "valid",
@@ -129,7 +130,6 @@ export default function RateDetail() {
         meal_plan_type: r.meal_plan_type || "inclusive",
         cost_per_night: Number(r.cost_per_night),
         selling_price: r.selling_price ? Number(r.selling_price) : null,
-        profit_margin: r.profit_margin ? Number(r.profit_margin) : null,
         tax_type: r.tax_type || "inclusive_tax",
         tax_rate: r.tax_rate !== undefined && r.tax_rate !== null ? Number(r.tax_rate) : 15,
         status: "expired",
@@ -250,9 +250,22 @@ function KV({ k, v }: { k: string; v: any }) {
 }
 
 function ProfileView({ r, lang, t }: any) {
-  const margin = r.selling_price && r.cost_per_night
-    ? (((Number(r.selling_price) - Number(r.cost_per_night)) / Number(r.cost_per_night)) * 100).toFixed(2) + " %"
-    : null;
+  const formatDays = (daysList?: string[]) => {
+    if (!daysList || daysList.length === 0) return "—";
+    const dayNamesAr: Record<string, string> = {
+      Sunday: "الأحد", Monday: "الإثنين", Tuesday: "الثلاثاء", Wednesday: "الأربعاء", Thursday: "الخميس", Friday: "الجمعة", Saturday: "السبت"
+    };
+    const dayNamesEn: Record<string, string> = {
+      Sunday: "Sun", Monday: "Mon", Tuesday: "Tue", Wednesday: "Wed", Thursday: "Thu", Friday: "Fri", Saturday: "Sat"
+    };
+    return daysList.map(d => lang === "ar" ? dayNamesAr[d] || d : dayNamesEn[d] || d).join(lang === "ar" ? "، " : ", ");
+  };
+
+  const margin = r.profit_margin !== null && r.profit_margin !== undefined
+    ? Number(r.profit_margin).toFixed(2) + " %"
+    : r.selling_price && r.cost_per_night
+      ? (((Number(r.selling_price) - Number(r.cost_per_night)) / Number(r.cost_per_night)) * 100).toFixed(2) + " %"
+      : null;
   return (
     <Card><CardContent className="grid grid-cols-1 gap-x-6 p-4 md:grid-cols-3">
       <KV k={t("label.code")} v={<span className="font-mono">{r.code}</span>} />
@@ -263,13 +276,16 @@ function ProfileView({ r, lang, t }: any) {
 
       <KV k={t("rates.meal_plan")} v={
         <div>
-          <div>{t(`board.${r.meal_plan_type}`) || r.meal_plan_type}</div>
+          <div>
+            {r.meal_plan_type === "exclusive" && (!r.meal_plan_details || r.meal_plan_details.length === 0)
+              ? (lang === "ar" ? "بدون وجبات (إقامة فقط)" : "Room Only")
+              : (t(`board.${r.meal_plan_type}`) || r.meal_plan_type)}
+          </div>
           {r.meal_plan_details && r.meal_plan_details.length > 0 && (
             <ul className="mt-1 space-y-1">
               {r.meal_plan_details.map((d: any) => (
                 <li key={d.id} className="text-xs flex gap-2">
-                  <span className="text-muted-foreground">- {d.label || t(`board.${d.key}`)}:</span>
-                  <span className="font-mono">{d.price} {r.currency?.symbol || r.currency?.code}</span>
+                  <span className="text-muted-foreground">- {d.label || t(`board.${d.key}`)}</span>
                 </li>
               ))}
             </ul>
@@ -277,23 +293,113 @@ function ProfileView({ r, lang, t }: any) {
         </div>
       } />
 
-      <KV k={t("rates.taxes")} v={`${r.tax_type === "inclusive_tax" ? t("rates.tax_inclusive_yes") : t("rates.tax_inclusive_no")} (${r.tax_rate}%)`} />
-
-      {r.days && r.days.length > 0 && (
-        <KV k={t("rates.price_type", "نوع السعر")} v={
-          <div>
-            <div className="capitalize">{r.price_type === "weekend" ? t("rates.we_rates", "نهاية الأسبوع") : (r.price_type === "weekday" ? t("rates.wd_rates", "أيام الأسبوع") : r.price_type)}</div>
-            <div className="text-xs text-muted-foreground mt-1" dir="ltr">{r.days.join(", ")}</div>
-          </div>
-        } />
-      )}
+      <KV k={t("rates.taxes")} v={`${r.tax_type === "inclusive_tax" ? t("rates.tax_inclusive_yes") : t("rates.tax_inclusive_no")} (${r.tax_type === "inclusive_tax" ? r.tax_rate : 0}%)`} />
 
       <KV k={t("label.currency")} v={<span className="font-mono">{r.currency?.code || ""}</span>} />
       <KV k={t("rates.valid_from")} v={formatDate(r.valid_from)} />
       <KV k={t("rates.valid_to")} v={formatDate(r.valid_to)} />
-      <KV k={t("rates.cost")} v={<span className="font-mono">{Number(r.cost_per_night).toFixed(2)}</span>} />
-      <KV k={t("rates.selling")} v={r.selling_price ? <span className="font-mono">{Number(r.selling_price).toFixed(2)}</span> : null} />
-      <KV k={t("rates.margin")} v={margin} />
+
+      {/* Pricing Details Section */}
+      <div className="md:col-span-3 border-t my-4 pt-4">
+        <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200 mb-3">
+          {lang === "ar" ? "تفاصيل الأسعار" : "Pricing Details"}
+        </h3>
+        {r.is_weekend_weekday ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Weekday Card */}
+            <Card className="border border-slate-200/60 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-900/10 shadow-none">
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-center justify-between border-b pb-2">
+                  <span className="font-semibold text-sm text-slate-700 dark:text-slate-300">
+                    {lang === "ar" ? "وسط الأسبوع (Weekday)" : "Weekday"}
+                  </span>
+                  <Badge variant="secondary" className="text-[10px] px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                    {formatDays(r.days)}
+                  </Badge>
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div className="bg-white dark:bg-slate-900 p-2 rounded-lg border border-border/40">
+                    <div className="text-[10px] text-muted-foreground">{t("rates.cost")}</div>
+                    <div className="font-mono text-sm font-semibold mt-1 text-slate-700 dark:text-slate-300">
+                      {Number(r.cost_per_night || 0).toFixed(2)}
+                    </div>
+                  </div>
+                  <div className="bg-white dark:bg-slate-900 p-2 rounded-lg border border-border/40">
+                    <div className="text-[10px] text-muted-foreground">{t("rates.selling")}</div>
+                    <div className="font-mono text-sm font-semibold mt-1 text-amber-600 dark:text-amber-500">
+                      {r.selling_price ? Number(r.selling_price).toFixed(2) : "—"}
+                    </div>
+                  </div>
+                  <div className="bg-white dark:bg-slate-900 p-2 rounded-lg border border-border/40">
+                    <div className="text-[10px] text-muted-foreground">{t("rates.taxes")}</div>
+                    <div className="font-mono text-sm font-semibold mt-1 text-emerald-600 dark:text-emerald-500">
+                      {r.tax_rate != null ? `${r.tax_type === "inclusive_tax" ? r.tax_rate : 0} %` : "—"}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Weekend Card */}
+            {r.weekend_cost_per_night !== null && r.weekend_cost_per_night !== undefined && (
+              <Card className="border border-amber-200/30 dark:border-amber-900/30 bg-amber-50/5 dark:bg-amber-950/5 shadow-none">
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-center justify-between border-b pb-2 border-amber-100/20">
+                    <span className="font-semibold text-sm text-amber-800 dark:text-amber-400">
+                      {lang === "ar" ? "نهاية الأسبوع (Weekend)" : "Weekend"}
+                    </span>
+                    <Badge variant="secondary" className="text-[10px] px-2 py-0.5 bg-amber-100/40 dark:bg-amber-900/20 text-amber-800 dark:text-amber-400 border-transparent">
+                      {formatDays(r.weekend_days)}
+                    </Badge>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div className="bg-white dark:bg-slate-900 p-2 rounded-lg border border-border/40">
+                      <div className="text-[10px] text-muted-foreground">{t("rates.cost")}</div>
+                      <div className="font-mono text-sm font-semibold mt-1 text-slate-700 dark:text-slate-300">
+                        {Number(r.weekend_cost_per_night).toFixed(2)}
+                      </div>
+                    </div>
+                    <div className="bg-white dark:bg-slate-900 p-2 rounded-lg border border-border/40">
+                      <div className="text-[10px] text-muted-foreground">{t("rates.selling")}</div>
+                      <div className="font-mono text-sm font-semibold mt-1 text-amber-600 dark:text-amber-500">
+                        {r.weekend_selling_price ? Number(r.weekend_selling_price).toFixed(2) : "—"}
+                      </div>
+                    </div>
+                    <div className="bg-white dark:bg-slate-900 p-2 rounded-lg border border-border/40">
+                      <div className="text-[10px] text-muted-foreground">{t("rates.taxes")}</div>
+                      <div className="font-mono text-sm font-semibold mt-1 text-emerald-600 dark:text-emerald-500">
+                        {r.tax_rate != null ? `${r.tax_type === "inclusive_tax" ? r.tax_rate : 0} %` : "—"}
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        ) : (
+          <div className="grid grid-cols-3 gap-4">
+            <div className="bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-border/40 text-center">
+              <div className="text-xs text-muted-foreground">{t("rates.cost")}</div>
+              <div className="font-mono text-base font-bold mt-1 text-slate-800 dark:text-slate-200">
+                {Number(r.cost_per_night || 0).toFixed(2)}
+              </div>
+            </div>
+            <div className="bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-border/40 text-center">
+              <div className="text-xs text-muted-foreground">{t("rates.selling")}</div>
+              <div className="font-mono text-base font-bold mt-1 text-amber-600 dark:text-amber-500">
+                {r.selling_price ? Number(r.selling_price).toFixed(2) : "—"}
+              </div>
+            </div>
+            <div className="bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-border/40 text-center">
+              <div className="text-xs text-muted-foreground">{t("rates.taxes")}</div>
+              <div className="font-mono text-base font-bold mt-1 text-emerald-600 dark:text-emerald-500">
+                {r.tax_rate != null ? `${r.tax_type === "inclusive_tax" ? r.tax_rate : 0} %` : "—"}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
       <div className="md:col-span-3"><KV k={t("label.notes")} v={r.notes} /></div>
       <div className="md:col-span-3"><KV k={t("rates.cancellation")} v={r.cancellation_policy} /></div>
     </CardContent></Card>

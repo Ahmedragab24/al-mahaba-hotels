@@ -1,33 +1,33 @@
-// Reports & Dashboards hub — role-gated dashboard tabs (Section 17).
 import { useI18n } from "@/lib/i18n";
 import { useSelector } from "react-redux";
 import { selectAuth } from "@/store/features/authSlice";
-import { hasRole, hasAnyRole, isAdmin, canAccessModule } from "@/lib/auth-utils";
+import { canAccessModule } from "@/lib/auth-utils";
 import { PageHeader } from "@/components/page-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { ShieldAlert } from "lucide-react";
-import { BOOKING_ROLES, EXEC_ROLES, FINANCE_ROLES, SALES_ROLES, SUPPLIER_ROLES } from "@/lib/kpi";
-import type { AppRole } from "@/hooks/use-auth";
+import type { PermissionKey } from "@/types/permissions";
 import {
-  BookingDashboard, ExecutiveDashboard, ProfitDashboard, ReceivablesDashboard, SalesDashboard, SupplierDashboard,
+  BookingDashboard, QuotationDashboard, HotelDashboard, RoomDashboard, CustomerDashboard, SupplierDashboard, InvoiceDashboard, TaskDashboard,
 } from "./-dashboards";
 
-type DashTab = { key: string; labelKey: string; roles: AppRole[]; Comp: React.ComponentType };
+type DashTab = { key: string; labelKey: string; permission: PermissionKey; Comp: React.ComponentType };
 
 const TABS: DashTab[] = [
-  { key: "executive", labelKey: "rpt.tab_executive", roles: EXEC_ROLES, Comp: ExecutiveDashboard },
-  { key: "sales", labelKey: "rpt.tab_sales", roles: SALES_ROLES, Comp: SalesDashboard },
-  { key: "bookings", labelKey: "rpt.tab_bookings", roles: BOOKING_ROLES, Comp: BookingDashboard },
-  { key: "suppliers", labelKey: "rpt.tab_suppliers", roles: SUPPLIER_ROLES, Comp: SupplierDashboard },
-  { key: "receivables", labelKey: "rpt.tab_receivables", roles: FINANCE_ROLES, Comp: ReceivablesDashboard },
-  { key: "profit", labelKey: "rpt.tab_profit", roles: FINANCE_ROLES, Comp: ProfitDashboard },
+  { key: "bookings", labelKey: "nav.bookings", permission: "reports", Comp: BookingDashboard },
+  { key: "quotations", labelKey: "nav.quotations", permission: "reports", Comp: QuotationDashboard },
+  { key: "hotels", labelKey: "nav.hotels", permission: "reports", Comp: HotelDashboard },
+  { key: "rooms", labelKey: "nav.rooms", permission: "reports", Comp: RoomDashboard },
+  { key: "customers", labelKey: "nav.customers", permission: "reports", Comp: CustomerDashboard },
+  { key: "suppliers", labelKey: "nav.suppliers", permission: "reports", Comp: SupplierDashboard },
+  { key: "invoices", labelKey: "nav.invoices", permission: "reports", Comp: InvoiceDashboard },
+  { key: "tasks", labelKey: "nav.tasks", permission: "reports", Comp: TaskDashboard },
 ];
 
 export default function ReportsHub() {
   const { t } = useI18n();
   const auth = useSelector(selectAuth);
-  const visible = TABS.filter((tab) => hasAnyRole(auth, tab.roles));
+  const visible = TABS.filter((tab) => canAccessModule(auth, tab.permission));
 
   return (
     <>

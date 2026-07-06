@@ -8,11 +8,7 @@ export interface DashboardResponse {
                 pending: number,
                 revenue_sar: number,
                 paid_sar: number,
-                remaining_sar: number,
-                average_booking_value_sar: number,
-                completion_rate: number,
-                total_rooms_booked: number,
-                average_stay_duration_nights: number
+                remaining_sar: number
             },
             charts: {
                 monthly_trend: {
@@ -20,7 +16,7 @@ export interface DashboardResponse {
                     month_name: string,
                     count: number,
                     revenue: number
-                }[],
+                }[]
                 annual_comparison: {
                     current_year: {
                         year: number,
@@ -33,35 +29,19 @@ export interface DashboardResponse {
                     growth_rate: number
                 },
                 booking_sources: {
-                    source: "hotel" | "Direct" | string,
+                    "source": "Direct" | "hotel",
                     count: number,
                     revenue: number
-                }[]
-                meal_plans_distribution: {
-                    plan: string,
-                    plan_text: string
-                    count: number,
-
-                }[],
-                monthly_nights_trend: {
-                    month_num: number,
-                    month_name: string,
-                    avg_nights: number
                 }[]
             }
         },
         quotations: {
             cards: {
                 total_quotations: number,
-                draft: number,
-                approved: number,
+                valid: number,
                 expired: number,
                 converted: number,
-                conversion_rate: number,
-                average_quotation_value_sar: number,
-                lost_quotations_count: number,
-                total_quoted_rooms: number,
-                avg_conversion_days: number
+                conversion_rate: number
             },
             charts: {
                 monthly_trend: {
@@ -76,21 +56,13 @@ export interface DashboardResponse {
                     name: string,
                     count: number
                 }[]
-                status_distribution: {
-                    status: string,
-                    status_text: string,
-                    count: number,
-                    value_sar: number
-                }[]
             }
         },
         hotels: {
             cards: {
                 total_hotels: number,
                 active: number,
-                archived: number,
-                average_hotel_rating: number,
-                hotels_with_bookings_count: number
+                archived: number
             },
             charts: {
                 stars_distribution: {
@@ -102,25 +74,13 @@ export interface DashboardResponse {
                     country_name: string,
                     count: number
                 }[]
-                city_distribution: {
-                    id: number,
-                    city_name: string,
-                    count: number
-                }[]
-                top_performing_hotels_revenue: {
-                    id: number,
-                    name: string,
-                    revenue_sar: number
-                }[]
             }
         },
         rooms: {
             cards: {
                 total_rooms: number,
                 active: number,
-                archived: number,
-                average_room_price_sar: number,
-                room_types_count: number
+                archived: number
             },
             charts: {
                 views_distribution: {
@@ -132,11 +92,6 @@ export interface DashboardResponse {
                     hotel_name: string,
                     count: number
                 }[]
-                room_type_distribution: {
-                    id: number,
-                    name: string,
-                    count: number
-                }[]
             }
         },
         customers: {
@@ -144,9 +99,7 @@ export interface DashboardResponse {
                 total_customers: number,
                 active: number,
                 corporate: number,
-                individual: number,
-                returning_customers: number,
-                average_lifetime_value_sar: number
+                individual: number
             },
             charts: {
                 monthly_registration_trend: {
@@ -164,35 +117,24 @@ export interface DashboardResponse {
                     name: string,
                     revenue: number
                 }[]
-                booking_frequency: {
-                    range: string,
-                    count: number
-                }[]
             }
         },
         suppliers: {
             cards: {
                 total_suppliers: number,
                 active: number,
-                archived: number,
-                average_rating: number,
-                active_ratio: number
+                archived: number
             },
             charts: {
                 country_distribution: {
                     id: number,
                     country_name: string,
                     count: number
-                }[],
+                }[]
                 top_suppliers_by_prices: {
                     id: number,
                     name: string,
-                    avg_price: number
-                }[],
-                top_suppliers_by_revenue: {
-                    id: number,
-                    name: string,
-                    revenue: number
+                    price_listings_count: number
                 }[]
             }
         },
@@ -216,28 +158,13 @@ export interface DashboardResponse {
                     amount_sar: number
                 },
                 total_collected_sar: number,
-                collection_rate: number,
-                average_invoice_value_sar: number,
-                average_payment_amount_sar: number,
-                unpaid_ratio: number
+                collection_rate: number
             },
             charts: {
                 monthly_collection_trend: {
                     month_num: number,
                     month_name: string,
                     collected: number
-                }[]
-                invoice_status_distribution: {
-                    status: "paid" | "overdue" | "scheduled" | "cancelled",
-                    status_text: string,
-                    count: number,
-                    amount_sar: number
-                }[]
-                payment_methods_distribution: {
-                    method: string,
-                    method_text: string,
-                    count: number,
-                    sum_sar: number
                 }[]
             }
         },
@@ -247,28 +174,21 @@ export interface DashboardResponse {
                 completed: number,
                 in_progress: number,
                 pending: number,
-                overdue: number,
-                completion_rate: number,
-                average_duration_days: number
+                overdue: number
             },
             charts: {
                 priority_distribution: {
-                    priority: string,
+                    priority: "urgent" | "high" | "medium" | "low",
                     count: number
-                }[],
+                }[]
                 status_distribution: {
-                    status: string,
-                    status_text: string,
+                    status: "open" | "awaiting_reply",
                     count: number
-                }[],
+                }[]
                 top_assignees: {
-                    user_id: number,
+                    id: number,
                     name: string,
                     task_count: number
-                }[],
-                overdue_by_priority: {
-                    priority: string,
-                    count: number
                 }[]
             }
         }

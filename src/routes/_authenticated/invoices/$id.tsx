@@ -5,7 +5,7 @@ import { useGetInvoiceByIdQuery, useUpdateInvoiceMutation } from "@/store/api";
 import { useI18n } from "@/lib/i18n";
 import { useSelector } from "react-redux";
 import { selectAuth } from "@/store/features/authSlice";
-import { hasAnyRole } from "@/lib/auth-utils";
+import { canWriteModule } from "@/lib/auth-utils";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,9 @@ import logoUrl from "@/assets/daleel-logo-transparent.png";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Printer, Mail, MessageCircle, FileEdit, Eye } from "lucide-react";
+import { ArrowLeft, Printer, Mail, MessageCircle, FileEdit, Eye, Share2, Loader2 } from "lucide-react";
+import html2canvas from "html2canvas";
+import { jsPDF } from "jspdf";
 import { formatDate, formatMoney } from "@/lib/format";
 import { toast } from "sonner";
 import { InvStatusBadge, FINANCE_WRITE } from "./index";
@@ -30,12 +32,47 @@ function KV({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
+const getZatcaQrCode = (sellerName: string, taxNumber: string, timestamp: string, totalAmount: number, vatAmount: number) => {
+  try {
+    const toTlv = (tag: number, value: string) => {
+      const valueBytes = new TextEncoder().encode(value);
+      const tagByte = tag;
+      const lengthByte = valueBytes.length;
+      return new Uint8Array([tagByte, lengthByte, ...valueBytes]);
+    };
+
+    const tlv1 = toTlv(1, sellerName);
+    const tlv2 = toTlv(2, taxNumber);
+    const tlv3 = toTlv(3, timestamp);
+    const tlv4 = toTlv(4, totalAmount.toFixed(2));
+    const tlv5 = toTlv(5, vatAmount.toFixed(2));
+
+    const totalLength = tlv1.length + tlv2.length + tlv3.length + tlv4.length + tlv5.length;
+    const combined = new Uint8Array(totalLength);
+    let offset = 0;
+    [tlv1, tlv2, tlv3, tlv4, tlv5].forEach(arr => {
+      combined.set(arr, offset);
+      offset += arr.length;
+    });
+
+    let binary = "";
+    const len = combined.byteLength;
+    for (let i = 0; i < len; i++) {
+      binary += String.fromCharCode(combined[i]);
+    }
+    return btoa(binary);
+  } catch (err) {
+    console.error("Error generating ZATCA QR TLV:", err);
+    return "";
+  }
+};
+
 export default function InvoiceDetail() {
   const { id } = useParams<{ id: string }>();
   const { t, lang, dir } = useI18n();
   const auth = useSelector(selectAuth);
   const navigate = useNavigate();
-  const canWrite = hasAnyRole(auth, [...FINANCE_WRITE]);
+  const canWrite = canWriteModule(auth, "invoices");
 
   const [editOpen, setEditOpen] = useState(false);
   const [editStatus, setEditStatus] = useState("unpaid");
@@ -46,6 +83,8 @@ export default function InvoiceDetail() {
   const { data: invoiceData, isLoading: isInvoiceLoading, refetch: refetchInvoice } = useGetInvoiceByIdQuery({ id: id || "", lang });
   const [updateInvoiceMutation] = useUpdateInvoiceMutation();
 
+  const [isSharing, setIsSharing] = useState(false);
+
   if (isInvoiceLoading) return <div className="p-6 text-muted-foreground">{t("label.loading")}</div>;
   const x = invoiceData;
   if (!x) return <div className="p-6 text-muted-foreground">{t("label.no_results")}</div>;
@@ -54,205 +93,140 @@ export default function InvoiceDetail() {
   const custName = x.customer ? (lang === "ar" ? x.customer.name_ar || x.customer.name_en : x.customer.name_en || x.customer.name_ar) : "—";
   const balance = Number(x.total_amount) - Number(x.paid_amount);
   const isDraft = x.status === "draft";
+  const hasTaxNumber = !!x.customer?.tax_number;
   const currencyCode = typeof x.currency === "object" ? x.currency?.code : (x.currency ?? "SAR");
 
   const ar = (a: string, e: string) => (lang === "ar" ? a : e);
 
-  const printInvoice = () => {
+  const getInvoiceHtmlString = (forPrint: boolean = false) => {
     const logoSrc = window.location.origin + logoUrl;
+
+    const taxPercent = x.tax_percent ?? 15;
+    const totalAmt = Number(x.total_amount) || 0;
+    const taxAmt = x.tax_amount ?? x.taxes ?? (totalAmt * taxPercent / (100 + taxPercent));
+    const subTotalAmt = x.subtotal ?? x.sub_total ?? (totalAmt - taxAmt);
+
+    let invoiceTimestamp = x.created_at || (x.invoice_date + "T12:00:00Z");
+    if (invoiceTimestamp.length === 19 && invoiceTimestamp.includes(" ")) {
+      invoiceTimestamp = invoiceTimestamp.replace(" ", "T") + "Z";
+    }
+
+    const qrBase64 = getZatcaQrCode(
+      "وكالة دليل المعالم لخدمات المعتمرين",
+      "310027358600003",
+      invoiceTimestamp,
+      totalAmt,
+      taxAmt
+    );
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrBase64)}`;
+
     let itemsListHtml = "";
     if (items.length > 0) {
-      itemsListHtml = items.map((i, index) => {
-        const desc = lang === "ar" ? i.description_ar || i.description_en || i.description : i.description_en || i.description_ar || i.description;
-        const taxesVal = i.taxes ?? 0;
-        const totalVal = i.line_total ?? i.total_price ?? (Number(i.quantity) * Number(i.unit_price));
+      itemsListHtml = items.map((i: any, index: number) => {
+        const desc = i.description || (lang === "ar" ? i.description_ar || i.description_en : i.description_en || i.description_ar);
+        const totalVal = i.subtotal || i.line_total || i.total_price || (Number(i.quantity) * Number(i.unit_price));
         return `<tr>
-          <td>${index + 1}</td>
-          <td>${desc || "—"}</td>
-          <td style="text-align: end;">${i.quantity}</td>
-          <td style="text-align: end;">${Number(i.unit_price).toLocaleString()}</td>
-          <td style="text-align: end;">${x.tax_percent ? `${x.tax_percent}%` : "—"}</td>
-          <td style="text-align: end;">${Number(taxesVal).toLocaleString()}</td>
-          <td style="text-align: end; font-weight: 600;">${Number(totalVal).toLocaleString()} ${currencyCode}</td>
+          <td style="text-align: center; font-weight: 600;">${index + 1}</td>
+          <td>
+            <div style="font-weight: 600; color: #1e293b; white-space: pre-wrap;">${desc || "—"}</div>
+          </td>
+          <td style="text-align: center; font-weight: 600;">${i.quantity}</td>
+          <td style="text-align: end; font-family: monospace; font-weight: 600;">${Number(i.unit_price).toLocaleString("en-US", { minimumFractionDigits: 2 })}</td>
+          <td style="text-align: end; font-family: monospace; font-weight: 700; color: #0f172a;">${Number(totalVal).toLocaleString("en-US", { minimumFractionDigits: 2 })}</td>
         </tr>`;
       }).join("");
     } else {
       itemsListHtml = `<tr>
-        <td>1</td>
-        <td>${ar("حجز خدمات عامة / فندقية", "General Services / Hotel Booking")} - ${x.invoice_number || x.invoice_no}</td>
-        <td style="text-align: end;">1</td>
-        <td style="text-align: end;">${Number(x.subtotal ?? x.sub_total).toLocaleString()}</td>
-        <td style="text-align: end;">${x.tax_percent ? `${x.tax_percent}%` : "—"}</td>
-        <td style="text-align: end;">${Number(x.tax_amount ?? x.taxes).toLocaleString()}</td>
-        <td style="text-align: end; font-weight: 600;">${Number(x.total_amount).toLocaleString()} ${currencyCode}</td>
+        <td style="text-align: center; font-weight: 600;">1</td>
+        <td>
+          <div style="font-weight: 600; color: #1e293b;">${ar("حجز خدمات عامة / فندقية", "General Services / Hotel Booking")} - ${x.invoice_number || x.invoice_no}</div>
+        </td>
+        <td style="text-align: center; font-weight: 600;">1</td>
+        <td style="text-align: end; font-family: monospace; font-weight: 600;">${Number(subTotalAmt).toLocaleString("en-US", { minimumFractionDigits: 2 })}</td>
+        <td style="text-align: end; font-family: monospace; font-weight: 700; color: #0f172a;">${Number(x.total_amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}</td>
       </tr>`;
     }
 
-    const w = window.open("", "_blank");
-    if (!w) return;
-    w.document.write(`<!doctype html>
+    return `<!doctype html>
 <html dir="${dir}">
 <head>
   <meta charset="utf-8">
   <title>${x.invoice_number || x.invoice_no}</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Inter:wght@400;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
     
     body {
       font-family: 'Cairo', 'Inter', system-ui, sans-serif;
       margin: 0;
-      padding: 40px;
-      color: #1f2937;
+      padding: 30px;
+      color: #0f172a;
       background-color: #ffffff;
-      line-height: 1.5;
-    }
-    
-    .invoice-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      border-bottom: 2px solid #e5e7eb;
-      padding-bottom: 20px;
-      margin-bottom: 30px;
-    }
-    
-    .company-logo {
-      font-size: 24px;
-      font-weight: 700;
-      color: #047857;
+      line-height: 1.6;
     }
     
     .invoice-title {
-      font-size: 28px;
+      text-align: center;
+      margin: 25px 0;
+      font-size: 22px;
       font-weight: 700;
-      color: #111827;
+      background-color: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 12px;
+      color: #0f172a;
       text-transform: uppercase;
-    }
-    
-    .invoice-details {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 40px;
-      margin-bottom: 40px;
-    }
-    
-    .details-block h3 {
-      font-size: 14px;
-      text-transform: uppercase;
-      color: #6b7280;
-      margin: 0 0 10px 0;
-      border-bottom: 1px solid #e5e7eb;
-      padding-bottom: 5px;
-      font-weight: 600;
-    }
-    
-    .details-block p {
-      margin: 4px 0;
-      font-size: 14px;
-    }
-    
-    .details-block .strong {
-      font-weight: 600;
-      color: #111827;
     }
     
     table.items-table {
       width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 30px;
+      border-collapse: separate;
+      border-spacing: 0;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      overflow: hidden;
+      margin-top: 20px;
+      margin-bottom: 20px;
     }
     
     table.items-table th {
-      background-color: #f3f4f6;
-      color: #374151;
-      font-weight: 600;
+      background-color: #f1f5f9;
+      color: #334155;
+      font-weight: 700;
+      padding: 12px 14px;
+      font-size: 14px;
+      border-bottom: 2px solid #cbd5e1;
       text-align: start;
-      padding: 12px;
-      font-size: 13px;
-      border-bottom: 2px solid #d1d5db;
+    }
+
+    table.items-table th.center {
+      text-align: center;
+    }
+
+    table.items-table th.end {
+      text-align: end;
     }
     
     table.items-table td {
-      padding: 12px;
-      font-size: 13px;
-      border-bottom: 1px solid #e5e7eb;
-      color: #4b5563;
+      padding: 12px 14px;
+      font-size: 14px;
+      border-bottom: 1px solid #e2e8f0;
+      color: #1e293b;
     }
     
     table.items-table tr:last-child td {
-      border-bottom: 2px solid #d1d5db;
-    }
-    
-    .summary-section {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 40px;
-    }
-    
-    .notes-block {
-      flex: 1;
-      background-color: #f9fafb;
-      border: 1px solid #e5e7eb;
-      border-radius: 6px;
-      padding: 15px;
-      font-size: 13px;
-      color: #4b5563;
-      max-width: 50%;
-    }
-    
-    .notes-block h4 {
-      margin: 0 0 8px 0;
-      font-size: 13px;
-      font-weight: 600;
-      color: #374151;
-    }
-    
-    .totals-block {
-      width: 300px;
-    }
-    
-    .total-row {
-      display: flex;
-      justify-content: space-between;
-      padding: 8px 0;
-      font-size: 14px;
-      border-bottom: 1px dashed #e5e7eb;
-    }
-    
-    .total-row:last-child {
       border-bottom: none;
-    }
-    
-    .total-row.grand-total {
-      font-size: 18px;
-      font-weight: 700;
-      color: #111827;
-      border-top: 2px solid #111827;
-      border-bottom: 2px solid #111827;
-      padding: 10px 0;
-      margin-top: 5px;
-    }
-    
-    .total-row.balance-due {
-      font-size: 16px;
-      font-weight: 700;
-      color: #b91c1c;
-      padding: 8px 0;
-    }
-    
-    .footer {
-      margin-top: 60px;
-      text-align: center;
-      font-size: 12px;
-      color: #9ca3af;
-      border-top: 1px solid #e5e7eb;
-      padding-top: 20px;
     }
     
     @media print {
       body {
-        padding: 20px;
+        padding: 0;
+        margin: 0;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      @page {
+        size: A4;
+        margin: 1cm;
       }
       .no-print {
         display: none;
@@ -261,49 +235,139 @@ export default function InvoiceDetail() {
   </style>
 </head>
 <body>
-  <div class="invoice-header">
-    <div style="display: flex; align-items: center; gap: 15px;">
-      <img src="${logoSrc}" alt="logo" style="height: 60px; object-fit: contain;" />
+  <!-- Header Section -->
+  <div class="invoice-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #cbd5e1; padding-bottom: 20px; margin-bottom: 25px;">
+    <!-- Left Side: Logo & Company Name -->
+    <div style="display: flex; align-items: center; gap: 15px; width: 45%;">
+      <img src="${logoSrc}" alt="logo" style="height: 70px; object-fit: contain;" />
       <div>
-        <div class="company-logo" style="color: #bf9f53;">${ar("شركة دليل المعالم", "Daleel Elm3alem")}</div>
-        <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">
-          ${ar("الرقم الضريبي: 300123456700003", "Tax Registration: 300123456700003")}
-        </div>
+        <div style="font-size: 18px; font-weight: 700; color: #bf9f53;">وكالة دليل المعالم لخدمات المعتمرين</div>
+        <div style="font-size: 13px; font-weight: 600; color: #4b5563; margin-top: 2px;">Daleel Almaalem for Umra Services</div>
+        <div style="font-size: 11px; color: #9ca3af; margin-top: 4px;">الرقم الضريبي / Tax ID: 310027358600003</div>
       </div>
     </div>
-    <div style="text-align: end;">
-      <div class="invoice-title">${ar("فاتورة ضريبية", "Tax Invoice")}</div>
-      <div style="font-weight: 600; font-size: 16px; margin-top: 5px;">${x.invoice_number || x.invoice_no}</div>
+
+    <!-- Center: QR Code -->
+    <div style="display: flex; justify-content: center; align-items: center; width: 20%;">
+      <img src="${qrUrl}" alt="QR Code" style="height: 90px; width: 90px; border: 1px solid #e2e8f0; padding: 4px; border-radius: 4px;" />
+    </div>
+
+    <!-- Right Side: Invoice Info Table -->
+    <div style="width: 35%; display: flex; justify-content: flex-end;">
+      <table style="width: 100%; font-size: 12px; border-collapse: collapse; text-align: start;">
+        <tr>
+          <td style="font-weight: 600; padding: 3px 6px; color: #64748b;">Issue Date</td>
+          <td style="padding: 3px 6px; text-align: center; font-weight: 700; color: #1e293b;">${formatDate(x.invoice_date, "en")}</td>
+          <td style="font-weight: 600; padding: 3px 6px; text-align: end; color: #64748b;">تاريخ الإصدار</td>
+        </tr>
+        <tr>
+          <td style="font-weight: 600; padding: 3px 6px; color: #64748b;">${isDraft ? 'Draft Invoice' : (hasTaxNumber ? 'Tax Invoice' : 'Simplified Tax Invoice')}</td>
+          <td style="padding: 3px 6px; text-align: center; font-weight: 700; color: #bf9f53;">${x.invoice_number || x.invoice_no}</td>
+          <td style="font-weight: 600; padding: 3px 6px; text-align: end; color: #64748b;">${isDraft ? 'فاتورة أولية' : (hasTaxNumber ? 'فاتورة ضريبية' : 'فاتورة ضريبية مبسطة')}</td>
+        </tr>
+        <tr>
+          <td style="font-weight: 600; padding: 3px 6px; color: #64748b;">Due Date</td>
+          <td style="padding: 3px 6px; text-align: center; font-weight: 700; color: #1e293b;">${formatDate(x.due_date, "en")}</td>
+          <td style="font-weight: 600; padding: 3px 6px; text-align: end; color: #64748b;">تاريخ الاستحقاق</td>
+        </tr>
+        <tr>
+          <td style="font-weight: 600; padding: 3px 6px; color: #64748b;">Payment method</td>
+          <td style="padding: 3px 6px; text-align: center; font-weight: 700; color: #047857;">${x.booking?.payment_method_text || x.payment_method_text || ar("نقداً", "Cash")}</td>
+          <td style="font-weight: 600; padding: 3px 6px; text-align: end; color: #64748b;">طريقة الدفع</td>
+        </tr>
+      </table>
     </div>
   </div>
 
-  <div class="invoice-details">
-    <div class="details-block">
-      <h3>${ar("العميل", "Bill To")}</h3>
-      <p><span class="strong">${custName}</span></p>
-      ${x.customer?.email ? `<p>${ar("البريد الإلكتروني", "Email")}: ${x.customer.email}</p>` : ""}
-      ${x.customer?.phone ? `<p>${ar("رقم الهاتف", "Phone")}: ${x.customer.phone}</p>` : ""}
+  <!-- Title Center -->
+  <div class="invoice-title">
+    ${x.status === 'draft' 
+      ? ar('فاتورة أولية / Draft Invoice', 'Draft Invoice') 
+      : hasTaxNumber 
+        ? ar('فاتورة ضريبية / Tax Invoice', 'Tax Invoice') 
+        : ar('فاتورة ضريبية مبسطة / Simplified Tax Invoice', 'Simplified Tax Invoice')}
+  </div>
+
+  <!-- Info Section (Buyer / Seller) -->
+  <div style="display: flex; justify-content: space-between; margin-bottom: 25px; font-size: 13px; border-bottom: 1px solid #e2e8f0; padding-bottom: 15px;">
+    <!-- Customer (Issue To) -->
+    <div style="width: 48%;">
+      <div style="font-weight: 700; color: #0f172a; border-bottom: 1px solid #cbd5e1; padding-bottom: 5px; margin-bottom: 8px;">
+        صادرة إلى Issue To
+      </div>
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+          <td style="color: #64748b; padding: 3px 0; width: 100px; font-weight: 600;">Name:</td>
+          <td style="color: #0f172a; padding: 3px 0; font-weight: 700;">${custName}</td>
+          <td style="color: #64748b; padding: 3px 0; text-align: end; font-weight: 600; width: 100px;">الاسم:</td>
+        </tr>
+        <tr>
+          <td style="color: #64748b; padding: 3px 0; font-weight: 600;">VAT Number:</td>
+          <td style="color: #0f172a; padding: 3px 0; font-weight: 600;">${x.customer?.tax_number || "—"}</td>
+          <td style="color: #64748b; padding: 3px 0; text-align: end; font-weight: 600;">الرقم الضريبي:</td>
+        </tr>
+        <tr>
+          <td style="color: #64748b; padding: 3px 0; font-weight: 600;">Address:</td>
+          <td style="color: #0f172a; padding: 3px 0;">${x.customer?.address || x.customer?.country?.name || "—"}</td>
+          <td style="color: #64748b; padding: 3px 0; text-align: end; font-weight: 600;">العنوان:</td>
+        </tr>
+        <tr>
+          <td style="color: #64748b; padding: 3px 0; font-weight: 600;">CR Number:</td>
+          <td style="color: #0f172a; padding: 3px 0;">${x.customer?.commercial_register || "—"}</td>
+          <td style="color: #64748b; padding: 3px 0; text-align: end; font-weight: 600;">السجل التجاري:</td>
+        </tr>
+        <tr>
+          <td style="color: #64748b; padding: 3px 0; font-weight: 600;">Email:</td>
+          <td style="color: #0f172a; padding: 3px 0;">${x.customer?.email || "—"}</td>
+          <td style="color: #64748b; padding: 3px 0; text-align: end; font-weight: 600;">البريد الإلكتروني:</td>
+        </tr>
+      </table>
     </div>
-    <div class="details-block" style="${dir === "rtl" ? "text-align: left;" : "text-align: right;"}">
-      <h3>${ar("تفاصيل الفاتورة", "Invoice Details")}</h3>
-      <p><span class="strong">${ar("تاريخ الإصدار", "Issue Date")}:</span> ${formatDate(x.invoice_date, lang)}</p>
-      <p><span class="strong">${ar("تاريخ الاستحقاق", "Due Date")}:</span> ${formatDate(x.due_date, lang)}</p>
-      <p><span class="strong">${ar("رقم الحجز", "Booking Reference")}:</span> ${x.booking?.booking_no || x.booking_id || "—"}</p>
-      <p><span class="strong">${ar("العملة", "Currency")}:</span> ${currencyCode}</p>
-      <p><span class="strong">${ar("الحالة", "Status")}:</span> ${x.status_text || x.status}</p>
+
+    <!-- Seller (Issue By) -->
+    <div style="width: 48%;">
+      <div style="font-weight: 700; color: #0f172a; border-bottom: 1px solid #cbd5e1; padding-bottom: 5px; margin-bottom: 8px;">
+        صادرة من Issue By
+      </div>
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+          <td style="color: #64748b; padding: 3px 0; width: 100px; font-weight: 600;">Name:</td>
+          <td style="color: #0f172a; padding: 3px 0; font-weight: 700;">وكالة دليل المعالم لخدمات المعتمرين</td>
+          <td style="color: #64748b; padding: 3px 0; text-align: end; font-weight: 600; width: 100px;">الاسم:</td>
+        </tr>
+        <tr>
+          <td style="color: #64748b; padding: 3px 0; font-weight: 600;">VAT Number:</td>
+          <td style="color: #0f172a; padding: 3px 0; font-weight: 600;">310027358600003</td>
+          <td style="color: #64748b; padding: 3px 0; text-align: end; font-weight: 600;">الرقم الضريبي:</td>
+        </tr>
+        <tr>
+          <td style="color: #64748b; padding: 3px 0; font-weight: 600;">Address:</td>
+          <td style="color: #0f172a; padding: 3px 0;">3190 شارع قريش، حي السلامة 6173 - 23524</td>
+          <td style="color: #64748b; padding: 3px 0; text-align: end; font-weight: 600;">العنوان:</td>
+        </tr>
+        <tr>
+          <td style="color: #64748b; padding: 3px 0; font-weight: 600;">CR Number:</td>
+          <td style="color: #0f172a; padding: 3px 0;">4030296935</td>
+          <td style="color: #64748b; padding: 3px 0; text-align: end; font-weight: 600;">السجل التجاري:</td>
+        </tr>
+        <tr>
+          <td style="color: #64748b; padding: 3px 0; font-weight: 600;">Email:</td>
+          <td style="color: #0f172a; padding: 3px 0;">info@daleel-alm3alem.com</td>
+          <td style="color: #64748b; padding: 3px 0; text-align: end; font-weight: 600;">البريد الإلكتروني:</td>
+        </tr>
+      </table>
     </div>
   </div>
 
+  <!-- Items Table -->
   <table class="items-table">
     <thead>
       <tr>
-        <th style="width: 50px;">#</th>
-        <th>${t("inv.item_desc")}</th>
-        <th style="text-align: end; width: 80px;">${t("inv.qty")}</th>
-        <th style="text-align: end; width: 120px;">${t("inv.unit_price")}</th>
-        <th style="text-align: end; width: 100px;">${ar("نسبة الضريبة", "Tax %")}</th>
-        <th style="text-align: end; width: 120px;">${t("inv.taxes")}</th>
-        <th style="text-align: end; width: 140px;">${t("inv.line_total")}</th>
+        <th style="width: 40px; text-align: center;">#</th>
+        <th>الوصف Item</th>
+        <th style="width: 80px; text-align: center;">العدد Qty</th>
+        <th style="width: 120px; text-align: end;">السعر Price</th>
+        <th style="width: 140px; text-align: end;">الإجمالي Total</th>
       </tr>
     </thead>
     <tbody>
@@ -311,58 +375,157 @@ export default function InvoiceDetail() {
     </tbody>
   </table>
 
-  <div class="summary-section">
-    <div class="notes-block">
-      <h4>${ar("ملاحظات وشروط الدفع", "Notes & Terms")}</h4>
-      <p style="margin: 0; white-space: pre-wrap;">${x.notes || ar("شكراً لتعاملكم معنا.", "Thank you for your business.")}</p>
-    </div>
-    <div class="totals-block">
-      <div class="total-row">
-        <span>${t("inv.subtotal")}</span>
-        <span>${formatMoney(Number(x.subtotal ?? x.sub_total), currencyCode, lang)}</span>
-      </div>
-      <div class="total-row">
-        <span>${ar("خصم مباشر", "Discount")}</span>
-        <span>${formatMoney(Number(x.discount), currencyCode, lang)}</span>
-      </div>
-      <div class="total-row">
-        <span>${ar("ضريبة القيمة المضافة", "VAT")}${x.tax_percent ? ` (${x.tax_percent}%)` : ""}</span>
-        <span>${formatMoney(Number(x.tax_amount ?? x.taxes), currencyCode, lang)}</span>
-      </div>
-      <div class="total-row grand-total">
-        <span>${ar("الإجمالي", "Grand Total")}</span>
-        <span>${formatMoney(Number(x.total_amount), currencyCode, lang)}</span>
-      </div>
-      ${x.total_amount_sar ? `
-      <div class="total-row" style="color: #4b5563; font-size: 13px;">
-        <span>${ar("الإجمالي بالريال", "Total (SAR)")}</span>
-        <span>${formatMoney(Number(x.total_amount_sar), "SAR", lang)}</span>
-      </div>
-      ` : ""}
-      <div class="total-row">
-        <span>${ar("المبلغ المدفوع", "Paid Amount")}</span>
-        <span>${formatMoney(Number(x.paid_amount), currencyCode, lang)}</span>
-      </div>
-      <div class="total-row balance-due">
-        <span>${ar("المبلغ المتبقي", "Balance Due")}</span>
-        <span>${formatMoney(Number(x.remaining_amount ?? balance), currencyCode, lang)}</span>
-      </div>
+  <!-- Totals Section -->
+  <div style="display: flex; justify-content: flex-end; margin-top: 10px;">
+    <div style="width: 320px;">
+      <table style="width: 100%; font-size: 13px; border-collapse: collapse;">
+        <tr style="border-bottom: 1px dashed #cbd5e1;">
+          <td style="padding: 6px 0; color: #64748b; font-weight: 600;">المجموع Sub Total</td>
+          <td style="padding: 6px 0; text-align: end; font-family: monospace; font-weight: 700; color: #334155;">
+            ${Number(subTotalAmt).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+          </td>
+        </tr>
+        ${Number(x.discount) > 0 ? `
+        <tr style="border-bottom: 1px dashed #cbd5e1;">
+          <td style="padding: 6px 0; color: #64748b; font-weight: 600;">الخصم Discount</td>
+          <td style="padding: 6px 0; text-align: end; font-family: monospace; font-weight: 700; color: #e11d48;">
+            -${Number(x.discount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+          </td>
+        </tr>` : ""}
+        <tr style="border-bottom: 1px dashed #cbd5e1;">
+          <td style="padding: 6px 0; color: #64748b; font-weight: 600;">ضريبة القيمة المضافة VAT (15%)</td>
+          <td style="padding: 6px 0; text-align: end; font-family: monospace; font-weight: 700; color: #334155;">
+            ${Number(taxAmt).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+          </td>
+        </tr>
+        <tr style="border-top: 2px solid #1e293b; border-bottom: 2px solid #1e293b; font-size: 16px;">
+          <td style="padding: 8px 0; font-weight: 700; color: #0f172a;">الإجمالي Total</td>
+          <td style="padding: 8px 0; text-align: end; font-family: monospace; font-weight: 800; color: #0f172a;">
+            ${Number(x.total_amount).toLocaleString("en-US", { minimumFractionDigits: 2 })} ${currencyCode}
+          </td>
+        </tr>
+      </table>
     </div>
   </div>
 
-  <div class="footer">
-    <p>${ar("هذه فاتورة ضريبية معتمدة تم إنشاؤها تلقائياً.", "This is a certified tax invoice generated automatically.")}</p>
-    <p style="margin-top: 4px; font-size: 10px;">${ar("مجموعة فنادق دليل المعلم - جميع الحقوق محفوظة © 2026", "Daleel Elm3alem Hotels Group - All Rights Reserved © 2026")}</p>
+  <!-- Bank Details Section -->
+  <div style="margin-top: 35px; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px;">
+    <div style="text-align: center; font-weight: 700; color: #0f172a; margin-bottom: 12px; font-size: 14px;">معلومات البنك / Bank Details</div>
+    <table style="width: 80%; margin: 0 auto; font-size: 13px; border-collapse: collapse;">
+      <tr style="border-bottom: 1px dashed #cbd5e1;">
+        <td style="color: #64748b; font-weight: 600; padding: 6px 0; width: 120px;">Bank Name</td>
+        <td style="color: #1e293b; font-weight: 700; padding: 6px 0; text-align: center;">بنك الرياض</td>
+        <td style="color: #64748b; font-weight: 600; padding: 6px 0; text-align: end; width: 120px;">اسم البنك</td>
+      </tr>
+      <tr style="border-bottom: 1px dashed #cbd5e1;">
+        <td style="color: #64748b; font-weight: 600; padding: 6px 0;">Account Name</td>
+        <td style="color: #1e293b; font-weight: 700; padding: 6px 0; text-align: center;">وكالة دليل المعالم لخدمات المعتمرين</td>
+        <td style="color: #64748b; font-weight: 600; padding: 6px 0; text-align: end;">اسم الحساب</td>
+      </tr>
+      <tr style="border-bottom: 1px dashed #cbd5e1;">
+        <td style="color: #64748b; font-weight: 600; padding: 6px 0;">Swift Code</td>
+        <td style="color: #1e293b; font-weight: 700; padding: 6px 0; text-align: center; font-family: monospace;">RIBLSARI</td>
+        <td style="color: #64748b; font-weight: 600; padding: 6px 0; text-align: end;">رمز سويفت</td>
+      </tr>
+      <tr>
+        <td style="color: #64748b; font-weight: 600; padding: 6px 0;">IBAN Number</td>
+        <td style="color: #1e293b; font-weight: 700; padding: 6px 0; text-align: center; font-family: monospace;">SA5320000001901068649940</td>
+        <td style="color: #64748b; font-weight: 600; padding: 6px 0; text-align: end;">رقم الحساب آيبان</td>
+      </tr>
+    </table>
   </div>
 
-  <script>
+  <!-- Signature Section -->
+  <div style="margin-top: 40px; display: flex; justify-content: flex-end; padding-right: 30px;">
+    <div style="text-align: center; width: 200px;">
+      <div style="font-weight: 700; color: #0f172a; margin-bottom: 35px; font-size: 14px;">التوقيع / Signature</div>
+      <div style="border-bottom: 1px dashed #94a3b8; width: 100%;"></div>
+    </div>
+  </div>
+
+  ${forPrint ? `<script>
     window.onload = function() {
       window.print();
     }
-  </script>
+  </script>` : ''}
 </body>
-</html>`);
+</html>`;
+  };
+
+  const printInvoice = () => {
+    const w = window.open("", "_blank");
+    if (!w) return;
+    w.document.write(getInvoiceHtmlString(true));
     w.document.close();
+  };
+
+  const shareInvoicePdf = async () => {
+    setIsSharing(true);
+    try {
+      const htmlStr = getInvoiceHtmlString(false);
+      
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.top = '-9999px';
+      iframe.style.left = '-9999px';
+      iframe.style.width = '210mm';
+      iframe.style.height = '297mm';
+      document.body.appendChild(iframe);
+      
+      const idoc = iframe.contentWindow?.document || iframe.contentDocument;
+      if (!idoc) throw new Error("Could not create iframe document");
+      
+      idoc.open();
+      idoc.write(htmlStr);
+      idoc.close();
+
+      await new Promise(resolve => setTimeout(resolve, 800));
+
+      const canvas = await html2canvas(idoc.body, { 
+        scale: 2, 
+        useCORS: true,
+        windowWidth: idoc.body.scrollWidth,
+        windowHeight: idoc.body.scrollHeight
+      });
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4"
+      });
+
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      
+      pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+      
+      document.body.removeChild(iframe);
+
+      const pdfBlob = pdf.output("blob");
+      const file = new File([pdfBlob], `invoice-${x.invoice_number || x.invoice_no}.pdf`, { type: "application/pdf" });
+
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: `Invoice ${x.invoice_number || x.invoice_no}`,
+          text: ar(`مرفق الفاتورة رقم ${x.invoice_number || x.invoice_no}`, `Attached is invoice ${x.invoice_number || x.invoice_no}`)
+        });
+      } else {
+        const url = URL.createObjectURL(pdfBlob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = file.name;
+        a.click();
+        URL.revokeObjectURL(url);
+        toast.info(ar('تم تنزيل الفاتورة لأنه لا يمكن مشاركتها مباشرة على هذا الجهاز.', 'Invoice downloaded as sharing is not supported on this device.'));
+      }
+    } catch (e: any) {
+      console.error(e);
+      toast.error(ar("خطأ في إنشاء ملف PDF", "Error generating PDF"));
+    } finally {
+      setIsSharing(false);
+    }
   };
 
   const invoiceNo = x.invoice_number || x.invoice_no;
@@ -374,7 +537,7 @@ export default function InvoiceDetail() {
 
   // WhatsApp Message
   const waMessage = ar(
-    `*فاتورة ضريبية - شركة دليل المعالم*
+    `*${hasTaxNumber ? 'فاتورة ضريبية' : 'فاتورة ضريبية مبسطة'} - شركة دليل المعالم*
 
 *رقم الفاتورة:* ${invoiceNo}
 *العميل:* ${custName}
@@ -385,8 +548,10 @@ export default function InvoiceDetail() {
 *المبلغ المتبقي:* ${remainingStr}
 *حالة السداد:* ${statusStr}
 
+*رابط عرض الفاتورة وطباعتها:* ${window.location.href}
+
 شكراً لتعاملكم معنا.`,
-    `*Tax Invoice - Daleel Elm3alem*
+    `*${hasTaxNumber ? 'Tax Invoice' : 'Simplified Tax Invoice'} - Daleel Elm3alem*
 
 *Invoice No:* ${invoiceNo}
 *Customer:* ${custName}
@@ -397,19 +562,21 @@ export default function InvoiceDetail() {
 *Balance Due:* ${remainingStr}
 *Payment Status:* ${statusStr}
 
+*Link to view and print invoice:* ${window.location.href}
+
 Thank you for your business.`
   );
 
   // Email Message
   const emailSubject = ar(
-    `فاتورة ضريبية رقم ${invoiceNo} - شركة دليل المعالم`,
-    `Tax Invoice #${invoiceNo} - Daleel Elm3alem`
+    `${hasTaxNumber ? 'فاتورة ضريبية' : 'فاتورة ضريبية مبسطة'} رقم ${invoiceNo} - شركة دليل المعالم`,
+    `${hasTaxNumber ? 'Tax Invoice' : 'Simplified Tax Invoice'} #${invoiceNo} - Daleel Elm3alem`
   );
 
   const emailBody = ar(
     `تحية طيبة،
 
-مرفق تفاصيل الفاتورة الضريبية الصادرة لكم من شركة دليل المعالم:
+مرفق تفاصيل ${hasTaxNumber ? 'الفاتورة الضريبية' : 'الفاتورة الضريبية المبسطة'} الصادرة لكم من شركة دليل المعالم:
 
 - رقم الفاتورة: ${invoiceNo}
 - تاريخ الإصدار: ${dateStr}
@@ -419,11 +586,14 @@ Thank you for your business.`
 - المبلغ المتبقي: ${remainingStr}
 - حالة السداد: ${statusStr}
 
+يمكنكم عرض الفاتورة وطباعتها بصيغة PDF عبر الرابط التالي:
+${window.location.href}
+
 شكراً لتعاملكم معنا.
 شركة دليل المعالم`,
     `Dear Customer,
 
-Please find the details of the tax invoice issued to you by Daleel Elm3alem:
+Please find the details of the ${hasTaxNumber ? 'tax invoice' : 'simplified tax invoice'} issued to you by Daleel Elm3alem:
 
 - Invoice Number: ${invoiceNo}
 - Issue Date: ${dateStr}
@@ -432,6 +602,9 @@ Please find the details of the tax invoice issued to you by Daleel Elm3alem:
 - Paid Amount: ${formatMoney(Number(x.paid_amount), currencyCode, lang)}
 - Balance Due: ${remainingStr}
 - Payment Status: ${statusStr}
+
+You can view and print the PDF invoice online using the following link:
+${window.location.href}
 
 Thank you for your business.
 Daleel Elm3alem`
@@ -451,8 +624,10 @@ Daleel Elm3alem`
               <ArrowLeft className="h-4 w-4 rtl:rotate-180" />{t("actions.back")}
             </Button>
             <Button variant="outline" size="sm" onClick={printInvoice}><Printer className="h-4 w-4" />{t("inv.pdf")}</Button>
-            <Button asChild variant="outline" size="sm"><a href={emailHref}><Mail className="h-4 w-4" />{t("inv.send_email")}</a></Button>
-            <Button asChild variant="outline" size="sm"><a href={waHref} target="_blank" rel="noreferrer"><MessageCircle className="h-4 w-4" />{t("inv.send_whatsapp")}</a></Button>
+            <Button variant="outline" size="sm" onClick={shareInvoicePdf} disabled={isSharing}>
+              {isSharing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Share2 className="h-4 w-4" />}
+              {lang === "ar" ? "مشاركة الـ PDF" : "Share PDF"}
+            </Button>
             {canWrite && (
               <Button size="sm" onClick={() => {
                 setEditStatus(x.status ?? "unpaid");

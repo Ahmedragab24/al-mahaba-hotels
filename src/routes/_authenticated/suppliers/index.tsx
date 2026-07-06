@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/page-header";
 import { useI18n } from "@/lib/i18n";
 import { useSelector } from "react-redux";
 import { selectAuth } from "@/store/features/authSlice";
-import { hasRole, hasAnyRole, isAdmin, canAccessModule } from "@/lib/auth-utils";
+import { canWriteModule, isAdmin } from "@/lib/auth-utils";
 import { useDebounce } from "@/lib/use-debounce";
 import { useCountries } from "@/lib/lookups";
 import { Card, CardContent } from "@/components/ui/card";
@@ -60,12 +60,7 @@ export default function SuppliersList() {
   const auth = useSelector(selectAuth);
   const qc = useQueryClient();
   const navigate = useNavigate();
-  const canWrite = hasAnyRole(auth, [
-    "super_admin",
-    "admin",
-    "operations_manager",
-    "operations_agent",
-  ]);
+  const canWrite = canWriteModule(auth, "suppliers");
 
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<string>("all");

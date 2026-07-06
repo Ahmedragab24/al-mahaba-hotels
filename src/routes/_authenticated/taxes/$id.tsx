@@ -6,7 +6,7 @@ import { useQuery, useQueryClient } from "@/store/queryBridge";
 import { useI18n } from "@/lib/i18n";
 import { useSelector } from "react-redux";
 import { selectAuth } from "@/store/features/authSlice";
-import { hasRole, hasAnyRole, isAdmin, canAccessModule } from "@/lib/auth-utils";
+import { canWriteModule } from "@/lib/auth-utils";
 import { PageHeader } from "@/components/page-header";
 import { EntityHistory } from "@/components/entity-history";
 import { Card, CardContent } from "@/components/ui/card";
@@ -33,7 +33,7 @@ export default function TaxDetail() {
   const auth = useSelector(selectAuth);
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const canWrite = hasAnyRole(auth, ["super_admin", "admin", "operations_manager", "operations_agent", "finance_manager", "finance_agent"]);
+  const canWrite = canWriteModule(auth, "settings");
   const [editing, setEditing] = useState(false);
 
   const q = useQuery({

@@ -31,6 +31,9 @@ export interface Price {
   is_weekend_weekday?: boolean;
   price_type?: string;
   days?: string[];
+  weekend_cost_per_night?: number;
+  weekend_selling_price?: number;
+  weekend_days?: string[];
   is_archived?: boolean;
   created_at?: string;
   updated_at?: string;

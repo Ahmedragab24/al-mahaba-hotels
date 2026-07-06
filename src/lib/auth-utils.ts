@@ -25,29 +25,22 @@ export function canAccessModule(auth: AuthState, key: string | null): boolean {
   // Check allow list if present (custom API permissions list)
   const profilePermissions = (auth.profile as any)?.permissions;
   if (profilePermissions) {
-    console.log('[canAccessModule] Checking permission for key:', key, 'permissions:', profilePermissions);
     // Handle API format: object with "true"/"false" string values
-    if (typeof profilePermissions === 'object' && !Array.isArray(profilePermissions)) {
+    if (typeof profilePermissions === "object" && !Array.isArray(profilePermissions)) {
       const permissionValue = profilePermissions[key];
-      console.log('[canAccessModule] Permission value for', key, ':', permissionValue);
-      // Check if permission is explicitly set to "true" or true
-      const result = permissionValue === 'true' || permissionValue === true;
-      console.log('[canAccessModule] Result:', result);
-      return result;
+      return permissionValue === "true" || permissionValue === true;
     }
-    
+
     // Handle array format
     if (Array.isArray(profilePermissions)) {
       return profilePermissions.includes(key as PermissionKey);
     }
-    
+
     // Handle legacy object format using permissionsToArray
     const permissionKeys = permissionsToArray(profilePermissions);
     if (permissionKeys.length > 0) {
       return permissionKeys.includes(key as PermissionKey);
     }
-  } else {
-    console.log('[canAccessModule] No permissions found in profile');
   }
 
   // Fall back to role-based default permissions
@@ -59,3 +52,45 @@ export function canAccessModule(auth: AuthState, key: string | null): boolean {
 
   return true;
 }
+
+/**
+ * Permission-based write check.
+ * Any user who has access to the module can perform write/edit/delete operations.
+ * Use this instead of hasAnyRole for all action buttons.
+ */
+export function canWriteModule(auth: AuthState, moduleKey: string): boolean {
+  return canAccessModule(auth, moduleKey);
+}
+
+/**
+ * Permission-based approve check.
+ * User must have access to the module AND hold a manager/admin level role.
+ * Approval represents a business authority level, not just module access.
+ */
+export function canApproveModule(auth: AuthState, moduleKey: string | null): boolean {
+  if (!canAccessModule(auth, moduleKey)) return false;
+  return hasAnyRole(auth, [
+    "super_admin",
+    "admin",
+    "sales_manager",
+    "operations_manager",
+    "finance_manager",
+  ]);
+}
+
+/**
+ * Check if user has any of the specified permissions.
+ * This is a helper for checking multiple permissions at once.
+ */
+export function hasAnyPermission(auth: AuthState, permissions: string[]): boolean {
+  return permissions.some((perm) => canAccessModule(auth, perm));
+}
+
+/**
+ * Check if user has all of the specified permissions.
+ * This is a helper for strict permission checking.
+ */
+export function hasAllPermissions(auth: AuthState, permissions: string[]): boolean {
+  return permissions.every((perm) => canAccessModule(auth, perm));
+}
+

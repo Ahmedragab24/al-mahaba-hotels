@@ -14,26 +14,23 @@ import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
+import { NotificationCard } from "@/components/notification-card";
 
 export function NotificationsPopover() {
   const { t, lang, dir } = useI18n();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
 
-  const { data: notifications = [], isLoading, refetch } = useGetNotificationsQuery();
-  const { data: unreadData, refetch: refetchCount } = useGetUnreadNotificationsCountQuery();
+  const { data: notifications = [], isLoading } = useGetNotificationsQuery();
+  const { data: unreadCount = 0 } = useGetUnreadNotificationsCountQuery();
   const [markAsRead] = useMarkNotificationAsReadMutation();
   const [markAllRead] = useMarkAllNotificationsAsReadMutation();
-
-  const unreadCount = typeof unreadData === "object" ? unreadData?.count : (unreadData ?? 0);
 
   const handleMarkAllRead = async (e: React.MouseEvent) => {
     e.stopPropagation();
     try {
       await markAllRead().unwrap();
       toast.success(lang === "ar" ? "تم تحديد الكل كمقروء" : "All notifications marked as read");
-      refetch();
-      refetchCount();
     } catch {
       toast.error(lang === "ar" ? "حدث خطأ ما" : "Failed to mark all as read");
     }
@@ -43,8 +40,6 @@ export function NotificationsPopover() {
     if (!isRead) {
       try {
         await markAsRead(id).unwrap();
-        refetch();
-        refetchCount();
       } catch (err) {
         console.warn("Failed to mark as read", err);
       }
@@ -98,32 +93,20 @@ export function NotificationsPopover() {
             </div>
           )}
           {!isLoading && latestNotifications.length > 0 && (
-            <div className="divide-y">
+            <div className="divide-y divide-border/40">
               {latestNotifications.map((n) => {
-                const isRead = n.read_at !== null;
+                const id = String(n.id || (n as any).user_id || "");
+                const isRead = (n as any).read_at !== undefined ? (n as any).read_at !== null : false;
                 return (
                   <div
-                    key={n.id}
-                    onClick={() => handleNotificationClick(n.id, isRead)}
-                    className={cn(
-                      "flex flex-col gap-1 p-4 text-start transition-colors cursor-pointer hover:bg-muted/50",
-                      !isRead && "bg-primary/5 hover:bg-primary/10"
-                    )}
+                    key={id}
+                    onClick={() => handleNotificationClick(id, isRead)}
+                    className="cursor-pointer"
                   >
-                    <div className="flex items-start justify-between gap-2">
-                      <span className={cn("text-xs font-semibold text-foreground line-clamp-1", !isRead && "text-primary")}>
-                        {lang === "ar" ? n.title : n.title_en}
-                      </span>
-                      {!isRead && (
-                        <span className="h-1.5 w-1.5 rounded-full bg-primary shrink-0 mt-1.5" />
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
-                      {lang === "ar" ? n.message : n.message_en}
-                    </p>
-                    <span className="text-[10px] text-muted-foreground mt-1 font-medium">
-                      {formatDateTime(n.created_at, lang)}
-                    </span>
+                    <NotificationCard
+                      notification={n}
+                      compact
+                    />
                   </div>
                 );
               })}

@@ -4,7 +4,7 @@ import { useGetCustomerByIdQuery, useDeleteCustomerMutation } from "@/store/serv
 import { useI18n } from "@/lib/i18n";
 import { useSelector } from "react-redux";
 import { selectAuth } from "@/store/features/authSlice";
-import { hasRole, hasAnyRole, isAdmin, canAccessModule } from "@/lib/auth-utils";
+import { canWriteModule, isAdmin } from "@/lib/auth-utils";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,7 +21,7 @@ export default function CustomerDetail() {
   const { t, lang } = useI18n();
   const auth = useSelector(selectAuth);
   const navigate = useNavigate();
-  const canWrite = hasAnyRole(auth, ["super_admin", "financial_manager", "sales_manager", "employee", "viewer"]);
+  const canWrite = canWriteModule(auth, "customers");
   const [editing, setEditing] = useState(!!search.edit);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleteCustomer] = useDeleteCustomerMutation();

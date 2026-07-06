@@ -70,9 +70,10 @@ const T = {
     status: "الحالة",
     action: "إجراء",
     awaitingAssignment: "بانتظار التعيين",
-    urgent: "عاجل",
+    urgent: "طارئ",
+    high: "عالي",
     medium: "متوسط",
-    normal: "عادي",
+    low: "منخفض",
     statusOpen: "مفتوح",
     statusInProgress: "قيد التنفيذ",
     statusAwaitingReply: "بانتظار الرد",
@@ -139,8 +140,9 @@ const T = {
     action: "Action",
     awaitingAssignment: "Awaiting Assignment",
     urgent: "Urgent",
+    high: "High",
     medium: "Medium",
-    normal: "Normal",
+    low: "Low",
     statusOpen: "Open",
     statusInProgress: "In Progress",
     statusAwaitingReply: "Awaiting Reply",
@@ -230,7 +232,7 @@ interface Task {
   assignedAvatar?: string;
   assignedTo?: string;
   deadline?: string;
-  priority: "urgent" | "medium" | "normal";
+  priority: "urgent" | "high" | "medium" | "low";
   status: "in_progress" | "open" | "awaiting_reply" | "completed" | "closed";
   requestDate: string;
   messages: Message[];
@@ -249,7 +251,7 @@ function mapApiTaskToUi(apiTask: any): Task {
     assignedAvatar: apiTask.assigned_avatar || undefined,
     assignedTo: apiTask.assignee?.id ? String(apiTask.assignee.id) : (apiTask.assigned_to ? String(apiTask.assigned_to) : ""),
     deadline: apiTask.deadline || "",
-    priority: apiTask.priority || "normal",
+    priority: apiTask.priority || "low",
     status: apiTask.status || "open",
     requestDate: apiTask.created_at ? new Date(apiTask.created_at).toLocaleString() : "",
     messages: [], // Populated dynamically when selected
@@ -295,7 +297,7 @@ export default function TasksPage() {
   const [formTitle, setFormTitle] = useState("");
   const [formAssignedTo, setFormAssignedTo] = useState("");
   const [formDept, setFormDept] = useState("فريق تقنية المعلومات");
-  const [formPriority, setFormPriority] = useState("urgent");
+  const [formPriority, setFormPriority] = useState("high");
   const [formDeadline, setFormDeadline] = useState("2026-07-10");
   const [formStatus, setFormStatus] = useState("open");
   const [formDetails, setFormDetails] = useState("");
@@ -422,7 +424,7 @@ export default function TasksPage() {
       setFormDetails("");
       setFormAssignedTo("");
       setFormDept("فريق تقنية المعلومات");
-      setFormPriority("urgent");
+      setFormPriority("high");
       setFormDeadline("2026-07-10");
       setFormStatus("open");
       setFormAttachments([]);
@@ -536,9 +538,11 @@ export default function TasksPage() {
     switch (priority) {
       case "urgent":
         return "bg-rose-50 dark:bg-rose-900/20 text-rose-600 border-rose-200 dark:border-rose-900/30";
+      case "high":
+        return "bg-orange-50 dark:bg-orange-900/20 text-orange-600 border-orange-200 dark:border-orange-900/30";
       case "medium":
         return "bg-amber-50 dark:bg-amber-900/20 text-amber-600 border-amber-200 dark:border-amber-900/30";
-      case "normal":
+      case "low":
         return "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-transparent";
     }
   };
@@ -877,9 +881,10 @@ export default function TasksPage() {
                           <SelectValue placeholder="Priority" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="urgent">{lang === "ar" ? "عاجل" : "Urgent"}</SelectItem>
+                          <SelectItem value="urgent">{lang === "ar" ? "طارئ" : "Urgent"}</SelectItem>
+                          <SelectItem value="high">{lang === "ar" ? "عالي" : "High"}</SelectItem>
                           <SelectItem value="medium">{lang === "ar" ? "متوسط" : "Medium"}</SelectItem>
-                          <SelectItem value="normal">{lang === "ar" ? "عادي" : "Normal"}</SelectItem>
+                          <SelectItem value="low">{lang === "ar" ? "منخفض" : "Low"}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -1282,9 +1287,10 @@ export default function TasksPage() {
                   >
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="urgent">{t.urgent}</SelectItem>
-                      <SelectItem value="medium">{t.medium}</SelectItem>
-                      <SelectItem value="normal">{t.normal}</SelectItem>
+                      <SelectItem value="urgent">{t.urgent || "طارئ"}</SelectItem>
+                      <SelectItem value="high">{t.high || "عالي"}</SelectItem>
+                      <SelectItem value="medium">{t.medium || "متوسط"}</SelectItem>
+                      <SelectItem value="low">{t.low || "منخفض"}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

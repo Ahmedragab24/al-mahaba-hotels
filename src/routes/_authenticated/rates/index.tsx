@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/page-header";
 import { useI18n } from "@/lib/i18n";
 import { useSelector } from "react-redux";
 import { selectAuth } from "@/store/features/authSlice";
-import { hasAnyRole, isAdmin } from "@/lib/auth-utils";
+import { canWriteModule, isAdmin } from "@/lib/auth-utils";
 import { useDebounce } from "@/lib/use-debounce";
 import { useHotelsLite, useSuppliersLite } from "@/lib/lookups";
 import {
@@ -53,25 +53,18 @@ import { formatDate } from "@/lib/format";
 
 const PAGE_SIZE = 20;
 const STATUSES = ["valid", "expired"] as const;
-const BOARDS = ["RO", "BB", "HB", "FB", "AI", "UAI"] as const;
 
 export default function RatesList() {
   const { t, lang } = useI18n();
   const auth = useSelector(selectAuth);
   const qc = useQueryClient();
   const navigate = useNavigate();
-  const canWrite = hasAnyRole(auth, [
-    "super_admin",
-    "admin",
-    "operations_manager",
-    "operations_agent",
-  ]);
+  const canWrite = canWriteModule(auth, "rates");
 
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<string>("all");
   const [hotelId, setHotelId] = useState<string>("all");
   const [supplierId, setSupplierId] = useState<string>("all");
-  const [board, setBoard] = useState<string>("all");
   const [from, setFrom] = useState<string>("");
   const [to, setTo] = useState<string>("");
   const [showArchived, setShowArchived] = useState(false);
@@ -90,7 +83,6 @@ export default function RatesList() {
     search: dSearch,
     hotel_id: hotelId === "all" ? undefined : hotelId,
     supplier_id: supplierId === "all" ? undefined : supplierId,
-    meal_plan_type: board === "all" ? undefined : board,
     status: status === "all" ? undefined : status,
     valid_from: from || undefined,
     valid_to: to || undefined,
@@ -132,7 +124,6 @@ export default function RatesList() {
           meal_plan_type: r.meal_plan_type || "inclusive",
           cost_per_night: Number(r.cost_per_night),
           selling_price: r.selling_price ? Number(r.selling_price) : null,
-          profit_margin: r.profit_margin ? Number(r.profit_margin) : null,
           tax_type: r.tax_type || "inclusive_tax",
           tax_rate: r.tax_rate !== undefined && r.tax_rate !== null ? Number(r.tax_rate) : 15,
           status: r.status === "expired" ? "expired" : "valid",
@@ -265,30 +256,6 @@ export default function RatesList() {
                 </SelectContent>
               </Select>
             </div>
-
-            <div className="flex flex-col gap-1.5">
-              <Label className="text-muted-foreground">{t("rates.meal_plan")}</Label>
-              <Select
-                value={board}
-                onValueChange={(v) => {
-                  setBoard(v);
-                  setPage(1);
-                }}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder={t("rates.meal_plan")} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t("filter.all")}</SelectItem>
-                  {BOARDS.map((b) => (
-                    <SelectItem key={b} value={b}>
-                      {t(`board.${b}`)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
             <div className="flex flex-col gap-1.5">
               <Label className="text-muted-foreground">{t("filter.status")}</Label>
               <Select
@@ -389,6 +356,18 @@ export default function RatesList() {
                   const h = r.hotel ?? {};
                   const s = r.supplier ?? {};
                   const rm = r.room ?? {};
+
+                  const formatDays = (daysList?: string[]) => {
+                    if (!daysList || daysList.length === 0) return "";
+                    const dayNamesAr: Record<string, string> = {
+                      Sunday: "الأحد", Monday: "الإثنين", Tuesday: "الثلاثاء", Wednesday: "الأربعاء", Thursday: "الخميس", Friday: "الجمعة", Saturday: "السبت"
+                    };
+                    const dayNamesEn: Record<string, string> = {
+                      Sunday: "Sun", Monday: "Mon", Tuesday: "Tue", Wednesday: "Wed", Thursday: "Thu", Friday: "Fri", Saturday: "Sat"
+                    };
+                    return daysList.map(d => lang === "ar" ? dayNamesAr[d] || d : dayNamesEn[d] || d).join(lang === "ar" ? "، " : ", ");
+                  };
+
                   return (
                     <TableRow key={r.id} className={r.is_archived ? "opacity-60" : ""}>
                       <TableCell className="text-xs max-w-[150px] truncate">
@@ -407,8 +386,20 @@ export default function RatesList() {
                           s.name_en || s.name_ar
                         )}
                       </TableCell>
-                      <TableCell className="text-xs max-w-[120px] truncate">
-                        {lang === "ar" ? rm.name_ar || rm.name_en : rm.name_en || rm.name_ar}
+                      <TableCell className="text-xs max-w-[150px]">
+                        <div>
+                          <div className="font-medium text-slate-800 dark:text-slate-200">
+                            {lang === "ar" ? rm.name_ar || rm.name_en : rm.name_en || rm.name_ar}
+                          </div>
+                          {r.days && r.days.length > 0 && (
+                            <div className="text-[10px] text-muted-foreground mt-1 flex flex-wrap gap-1 items-center">
+                              <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-amber-50/50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 border-amber-200/40">
+                                {r.price_type === "weekend" ? (lang === "ar" ? "نهاية الأسبوع" : "Weekend") : (r.price_type === "weekday" ? (lang === "ar" ? "وسط الأسبوع" : "Weekday") : r.price_type)}
+                              </Badge>
+                              <span className="text-[9px] font-normal font-sans">({formatDays(r.days)})</span>
+                            </div>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-xs max-w-[80px] truncate">
                         {t(`board.${r.meal_plan_type}`) || r.meal_plan_type}

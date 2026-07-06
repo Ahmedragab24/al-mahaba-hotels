@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/page-header";
 import { useI18n } from "@/lib/i18n";
 import { useSelector } from "react-redux";
 import { selectAuth } from "@/store/features/authSlice";
-import { hasRole, hasAnyRole, isAdmin, canAccessModule } from "@/lib/auth-utils";
+import { canWriteModule } from "@/lib/auth-utils";
 import { Card } from "@/components/ui/card";
 import {
   Table,
@@ -158,7 +158,7 @@ export default function CurrenciesPage() {
   const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
   const paginatedList = filteredList.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  const canWrite = hasAnyRole(auth, ["super_admin", "admin"]);
+  const canWrite = canWriteModule(auth, "currencies");
 
   const saveMutation = useMutation({
     mutationFn: async (payload: CurrencyItem) => {

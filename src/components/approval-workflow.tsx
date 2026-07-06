@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@/store/queryBridge";
 import { useI18n } from "@/lib/i18n";
 import { useSelector } from "react-redux";
 import { selectAuth } from "@/store/features/authSlice";
-import { hasRole, hasAnyRole, isAdmin, canAccessModule } from "@/lib/auth-utils";
+import { canAccessModule, canApproveModule } from "@/lib/auth-utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -38,8 +38,9 @@ export function ApprovalWorkflow({ entityType, entityId }: { entityType: Attachm
   const [notesAction, setNotesAction] = useState<"rejected" | "returned" | null>(null);
   const [notes, setNotes] = useState("");
 
-  const canSubmit = hasAnyRole(auth, [...SUBMIT_ROLES]);
-  const canApprove = hasAnyRole(auth, [...APPROVER_ROLES]);
+  // Any user who is authenticated can submit; approval requires manager level
+  const canSubmit = auth.isAuthenticated;
+  const canApprove = canApproveModule(auth, null);
 
   const list = useQuery({
     queryKey: ["approval-requests", entityType, entityId],

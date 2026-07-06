@@ -28,6 +28,8 @@ import {
   Plus,
   X,
   Check,
+  Building2,
+  MapPin,
 } from "lucide-react";
 import {
   useCreateBookingMutation,
@@ -37,6 +39,7 @@ import {
   useGetCurrenciesQuery,
   useGetCountriesQuery,
   useGetCitiesQuery,
+  useGetRoomTypesQuery,
 } from "@/store/api";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -105,6 +108,9 @@ function FinancialSummary({
   amountPaid,
   currency,
   lang,
+  isQuotationMode = false,
+  selectedItems = [],
+  getItemTotal = (item: any) => 0,
 }: {
   roomRate: number;
   nights: number;
@@ -113,6 +119,9 @@ function FinancialSummary({
   amountPaid: number;
   currency: string;
   lang: string;
+  isQuotationMode?: boolean;
+  selectedItems?: any[];
+  getItemTotal?: (item: any) => number;
 }) {
   const roomTotal = roomRate * Math.max(nights, 0) * Math.max(rooms, 1);
   const remaining = totalAmount - amountPaid;
@@ -136,17 +145,49 @@ function FinancialSummary({
         </div>
 
         <div className="space-y-2.5">
-          {roomRate > 0 && nights > 0 && (
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-muted-foreground">
-                {lang === "ar"
-                  ? `${fmt(roomRate)} × ${nights} ليلة × ${rooms} غرفة`
-                  : `${fmt(roomRate)} × ${nights} nights × ${rooms} room${rooms > 1 ? "s" : ""}`}
-              </span>
-              <span className="font-medium tabular-nums">
-                {fmt(roomTotal)} {currency}
-              </span>
-            </div>
+          {selectedItems && selectedItems.length > 0 ? (
+            selectedItems.map((item: any, idx: number) => {
+              const sDate = item.check_in || item.start_date;
+              const eDate = item.check_out || item.end_date;
+              let itemNights = nights || 1;
+              if (sDate && eDate) {
+                const startDate = new Date(sDate.split(/[ T]/)[0]);
+                const endDate = new Date(eDate.split(/[ T]/)[0]);
+                if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
+                  const diff = Math.round((endDate.getTime() - startDate.getTime()) / 86400000);
+                  if (diff > 0) itemNights = diff;
+                }
+              }
+              const itemTotal = getItemTotal(item);
+              const roomName = lang === "ar"
+                ? item.room_name_ar || item.room_type_name_ar || "غرفة"
+                : item.room_name_en || item.room_type_name_en || "Room";
+              return (
+                <div key={idx} className="flex justify-between items-center text-sm border-b border-border/20 pb-2 last:border-0 last:pb-0">
+                  <span className="text-muted-foreground text-xs">
+                    {lang === "ar"
+                      ? `${roomName} (${fmt(item.selling_price || 0)} ${currency}) × ${itemNights} ليلة × ${item.rooms || 1} غرفة`
+                      : `${roomName} (${fmt(item.selling_price || 0)} ${currency}) × ${itemNights} nights × ${item.rooms || 1} room${(item.rooms || 1) > 1 ? "s" : ""}`}
+                  </span>
+                  <span className="font-semibold tabular-nums text-xs text-foreground">
+                    {fmt(itemTotal)} {currency}
+                  </span>
+                </div>
+              );
+            })
+          ) : (
+            roomRate > 0 && nights > 0 && (
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-muted-foreground">
+                  {lang === "ar"
+                    ? `${fmt(roomRate)} × ${nights} ليلة × ${rooms} غرفة`
+                    : `${fmt(roomRate)} × ${nights} nights × ${rooms} room${rooms > 1 ? "s" : ""}`}
+                </span>
+                <span className="font-medium tabular-nums">
+                  {fmt(roomTotal)} {currency}
+                </span>
+              </div>
+            )
           )}
 
           <div className="border-t border-border/50 pt-2.5 space-y-2">
@@ -183,13 +224,12 @@ function FinancialSummary({
                   </Badge>
                 ) : null}
                 <span
-                  className={`text-sm font-bold tabular-nums ${
-                    remaining < 0
-                      ? "text-amber-600"
-                      : remaining === 0 && totalAmount > 0
-                        ? "text-emerald-600"
-                        : "text-destructive"
-                  }`}
+                  className={`text-sm font-bold tabular-nums ${remaining < 0
+                    ? "text-amber-600"
+                    : remaining === 0 && totalAmount > 0
+                      ? "text-emerald-600"
+                      : "text-destructive"
+                    }`}
                 >
                   {fmt(Math.max(remaining, 0))} {currency}
                 </span>
@@ -206,9 +246,8 @@ function FinancialSummary({
             </div>
             <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
               <div
-                className={`h-full rounded-full transition-all duration-500 ${
-                  isOverpaid ? "bg-amber-500" : "bg-emerald-500"
-                }`}
+                className={`h-full rounded-full transition-all duration-500 ${isOverpaid ? "bg-amber-500" : "bg-emerald-500"
+                  }`}
                 style={{ width: `${Math.min((amountPaid / totalAmount) * 100, 100)}%` }}
               />
             </div>
@@ -218,6 +257,81 @@ function FinancialSummary({
     </Card>
   );
 }
+
+const mapInitialItemsToSelectedRates = (items: any[], initial: any) => {
+  if (!items || !Array.isArray(items)) return [];
+  return items.map((item: any) => {
+    const price = item.price_details || item.price || {};
+    const roomObj = price.room || item.room || {};
+    // Room name fallback: price.room -> item.room -> price.room.name
+    const roomNameEn = price.room?.name_en || price.room?.name || item.room?.name_en || item.room?.name || "";
+    const roomNameAr = price.room?.name_ar || price.room?.name || item.room?.name_ar || item.room?.name || "";
+    // View Obj
+    const viewObj = price.hotel_view || price.hotelView || price.view || item.view || item.hotel_view;
+    const viewNameEn = viewObj?.name_en || (typeof viewObj === "string" ? viewObj : "") || item.view_name_en || "";
+    const viewNameAr = viewObj?.name_ar || (typeof viewObj === "string" ? viewObj : "") || item.view_name_ar || "";
+    // Supplier
+    const supplierNameEn = price.supplier?.name_en || item.supplier?.name_en || (price.is_direct || item.is_direct ? "Direct Hotel" : "Supplier");
+    const supplierNameAr = price.supplier?.name_ar || item.supplier?.name_ar || (price.is_direct || item.is_direct ? "فندق مباشر" : "مورد");
+
+    // Use parent stay dates as a fallback for direct booking items
+    const itemCheckIn = item.start_date || item.check_in || initial?.check_in || "";
+    const itemCheckOut = item.end_date || item.check_out || initial?.check_out || "";
+
+    return {
+      rate_id: String(price.id || item.price_id || ""),
+      room_type_id: String(item.room_type_id || price.room_type_id || price.room?.room_type_id || roomObj.room_type_id || ""),
+      is_saved: true, // Mark as saved so that we use server computed values directly
+      view_id: price.hotel_view_id || item.hotel_view_id ? String(price.hotel_view_id || item.hotel_view_id) : null,
+      meal_plan: price.meal_plan_type || item.meal_plan || "exclusive",
+      meal_plan_type: price.meal_plan_type || item.meal_plan,
+      meal_plan_details: price.meal_plan_details || item.meal_plan_details,
+      is_weekend_weekday: price.is_weekend_weekday || false,
+      weekend_selling_price: price.weekend_selling_price,
+      weekend_days: price.weekend_days,
+      days: price.days,
+      // Set base supplier price (e.g. 200). Fallback to hotel_total or night_price (reversing margin & tax) if empty
+      selling_price: Number(price.selling_price) || Number(item.hotel_total) ||
+        (item.night_price ? Number(item.night_price) / (1 + (item.profit_margin || 5) / 100 * 1.15) : 0),
+      rooms: Number(item.room_count) || Number(item.rooms) || 1,
+      supplier_id: price.supplier_id ? String(price.supplier_id) : null,
+      is_direct: !!price.is_direct,
+      room_name_en: roomNameEn,
+      room_name_ar: roomNameAr,
+      room_type_name_en:
+        item.room_type?.name_en ||
+        price.room_type?.name_en ||
+        price.room?.room_type?.name_en ||
+        price.room?.name_en ||
+        price.room?.name ||
+        roomObj.room_type?.name_en ||
+        "",
+      room_type_name_ar:
+        item.room_type?.name_ar ||
+        price.room_type?.name_ar ||
+        price.room?.room_type?.name_ar ||
+        price.room?.name_ar ||
+        price.room?.name ||
+        roomObj.room_type?.name_ar ||
+        "",
+      view_name_en: viewNameEn,
+      view_name_ar: viewNameAr,
+      supplier_name_en: supplierNameEn,
+      supplier_name_ar: supplierNameAr,
+      room: price.room || item.room || roomObj,
+      room_type: item.room_type || price.room_type || price.room?.room_type || item.room?.room_type || roomObj.room_type,
+      start_date: itemCheckIn,
+      end_date: itemCheckOut,
+      check_in: itemCheckIn,
+      check_out: itemCheckOut,
+      hotel_id: String(item.hotel_id || price.hotel_id || ""),
+      quotation_item_id: item.id,
+      profit_margin: item.profit_margin !== undefined ? item.profit_margin : 5,
+      night_price: item.night_price || null,
+      subtotal: item.subtotal || null,
+    };
+  });
+};
 
 // ═════════════════════════════════════════════════════════════════════════════
 // Main BookingForm Component
@@ -240,49 +354,7 @@ export function BookingForm({
   const ar = (a: string, e: string) => (lang === "ar" ? a : e);
 
   const [selectedItems, setSelectedItems] = useState<SelectedRate[]>(() => {
-    if (initial?.items && Array.isArray(initial.items)) {
-      return initial.items.map((item: any) => {
-        const price = item.price_details || item.price || {};
-        const roomNameEn = price.room?.name_en || "";
-        const roomNameAr = price.room?.name_ar || "";
-        const viewObj = price.hotel_view || price.hotelView || price.view;
-        const viewNameEn = viewObj?.name_en || (typeof viewObj === "string" ? viewObj : "");
-        const viewNameAr = viewObj?.name_ar || (typeof viewObj === "string" ? viewObj : "");
-        const supplierNameEn =
-          price.supplier?.name_en || (price.is_direct ? "Direct Hotel" : "Supplier");
-        const supplierNameAr = price.supplier?.name_ar || (price.is_direct ? "فندق مباشر" : "مورد");
-
-        return {
-          rate_id: String(price.id || item.price_id || ""),
-          room_type_id: String(price.room_type_id || price.room?.room_type_id || ""),
-          view_id: price.hotel_view_id ? String(price.hotel_view_id) : null,
-          meal_plan: price.meal_plan_type || "exclusive",
-          selling_price: Number(item.night_price) || Number(price.selling_price) || 0,
-          rooms: Number(item.room_count) || Number(item.rooms) || 1,
-          supplier_id: price.supplier_id ? String(price.supplier_id) : null,
-          is_direct: !!price.is_direct,
-          room_name_en: roomNameEn,
-          room_name_ar: roomNameAr,
-          room_type_name_en:
-            item.room_type?.name_en ||
-            price.room_type?.name_en ||
-            price.room?.room_type?.name_en ||
-            "",
-          room_type_name_ar:
-            item.room_type?.name_ar ||
-            price.room_type?.name_ar ||
-            price.room?.room_type?.name_ar ||
-            "",
-          view_name_en: viewNameEn,
-          view_name_ar: viewNameAr,
-          supplier_name_en: supplierNameEn,
-          supplier_name_ar: supplierNameAr,
-          room: price.room,
-          room_type: item.room_type || price.room_type || price.room?.room_type,
-        };
-      });
-    }
-    return [];
+    return mapInitialItemsToSelectedRates(initial?.items, initial);
   });
   const [invoiceImage, setInvoiceImage] = useState<File | null>(null);
 
@@ -308,6 +380,12 @@ export function BookingForm({
       ? initial.booking_type === "direct"
       : (initial?.is_direct ?? true),
     room_rate: (() => {
+      if (initial?.items?.[0]) {
+        const firstItem = initial.items[0];
+        const price = firstItem.price_details || firstItem.price || {};
+        const cost = price.selling_price || firstItem.hotel_total;
+        if (cost) return String(cost);
+      }
       if (initial?.room_rate) return String(initial.room_rate);
       if (
         initial?.quotation_id &&
@@ -326,7 +404,7 @@ export function BookingForm({
       return initial?.room_rate ?? "";
     })(),
     total_amount: initial?.total_amount ?? "",
-    amount_paid: initial?.amount_paid ?? "",
+    amount_paid: initial?.paid_amount ?? initial?.amount_paid ?? "",
     payment_mode: initial?.payment_method ?? "full",
     deferred_payment_due_date: (() => {
       const dStr = initial?.deferred_payment_due_date;
@@ -342,7 +420,7 @@ export function BookingForm({
 
     special_requests: initial?.special_requests ?? "",
     notes: initial?.notes ?? "",
-    status: initial?.status ?? "confirmed",
+    status: initial?.status ?? "pending",
   });
 
   const [installments, setInstallments] = useState<any[]>(() => {
@@ -367,18 +445,20 @@ export function BookingForm({
     newInst[idx][key] = val;
     setInstallments(newInst);
   };
+  const removeInstallment = (idx: number) => {
+    setInstallments(installments.filter((_, i) => i !== idx));
+  };
   // State for number of installments
   const [numInstallments, setNumInstallments] = useState(1);
 
-  // Function to distribute remaining amount equally among installments
-  // remainingAmount = totalAmount - amountPaid (المتبقي من السعر الإجمالي بعد الدفع الفوري)
   const distributeInstallments = (count: number, remaining: number) => {
-    if (count <= 0 || remaining <= 0) return [];
-    const amountPerInstallment = (remaining / count).toFixed(2);
+    if (count <= 0) return [];
+    const safeRemaining = Math.max(0, remaining);
+    const amountPerInstallment = safeRemaining > 0 ? (safeRemaining / count).toFixed(2) : "0.00";
     const result = Array.from({ length: count }, (_, idx) => ({
       amount:
         idx === count - 1
-          ? String(remaining - parseFloat(amountPerInstallment) * (count - 1))
+          ? (safeRemaining - parseFloat(amountPerInstallment) * (count - 1)).toFixed(2)
           : amountPerInstallment,
       due_date: "",
       is_paid: false,
@@ -393,6 +473,7 @@ export function BookingForm({
   const [updateBooking, { isLoading: isUpdating }] = useUpdateBookingMutation();
   const isSaving = isCreating || isUpdating;
 
+  const initialId = initial?.id || initial?.quotation_id;
   useEffect(() => {
     if (initial) {
       setForm((f) => ({
@@ -414,6 +495,12 @@ export function BookingForm({
           ? initial.booking_type === "direct"
           : (initial.is_direct ?? f.is_direct),
         room_rate: (() => {
+          if (initial.items?.[0]) {
+            const firstItem = initial.items[0];
+            const price = firstItem.price_details || firstItem.price || {};
+            const cost = price.selling_price || firstItem.hotel_total;
+            if (cost) return String(cost);
+          }
           if (initial.room_rate) return String(initial.room_rate);
           if (
             initial.quotation_id &&
@@ -432,7 +519,7 @@ export function BookingForm({
           return f.room_rate;
         })(),
         total_amount: initial.total_amount ?? f.total_amount,
-        amount_paid: initial.amount_paid ?? f.amount_paid,
+        amount_paid: initial.paid_amount ?? initial.amount_paid ?? f.amount_paid,
         payment_mode: initial.payment_method ?? f.payment_mode,
         deferred_payment_due_date: (() => {
           const dStr = initial.deferred_payment_due_date;
@@ -451,48 +538,19 @@ export function BookingForm({
       }));
 
       if (initial.items && Array.isArray(initial.items)) {
-        setSelectedItems(
-          initial.items.map((item: any) => {
-            const price = item.price_details || item.price || {};
-            const roomNameEn = price.room?.name_en || "";
-            const roomNameAr = price.room?.name_ar || "";
-            const viewObj = price.hotel_view || price.hotelView || price.view;
-            const viewNameEn = viewObj?.name_en || (typeof viewObj === "string" ? viewObj : "");
-            const viewNameAr = viewObj?.name_ar || (typeof viewObj === "string" ? viewObj : "");
-            const supplierNameEn =
-              price.supplier?.name_en || (price.is_direct ? "Direct Hotel" : "Supplier");
-            const supplierNameAr =
-              price.supplier?.name_ar || (price.is_direct ? "فندق مباشر" : "مورد");
-
-            return {
-              rate_id: String(price.id || item.price_id || ""),
-              room_type_id: String(price.room_type_id || price.room?.room_type_id || ""),
-              view_id: price.hotel_view_id ? String(price.hotel_view_id) : null,
-              meal_plan: price.meal_plan_type || "exclusive",
-              selling_price: Number(item.night_price) || Number(price.selling_price) || 0,
-              rooms: Number(item.room_count) || Number(item.rooms) || 1,
-              supplier_id: price.supplier_id ? String(price.supplier_id) : null,
-              is_direct: !!price.is_direct,
-              room_name_en: roomNameEn,
-              room_name_ar: roomNameAr,
-              view_name_en: viewNameEn,
-              view_name_ar: viewNameAr,
-              supplier_name_en: supplierNameEn,
-              supplier_name_ar: supplierNameAr,
-            };
-          }),
-        );
+        setSelectedItems(mapInitialItemsToSelectedRates(initial.items, initial));
       }
     }
-  }, [initial]);
+  }, [initialId]);
 
   const currencyList = useMemo(() => {
-    if (!currencies.data) return [];
-    if (Array.isArray(currencies.data)) return currencies.data;
+    const data = currencies.data as any;
+    if (!data) return [];
+    if (Array.isArray(data)) return data;
     // Handle { data: { data: [...] } } format
-    if (currencies.data?.data && Array.isArray(currencies.data.data)) return currencies.data.data;
+    if (data.data && Array.isArray(data.data)) return data.data;
     // Handle { data: [...] } format
-    if (Array.isArray((currencies.data as any)?.data)) return (currencies.data as any).data;
+    if (Array.isArray(data.data)) return data.data;
     return [];
   }, [currencies.data]);
 
@@ -503,12 +561,13 @@ export function BookingForm({
   }, [form.currency_id, currencyList]);
 
   const countryList = useMemo(() => {
-    if (!countries.data) return [];
-    if (Array.isArray(countries.data)) return countries.data;
+    const data = countries.data as any;
+    if (!data) return [];
+    if (Array.isArray(data)) return data;
     // Handle { data: { data: [...] } } format
-    if (countries.data?.data && Array.isArray(countries.data.data)) return countries.data.data;
+    if (data.data && Array.isArray(data.data)) return data.data;
     // Handle { data: [...] } format
-    if (Array.isArray((countries.data as any)?.data)) return (countries.data as any).data;
+    if (Array.isArray(data.data)) return data.data;
     return [];
   }, [countries.data]);
 
@@ -517,12 +576,13 @@ export function BookingForm({
   });
 
   const cityList = useMemo(() => {
-    if (!cities.data) return [];
-    if (Array.isArray(cities.data)) return cities.data;
+    const data = cities.data as any;
+    if (!data) return [];
+    if (Array.isArray(data)) return data;
     // Handle { data: { data: [...] } } format
-    if (cities.data?.data && Array.isArray(cities.data.data)) return cities.data.data;
+    if (data.data && Array.isArray(data.data)) return data.data;
     // Handle { data: [...] } format
-    if (Array.isArray((cities.data as any)?.data)) return (cities.data as any).data;
+    if (Array.isArray(data.data)) return data.data;
     return [];
   }, [cities.data]);
 
@@ -536,24 +596,35 @@ export function BookingForm({
     return [];
   }, [customersQuery.data]);
 
+  const roomTypesQuery = useGetRoomTypesQuery({ all: true }, { pollingInterval: 2000 });
+
+  const roomTypesList = useMemo(() => {
+    const d = roomTypesQuery.data as any;
+    if (!d) return [];
+    if (Array.isArray(d)) return d;
+    if (d.data && Array.isArray(d.data)) return d.data;
+    if (Array.isArray(d.data)) return d.data;
+    return [];
+  }, [roomTypesQuery.data]);
+
   const hotelsQuery = useGetHotelsQuery(
     {
       per_page: 1000,
       lang,
-      country_id: form.country_id || undefined,
-      city_id: form.city_id || undefined,
+      country_id: isQuotationMode ? undefined : (form.country_id || undefined),
+      city_id: isQuotationMode ? undefined : (form.city_id || undefined),
     },
     { pollingInterval: 2000 },
   );
 
   const hotelList = useMemo(() => {
-    const d = hotelsQuery.data;
+    const d = hotelsQuery.data as any;
     if (!d) return [];
     if (Array.isArray(d)) return d;
     // Handle { data: { data: [...] } } format
     if (d?.data && Array.isArray(d.data)) return d.data;
     // Handle { data: [...] } format
-    if (Array.isArray((d as any)?.data)) return (d as any).data;
+    if (Array.isArray(d?.data)) return d.data;
     return [];
   }, [hotelsQuery.data]);
 
@@ -564,6 +635,21 @@ export function BookingForm({
     if (form.city_id) list = list.filter((h: any) => String(h.city_id) === String(form.city_id));
     return list;
   }, [hotelList, form.country_id, form.city_id]);
+
+  const uniqueSelectedHotels = useMemo(() => {
+    const list: any[] = [];
+    const seen = new Set<string>();
+    selectedItems.forEach((item) => {
+      if (item.hotel_id && !seen.has(String(item.hotel_id))) {
+        seen.add(String(item.hotel_id));
+        const found = hotelList.find((h: any) => String(h.id) === String(item.hotel_id));
+        if (found) {
+          list.push(found);
+        }
+      }
+    });
+    return list;
+  }, [selectedItems, hotelList]);
 
   const nights = useMemo(() => {
     if (!form.check_in || !form.check_out) return 0;
@@ -597,7 +683,61 @@ export function BookingForm({
         setInstallments(distributeInstallments(numInstallments, remaining));
       }
     }
-  }, [numInstallments, form.payment_mode, form.amount_paid, totalAmount, installments]);
+  }, [numInstallments, form.payment_mode, form.amount_paid, totalAmount]);
+
+  const calculateItemNights = (start?: string, end?: string): number => {
+    if (!start || !end) return 0;
+    const startDate = new Date(start.split(/[ T]/)[0]);
+    const endDate = new Date(end.split(/[ T]/)[0]);
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) return 0;
+    const diff = Math.round((endDate.getTime() - startDate.getTime()) / 86400000);
+    return diff > 0 ? diff : 0;
+  };
+
+  const getItemTotal = (item: any) => {
+    const rCount = item.rooms || 1;
+    const sDate = item.check_in || item.start_date || form.check_in;
+    const eDate = item.check_out || item.end_date || form.check_out;
+    const itemNights = calculateItemNights(sDate, eDate) || nights || 1;
+
+    if (isQuotationMode) {
+      return (item.selling_price || 0) * rCount * itemNights;
+    }
+
+    const margin = item.profit_margin !== undefined ? item.profit_margin : 5;
+
+    const getClientNightPrice = (base: number) => {
+      const marginAmt = base * (margin / 100);
+      const taxAmt = marginAmt * 0.15;
+      return base + marginAmt + taxAmt;
+    };
+
+    // If it has weekend/weekday rates
+    if (item.is_weekend_weekday && sDate && eDate) {
+      const startDate = new Date(sDate.split(/[ T]/)[0]);
+      const endDate = new Date(eDate.split(/[ T]/)[0]);
+      if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime()) && startDate < endDate) {
+        let totalSum = 0;
+        const currentDate = new Date(startDate);
+        const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+        const weekendDays = item.weekend_days || ["Friday", "Saturday"];
+        const weekendPrice = item.weekend_selling_price !== null && item.weekend_selling_price !== undefined
+          ? item.weekend_selling_price
+          : item.selling_price;
+        const weekdayPrice = item.selling_price || 0;
+
+        while (currentDate < endDate) {
+          const dayOfWeek = dayNames[currentDate.getDay()];
+          const basePrice = weekendDays.includes(dayOfWeek) ? weekendPrice : weekdayPrice;
+          totalSum += getClientNightPrice(Number(basePrice));
+          currentDate.setDate(currentDate.getDate() + 1);
+        }
+        return totalSum * rCount;
+      }
+    }
+
+    return getClientNightPrice(item.selling_price || 0) * rCount * itemNights;
+  };
 
   useEffect(() => {
     if (selectedItems.length > 0) {
@@ -606,7 +746,8 @@ export function BookingForm({
         (sum, item) => sum + (Number(item.selling_price) || 0) * (item.rooms || 1),
         0,
       );
-      const autoTotal = roomTotalRate * nights;
+      const autoTotalRaw = selectedItems.reduce((sum, item) => sum + getItemTotal(item), 0);
+      const autoTotal = Number(autoTotalRaw.toFixed(2));
 
       setForm((f) => {
         const nextTotal = autoTotal > 0 ? String(autoTotal) : f.total_amount;
@@ -627,7 +768,7 @@ export function BookingForm({
       setForm((f) => {
         const rate = Number(f.room_rate) || 0;
         const rCount = Number(f.rooms) || 1;
-        const autoTotal = rate * rCount * nights;
+        const autoTotal = Number((rate * rCount * nights).toFixed(2));
         if (autoTotal <= 0) return f;
 
         const nextTotal = String(autoTotal);
@@ -640,7 +781,7 @@ export function BookingForm({
         };
       });
     }
-  }, [selectedItems, nights, isQuotationMode, form.room_rate]);
+  }, [selectedItems, nights, isQuotationMode]);
 
   // Auto-update amount_paid based on payment mode and installments
   useEffect(() => {
@@ -701,8 +842,8 @@ export function BookingForm({
         toast.error(ar("يجب اختيار الفندق", "Hotel is required") + " *");
         return;
       }
-      if (!form.check_in || !form.check_out) {
-        toast.error(ar("يجب تحديد تواريخ الإقامة", "Check-in/out dates required") + " *");
+      if (selectedItems.length === 0) {
+        toast.error(ar("يجب اختيار بند سعر واحد على الأقل", "At least one rate item must be selected") + " *");
         return;
       }
     }
@@ -720,21 +861,30 @@ export function BookingForm({
         );
       }
 
+      let checkInDate = form.check_in;
+      let checkOutDate = form.check_out;
+
+      if (!isQuotationMode && selectedItems.length > 0) {
+        const startDates = selectedItems.map(item => item.start_date || item.check_in).filter(Boolean);
+        const endDates = selectedItems.map(item => item.end_date || item.check_out).filter(Boolean);
+        if (startDates.length > 0) {
+          checkInDate = startDates.sort()[0];
+        }
+        if (endDates.length > 0) {
+          checkOutDate = endDates.sort().reverse()[0];
+        }
+      }
+
       let payload: any = {
         booking_type: isQuotationMode ? "quotation" : "direct",
         booking_date: form.booking_date,
         payment_method: form.payment_mode,
-        paid_amount: paidAmt,
         status: form.status,
       };
 
       if (isQuotationMode) {
-        payload.quotation_id = Number(initial.quotation_id);
-        payload.check_in = form.check_in;
-        payload.check_out = form.check_out;
-        payload.total_amount = Number(form.total_amount);
-        payload.room_rate = Number(form.room_rate);
-        payload.rooms = Number(form.rooms);
+        payload.quotation_id = Number(initial.quotation_id || initial.id);
+        payload.quotation_items = selectedItems.map((item) => Number(item.quotation_item_id)).filter(Boolean);
       } else {
         payload.booking_source = form.is_direct ? "hotel" : "supplier";
         payload.customer_id = Number(form.customer_id);
@@ -742,14 +892,14 @@ export function BookingForm({
         payload.country_id = Number(form.country_id);
         payload.city_id = Number(form.city_id);
         payload.hotel_id = Number(form.hotel_id);
-        payload.group_size = Number(form.group_size) || 1;
-        payload.check_in = form.check_in;
-        payload.check_out = form.check_out;
+        payload.check_in = checkInDate;
+        payload.check_out = checkOutDate;
         payload.special_requests = form.special_requests || "";
         payload.notes = form.notes || "";
         payload.items = selectedItems.map((item) => ({
           price_id: Number(item.rate_id),
           room_count: Number(item.rooms) || 1,
+          profit_margin: Number(item.profit_margin !== undefined ? item.profit_margin : 5),
         }));
       }
 
@@ -776,8 +926,16 @@ export function BookingForm({
             // skip
           } else if (key === "items" && Array.isArray(val)) {
             val.forEach((item: any, idx: number) => {
+              formData.append(`items[${idx}][hotel_id]`, String(item.hotel_id));
               formData.append(`items[${idx}][price_id]`, String(item.price_id));
               formData.append(`items[${idx}][room_count]`, String(item.room_count));
+              formData.append(`items[${idx}][start_date]`, String(item.start_date));
+              formData.append(`items[${idx}][end_date]`, String(item.end_date));
+              formData.append(`items[${idx}][profit_margin]`, String(item.profit_margin));
+            });
+          } else if (key === "quotation_items" && Array.isArray(val)) {
+            val.forEach((id: any, idx: number) => {
+              formData.append(`quotation_items[${idx}]`, String(id));
             });
           } else if (key === "installments" && Array.isArray(val)) {
             val.forEach((inst: any, idx: number) => {
@@ -832,7 +990,7 @@ export function BookingForm({
               title={ar("بيانات العميل", "Customer Details")}
               subtitle={ar("المعلومات الأساسية للحجز", "Basic booking information")}
             />
-            <div className="grid gap-4 md:grid-cols-5 mt-4">
+            <div className="grid gap-4 md:grid-cols-4 mt-4">
               <FormField label={t("bk.customer")} required>
                 <Select
                   value={form.customer_id}
@@ -931,29 +1089,13 @@ export function BookingForm({
                 />
               </FormField>
 
-              <FormField label={ar("حالة الحجز", "Booking Status")} required>
-                <Select value={form.status} onValueChange={(v) => set("status", v)}>
-                  <SelectTrigger className="h-9">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="confirmed">{ar("مؤكد", "Confirmed")}</SelectItem>
-                    <SelectItem value="pending">{ar("قيد الانتظار", "Pending")}</SelectItem>
-                    {initial?.status && !["confirmed", "pending"].includes(initial.status) && (
-                      <SelectItem value={initial.status}>
-                        {t(`bkstatus.${initial.status}`)}
-                      </SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
-              </FormField>
             </div>
           </CardContent>
         </Card>
       )}
 
       {/* ── 4. Stay Dates ── */}
-      <Card className="shadow-sm border-border/60">
+      {/* <Card className="shadow-sm border-border/60">
         <CardContent className="p-5">
           <SectionHeader
             icon={CalendarDays}
@@ -1018,10 +1160,10 @@ export function BookingForm({
             </div>
           </div>
         </CardContent>
-      </Card>
+      </Card> */}
 
       {/* ── 2. Location & Hotel ── */}
-      {!isQuotationMode && (
+      {(true) && (
         <Card className="shadow-sm border-border/60">
           <CardContent className="p-5">
             <SectionHeader
@@ -1029,78 +1171,119 @@ export function BookingForm({
               title={ar("الوجهة والفندق", "Destination & Hotel")}
               subtitle={ar("اختر الدولة والمدينة والفندق", "Select country, city and hotel")}
             />
-            <div className="grid gap-4 md:grid-cols-3 mt-4">
-              <FormField label={t("label.country", "الدولة")}>
-                <Select value={form.country_id} onValueChange={handleCountryChange}>
-                  <SelectTrigger className="h-9">
-                    <SelectValue placeholder={ar("اختر الدولة", "Select country")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {countryList.map((c: any) => (
-                      <SelectItem key={c.id} value={String(c.id)}>
-                        {lang === "ar" ? c.name_ar : c.name_en}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </FormField>
-
-              <FormField label={t("label.city", "المدينة")}>
-                <Select
-                  value={form.city_id}
-                  onValueChange={handleCityChange}
-                  disabled={!form.country_id}
-                >
-                  <SelectTrigger className="h-9">
-                    <SelectValue placeholder={ar("اختر المدينة", "Select city")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {cityList.map((c: any) => (
-                      <SelectItem key={c.id} value={String(c.id)}>
-                        {lang === "ar" ? c.name_ar : c.name_en}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </FormField>
-
-              <FormField label={t("rates.hotel", "الفندق")} required>
-                <Select
-                  value={form.hotel_id}
-                  onValueChange={handleHotelChange}
-                  disabled={!form.city_id}
-                >
-                  <SelectTrigger className="h-9">
-                    <SelectValue placeholder={ar("اختر الفندق", "Select hotel")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {filteredHotels.length === 0 ? (
-                      <SelectItem value="none" disabled>
-                        {ar("لا يتوفر فنادق في هذه المدينة", "No hotels available in this city")}
-                      </SelectItem>
-                    ) : (
-                      filteredHotels.map((h: any) => (
-                        <SelectItem key={h.id} value={String(h.id)}>
-                          {lang === "ar" ? h.name_ar || h.name_en : h.name_en || h.name_ar}
-                          {h.star_rating || h.stars
-                            ? " " + "★".repeat(h.star_rating || h.stars)
-                            : ""}
+            {isQuotationMode ? (
+              <div className="mt-4 bg-slate-50/50 dark:bg-slate-800/10 rounded-xl p-4 border border-border/40">
+                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+                  {ar("الفنادق المحددة في هذا الحجز", "Hotels selected in this booking")}
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+                  {uniqueSelectedHotels.map((h: any) => {
+                    const hName = lang === "ar" ? h.name_ar || h.name_en : h.name_en || h.name_ar;
+                    const cName = h.city ? (lang === "ar" ? h.city.name_ar || h.city.name_en : h.city.name_en || h.city.name_ar) : "";
+                    const coName = h.country ? (lang === "ar" ? h.country.name_ar || h.country.name_en : h.country.name_en || h.country.name_ar) : "";
+                    return (
+                      <div key={h.id} className="bg-card border rounded-lg p-3 flex items-start gap-3 shadow-xs">
+                        <Building2 className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                        <div>
+                          <div className="font-bold text-sm text-foreground">
+                            {hName}
+                            {(h.star_rating || h.stars) ? (
+                              <span className="text-amber-500 ms-1.5 text-xs">
+                                {"★".repeat(h.star_rating || h.stars)}
+                              </span>
+                            ) : null}
+                          </div>
+                          {(cName || coName) && (
+                            <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                              <MapPin className="w-3 h-3 text-slate-400" />
+                              {cName}{cName && coName && ", "}{coName}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-3 mt-4">
+                <FormField label={t("label.country", "الدولة")}>
+                  <Select value={form.country_id} onValueChange={handleCountryChange} disabled={isQuotationMode}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder={ar("اختر الدولة", "Select country")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {countryList.map((c: any) => (
+                        <SelectItem key={c.id} value={String(c.id)}>
+                          {lang === "ar" ? c.name_ar : c.name_en}
                         </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
-              </FormField>
-            </div>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormField>
+
+                <FormField label={t("label.city", "المدينة")}>
+                  <Select
+                    value={form.city_id}
+                    onValueChange={handleCityChange}
+                    disabled={isQuotationMode || !form.country_id}
+                  >
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder={ar("اختر المدينة", "Select city")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {cityList.map((c: any) => (
+                        <SelectItem key={c.id} value={String(c.id)}>
+                          {lang === "ar" ? c.name_ar : c.name_en}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormField>
+
+                <FormField label={t("rates.hotel", "الفندق")} required>
+                  <Select
+                    value={form.hotel_id}
+                    onValueChange={handleHotelChange}
+                    disabled={isQuotationMode || !form.city_id}
+                  >
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder={ar("اختر الفندق", "Select hotel")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {filteredHotels.length === 0 ? (
+                        <SelectItem value="none" disabled>
+                          {ar("لا يتوفر فنادق في هذه المدينة", "No hotels available in this city")}
+                        </SelectItem>
+                      ) : (
+                        filteredHotels.map((h: any) => (
+                          <SelectItem key={h.id} value={String(h.id)}>
+                            {lang === "ar" ? h.name_ar || h.name_en : h.name_en || h.name_ar}
+                            {h.star_rating || h.stars
+                              ? " " + "★".repeat(h.star_rating || h.stars)
+                              : ""}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                </FormField>
+              </div>
+            )}
 
             <HotelRatesSelector
-              hotelId={form.hotel_id}
+              hotelId={form.hotel_id || "quotation-hotel"}
               currencyId={form.currency_id}
               currencyCode={currencyCode}
               selectedItems={selectedItems}
               onChange={setSelectedItems}
               nights={nights}
               groupSize={form.group_size}
+              checkIn={form.check_in}
+              checkOut={form.check_out}
+              readOnly={isQuotationMode}
+              hotels={hotelList}
+              roomTypes={roomTypesList}
             />
           </CardContent>
         </Card>
@@ -1119,7 +1302,7 @@ export function BookingForm({
           />
           <div className="grid gap-6 lg:grid-cols-2 mt-4">
             <div className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-4">
                 <FormField label={ar("المبلغ الإجمالي", "Total Amount")}>
                   <div className="relative">
                     <Input
@@ -1133,23 +1316,6 @@ export function BookingForm({
                     </span>
                   </div>
                 </FormField>
-
-                <div className="flex flex-col justify-end">
-                  <div
-                    className={`flex items-center justify-center gap-2 rounded-lg border p-2 h-9 ${
-                      nights > 0
-                        ? "bg-primary/5 border-primary/30 text-primary"
-                        : "bg-muted border-border text-muted-foreground"
-                    }`}
-                  >
-                    <CalendarDays className="w-4 h-4" />
-                    <span className="text-sm font-semibold tabular-nums">
-                      {nights > 0
-                        ? `${nights} ${ar("ليلة", nights === 1 ? "night" : "nights")}`
-                        : ar("لم يُحدَّد بعد", "Not set yet")}
-                    </span>
-                  </div>
-                </div>
               </div>
 
               <FormField label={ar("طريقة الدفع", "Payment Mode")}>
@@ -1159,11 +1325,10 @@ export function BookingForm({
                       key={pm.code}
                       type="button"
                       onClick={() => handlePaymentModeChange(pm.code)}
-                      className={`flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition-all duration-150 ${
-                        form.payment_mode === pm.code
-                          ? "border-primary bg-primary/10 text-primary"
-                          : "border-border hover:border-primary/40 hover:bg-muted/40 text-muted-foreground"
-                      }`}
+                      className={`flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition-all duration-150 ${form.payment_mode === pm.code
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border hover:border-primary/40 hover:bg-muted/40 text-muted-foreground"
+                        }`}
                     >
                       <CreditCard className="w-3.5 h-3.5 shrink-0" />
                       {lang === "ar" ? pm.ar : pm.en}
@@ -1420,6 +1585,9 @@ export function BookingForm({
               amountPaid={amountPaid}
               currency={currencyCode}
               lang={lang}
+              isQuotationMode={isQuotationMode}
+              selectedItems={selectedItems}
+              getItemTotal={getItemTotal}
             />
           </div>
         </CardContent>

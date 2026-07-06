@@ -6,7 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { useI18n } from "@/lib/i18n";
 import { useSelector } from "react-redux";
 import { selectAuth } from "@/store/features/authSlice";
-import { hasRole, hasAnyRole, isAdmin, canAccessModule } from "@/lib/auth-utils";
+import { canWriteModule, canApproveModule } from "@/lib/auth-utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -174,7 +174,7 @@ export function RfqResponsesTab({ rfqId, rfqStatus, currency }: { rfqId: string;
   const auth = useSelector(selectAuth);
   const qc = useQueryClient();
   const currencies = useCurrencies();
-  const canApprove = hasAnyRole(auth, [...APPROVER_ROLES]);
+  const canApprove = canApproveModule(auth, "quotations");
   const canRespond = ["sent", "partial"].includes(rfqStatus);
   const [open, setOpen] = useState(false);
   const empty = { request_id: "", rfq_item_id: "", availability: "available", available_rooms: "", cost_price: "", currency, cancellation_policy: "", release_days: "", remarks: "" };
@@ -451,7 +451,7 @@ export function CreateQuotationButton({ rfq }: { rfq: any }) {
   const [customerId, setCustomerId] = useState<string>("");
   const plus7 = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
   const [expiry, setExpiry] = useState(plus7);
-  const canWrite = hasAnyRole(auth, ["super_admin","admin","sales_manager","sales_agent"]);
+  const canWrite = canWriteModule(auth, "quotations");
 
   const customers = useQuery({
     queryKey: ["lookup-customers"],

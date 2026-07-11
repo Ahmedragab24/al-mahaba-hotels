@@ -37,6 +37,7 @@ import { StatusPill } from "@/components/status-pill";
 import { Badge } from "@/components/ui/badge";
 import { DataPagination } from "@/components/data-pagination";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { formatMealPlan } from "@/components/quotation-rates-dialog";
 import {
   Plus,
   Search,
@@ -322,19 +323,20 @@ export default function RatesList() {
           <CardContent className="p-0">
             <Table>
               <TableHeader>
-                <TableRow className="whitespace-nowrap">
+                <TableRow className="whitespace-nowrap text-[11px]">
                   {/* <TableHead>{t("label.code")}</TableHead> */}
-                  <TableHead>{t("rates.hotel")}</TableHead>
-                  <TableHead>{t("rates.supplier")}</TableHead>
-                  <TableHead>{t("rates.room_type")}</TableHead>
-                  <TableHead>{t("rates.meal_plan")}</TableHead>
-                  <TableHead>{t("rates.valid_from")}</TableHead>
-                  <TableHead>{t("rates.valid_to")}</TableHead>
-                  <TableHead className="text-end">{t("rates.cost")}</TableHead>
-                  <TableHead className="text-end">{t("rates.selling")}</TableHead>
-                  <TableHead>{t("label.currency")}</TableHead>
-                  <TableHead>{t("label.status")}</TableHead>
-                  <TableHead className="text-center">{t("label.actions")}</TableHead>
+                  <TableHead className="px-2 py-2 h-8">{t("rates.hotel")}</TableHead>
+                  <TableHead className="px-2 py-2 h-8">{t("rates.supplier")}</TableHead>
+                  <TableHead className="px-2 py-2 h-8">{t("rates.room_type")}</TableHead>
+                  <TableHead className="px-2 py-2 h-8">{t("rates.meal_plan")}</TableHead>
+                  <TableHead className="px-2 py-2 h-8">{t("rates.valid_from")}</TableHead>
+                  <TableHead className="px-2 py-2 h-8">{t("rates.valid_to")}</TableHead>
+                  <TableHead className="px-2 py-2 h-8 text-end">{t("rates.cost")}</TableHead>
+                  <TableHead className="px-2 py-2 h-8 text-end">{t("rates.selling")}</TableHead>
+                  <TableHead className="px-2 py-2 h-8 text-center">{t("rates.tax_rate") || "الضريبة"}</TableHead>
+                  <TableHead className="px-2 py-2 h-8">{t("label.currency")}</TableHead>
+                  <TableHead className="px-2 py-2 h-8">{t("label.status")}</TableHead>
+                  <TableHead className="px-2 py-2 h-8 text-center">{t("label.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -370,12 +372,12 @@ export default function RatesList() {
 
                   return (
                     <TableRow key={r.id} className={r.is_archived ? "opacity-60" : ""}>
-                      <TableCell className="text-xs max-w-[150px] truncate">
+                      <TableCell className="px-2 py-1.5 text-[11px] max-w-[120px] truncate">
                         <Link to={`/rates/${r.id}`} className="hover:underline font-medium">
                           {lang === "ar" ? h.name_ar || h.name_en : h.name_en || h.name_ar}
                         </Link>
                       </TableCell>
-                      <TableCell className="text-xs max-w-[120px] truncate">
+                      <TableCell className="px-2 py-1.5 text-[11px] max-w-[100px] truncate">
                         {r.is_direct ? (
                           <span className="text-emerald-600 dark:text-emerald-400 font-medium">
                             {t("rates.is_direct_short")}
@@ -386,47 +388,49 @@ export default function RatesList() {
                           s.name_en || s.name_ar
                         )}
                       </TableCell>
-                      <TableCell className="text-xs max-w-[150px]">
+                      <TableCell className="px-2 py-1.5 text-[11px] max-w-[120px]">
                         <div>
                           <div className="font-medium text-slate-800 dark:text-slate-200">
                             {lang === "ar" ? rm.name_ar || rm.name_en : rm.name_en || rm.name_ar}
                           </div>
                           {r.days && r.days.length > 0 && (
-                            <div className="text-[10px] text-muted-foreground mt-1 flex flex-wrap gap-1 items-center">
-                              <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-amber-50/50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 border-amber-200/40">
+                            <div className="text-[9px] text-muted-foreground mt-0.5 flex flex-wrap gap-0.5 items-center">
+                              <Badge variant="outline" className="text-[8px] px-1 py-0 h-4 bg-amber-50/50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 border-amber-200/40">
                                 {r.price_type === "weekend" ? (lang === "ar" ? "نهاية الأسبوع" : "Weekend") : (r.price_type === "weekday" ? (lang === "ar" ? "وسط الأسبوع" : "Weekday") : r.price_type)}
                               </Badge>
-                              <span className="text-[9px] font-normal font-sans">({formatDays(r.days)})</span>
+                              <span className="text-[8px] font-normal font-sans leading-none">({formatDays(r.days)})</span>
                             </div>
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className="text-xs max-w-[80px] truncate">
-                        {t(`board.${r.meal_plan_type}`) || r.meal_plan_type}
+                      <TableCell className="px-2 py-1.5 text-[11px] max-w-[120px] truncate" title={formatMealPlan(r.meal_plan_type, r.meal_plan_details, lang, t)}>
+                        {formatMealPlan(r.meal_plan_type, r.meal_plan_details, lang, t)}
                       </TableCell>
-                      <TableCell className="text-xs max-w-[100px] truncate" dir="ltr">
+                      <TableCell className="px-2 py-1.5 text-[11px] max-w-[80px] truncate" dir="ltr">
                         {formatDate(r.valid_from)}
                       </TableCell>
-                      <TableCell className="text-xs max-w-[100px] truncate" dir="ltr">
+                      <TableCell className="px-2 py-1.5 text-[11px] max-w-[80px] truncate" dir="ltr">
                         {formatDate(r.valid_to)}
                       </TableCell>
-                      <TableCell className="text-end font-mono text-xs max-w-[80px]">
+                      <TableCell className="px-2 py-1.5 text-end font-mono text-[11px] max-w-[60px]">
                         {Number(r.cost_per_night).toFixed(2)}
                       </TableCell>
-                      <TableCell className="text-end font-mono text-xs max-w-[80px]">
+                      <TableCell className="px-2 py-1.5 text-end font-mono text-[11px] max-w-[60px]">
                         {r.selling_price ? Number(r.selling_price).toFixed(2) : "—"}
                       </TableCell>
-                      <TableCell className="text-xs font-mono max-w-[60px]">
+                      <TableCell className="px-2 py-1.5 text-center font-mono text-[11px]">
+                        {r.tax_rate !== undefined && r.tax_rate !== null ? `${r.tax_rate}%` : "—"}
+                      </TableCell>
+                      <TableCell className="px-2 py-1.5 text-[11px] font-mono max-w-[50px]">
                         {r.currency?.code || ""}
                       </TableCell>
-                      <TableCell className="max-w-[100px]">
+                      <TableCell className="px-2 py-1.5 max-w-[80px]">
                         {r.status_text && r.status_text !== t(`status.${r.status}`) ? (
                           <Badge
-                            className={
-                              r.status === "expired" || r.status_text === "منتهي"
-                                ? "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400 border-transparent"
-                                : "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-400 border-transparent"
-                            }
+                            className={`text-[10px] px-1.5 py-0 h-5 ${r.status === "expired" || r.status_text === "منتهي"
+                              ? "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400 border-transparent"
+                              : "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-400 border-transparent"
+                              }`}
                           >
                             {r.status_text}
                           </Badge>
@@ -434,15 +438,15 @@ export default function RatesList() {
                           <StatusPill status={r.status} />
                         )}
                       </TableCell>
-                      <TableCell className="text-end min-w-[120px]">
-                        <div className="flex justify-end gap-1">
-                          <Button asChild variant="ghost" size="icon" title={t("actions.view")}>
+                      <TableCell className="px-2 py-1.5 text-end">
+                        <div className="flex justify-end gap-0.5">
+                          <Button asChild variant="ghost" size="icon" className="h-7 w-7" title={t("actions.view")}>
                             <Link to={`/rates/${r.id}`}>
                               <Eye className="h-4 w-4" />
                             </Link>
                           </Button>
                           {canWrite && (
-                            <Button asChild variant="ghost" size="icon" title={t("actions.edit")}>
+                            <Button asChild variant="ghost" size="icon" className="h-7 w-7" title={t("actions.edit")}>
                               <Link to={`/rates/new?edit=${r.id}`}>
                                 <Pencil className="h-4 w-4" />
                               </Link>
@@ -453,6 +457,7 @@ export default function RatesList() {
                               <Button
                                 variant="ghost"
                                 size="icon"
+                                className="h-7 w-7"
                                 title={t("actions.restore")}
                                 onClick={() => setConfirm({ id: r.id, action: "restore" })}
                               >
@@ -462,6 +467,7 @@ export default function RatesList() {
                               <Button
                                 variant="ghost"
                                 size="icon"
+                                className="h-7 w-7"
                                 title={t("actions.archive")}
                                 onClick={() => setConfirm({ id: r.id, action: "archive" })}
                               >
@@ -472,6 +478,7 @@ export default function RatesList() {
                             <Button
                               variant="ghost"
                               size="icon"
+                              className="h-7 w-7"
                               title={t("actions.delete")}
                               onClick={() => setConfirm({ id: r.id, action: "delete" })}
                             >

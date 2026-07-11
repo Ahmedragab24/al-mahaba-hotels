@@ -2,7 +2,7 @@ export type InvoiceStatus = "draft" | "issued" | "sent" | "partially_paid" | "pa
 export type InvoiceType = "manual" | "from_booking";
 
 export interface InvoiceItem {
-  id?: number;
+  id?: number | string;
   invoice_id?: number;
   description: string;
   description_en?: string;
@@ -13,6 +13,7 @@ export interface InvoiceItem {
   fees?: number;
   total_price?: number;
   line_total?: number;
+  subtotal?: number;
 }
 
 export interface InvoicePayment {
@@ -81,6 +82,7 @@ export interface Invoice {
   updated_at?: string;
   invoice_image?: string | null;
   booking_code?: string | null;
+  bookings?: any[];
 }
 
 export interface InvoiceStatistics {

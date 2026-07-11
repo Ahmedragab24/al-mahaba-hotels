@@ -367,8 +367,10 @@ export function RateForm({ initial, onSaved }: { initial?: any; onSaved: (id: st
   useEffect(() => {
     if (isWeekendWeekday) return;
     const cost = Number(costPerNight) || 0;
-    const rate = taxType === "inclusive_tax" ? -(Number(taxRate) || 0) : 0;
-    const price = cost + (cost * rate / 100);
+    const rate = Number(taxRate) || 0;
+    const price = taxType === "inclusive_tax"
+      ? (cost * 100) / (100 + rate)
+      : cost * (1 + rate / 100);
 
     form.setValue("selling_price", price > 0 ? Number(price.toFixed(2)) : ("" as any));
   }, [costPerNight, taxType, taxRate, isWeekendWeekday, form]);
@@ -377,8 +379,10 @@ export function RateForm({ initial, onSaved }: { initial?: any; onSaved: (id: st
   useEffect(() => {
     if (!isWeekendWeekday) return;
     const cost = Number(weCostPerNight) || 0;
-    const rate = taxType === "inclusive_tax" ? -(Number(taxRate) || 0) : 0;
-    const price = cost + (cost * rate / 100);
+    const rate = Number(taxRate) || 0;
+    const price = taxType === "inclusive_tax"
+      ? (cost * 100) / (100 + rate)
+      : cost * (1 + rate / 100);
 
     form.setValue("weekend_price.selling_price", price > 0 ? Number(price.toFixed(2)) : ("" as any));
   }, [weCostPerNight, taxType, taxRate, isWeekendWeekday, form]);
@@ -387,8 +391,10 @@ export function RateForm({ initial, onSaved }: { initial?: any; onSaved: (id: st
   useEffect(() => {
     if (!isWeekendWeekday) return;
     const cost = Number(wdCostPerNight) || 0;
-    const rate = taxType === "inclusive_tax" ? -(Number(taxRate) || 0) : 0;
-    const price = cost + (cost * rate / 100);
+    const rate = Number(taxRate) || 0;
+    const price = taxType === "inclusive_tax"
+      ? (cost * 100) / (100 + rate)
+      : cost * (1 + rate / 100);
 
     form.setValue("weekday_price.selling_price", price > 0 ? Number(price.toFixed(2)) : ("" as any));
   }, [wdCostPerNight, taxType, taxRate, isWeekendWeekday, form]);
@@ -412,6 +418,19 @@ export function RateForm({ initial, onSaved }: { initial?: any; onSaved: (id: st
   const selectedHotel = Array.isArray(hotels.data)
     ? hotels.data.find((h: any) => h.id == hotelId)
     : Array.isArray(hotels.data?.data) ? hotels.data.data.find((h: any) => h.id == hotelId) : null;
+
+  const selectedHotelStars = Number(selectedHotel?.stars ?? selectedHotel?.star_rating ?? 0);
+
+  const isFiveStarHotel = (hotels.isLoading || hotels.isPending)
+    ? (initial?.is_weekend_weekday ?? false)
+    : (selectedHotelStars === 5);
+
+  useEffect(() => {
+    if (hotels.isLoading || hotels.isPending) return;
+    if (!isFiveStarHotel && isWeekendWeekday) {
+      form.setValue("is_weekend_weekday", false);
+    }
+  }, [isFiveStarHotel, isWeekendWeekday, hotels.isLoading, hotels.isPending, form]);
 
   const onSubmit = async (vals: FormVals) => {
     try {
@@ -455,9 +474,7 @@ export function RateForm({ initial, onSaved }: { initial?: any; onSaved: (id: st
       if (payload.currency_id) payload.currency_id = Number(payload.currency_id);
       if (payload.supplier_id) payload.supplier_id = Number(payload.supplier_id);
 
-      if (payload.tax_rate !== "" && payload.tax_rate !== null && payload.tax_rate !== undefined) {
-        payload.tax_rate = Number(payload.tax_rate);
-      }
+      payload.tax_rate = Number(payload.tax_rate ?? 15);
 
       if (payload.is_weekend_weekday) {
         const weCost = Number(payload.weekend_price?.cost_per_night) || 0;
@@ -682,19 +699,21 @@ export function RateForm({ initial, onSaved }: { initial?: any; onSaved: (id: st
           <CardContent className="space-y-6 p-6" dir={lang === "ar" ? "rtl" : "ltr"}>
 
             {/* W.D and W.E Toggle */}
-            <FormField control={form.control} name="is_weekend_weekday" render={({ field }) => (
-              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm bg-card hover:bg-accent/5 transition-colors">
-                <div className="space-y-0.5">
-                  <FormLabel className="text-sm font-semibold cursor-pointer">{t("rates.wd_we_title")}</FormLabel>
-                </div>
-                <FormControl>
-                  <Switch
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-              </FormItem>
-            )} />
+            {isFiveStarHotel && (
+              <FormField control={form.control} name="is_weekend_weekday" render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm bg-card hover:bg-accent/5 transition-colors">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-sm font-semibold cursor-pointer">{t("rates.wd_we_title")}</FormLabel>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                </FormItem>
+              )} />
+            )}
 
             {isWeekendWeekday ? (
               <div className="space-y-6">
@@ -713,15 +732,13 @@ export function RateForm({ initial, onSaved }: { initial?: any; onSaved: (id: st
                       <FormMessage />
                     </FormItem>
                   )} />
-                  {taxType === "inclusive_tax" && (
-                    <FormField control={form.control} name="tax_rate" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t("rates.tax_rate")} (%)</FormLabel>
-                        <FormControl><Input type="number" step="0.01" min="0" {...field} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )} />
-                  )}
+                  <FormField control={form.control} name="tax_rate" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("rates.tax_rate")} (%)</FormLabel>
+                      <FormControl><Input type="number" step="0.01" min="0" {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
                 </div>
 
                 {/* Weekend Prices Box */}
@@ -849,7 +866,7 @@ export function RateForm({ initial, onSaved }: { initial?: any; onSaved: (id: st
                                 <span className="font-semibold text-emerald-600 dark:text-emerald-400">{selling.toFixed(2)}</span>
                               </div>
                               <div className="flex justify-between items-center">
-                                <span>{taxType === "inclusive_tax" ? (lang === "ar" ? `الضريبة (${rate}%):` : `Tax (${rate}%):`) : (lang === "ar" ? "الضريبة:" : "Tax:")}</span>
+                                <span>{lang === "ar" ? `الضريبة (${rate}%):` : `Tax (${rate}%):`}</span>
                                 <span className="font-semibold text-destructive">{taxType === "inclusive_tax" ? (lang === "ar" ? "مشمولة" : "Included") : (lang === "ar" ? "غير مشمولة" : "Not Included")}</span>
                               </div>
                               <div className="border-t border-border/50 pt-1.5 mt-1.5 flex justify-between items-center font-bold text-primary text-xs">
@@ -989,7 +1006,7 @@ export function RateForm({ initial, onSaved }: { initial?: any; onSaved: (id: st
                                 <span className="font-semibold text-emerald-600 dark:text-emerald-400">{selling.toFixed(2)}</span>
                               </div>
                               <div className="flex justify-between items-center">
-                                <span>{taxType === "inclusive_tax" ? (lang === "ar" ? `الضريبة (${rate}%):` : `Tax (${rate}%):`) : (lang === "ar" ? "الضريبة:" : "Tax:")}</span>
+                                <span>{lang === "ar" ? `الضريبة (${rate}%):` : `Tax (${rate}%):`}</span>
                                 <span className="font-semibold text-destructive">{taxType === "inclusive_tax" ? (lang === "ar" ? "مشمولة" : "Included") : (lang === "ar" ? "غير مشمولة" : "Not Included")}</span>
                               </div>
                               <div className="border-t border-border/50 pt-1.5 mt-1.5 flex justify-between items-center font-bold text-primary text-xs">
@@ -1037,15 +1054,13 @@ export function RateForm({ initial, onSaved }: { initial?: any; onSaved: (id: st
                   </FormItem>
                 )} />
 
-                {taxType === "inclusive_tax" && (
-                  <FormField control={form.control} name="tax_rate" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("rates.tax_rate")} (%)</FormLabel>
-                      <FormControl><Input type="number" step="0.01" min="0" {...field} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                )}
+                <FormField control={form.control} name="tax_rate" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("rates.tax_rate")} (%)</FormLabel>
+                    <FormControl><Input type="number" step="0.01" min="0" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
 
                 {/* Total Price Display */}
                 <div className="col-span-1 sm:col-span-2 bg-primary/5 p-4 rounded-lg border border-primary/20 flex flex-col justify-center">

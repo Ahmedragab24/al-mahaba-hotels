@@ -20,7 +20,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { NotificationsPopover } from "@/components/notifications-popover";
 
 export default function AuthenticatedLayout() {
@@ -84,15 +84,15 @@ export default function AuthenticatedLayout() {
   const primaryRole = auth.roles[0];
   const displayName = String(
     customDisplayEmail ||
-      (lang === "ar"
-        ? auth.profile?.full_name_ar ||
-          auth.profile?.full_name_en ||
-          auth.user?.email ||
-          (primaryRole ? (t(`role.${primaryRole}`) as string) : "—")
-        : auth.profile?.full_name_en ||
-          auth.profile?.full_name_ar ||
-          auth.user?.email ||
-          (primaryRole ? (t(`role.${primaryRole}`) as string) : "—"))
+    (lang === "ar"
+      ? auth.profile?.full_name_ar ||
+      auth.profile?.full_name_en ||
+      auth.user?.email ||
+      (primaryRole ? (t(`role.${primaryRole}`) as string) : "—")
+      : auth.profile?.full_name_en ||
+      auth.profile?.full_name_ar ||
+      auth.user?.email ||
+      (primaryRole ? (t(`role.${primaryRole}`) as string) : "—"))
   );
   const initials = (displayName || "?")
     .toString()
@@ -116,7 +116,8 @@ export default function AuthenticatedLayout() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="sm" className="gap-2 px-2">
-                  <Avatar className="h-7 w-7">
+                  <Avatar className="h-7 w-7 bg-orange-900 dark:bg-accent">
+                    <AvatarImage src={(auth.profile?.image as string) || undefined} />
                     <AvatarFallback className="text-[10px]">{initials}</AvatarFallback>
                   </Avatar>
                   <div className="hidden text-start sm:flex sm:flex-col sm:leading-tight">

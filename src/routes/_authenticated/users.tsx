@@ -24,6 +24,7 @@ import { formatDateTime } from "@/lib/format";
 import { createStaffUser } from "@/lib/users.functions";
 import { useGetCountriesQuery } from "@/store/services/attributes/countries";
 import { useGetCitiesQuery } from "@/store/services/attributes/cities";
+import { useGetRolesQuery } from "@/store/services/attributes/roles";
 import { PermissionKey, UserRole, getDefaultPermissions, permissionsFromArray, permissionsToArray } from "@/types/permissions";
 
 export default function UsersPage() {
@@ -75,6 +76,9 @@ export default function UsersPage() {
     { skip: !editingUser?.country_id }
   );
   const editCitiesArray = extractArray(editCitiesResponse);
+
+  const { data: apiRolesResponse } = useGetRolesQuery();
+  const rolesArray = extractArray(apiRolesResponse);
 
   const q = useQuery({
     queryKey: ["users-list"],
@@ -664,11 +668,13 @@ export default function UsersPage() {
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="super_admin">{t("role.super_admin")}</SelectItem>
-                              <SelectItem value="financial_manager">{t("role.financial_manager")}</SelectItem>
-                              <SelectItem value="sales_manager">{t("role.sales_manager")}</SelectItem>
-                              <SelectItem value="employee">{t("role.employee")}</SelectItem>
-                              <SelectItem value="viewer">{t("role.viewer")}</SelectItem>
+                              {rolesArray
+                                .filter((r: any) => r.status !== false)
+                                .map((r: any) => (
+                                  <SelectItem key={r.id} value={r.name}>
+                                    {lang === "ar" ? r.name_ar || r.name : r.name_en || r.name}
+                                  </SelectItem>
+                                ))}
                             </SelectContent>
                           </Select>
                         </div>
@@ -904,11 +910,13 @@ export default function UsersPage() {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="super_admin">{t("role.super_admin")}</SelectItem>
-                            <SelectItem value="financial_manager">{t("role.financial_manager")}</SelectItem>
-                            <SelectItem value="sales_manager">{t("role.sales_manager")}</SelectItem>
-                            <SelectItem value="employee">{t("role.employee")}</SelectItem>
-                            <SelectItem value="viewer">{t("role.viewer")}</SelectItem>
+                            {rolesArray
+                              .filter((r: any) => r.status !== false)
+                              .map((r: any) => (
+                                <SelectItem key={r.id} value={r.name}>
+                                  {lang === "ar" ? r.name_ar || r.name : r.name_en || r.name}
+                                </SelectItem>
+                              ))}
                           </SelectContent>
                         </Select>
                       </div>

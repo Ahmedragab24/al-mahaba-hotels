@@ -1,7 +1,7 @@
 // Invoice detail — Section 15 (BR-INV). Items, status workflow, payments, sharing, history.
-import { useNavigate, useParams } from "react-router-dom";
-import { useState } from "react";
-import { useGetInvoiceByIdQuery, useUpdateInvoiceMutation } from "@/store/api";
+import { useNavigate, useParams, Link } from "react-router-dom";
+import { useState, useMemo } from "react";
+import { useGetInvoiceByIdQuery, useUpdateInvoiceMutation, useGetHotelsQuery } from "@/store/api";
 import { useI18n } from "@/lib/i18n";
 import { useSelector } from "react-redux";
 import { selectAuth } from "@/store/features/authSlice";
@@ -82,29 +82,80 @@ export default function InvoiceDetail() {
 
   const { data: invoiceData, isLoading: isInvoiceLoading, refetch: refetchInvoice } = useGetInvoiceByIdQuery({ id: id || "", lang });
   const [updateInvoiceMutation] = useUpdateInvoiceMutation();
+  const { data: hotelsData } = useGetHotelsQuery();
 
   const [isSharing, setIsSharing] = useState(false);
+
+  const hotelsMap = useMemo(() => {
+    const map = new Map<string, any>();
+    if (Array.isArray(hotelsData)) {
+      hotelsData.forEach((h: any) => {
+        if (h.id !== undefined && h.id !== null) {
+          map.set(String(h.id), h);
+        }
+      });
+    }
+    return map;
+  }, [hotelsData]);
+
+  const items = useMemo(() => {
+    const list: any[] = [...(invoiceData?.items ?? [])];
+    if (list.length === 0 && invoiceData?.bookings && Array.isArray(invoiceData.bookings) && invoiceData.bookings.length > 0) {
+      invoiceData.bookings.forEach((b: any) => {
+        if (b.items && Array.isArray(b.items)) {
+          b.items.forEach((item: any) => {
+            const hotelIdStr = b.hotel_id !== undefined && b.hotel_id !== null ? String(b.hotel_id) : "";
+            const hotel = hotelsMap.get(hotelIdStr);
+            const hotelName = lang === "ar"
+              ? b.hotel?.name_ar || b.hotel?.name || b.hotel?.name_en || hotel?.name_ar || hotel?.name || hotel?.name_en
+              : b.hotel?.name_en || b.hotel?.name || b.hotel?.name_ar || hotel?.name_en || hotel?.name || hotel?.name_ar;
+            
+            const roomName = lang === "ar" 
+              ? item.price?.room?.name_ar || item.price?.room?.name || item.price?.room?.name_en || "غرفة" 
+              : item.price?.room?.name_en || item.price?.room?.name || item.price?.room?.name_ar || "Room";
+            
+            const viewName = lang === "ar" 
+              ? item.price?.room?.view || item.price?.view?.name_ar || item.price?.view?.name || item.price?.view?.name_en 
+              : item.price?.room?.view || item.price?.view?.name_en || item.price?.view?.name || item.price?.view?.name_ar;
+            
+            const dateStr = b.check_in && b.check_out ? ` [${formatDate(b.check_in, lang)} ➔ ${formatDate(b.check_out, lang)}]` : "";
+            
+            const description = `${hotelName ? hotelName + " - " : ""}${roomName}${viewName ? ` (${viewName})` : ""}${dateStr} (${b.code || b.booking_no})`;
+            
+            list.push({
+              id: `booking-item-${item.id}-${b.id}`,
+              description,
+              quantity: item.room_count || item.rooms || 1,
+              unit_price: Number(item.night_price) || 0,
+              subtotal: Number(item.subtotal) || 0,
+            });
+          });
+        }
+      });
+    }
+    return list;
+  }, [invoiceData?.items, invoiceData?.bookings, lang, hotelsMap]);
 
   if (isInvoiceLoading) return <div className="p-6 text-muted-foreground">{t("label.loading")}</div>;
   const x = invoiceData;
   if (!x) return <div className="p-6 text-muted-foreground">{t("label.no_results")}</div>;
-  const items = invoiceData?.items ?? [];
   const allocs: any[] = [];
   const custName = x.customer ? (lang === "ar" ? x.customer.name_ar || x.customer.name_en : x.customer.name_en || x.customer.name_ar) : "—";
-  const balance = Number(x.total_amount) - Number(x.paid_amount);
+  const balance = Number(x.total_amount ?? 0) - Number(x.paid_amount ?? 0);
   const isDraft = x.status === "draft";
   const hasTaxNumber = !!x.customer?.tax_number;
   const currencyCode = typeof x.currency === "object" ? x.currency?.code : (x.currency ?? "SAR");
+
+  const taxPercent = x.tax_percent !== undefined && x.tax_percent !== null ? Number(x.tax_percent) : 15;
+  const totalAmt = Number(x.total_amount) || 0;
+  const discountAmt = x.discount !== undefined && x.discount !== null ? Number(x.discount) : (x.discount_amount !== undefined && x.discount_amount !== null ? Number(x.discount_amount) : 0);
+  const taxAmt = x.tax_amount !== undefined && x.tax_amount !== null ? Number(x.tax_amount) : (x.taxes !== undefined && x.taxes !== null ? Number(x.taxes) : (totalAmt * taxPercent / (100 + taxPercent)));
+  const subTotalAmt = x.subtotal !== undefined && x.subtotal !== null ? Number(x.subtotal) : (x.sub_total !== undefined && x.sub_total !== null ? Number(x.sub_total) : (totalAmt - taxAmt));
 
   const ar = (a: string, e: string) => (lang === "ar" ? a : e);
 
   const getInvoiceHtmlString = (forPrint: boolean = false) => {
     const logoSrc = window.location.origin + logoUrl;
-
-    const taxPercent = x.tax_percent ?? 15;
-    const totalAmt = Number(x.total_amount) || 0;
-    const taxAmt = x.tax_amount ?? x.taxes ?? (totalAmt * taxPercent / (100 + taxPercent));
-    const subTotalAmt = x.subtotal ?? x.sub_total ?? (totalAmt - taxAmt);
 
     let invoiceTimestamp = x.created_at || (x.invoice_date + "T12:00:00Z");
     if (invoiceTimestamp.length === 19 && invoiceTimestamp.includes(" ")) {
@@ -385,11 +436,11 @@ export default function InvoiceDetail() {
             ${Number(subTotalAmt).toLocaleString("en-US", { minimumFractionDigits: 2 })}
           </td>
         </tr>
-        ${Number(x.discount) > 0 ? `
+        ${discountAmt > 0 ? `
         <tr style="border-bottom: 1px dashed #cbd5e1;">
           <td style="padding: 6px 0; color: #64748b; font-weight: 600;">الخصم Discount</td>
           <td style="padding: 6px 0; text-align: end; font-family: monospace; font-weight: 700; color: #e11d48;">
-            -${Number(x.discount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+            -${discountAmt.toLocaleString("en-US", { minimumFractionDigits: 2 })}
           </td>
         </tr>` : ""}
         <tr style="border-bottom: 1px dashed #cbd5e1;">
@@ -650,20 +701,39 @@ Daleel Elm3alem`
             <KV label={t("inv.customer")} value={custName} />
             <KV label={ar("البريد الإلكتروني للعميل", "Customer Email")} value={x.customer?.email} />
             <KV label={ar("هاتف العميل", "Customer Phone")} value={x.customer?.phone} />
-            <KV label={t("inv.booking")} value={x.booking?.booking_no || x.booking_id} />
+            <KV
+              label={t("inv.booking")}
+              value={
+                x.bookings && x.bookings.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {x.bookings.map((b: any) => (
+                      <Link
+                        key={b.id}
+                        to={`/bookings/${b.id}`}
+                        className="text-primary hover:underline font-mono text-xs bg-primary/5 px-2 py-0.5 rounded border border-primary/10"
+                      >
+                        {b.code || b.booking_no}
+                      </Link>
+                    ))}
+                  </div>
+                ) : (
+                  x.booking_code || "—"
+                )
+              }
+            />
             <KV label={t("inv.date")} value={formatDate(x.invoice_date, lang)} />
             <KV label={t("inv.due_date")} value={formatDate(x.due_date, lang)} />
             <KV label={t("inv.currency")} value={currencyCode} />
             <KV label={t("inv.exchange_rate")} value={x.exchange_rate} />
 
-            <KV label={t("inv.subtotal")} value={formatMoney(Number(x.subtotal ?? x.sub_total), currencyCode, lang)} />
-            <KV label={ar("نسبة الضريبة", "Tax Percent")} value={x.tax_percent ? `${x.tax_percent}%` : "0%"} />
-            <KV label={t("inv.taxes")} value={formatMoney(Number(x.tax_amount ?? x.taxes), currencyCode, lang)} />
-            <KV label={t("inv.discount")} value={formatMoney(Number(x.discount), currencyCode, lang)} />
-            <KV label={t("inv.total")} value={<span className="font-bold">{formatMoney(Number(x.total_amount), currencyCode, lang)}</span>} />
+            <KV label={t("inv.subtotal")} value={formatMoney(subTotalAmt, currencyCode, lang)} />
+            <KV label={ar("نسبة الضريبة", "Tax Percent")} value={`${taxPercent}%`} />
+            <KV label={t("inv.taxes")} value={formatMoney(taxAmt, currencyCode, lang)} />
+            <KV label={t("inv.discount")} value={formatMoney(discountAmt, currencyCode, lang)} />
+            <KV label={t("inv.total")} value={<span className="font-bold">{formatMoney(totalAmt, currencyCode, lang)}</span>} />
             <KV label={ar("الإجمالي بالريال السعودي", "Total Amount (SAR)")} value={formatMoney(Number(x.total_amount_sar ?? 0), "SAR", lang)} />
-            <KV label={t("inv.paid")} value={formatMoney(Number(x.paid_amount), currencyCode, lang)} />
-            <KV label={t("inv.balance")} value={<span className="font-bold text-destructive">{formatMoney(Number(x.remaining_amount ?? balance), currencyCode, lang)}</span>} />
+            <KV label={t("inv.paid")} value={formatMoney(Number(x.paid_amount ?? 0), currencyCode, lang)} />
+            <KV label={t("inv.balance")} value={<span className="font-bold text-destructive">{formatMoney(Number(x.remaining_amount ?? balance ?? 0), currencyCode, lang)}</span>} />
 
             <KV label={t("label.status")} value={<InvStatusBadge status={x.status} t={t} />} />
             <KV label={ar("حالة الدفع", "Payment Status")} value={x.status_text || x.status} />

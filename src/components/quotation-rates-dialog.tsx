@@ -20,6 +20,8 @@ export interface SelectedRate {
   rooms: number;
   supplier_id: string | null;
   is_direct: boolean;
+  tax_type?: "inclusive_tax" | "exclusive_tax";
+  tax_rate?: number;
   // UI Display info
   room_name_en?: string;
   room_name_ar?: string;
@@ -44,9 +46,13 @@ export interface SelectedRate {
   profit_margin?: number;
   hotel_id?: string;
   quotation_item_id?: string | number;
+  custom_selling_price?: number | string | null;
   // قيم محسوبة من السيرفر (ReadOnly mode)
   night_price?: number | null;
   subtotal?: number | null;
+  hotel_total?: number | null;
+  company_profit?: number | null;
+  is_saved?: boolean;
 }
 
 export const formatMealPlan = (planType?: string, planDetails?: any[], lang?: string, t?: any) => {
@@ -105,7 +111,7 @@ export function QuotationRatesDialog({
     return diff > 0 ? diff : 0;
   };
 
-  const getRateTotal = (rate: any, qty: number, startDateStr?: string, endDateStr?: string, profitMarginVal: number = 0) => {
+  const getRateTotal = (rate: any, qty: number, startDateStr?: string, endDateStr?: string, profitMarginVal: number = 0, customSellingPriceVal?: string | number | null) => {
     if (qty <= 0) return 0;
     const start = startDateStr || "";
     const end = endDateStr || "";
@@ -113,9 +119,16 @@ export function QuotationRatesDialog({
 
     const getClientNightPrice = (base: number) => {
       const marginAmt = base * (profitMarginVal / 100);
-      const taxAmt = marginAmt * 0.15;
-      return base + marginAmt + taxAmt;
+      return base + marginAmt;
     };
+
+    const hasCustom = customSellingPriceVal !== undefined && customSellingPriceVal !== null && customSellingPriceVal !== "";
+
+    if (hasCustom) {
+      const basePrice = Number(customSellingPriceVal) || 0;
+      const clientPrice = getClientNightPrice(basePrice);
+      return clientPrice * qty * n;
+    }
 
     if (!rate.is_weekend_weekday || !start || !end) {
       const basePrice = rate.selling_price || rate.cost_per_night || 0;
@@ -165,16 +178,21 @@ export function QuotationRatesDialog({
   }, [roomsData]);
 
   // Selected state per rate_id
-  const [selected, setSelected] = useState<Record<string, { selected: boolean; quantity: number; start_date: string; end_date: string; profit_margin: number }>>({});
+  const [selected, setSelected] = useState<Record<string, { selected: boolean; quantity: number; start_date: string; end_date: string; profit_margin: number; custom_selling_price: string }>>({});
 
   const defaultStart = checkIn ? checkIn.split(/[ T]/)[0] : "";
   const defaultEnd = checkOut ? checkOut.split(/[ T]/)[0] : "";
 
+  const [filterFrom, setFilterFrom] = useState(defaultStart);
+  const [filterTo, setFilterTo] = useState(defaultEnd);
+
   // Reset state when opened with a new hotel
   useEffect(() => {
     if (open) {
+      setFilterFrom(checkIn ? checkIn.split(/[ T]/)[0] : "");
+      setFilterTo(checkOut ? checkOut.split(/[ T]/)[0] : "");
       if (initialSelected && initialSelected.length > 0) {
-        const state: Record<string, { selected: boolean; quantity: number; start_date: string; end_date: string; profit_margin: number }> = {};
+        const state: Record<string, { selected: boolean; quantity: number; start_date: string; end_date: string; profit_margin: number; custom_selling_price: string }> = {};
         initialSelected.forEach(item => {
           state[item.rate_id] = {
             selected: true,
@@ -182,6 +200,7 @@ export function QuotationRatesDialog({
             start_date: item.start_date || "",
             end_date: item.end_date || "",
             profit_margin: item.profit_margin || 0,
+            custom_selling_price: item.custom_selling_price !== undefined ? (item.custom_selling_price === null ? "" : String(item.custom_selling_price)) : "",
           };
         });
         setSelected(state);
@@ -189,7 +208,7 @@ export function QuotationRatesDialog({
         setSelected({});
       }
     }
-  }, [open, hotelId, initialSelected]);
+  }, [open, hotelId, initialSelected, checkIn, checkOut]);
 
   const q = useGetPricesQuery(
     hotelId
@@ -198,8 +217,8 @@ export function QuotationRatesDialog({
         status: "valid",
         lang,
         per_page: "500",
-        valid_from: checkIn ? checkIn.split(/[ T]/)[0] : undefined,
-        valid_to: checkOut ? checkOut.split(/[ T]/)[0] : undefined,
+        ...(filterFrom ? { valid_from: filterFrom } : {}),
+        ...(filterTo ? { valid_to: filterTo } : {}),
       }
       : undefined,
     {
@@ -210,13 +229,35 @@ export function QuotationRatesDialog({
 
   const ratesData = useMemo(() => {
     if (!q.data) return [];
-    if (Array.isArray(q.data)) return q.data;
-    // Handle { data: { data: [...] } } format
-    if (q.data?.data && Array.isArray(q.data.data)) return q.data.data;
-    // Handle { data: [...] } format
-    if (Array.isArray((q.data as any)?.data)) return (q.data as any).data;
-    return [];
-  }, [q.data]);
+    let list = [];
+    if (Array.isArray(q.data)) {
+      list = q.data;
+    } else if (q.data?.data && Array.isArray(q.data.data)) {
+      list = q.data.data;
+    } else if (Array.isArray((q.data as any)?.data)) {
+      list = (q.data as any).data;
+    }
+
+    if (filterFrom || filterTo) {
+      list = list.filter((r: any) => {
+        const rFrom = r.valid_from ? r.valid_from.split(/[ T]/)[0] : null;
+        const rTo = r.valid_to ? r.valid_to.split(/[ T]/)[0] : null;
+
+        // If rate has no dates defined, it's always valid
+        if (!rFrom && !rTo) return true;
+
+        // Overlap check:
+        // Exclude if rate ends before filterFrom
+        if (filterFrom && rTo && rTo < filterFrom) return false;
+        // Exclude if rate starts after filterTo
+        if (filterTo && rFrom && rFrom > filterTo) return false;
+
+        return true;
+      });
+    }
+
+    return list;
+  }, [q.data, filterFrom, filterTo]);
 
   const groupedRates = useMemo(() => {
     const groups: Record<string, { supplier_id: string | null; name_en: string; name_ar: string; is_direct: boolean; rates: any[] }> = {};
@@ -258,20 +299,25 @@ export function QuotationRatesDialog({
     return Object.values(groups);
   }, [ratesData]);
 
-  const handleToggle = (rateId: string, checked: boolean) => {
+  const handleToggle = (rateId: string, checked: boolean, validFrom?: string, validTo?: string) => {
+    const defaultRateStart = validFrom || filterFrom || defaultStart;
+    const defaultRateEnd = validTo || filterTo || defaultEnd;
     setSelected(prev => ({
       ...prev,
       [rateId]: {
         selected: checked,
         quantity: checked ? (prev[rateId]?.quantity || 1) : 0,
-        start_date: checked ? (prev[rateId]?.start_date || defaultStart) : "",
-        end_date: checked ? (prev[rateId]?.end_date || defaultEnd) : "",
+        start_date: checked ? (prev[rateId]?.start_date || defaultRateStart) : "",
+        end_date: checked ? (prev[rateId]?.end_date || defaultRateEnd) : "",
         profit_margin: checked ? (prev[rateId]?.profit_margin ?? 5) : 0,
+        custom_selling_price: checked ? (prev[rateId]?.custom_selling_price ?? "") : "",
       }
     }));
   };
 
-  const handleQuantity = (rateId: string, qty: number) => {
+  const handleQuantity = (rateId: string, qty: number, validFrom?: string, validTo?: string) => {
+    const defaultRateStart = validFrom || filterFrom || defaultStart;
+    const defaultRateEnd = validTo || filterTo || defaultEnd;
     setSelected(prev => ({
       ...prev,
       [rateId]: {
@@ -279,8 +325,9 @@ export function QuotationRatesDialog({
         quantity: qty,
         selected: prev[rateId]?.selected || qty > 0,
         profit_margin: prev[rateId]?.profit_margin ?? 5,
-        start_date: prev[rateId]?.start_date || defaultStart,
-        end_date: prev[rateId]?.end_date || defaultEnd,
+        start_date: prev[rateId]?.start_date || defaultRateStart,
+        end_date: prev[rateId]?.end_date || defaultRateEnd,
+        custom_selling_price: prev[rateId]?.custom_selling_price ?? "",
       }
     }));
   };
@@ -303,6 +350,13 @@ export function QuotationRatesDialog({
     setSelected(prev => ({
       ...prev,
       [rateId]: { ...prev[rateId], profit_margin: val }
+    }));
+  };
+
+  const handleCustomSellingPrice = (rateId: string, val: string) => {
+    setSelected(prev => ({
+      ...prev,
+      [rateId]: { ...prev[rateId], custom_selling_price: val }
     }));
   };
 
@@ -331,6 +385,8 @@ export function QuotationRatesDialog({
           view_id: String(r.hotel_view_id || roomObj?.hotel_view_id || null),
           meal_plan: formatMealPlan(r.meal_plan_type, r.meal_plan_details, lang, t),
           selling_price: r.selling_price || r.cost_per_night,
+          tax_type: r.tax_type || "inclusive_tax",
+          tax_rate: Number(r.tax_rate ?? 15),
           rooms: state.quantity,
           supplier_id: String(r.supplier_id || r.contract?.supplier_id || null),
           is_direct: r.is_direct,
@@ -353,6 +409,7 @@ export function QuotationRatesDialog({
           start_date: state.start_date,
           end_date: state.end_date,
           profit_margin: state.profit_margin || 0,
+          custom_selling_price: state.custom_selling_price ? Number(state.custom_selling_price) : null,
         });
       }
     });
@@ -370,10 +427,32 @@ export function QuotationRatesDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-7xl max-h-[85vh] flex flex-col p-0 overflow-hidden">
         <DialogHeader className="px-4 py-3 border-b">
-          <DialogTitle className="text-sm sm:text-base flex items-center justify-between w-full">
-            <div className="flex items-center gap-1.5">
-              <Building2 className="w-4 h-4 text-amber-600" />
-              {lang === "ar" ? "عروض أسعار الفندق" : "Hotel Rates"}
+          <DialogTitle className="text-sm sm:text-base flex items-center justify-between w-full flex-wrap gap-3">
+            <div className="flex items-center gap-4 flex-wrap">
+              <div className="flex items-center gap-1.5">
+                <Building2 className="w-4 h-4 text-amber-600" />
+                <span>{lang === "ar" ? "عروض أسعار الفندق" : "Hotel Rates"}</span>
+              </div>
+              <div className="flex items-center gap-3 flex-wrap text-xs font-normal">
+                <div className="flex items-center gap-1">
+                  <span className="text-muted-foreground">{lang === "ar" ? "من:" : "From:"}</span>
+                  <Input
+                    type="date"
+                    className="h-8 py-1 px-2 text-xs w-fit bg-background border border-border"
+                    value={filterFrom}
+                    onChange={(e) => setFilterFrom(e.target.value)}
+                  />
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="text-muted-foreground">{lang === "ar" ? "إلى:" : "To:"}</span>
+                  <Input
+                    type="date"
+                    className="h-8 py-1 px-2 text-xs w-fit bg-background border border-border"
+                    value={filterTo}
+                    onChange={(e) => setFilterTo(e.target.value)}
+                  />
+                </div>
+              </div>
             </div>
             <div className="flex gap-1.5 me-4">
               <Badge variant="secondary" className="text-xs font-semibold px-2 py-0.5 bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
@@ -398,7 +477,8 @@ export function QuotationRatesDialog({
                 const startDate = selected[rate.id]?.start_date;
                 const endDate = selected[rate.id]?.end_date;
                 const margin = selected[rate.id]?.profit_margin || 0;
-                return acc + (isSelected ? getRateTotal(rate, qty, startDate, endDate, margin) : 0);
+                const customPrice = selected[rate.id]?.custom_selling_price;
+                return acc + (isSelected ? getRateTotal(rate, qty, startDate, endDate, margin, customPrice) : 0);
               }, 0);
 
               return (
@@ -435,6 +515,7 @@ export function QuotationRatesDialog({
                           <th className="pb-2 px-2 font-normal">الصلاحية</th>
                           <th className="pb-2 px-2 font-normal">الوجبات</th>
                           <th className="pb-2 px-2 font-normal">سعر الليلة</th>
+                          <th className="pb-2 px-2 font-normal">{lang === "ar" ? "الضريبة" : "Tax"}</th>
                           <th className="pb-2 px-2 font-normal w-24">{lang === "ar" ? "عدد الغرف" : "Rooms Qty"}</th>
                           <th className="pb-2 px-2 font-normal">الإجمالي</th>
                         </tr>
@@ -464,7 +545,7 @@ export function QuotationRatesDialog({
                                   <div className="flex items-center gap-2.5">
                                     <Checkbox
                                       checked={isSelected}
-                                      onCheckedChange={(c) => handleToggle(rate.id, !!c)}
+                                      onCheckedChange={(c) => handleToggle(rate.id, !!c, rate.valid_from, rate.valid_to)}
                                       className={cn("w-4 h-4 border-slate-300 dark:border-slate-600 rounded transition-colors", isSelected && "bg-amber-600 border-amber-600 dark:border-amber-600")}
                                     />
                                     <div>
@@ -517,13 +598,18 @@ export function QuotationRatesDialog({
                                     )}
                                   </div>
                                 </td>
+                                <td className="py-2 px-2 text-center">
+                                  <div className={cn("font-medium transition-all mx-auto w-fit text-sm", isSelected ? "text-slate-600 dark:text-slate-300" : "text-muted-foreground/50")}>
+                                    {rate.tax_rate}%
+                                  </div>
+                                </td>
                                 <td className="py-2 px-2">
                                   {isSelected ? (
                                     <Input
                                       type="number"
                                       min={1}
                                       value={qty}
-                                      onChange={(e) => handleQuantity(rate.id, parseInt(e.target.value) || 0)}
+                                      onChange={(e) => handleQuantity(rate.id, parseInt(e.target.value) || 0, rate.valid_from, rate.valid_to)}
                                       className="h-10 text-center bg-slate-50 dark:bg-slate-800/50 border-0 rounded text-amber-600 dark:text-amber-500 font-bold focus-visible:ring-1 focus-visible:ring-amber-500 text-sm py-0 px-2 w-20 mx-auto"
                                     />
                                   ) : (
@@ -535,7 +621,7 @@ export function QuotationRatesDialog({
                                 <td className="py-2 px-2 text-center text-sm">
                                   {isSelected ? (
                                     <div className="font-bold text-amber-600 dark:text-amber-500 text-sm sm:text-base">
-                                      {getRateTotal(rate, typeof qty === 'number' ? qty : 0, selected[rate.id]?.start_date, selected[rate.id]?.end_date, selected[rate.id]?.profit_margin).toFixed(2)}
+                                      {getRateTotal(rate, typeof qty === 'number' ? qty : 0, selected[rate.id]?.start_date, selected[rate.id]?.end_date, selected[rate.id]?.profit_margin, selected[rate.id]?.custom_selling_price).toFixed(2)}
                                     </div>
                                   ) : (
                                     <div className="text-muted-foreground/50 font-medium">—</div>
@@ -544,8 +630,8 @@ export function QuotationRatesDialog({
                               </tr>
                               {isSelected && (
                                 <tr className="bg-amber-50/5 dark:bg-amber-950/5">
-                                  <td colSpan={7} className="p-3 border-b border-border/50">
-                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-card p-4 rounded border border-border/50 shadow-xs max-w-3xl mx-auto">
+                                  <td colSpan={8} className="p-3 border-b border-border/50">
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 bg-card p-4 rounded border border-border/50 shadow-xs max-w-5xl mx-auto">
                                       {/* Check-In Date */}
                                       <div className="space-y-1">
                                         <Label className="text-xs font-semibold text-muted-foreground">
@@ -593,6 +679,37 @@ export function QuotationRatesDialog({
                                           onChange={(e) => handleProfitMargin(rate.id, parseFloat(e.target.value) || 0)}
                                           className="h-10 text-sm bg-slate-50/50 dark:bg-slate-800/30 border-border/70 focus-visible:ring-amber-500 py-0 px-3"
                                         />
+                                      </div>
+                                      {/* Custom Selling Price */}
+                                      <div className="space-y-1">
+                                        <Label className="text-xs font-semibold text-muted-foreground">
+                                          {lang === "ar" ? "سعر البيع المخصص" : "Custom Selling Price"}
+                                        </Label>
+                                        <Input
+                                          type="number"
+                                          min={0}
+                                          step="0.01"
+                                          placeholder={lang === "ar" ? "تلقائي" : "Auto"}
+                                          value={selected[rate.id]?.custom_selling_price ?? ""}
+                                          onChange={(e) => handleCustomSellingPrice(rate.id, e.target.value)}
+                                          className="h-10 text-sm bg-slate-50/50 dark:bg-slate-800/30 border-border/70 focus-visible:ring-amber-500 py-0 px-3"
+                                        />
+                                      </div>
+                                      {/* Calculated Profit */}
+                                      <div className="space-y-1 flex flex-col justify-end">
+                                        <Label className="text-xs font-semibold text-muted-foreground">
+                                          {lang === "ar" ? "صافي الربح" : "Net Profit"}
+                                        </Label>
+                                        {(() => {
+                                          const costTotal = getRateTotal(rate, typeof qty === 'number' ? qty : 0, selected[rate.id]?.start_date, selected[rate.id]?.end_date, 0, "");
+                                          const sellingTotal = getRateTotal(rate, typeof qty === 'number' ? qty : 0, selected[rate.id]?.start_date, selected[rate.id]?.end_date, selected[rate.id]?.profit_margin, selected[rate.id]?.custom_selling_price);
+                                          const netProfit = sellingTotal - costTotal;
+                                          return (
+                                            <div className="h-10 flex items-center justify-center font-bold text-emerald-600 bg-emerald-50/50 dark:bg-emerald-950/20 px-3 rounded border border-emerald-200/20 w-full text-sm">
+                                              {netProfit.toFixed(2)} {lang === "ar" ? "ريال" : String(rate.currency?.code || "SAR")}
+                                            </div>
+                                          );
+                                        })()}
                                       </div>
                                     </div>
                                   </td>

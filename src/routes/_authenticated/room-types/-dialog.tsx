@@ -11,15 +11,118 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 import { useCreateRoomMutation, useUpdateRoomMutation } from "@/store/services/rooms/roomsService";
 import { useGetRoomTypesQuery } from "@/store/services/attributes/room-types";
+import { useSelector, useDispatch } from "react-redux";
+import { RootState } from "@/store/store";
+import { addRoomNameAr, addRoomNameEn } from "@/store/features/roomNamesSlice";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return <div className="space-y-1"><div className="text-xs text-muted-foreground">{label}</div>{children}</div>;
+}
+
+interface SuggestiveNameInputProps {
+  value: string;
+  onChange: (val: string) => void;
+  options: string[];
+  placeholder: string;
+  dir: "rtl" | "ltr";
+  labelCustom: string;
+  labelSelect: string;
+}
+
+function SuggestiveNameInput({
+  value,
+  onChange,
+  options,
+  placeholder,
+  dir,
+  labelCustom,
+  labelSelect,
+}: SuggestiveNameInputProps) {
+  const [isCustom, setIsCustom] = useState(() => {
+    return value ? !options.includes(value) : false;
+  });
+
+  // Keep state in sync if value is reset or changed from parent
+  useEffect(() => {
+    if (!value) {
+      setIsCustom(false);
+    } else if (!options.includes(value)) {
+      setIsCustom(true);
+    }
+  }, [value, options]);
+
+  if (isCustom) {
+    return (
+      <div className="flex gap-2">
+        <Input
+          className="h-10"
+          dir={dir}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+        />
+        {options.length > 0 && (
+          <Button
+            type="button"
+            variant="outline"
+            className="h-10 px-3 shrink-0"
+            onClick={() => setIsCustom(false)}
+            title={labelSelect}
+          >
+            📋
+          </Button>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex gap-2">
+      <Select
+        value={value}
+        onValueChange={(val) => {
+          if (val === "__custom__") {
+            setIsCustom(true);
+            onChange("");
+          } else {
+            onChange(val);
+          }
+        }}
+      >
+        <SelectTrigger className="h-10 w-full" dir={dir}>
+          <SelectValue placeholder={placeholder} />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((opt) => (
+            <SelectItem key={opt} value={opt} dir={dir}>
+              {opt}
+            </SelectItem>
+          ))}
+          <SelectItem value="__custom__" className="text-amber-600 font-medium">
+            ✨ {labelCustom}
+          </SelectItem>
+        </SelectContent>
+      </Select>
+      <Button
+        type="button"
+        variant="outline"
+        className="h-10 px-3 shrink-0"
+        onClick={() => setIsCustom(true)}
+        title={labelCustom}
+      >
+        ✏️
+      </Button>
+    </div>
+  );
 }
 
 export function RoomTypeDialog({ open, onOpenChange, initial, onSaved, fixedHotelId }: {
   open: boolean; onOpenChange: (v: boolean) => void; initial?: any; onSaved: () => void; fixedHotelId?: string;
 }) {
   const { t, lang } = useI18n();
+  const dispatch = useDispatch();
+  const namesAr = useSelector((state: RootState) => state.roomNames.namesAr);
+  const namesEn = useSelector((state: RootState) => state.roomNames.namesEn);
   const hotels = useHotels({}, { refetchInterval: 2000 });
   const [v, setV] = useState<any>({});
   const isEdit = !!initial?.id;
@@ -77,6 +180,8 @@ export function RoomTypeDialog({ open, onOpenChange, initial, onSaved, fixedHote
         await createRoom(formData).unwrap();
         toast.success(t("toast.created"));
       }
+      dispatch(addRoomNameAr(v.name_ar));
+      dispatch(addRoomNameEn(v.name_en));
       onSaved();
       onOpenChange(false);
     } catch (e: any) {
@@ -113,20 +218,26 @@ export function RoomTypeDialog({ open, onOpenChange, initial, onSaved, fixedHote
 
 
             <Field label={`${t("label.name_ar")} *`}>
-              <Input
-                className="h-10"
-                dir="rtl"
+              <SuggestiveNameInput
                 value={v.name_ar ?? ""}
-                onChange={(e) => setV({ ...v, name_ar: e.target.value })}
+                onChange={(val) => setV({ ...v, name_ar: val })}
+                options={namesAr}
+                placeholder={t("label.name_ar")}
+                dir="rtl"
+                labelCustom={lang === "ar" ? "كتابة اسم مخصص..." : "Type custom name..."}
+                labelSelect={lang === "ar" ? "اختيار من القائمة..." : "Select from list..."}
               />
             </Field>
 
             <Field label={`${t("label.name_en")} *`}>
-              <Input
-                className="h-10"
-                dir="ltr"
+              <SuggestiveNameInput
                 value={v.name_en ?? ""}
-                onChange={(e) => setV({ ...v, name_en: e.target.value })}
+                onChange={(val) => setV({ ...v, name_en: val })}
+                options={namesEn}
+                placeholder={t("label.name_en")}
+                dir="ltr"
+                labelCustom={lang === "ar" ? "كتابة اسم مخصص..." : "Type custom name..."}
+                labelSelect={lang === "ar" ? "اختيار من القائمة..." : "Select from list..."}
               />
             </Field>
 

@@ -197,14 +197,6 @@ export async function openQuotationPrint(opts: {
     </div>
   </div>
 
-  ${hotel ? `<div class="hero">
-    ${coverImage ? `<img src="${esc(coverImage)}" alt="${esc(name(hotel))}" />` : ""}
-    <div class="hero-info">
-      <h3>${esc(name(hotel))} ${starsHtml}</h3>
-      <div class="loc">${esc(hotelLocation)}</div>
-      ${hotel.check_in || hotel.check_out ? `<div style="font-size:12px;color:${T.muted}">${esc(s.check_in)}: ${esc(hotel.check_in ?? "—")} · ${esc(s.check_out)}: ${esc(hotel.check_out ?? "—")}</div>` : ""}
-    </div>
-  </div>` : ""}
 
   <div class="meta">
     <div class="box"><div class="k">${recipientLabel}</div><div class="v">${esc(recipientName)}</div></div>
@@ -423,14 +415,6 @@ export async function generateQuotationPdfBlob(opts: {
       </div>
     </div>
 
-    ${hotel ? `<div class="pdf-hero">
-      ${coverImage ? `<img src="${esc(coverImage)}" alt="${esc(name(hotel))}" />` : ""}
-      <div class="pdf-hero-info">
-        <h3>${esc(name(hotel))} ${starsHtml}</h3>
-        <div class="loc">${esc(hotelLocation)}</div>
-        ${hotel.check_in || hotel.check_out ? `<div style="font-size:12px;color:${T.muted}">${esc(s.check_in)}: ${esc(hotel.check_in ?? "—")} · ${esc(s.check_out)}: ${esc(hotel.check_out ?? "—")}</div>` : ""}
-      </div>
-    </div>` : ""}
 
     <div class="pdf-meta">
       <div class="pdf-box"><div class="k">${recipientLabel}</div><div class="v">${esc(recipientName)}</div></div>

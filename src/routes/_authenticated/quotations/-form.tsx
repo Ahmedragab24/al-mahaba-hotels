@@ -9,6 +9,7 @@ import { useCountries, useCities, useCurrencies } from "@/lib/lookups";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DateTimePicker } from "@/components/ui/datetime-picker";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -215,44 +216,65 @@ export function QuotationForm({ initial, onSaved }: Props) {
   const [selectedItems, setSelectedItems] = useState<SelectedRate[]>(() => {
     // Convert existing items to SelectedRate format when editing
     if (initial?.items && Array.isArray(initial.items)) {
-      return initial.items.map((item: any) => ({
-        rate_id: String(item.price_id),
-        room_type_id: String(item.price_details?.room?.room_type_id || item.price_details?.room_id),
-        view_id: String(item.price_details?.hotel_view_id || null),
-        meal_plan: item.price_details?.meal_plan_type || "exclusive",
-        meal_plan_type: item.price_details?.meal_plan_type,
-        meal_plan_details: item.price_details?.meal_plan_details,
-        is_weekend_weekday: item.price_details?.is_weekend_weekday || false,
-        weekend_selling_price: item.price_details?.weekend_selling_price,
-        weekend_days: item.price_details?.weekend_days,
-        days: item.price_details?.days,
-        selling_price: item.night_price || item.price_details?.selling_price || item.price_details?.cost_per_night,
-        rooms: item.room_count,
-        supplier_id: String(item.price_details?.supplier_id || null),
-        is_direct: item.price_details?.is_direct || false,
-        // UI Display info
-        room_name_en: item.price_details?.room?.name_en,
-        room_name_ar: item.price_details?.room?.name_ar,
-        room_type_name_en:
-          item.room_type?.name_en ||
-          item.price_details?.room_type?.name_en ||
-          item.price_details?.room?.room_type?.name_en,
-        room_type_name_ar:
-          item.room_type?.name_ar ||
-          item.price_details?.room_type?.name_ar ||
-          item.price_details?.room?.room_type?.name_ar,
-        view_name_en: item.price_details?.hotel_view?.name_en,
-        view_name_ar: item.price_details?.hotel_view?.name_ar,
-        supplier_name_en: item.price_details?.supplier?.name_en,
-        supplier_name_ar: item.price_details?.supplier?.name_ar,
-        room: item.price_details?.room,
-        room_type:
-          item.room_type || item.price_details?.room_type || item.price_details?.room?.room_type,
-        start_date: item.start_date ? toDateString(item.start_date) : "",
-        end_date: item.end_date ? toDateString(item.end_date) : "",
-        profit_margin: Number(item.profit_margin) || 0,
-        hotel_id: String(item.hotel_id),
-      }));
+      return initial.items.map((item: any) => {
+        const margin = item.profit_margin !== undefined ? Number(item.profit_margin) : 5;
+        const priceDetails = item.price_details || {};
+        const taxRate = Number(priceDetails.tax_rate ?? item.tax_rate ?? 15);
+        const taxType = priceDetails.tax_type || item.tax_type || "inclusive_tax";
+        const isInclusive = taxType !== "exclusive_tax";
+
+        const reversedSellingPrice = item.night_price
+          ? Number(item.night_price) / (1 + margin / 100)
+          : Number(priceDetails.selling_price || priceDetails.cost_per_night || 0);
+
+        return {
+          rate_id: String(item.price_id),
+          room_type_id: String(item.price_details?.room?.room_type_id || item.price_details?.room_id),
+          view_id: String(item.price_details?.hotel_view_id || null),
+          meal_plan: item.price_details?.meal_plan_type || "exclusive",
+          meal_plan_type: item.price_details?.meal_plan_type,
+          meal_plan_details: item.price_details?.meal_plan_details,
+          is_weekend_weekday: item.price_details?.is_weekend_weekday || false,
+          weekend_selling_price: item.price_details?.weekend_selling_price,
+          weekend_days: item.price_details?.weekend_days,
+          days: item.price_details?.days,
+          selling_price: reversedSellingPrice || Number(priceDetails.selling_price || priceDetails.cost_per_night || 0),
+          rooms: item.room_count,
+          supplier_id: String(item.price_details?.supplier_id || null),
+          is_direct: item.price_details?.is_direct || false,
+          // UI Display info
+          room_name_en: item.price_details?.room?.name_en,
+          room_name_ar: item.price_details?.room?.name_ar,
+          room_type_name_en:
+            item.room_type?.name_en ||
+            item.price_details?.room_type?.name_en ||
+            item.price_details?.room?.room_type?.name_en,
+          room_type_name_ar:
+            item.room_type?.name_ar ||
+            item.price_details?.room_type?.name_ar ||
+            item.price_details?.room?.room_type?.name_ar,
+          view_name_en: item.price_details?.hotel_view?.name_en,
+          view_name_ar: item.price_details?.hotel_view?.name_ar,
+          supplier_name_en: item.price_details?.supplier?.name_en,
+          supplier_name_ar: item.price_details?.supplier?.name_ar,
+          room: item.price_details?.room,
+          room_type:
+            item.room_type || item.price_details?.room_type || item.price_details?.room?.room_type,
+          start_date: item.start_date ? toDateString(item.start_date) : "",
+          end_date: item.end_date ? toDateString(item.end_date) : "",
+          profit_margin: margin,
+          custom_selling_price: item.custom_selling_price !== undefined ? (item.custom_selling_price === null ? "" : String(item.custom_selling_price)) : "",
+          tax_type: taxType,
+          tax_rate: taxRate,
+          hotel_id: String(item.hotel_id),
+          is_saved: true,
+          quotation_item_id: item.id,
+          night_price: item.night_price ? Number(item.night_price) : null,
+          subtotal: item.subtotal ? Number(item.subtotal) : null,
+          hotel_total: item.hotel_total ? Number(item.hotel_total) : null,
+          company_profit: item.company_profit ? Number(item.company_profit) : null,
+        };
+      });
     }
     return [];
   });
@@ -274,7 +296,7 @@ export function QuotationForm({ initial, onSaved }: Props) {
 
   const customers = useQuery({
     queryKey: ["lookup-customers"],
-    queryFn: async () => (await apiClient.customers.getAll()) ?? [],
+    queryFn: async () => (await apiClient.customers.getAll({ per_page: 5000 })) ?? [],
   });
 
   const hotelsQuery = useQuery({
@@ -466,6 +488,7 @@ export function QuotationForm({ initial, onSaved }: Props) {
           start_date: item.start_date || null,
           end_date: item.end_date || null,
           profit_margin: Number(item.profit_margin) || 0,
+          custom_selling_price: item.custom_selling_price ? Number(item.custom_selling_price) : null,
         })),
       };
 
@@ -628,11 +651,10 @@ export function QuotationForm({ initial, onSaved }: Props) {
                 required
                 error={fieldErrors.check_in}
               >
-                <Input
-                  className="h-9"
-                  type="datetime-local"
+                <DateTimePicker
                   value={form.check_in}
-                  onChange={(e) => set("check_in", e.target.value)}
+                  onChange={(val) => set("check_in", val)}
+                  placeholder={arLabel("اختر تاريخ ووقت بداية صلاحية العرض", "Select start date & time")}
                 />
               </FormField>
               <FormField
@@ -640,12 +662,11 @@ export function QuotationForm({ initial, onSaved }: Props) {
                 required
                 error={fieldErrors.check_out}
               >
-                <Input
-                  className="h-9"
-                  type="datetime-local"
+                <DateTimePicker
                   value={form.check_out}
                   min={form.check_in || undefined}
-                  onChange={(e) => set("check_out", e.target.value)}
+                  onChange={(val) => set("check_out", val)}
+                  placeholder={arLabel("اختر تاريخ ووقت نهاية صلاحية العرض", "Select expiry date & time")}
                 />
               </FormField>
             </FieldGroup>
@@ -667,11 +688,16 @@ export function QuotationForm({ initial, onSaved }: Props) {
           });
           // Filter hotels for this selection
           const allHotels = Array.isArray(hotelsQuery.data) ? hotelsQuery.data : [];
-          const currentHotelList = allHotels.filter(
-            (h: any) =>
-              String(h.country_id) === String(hs.country_id) &&
-              String(h.city_id) === String(hs.city_id)
-          );
+          const currentHotelList = allHotels.filter((h: any) => {
+            const matchGeo = String(h.country_id) === String(hs.country_id) && String(h.city_id) === String(hs.city_id);
+            if (!matchGeo) return false;
+
+            // Prevent selecting the same hotel in different hotel options
+            const isAlreadySelectedElsewhere = hotelSelections.some(
+              (selection, sIdx) => sIdx !== idx && String(selection.hotel_id) === String(h.id)
+            );
+            return !isAlreadySelectedElsewhere;
+          });
 
           return (
             <Card key={hs.id} className="shadow-sm border-border/60">

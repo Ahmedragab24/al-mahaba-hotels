@@ -131,7 +131,7 @@ export default function BookingsList() {
   const customers = useQuery({
     queryKey: ["lookup-customers"],
     queryFn: async () => {
-      const response = await apiClient.customers.getAll();
+      const response = await apiClient.customers.getAll({ per_page: 5000 });
       return Array.isArray(response) ? response : response?.data?.data || response?.data || [];
     },
     refetchInterval: 2000, // Auto-refresh every 2 seconds
@@ -543,9 +543,9 @@ export default function BookingsList() {
                     b.total_amount !== undefined
                       ? Number(b.total_amount)
                       : bookingItems.reduce(
-                          (a: number, i: any) => a + Number(i.total_selling || i.subtotal || 0),
-                          0,
-                        );
+                        (a: number, i: any) => a + Number(i.total_selling || i.subtotal || 0),
+                        0,
+                      );
                   const earliestCheckIn =
                     b.check_in ||
                     bookingItems
@@ -563,13 +563,13 @@ export default function BookingsList() {
                     b.nights ||
                     (earliestCheckIn && latestCheckOut
                       ? Math.max(
-                          0,
-                          Math.round(
-                            (new Date(latestCheckOut).getTime() -
-                              new Date(earliestCheckIn).getTime()) /
-                              86400000,
-                          ),
-                        )
+                        0,
+                        Math.round(
+                          (new Date(latestCheckOut).getTime() -
+                            new Date(earliestCheckIn).getTime()) /
+                          86400000,
+                        ),
+                      )
                       : null);
 
                   let hotelNames: string[] = [];

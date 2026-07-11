@@ -5,3 +5,4 @@ export * from "./languages";
 export * from "./meal-plans";
 export * from "./room-types";
 export * from "./supplier-types";
+export * from "./roles";

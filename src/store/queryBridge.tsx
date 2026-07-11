@@ -124,6 +124,8 @@ const TABLE_TO_SERVICE: Record<string, string> = {
   receipts: "receipts",
   receivables: "receivables",
   payables: "payables",
+  hotel_room_types: "roomTypes",
+  hotel_meal_plans: "mealPlans",
   countries: "countries",
   cities: "cities",
   currencies: "currencies",
@@ -348,12 +350,15 @@ class QueryBuilder {
   async then(onfulfilled?: (value: any) => any, onrejected?: (reason: any) => any) {
     try {
       const res = await this.execute();
-      if (onfulfilled) return onfulfilled(res);
-      return res;
+      return onfulfilled ? onfulfilled(res) : res;
     } catch (err) {
       if (onrejected) return onrejected(err);
       throw err;
     }
+  }
+
+  async catch(onrejected?: (reason: any) => any) {
+    return this.then(undefined, onrejected);
   }
 }
 

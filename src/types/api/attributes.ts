@@ -55,3 +55,31 @@ export interface Language {
   status: boolean;
 }
 
+export interface RoleResponseType {
+  data: {
+    id: number;
+    name: string;
+    name_ar: string;
+    name_en: string;
+    status: boolean;
+  }[];
+  message: string;
+  status_code: number;
+}
+
+export interface RoleResponseTypeSingle {
+  data: {
+    id: number;
+    name: string;
+    name_ar: string;
+    name_en: string;
+    status: boolean;
+  }[];
+  message: string;
+  status_code: number;
+}
+
+export interface CreateRoleRequest {
+  name_en: string;
+  name_ar: string;
+}

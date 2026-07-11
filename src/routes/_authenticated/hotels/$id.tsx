@@ -1,4 +1,4 @@
-import { useLocation, useParams, useSearchParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useSearchParams, useNavigate, Link } from "react-router-dom";
 import { db } from "@/store/queryBridge";
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@/store/queryBridge";
@@ -6,7 +6,6 @@ import { useI18n } from "@/lib/i18n";
 import { useSelector } from "react-redux";
 import { selectAuth } from "@/store/features/authSlice";
 import { canWriteModule } from "@/lib/auth-utils";
-import { useFacilities, useHotelViews } from "@/lib/lookups";
 import { useGetRoomsQuery } from "@/store/services/rooms/roomsService";
 import {
   useGetHotelImagesQuery,
@@ -54,15 +53,21 @@ import { HotelShareActions } from "./-share-actions";
 import { StatusPill } from "@/components/status-pill";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { ArrowLeft, Eye, Pencil, Plus, Trash2, Star, Shield } from "lucide-react";
-import { formatDateTime } from "@/lib/format";
+import { formatDate, formatDateTime } from "@/lib/format";
 import { toast } from "sonner";
 import { RoomTypeDialog } from "../room-types/-dialog";
-import { MealPlanSelector, MEAL_PLANS } from "@/components/meal-plan-selector";
-import { MealPlanConfigurator } from "@/components/meal-plan-configurator";
+import { formatMealPlan } from "@/components/quotation-rates-dialog";
 import { apiClient } from "@/store/queryBridge";
 import { BkStatusBadge } from "../bookings";
 import { QStatusBadge } from "../quotations";
-const CONTRACT_STATUSES = ["draft", "active", "expired", "terminated"] as const;
+
+const getResponseDataList = (data: any): any[] => {
+  if (!data) return [];
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data.data)) return data.data;
+  if (data.data && Array.isArray(data.data.data)) return data.data.data;
+  return [];
+};
 
 export default function HotelDetail() {
   const { id } = useParams();
@@ -115,11 +120,7 @@ export default function HotelDetail() {
       : 0;
 
   const quotationsCountQuery = useGetQuotationsQuery({ hotel_id: id });
-  const quotationsCount = Array.isArray(quotationsCountQuery.data)
-    ? quotationsCountQuery.data.length
-    : Array.isArray((quotationsCountQuery.data as any)?.data)
-      ? (quotationsCountQuery.data as any).data.length
-      : 0;
+  const quotationsCount = getResponseDataList(quotationsCountQuery.data).length;
 
   const hotelImages = useGetHotelImagesQuery({ hotel_id: id });
   const { data: linkedSuppliersData } = useGetSuppliersQuery({ hotel_id: id as string, all: 1 });
@@ -395,13 +396,12 @@ function RoomsTab({ hotelId, canWrite }: { hotelId: string; canWrite: boolean })
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>{t("label.image")}</TableHead>
               <TableHead>{t("label.code")}</TableHead>
               <TableHead>{t("label.name")}</TableHead>
               <TableHead>{t("hotels.room_type")}</TableHead>
               <TableHead>{t("hotels.view")}</TableHead>
               <TableHead>{t("label.status")}</TableHead>
-              <TableHead></TableHead>
+              <TableHead className="text-center">{t("label.actions")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -422,15 +422,7 @@ function RoomsTab({ hotelId, canWrite }: { hotelId: string; canWrite: boolean })
                   )}
                   {rooms.map((r: any) => (
                     <TableRow key={r.id}>
-                      <TableCell>
-                        {r.cover_image && (
-                          <img
-                            src={r.cover_image}
-                            alt={r.name}
-                            className="h-12 w-12 rounded-md object-cover"
-                          />
-                        )}
-                      </TableCell>
+
                       <TableCell className="font-mono text-xs">{r.code}</TableCell>
                       <TableCell>{lang === "ar" ? r.name_ar : r.name_en}</TableCell>
                       <TableCell>
@@ -446,7 +438,7 @@ function RoomsTab({ hotelId, canWrite }: { hotelId: string; canWrite: boolean })
                           <Badge variant="secondary">{t("status.inactive")}</Badge>
                         )}
                       </TableCell>
-                      <TableCell className="text-end">
+                      <TableCell className="text-center">
                         <Button variant="ghost" size="icon" onClick={() => setViewRoom(r)}>
                           <Eye className="h-4 w-4" />
                         </Button>
@@ -1331,8 +1323,8 @@ function RatesHistoryTab({ hotelId }: { hotelId: string }) {
                   <TableCell className="font-mono text-xs">{r.code}</TableCell>
                   <TableCell>{lang === "ar" ? r.supplier?.name_ar : r.supplier?.name_en}</TableCell>
                   <TableCell>{lang === "ar" ? r.room?.name_ar : r.room?.name_en}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{r.meal_plan_type}</Badge>
+                  <TableCell className="text-xs">
+                    {formatMealPlan(r.meal_plan_type, r.meal_plan_details, lang, t)}
                   </TableCell>
                   <TableCell className="text-xs">{r.valid_from}</TableCell>
                   <TableCell className="text-xs">{r.valid_to}</TableCell>
@@ -1363,7 +1355,7 @@ function RatesHistoryTab({ hotelId }: { hotelId: string }) {
 }
 
 function BookingsTab({ hotelId }: { hotelId: string }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { data: bookingsData, isLoading } = useGetBookingsQuery({ hotel_id: hotelId });
   const list = Array.isArray(bookingsData)
     ? bookingsData
@@ -1401,8 +1393,8 @@ function BookingsTab({ hotelId }: { hotelId: string }) {
               list.map((b: any) => (
                 <TableRow key={b.id}>
                   <TableCell className="font-mono text-xs">{b.code}</TableCell>
-                  <TableCell className="text-xs">{b.check_in}</TableCell>
-                  <TableCell className="text-xs">{b.check_out}</TableCell>
+                  <TableCell className="text-xs">{formatDate(b.check_in, lang)}</TableCell>
+                  <TableCell className="text-xs">{formatDate(b.check_out, lang)}</TableCell>
                   <TableCell>
                     <BkStatusBadge status={b.status} t={t} />
                   </TableCell>
@@ -1417,12 +1409,8 @@ function BookingsTab({ hotelId }: { hotelId: string }) {
 
 function QuotationsTab({ hotelId }: { hotelId: string }) {
   const { t, lang } = useI18n();
-  const { data: quotesData, isLoading } = useGetQuotationsQuery({ hotel_id: hotelId });
-  const list = Array.isArray(quotesData)
-    ? quotesData
-    : Array.isArray((quotesData as any)?.data)
-      ? (quotesData as any).data
-      : [];
+  const { data: quotesData, isLoading } = useGetQuotationsQuery({ hotel_id: hotelId, all: true });
+  const list = getResponseDataList(quotesData);
   return (
     <Card>
       <CardContent className="p-0">
@@ -1462,8 +1450,8 @@ function QuotationsTab({ hotelId }: { hotelId: string }) {
                         : q.customer.name_en || q.customer.name_ar
                       : "—"}
                   </TableCell>
-                  <TableCell className="text-xs">{q.start_date}</TableCell>
-                  <TableCell className="text-xs">{q.end_date}</TableCell>
+                  <TableCell className="text-xs">{formatDateTime(q.valid_from, lang)}</TableCell>
+                  <TableCell className="text-xs">{formatDateTime(q.valid_to, lang)}</TableCell>
                   <TableCell>
                     <QStatusBadge
                       status={q.status}

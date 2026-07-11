@@ -184,7 +184,13 @@ const getCurrencyNameAr = (code: string) => {
 };
 
 type ActiveTab =
-  "countries" | "cities" | "currencies" | "room_types" | "supplier_types" | "meal_plans";
+  | "countries"
+  | "cities"
+  | "currencies"
+  | "room_types"
+  | "supplier_types"
+  | "meal_plans"
+  | "roles";
 
 const TAB_LABELS: Record<ActiveTab, { ar: string; en: string }> = {
   countries: { ar: "الدول", en: "Countries" },
@@ -193,6 +199,7 @@ const TAB_LABELS: Record<ActiveTab, { ar: string; en: string }> = {
   room_types: { ar: "أنواع الغرف", en: "Room Types" },
   supplier_types: { ar: "أنواع الموردين", en: "Supplier Types" },
   meal_plans: { ar: "خطط الوجبات", en: "Meal Plans" },
+  roles: { ar: "الأدوار", en: "Roles" },
 };
 
 /** Resolve active/inactive status from any item shape */
@@ -250,6 +257,8 @@ export default function SettingsPage() {
           });
         case "meal_plans":
           return apiClient.mealPlans.getAll({ lang, all: 1 });
+        case "roles":
+          return apiClient.roles.getAll({ lang, all: 1 });
         default:
           return [];
       }
@@ -402,6 +411,20 @@ export default function SettingsPage() {
             status: payload.is_active ? 1 : 0,
           });
         }
+      } else if (activeTab === "roles") {
+        if (editingItem) {
+          await apiClient.roles.update(editingItem.id, {
+            name_ar: payload.name_ar,
+            name_en: payload.name_en,
+            status: payload.is_active ? 1 : 0,
+          });
+        } else {
+          await apiClient.roles.create({
+            name_ar: payload.name_ar,
+            name_en: payload.name_en,
+            status: payload.is_active ? 1 : 0,
+          });
+        }
       }
     },
     onSuccess: () => {
@@ -429,6 +452,8 @@ export default function SettingsPage() {
         await apiClient.supplierTypes.delete(item.id);
       } else if (activeTab === "meal_plans") {
         await apiClient.mealPlans.delete(item.id);
+      } else if (activeTab === "roles") {
+        await apiClient.roles.delete(item.id);
       }
     },
     onSuccess: () => {

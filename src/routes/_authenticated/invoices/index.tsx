@@ -95,7 +95,7 @@ export default function InvoicesList() {
 
   const customers = useQuery({
     queryKey: ["lookup-customers"],
-    queryFn: async () => (await apiClient.customers.getAll()) ?? [],
+    queryFn: async () => (await apiClient.customers.getAll({ per_page: 5000 })) ?? [],
   });
 
   const { data: invoicesData, isLoading: isListLoading } = useGetInvoicesQuery({
@@ -131,7 +131,9 @@ export default function InvoicesList() {
 
   const listCount = useMemo(() => {
     if (!invoicesData) return 0;
-    return Array.isArray(invoicesData) ? invoicesData.length : invoicesData.count ?? invoicesData.total ?? 0;
+    if (Array.isArray(invoicesData)) return invoicesData.length;
+    const anyRaw = invoicesData as any;
+    return anyRaw.total ?? anyRaw.count ?? anyRaw.data?.length ?? 0;
   }, [invoicesData]);
 
   const total = listCount;
@@ -228,8 +230,20 @@ export default function InvoicesList() {
                       <TableCell className="font-mono text-xs whitespace-nowrap">
                         <Link to={`/invoices/${r.id}`} className="hover:underline text-primary font-semibold">{r.invoice_number || r.invoice_no}</Link>
                       </TableCell>
-                      <TableCell className="font-mono text-xs text-muted-foreground whitespace-nowrap">
-                        {r.booking_code || r.booking?.code || "—"}
+                      <TableCell className="font-mono text-xs text-muted-foreground">
+                        {(() => {
+                          const codeStr = r.booking_code || r.booking?.code;
+                          if (!codeStr) return "—";
+                          const codes = String(codeStr).split(",").map((c) => c.trim()).filter(Boolean);
+                          if (codes.length === 0) return "—";
+                          return (
+                            <div className="flex flex-col gap-0.5">
+                              {codes.map((code) => (
+                                <span key={code} className="whitespace-nowrap">{code}</span>
+                              ))}
+                            </div>
+                          );
+                        })()}
                       </TableCell>
                       <TableCell className="text-sm font-medium">{name(r.customer)}</TableCell>
                       <TableCell dir="ltr" className="text-xs text-muted-foreground whitespace-nowrap">{formatDate(r.invoice_date, lang)}</TableCell>

@@ -49,31 +49,49 @@ export function HotelRatesSelector({
     return diff > 0 ? diff : 0;
   };
 
+  const getClientNightPrice = (item: SelectedRate, base: number) => {
+    const margin = item.profit_margin !== undefined ? item.profit_margin : 5;
+    const marginAmt = base * (margin / 100);
+    return base + marginAmt;
+  };
+
   const getRateTotal = (item: SelectedRate) => {
+    // 1. If it's a saved item, use the subtotal or night_price from server directly
+    if (item.quotation_item_id || item.is_saved) {
+      if (item.subtotal !== undefined && item.subtotal !== null) {
+        return Number(item.subtotal);
+      }
+      if (item.night_price !== undefined && item.night_price !== null) {
+        const rooms = item.rooms || 1;
+        const itemNights = calculateNights(item.start_date, item.end_date) || nights || 1;
+        return Number(item.night_price) * rooms * itemNights;
+      }
+    }
+
+    // 2. Otherwise, perform dynamic calculation
     const rooms = item.rooms || 1;
     const itemNights = calculateNights(item.start_date, item.end_date) || nights || 1;
-    const margin = item.profit_margin !== undefined ? item.profit_margin : 5;
 
-    if (readOnly || (item as any).is_saved) {
-      // إذا توفر الإجمالي من السيرفر نستخدمه مباشرة
-      if (item.subtotal !== undefined && item.subtotal !== null) return Number(item.subtotal);
+    if (readOnly) {
       return (Number(item.night_price) ?? item.selling_price ?? 0) * rooms * itemNights;
     }
 
-    const getClientNightPrice = (base: number) => {
-      const marginAmt = base * (margin / 100);
-      const taxAmt = marginAmt * 0.15;
-      return base + marginAmt + taxAmt;
-    };
+    const hasCustom = item.custom_selling_price !== undefined && item.custom_selling_price !== null && item.custom_selling_price !== "";
+
+    if (hasCustom) {
+      const basePrice = Number(item.custom_selling_price) || 0;
+      const clientPrice = getClientNightPrice(item, basePrice);
+      return clientPrice * rooms * itemNights;
+    }
 
     if (!item.is_weekend_weekday || !item.start_date || !item.end_date) {
-      return getClientNightPrice(item.selling_price || 0) * rooms * itemNights;
+      return getClientNightPrice(item, item.selling_price || 0) * rooms * itemNights;
     }
 
     const startDate = new Date(item.start_date + "T00:00:00");
     const endDate = new Date(item.end_date + "T00:00:00");
     if (isNaN(startDate.getTime()) || isNaN(endDate.getTime()) || startDate >= endDate) {
-      return getClientNightPrice(item.selling_price || 0) * rooms * itemNights;
+      return getClientNightPrice(item, item.selling_price || 0) * rooms * itemNights;
     }
 
     let totalSum = 0;
@@ -88,7 +106,47 @@ export function HotelRatesSelector({
     while (currentDate < endDate) {
       const dayOfWeek = dayNames[currentDate.getDay()];
       const basePrice = weekendDays.includes(dayOfWeek) ? weekendPrice : weekdayPrice;
-      totalSum += getClientNightPrice(Number(basePrice));
+      totalSum += getClientNightPrice(item, Number(basePrice));
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    return totalSum * rooms;
+  };
+
+  const getRateCost = (item: SelectedRate) => {
+    // 1. If it's a saved item, use hotel_total from server directly
+    if (item.quotation_item_id || item.is_saved) {
+      if (item.hotel_total !== undefined && item.hotel_total !== null) {
+        return Number(item.hotel_total);
+      }
+    }
+
+    // 2. Otherwise, perform dynamic calculation
+    const rooms = item.rooms || 1;
+    const itemNights = calculateNights(item.start_date, item.end_date) || nights || 1;
+
+    if (!item.is_weekend_weekday || !item.start_date || !item.end_date) {
+      return (item.selling_price || 0) * rooms * itemNights;
+    }
+
+    const startDate = new Date(item.start_date + "T00:00:00");
+    const endDate = new Date(item.end_date + "T00:00:00");
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime()) || startDate >= endDate) {
+      return (item.selling_price || 0) * rooms * itemNights;
+    }
+
+    let totalSum = 0;
+    const currentDate = new Date(startDate);
+    const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const weekendDays = item.weekend_days || ["Friday", "Saturday"];
+    const weekendPrice = item.weekend_selling_price !== null && item.weekend_selling_price !== undefined
+      ? item.weekend_selling_price
+      : item.selling_price;
+    const weekdayPrice = item.selling_price || 0;
+
+    while (currentDate < endDate) {
+      const dayOfWeek = dayNames[currentDate.getDay()];
+      const basePrice = weekendDays.includes(dayOfWeek) ? weekendPrice : weekdayPrice;
+      totalSum += Number(basePrice);
       currentDate.setDate(currentDate.getDate() + 1);
     }
     return totalSum * rooms;
@@ -180,8 +238,10 @@ export function HotelRatesSelector({
                       <th className="pb-2 px-2 font-normal">{lang === "ar" ? "فترة الإقامة / الليالي" : "Stay Period / Nights"}</th>
                       <th className="pb-2 px-2 font-normal">خطة الوجبات</th>
                       <th className="pb-2 px-2 font-normal">سعر الليلة</th>
+                      <th className="pb-2 px-2 font-normal">{lang === "ar" ? "الضريبة" : "Tax"}</th>
                       <th className="pb-2 px-2 font-normal">{lang === "ar" ? "هامش الربح" : "Profit Margin"}</th>
                       <th className="pb-2 px-2 font-normal w-24">{lang === "ar" ? "عدد الغرف" : "Rooms Quantity"}</th>
+                      <th className="pb-2 px-2 font-normal">{lang === "ar" ? "الربح" : "Profit"}</th>
                       <th className="pb-2 px-2 font-normal">الإجمالي</th>
                     </tr>
                   </thead>
@@ -267,40 +327,64 @@ export function HotelRatesSelector({
                           </td>
                           <td className="py-2 px-2 text-center text-[11px] max-w-[50px]!">
                             <div className="font-medium mx-auto w-fit">
-                              {readOnly && item.night_price !== undefined && item.night_price !== null ? (
+                              {(item.is_saved || item.quotation_item_id || readOnly) && item.night_price !== undefined && item.night_price !== null ? (
                                 <span className="font-bold text-amber-600 dark:text-amber-500">
                                   {Number(item.night_price).toFixed(2)} {lang === "ar" ? "ريال" : String(currencyCode || "")}
+                                </span>
+                              ) : item.custom_selling_price !== undefined && item.custom_selling_price !== null && item.custom_selling_price !== "" ? (
+                                <span className="font-bold text-amber-600 dark:text-amber-500">
+                                  {getClientNightPrice(item, Number(item.custom_selling_price)).toFixed(2)} {lang === "ar" ? "ريال" : String(currencyCode || "")}
                                 </span>
                               ) : item.is_weekend_weekday ? (
                                 <div className="flex flex-col gap-0.5 text-[9px] text-start min-w-[100px] font-sans">
                                   {item.selling_price !== null && item.selling_price !== undefined && (
                                     <div className="flex items-center justify-between gap-1 bg-slate-50 dark:bg-slate-800/40 p-1 rounded border border-border/40">
                                       <span className="text-slate-700 dark:text-slate-300">WD Price :</span>
-                                      <span className="font-bold text-amber-600">{item.selling_price}</span>
+                                      <span className="font-bold text-amber-600">
+                                        {getClientNightPrice(item, Number(item.selling_price)).toFixed(2)}
+                                      </span>
                                     </div>
                                   )}
                                   {item.weekend_selling_price !== null && item.weekend_selling_price !== undefined && (
                                     <div className="flex items-center justify-between gap-1 bg-amber-50/20 dark:bg-amber-950/10 p-1 rounded border border-amber-200/20">
                                       <span className="text-amber-800 dark:text-amber-400">WE Price :</span>
-                                      <span className="font-bold text-amber-600">{item.weekend_selling_price}</span>
+                                      <span className="font-bold text-amber-600">
+                                        {getClientNightPrice(item, Number(item.weekend_selling_price)).toFixed(2)}
+                                      </span>
                                     </div>
                                   )}
                                 </div>
                               ) : (
                                 <span className="font-semibold text-amber-600 dark:text-amber-500">
-                                  {item.selling_price} {lang === "ar" ? "ريال" : String(currencyCode || "")}
+                                  {getClientNightPrice(item, Number(item.selling_price || 0)).toFixed(2)} {lang === "ar" ? "ريال" : String(currencyCode || "")}
                                 </span>
                               )}
                             </div>
                           </td>
                           <td className="py-2 px-2 text-center text-[11px]">
-                            <div className="font-medium text-slate-700 dark:text-slate-300 mx-auto w-fit">
-                              {item.profit_margin ?? 0}%
+                            <div className="font-semibold text-slate-700 dark:text-slate-300">
+                              {item.tax_rate}%
+                            </div>
+                          </td>
+                          <td className="py-2 px-2 text-center text-[11px]">
+                            <div className="font-medium text-slate-700 dark:text-slate-300 mx-auto w-fit font-sans">
+                              {item.custom_selling_price !== undefined && item.custom_selling_price !== null && item.custom_selling_price !== "" ? (
+                                <Badge variant="outline" className="bg-purple-50 dark:bg-purple-950/20 text-purple-700 dark:text-purple-400 border-purple-200/50 text-[10px] font-normal">
+                                  {lang === "ar" ? "سعر مخصص" : "Custom Price"}
+                                </Badge>
+                              ) : (
+                                `${item.profit_margin ?? 0}%`
+                              )}
                             </div>
                           </td>
                           <td className="py-2 px-2 text-center text-[11px]">
                             <div className="font-bold text-slate-700 dark:text-slate-300 mx-auto w-fit">
                               {item.rooms}
+                            </div>
+                          </td>
+                          <td className="py-2 px-2 text-center text-[11px]">
+                            <div className="font-bold text-emerald-600 dark:text-emerald-500 mx-auto w-fit">
+                              {(getRateTotal(item) - getRateCost(item)).toFixed(2)} {lang === "ar" ? "ريال" : String(currencyCode || "")}
                             </div>
                           </td>
                           <td className="py-2 px-2 text-center text-[11px]">

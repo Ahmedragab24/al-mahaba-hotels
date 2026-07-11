@@ -293,7 +293,7 @@ function ProfileView({ r, lang, t }: any) {
         </div>
       } />
 
-      <KV k={t("rates.taxes")} v={`${r.tax_type === "inclusive_tax" ? t("rates.tax_inclusive_yes") : t("rates.tax_inclusive_no")} (${r.tax_type === "inclusive_tax" ? r.tax_rate : 0}%)`} />
+      <KV k={t("rates.taxes")} v={`${r.tax_rate ?? 0}%`} />
 
       <KV k={t("label.currency")} v={<span className="font-mono">{r.currency?.code || ""}</span>} />
       <KV k={t("rates.valid_from")} v={formatDate(r.valid_from)} />
@@ -333,7 +333,7 @@ function ProfileView({ r, lang, t }: any) {
                   <div className="bg-white dark:bg-slate-900 p-2 rounded-lg border border-border/40">
                     <div className="text-[10px] text-muted-foreground">{t("rates.taxes")}</div>
                     <div className="font-mono text-sm font-semibold mt-1 text-emerald-600 dark:text-emerald-500">
-                      {r.tax_rate != null ? `${r.tax_type === "inclusive_tax" ? r.tax_rate : 0} %` : "—"}
+                      {r.tax_rate != null ? `${r.tax_rate} %` : "—"}
                     </div>
                   </div>
                 </div>
@@ -368,7 +368,7 @@ function ProfileView({ r, lang, t }: any) {
                     <div className="bg-white dark:bg-slate-900 p-2 rounded-lg border border-border/40">
                       <div className="text-[10px] text-muted-foreground">{t("rates.taxes")}</div>
                       <div className="font-mono text-sm font-semibold mt-1 text-emerald-600 dark:text-emerald-500">
-                        {r.tax_rate != null ? `${r.tax_type === "inclusive_tax" ? r.tax_rate : 0} %` : "—"}
+                        {r.tax_rate != null ? `${r.tax_rate} %` : "—"}
                       </div>
                     </div>
                   </div>
@@ -393,7 +393,7 @@ function ProfileView({ r, lang, t }: any) {
             <div className="bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-border/40 text-center">
               <div className="text-xs text-muted-foreground">{t("rates.taxes")}</div>
               <div className="font-mono text-base font-bold mt-1 text-emerald-600 dark:text-emerald-500">
-                {r.tax_rate != null ? `${r.tax_type === "inclusive_tax" ? r.tax_rate : 0} %` : "—"}
+                {r.tax_rate != null ? `${r.tax_rate} %` : "—"}
               </div>
             </div>
           </div>

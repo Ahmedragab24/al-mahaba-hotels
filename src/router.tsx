@@ -35,9 +35,9 @@ const CustomerDetail = () => import("@/routes/_authenticated/customers/$id").the
 const CustomerNew = () => import("@/routes/_authenticated/customers/new").then((m) => ({ Component: m.default }));
 
 // Contracts
-const ContractsIndex = () => import("@/routes/_authenticated/contracts/index").then((m) => ({ Component: m.default }));
-const ContractDetail = () => import("@/routes/_authenticated/contracts/$id").then((m) => ({ Component: m.default }));
-const ContractNew = () => import("@/routes/_authenticated/contracts/new").then((m) => ({ Component: m.default }));
+// const ContractsIndex = () => import("@/routes/_authenticated/contracts/index").then((m) => ({ Component: m.default }));
+// const ContractDetail = () => import("@/routes/_authenticated/contracts/$id").then((m) => ({ Component: m.default }));
+// const ContractNew = () => import("@/routes/_authenticated/contracts/new").then((m) => ({ Component: m.default }));
 
 // Quotations
 const QuotationsIndex = () => import("@/routes/_authenticated/quotations/index").then((m) => ({ Component: m.default }));
@@ -105,9 +105,9 @@ export const router = createBrowserRouter([
           { path: "customers/new", lazy: CustomerNew },
           { path: "customers/:id", lazy: CustomerDetail },
           // Contracts
-          { path: "contracts", lazy: ContractsIndex },
-          { path: "contracts/new", lazy: ContractNew },
-          { path: "contracts/:id", lazy: ContractDetail },
+          // { path: "contracts", lazy: ContractsIndex },
+          // { path: "contracts/new", lazy: ContractNew },
+          // { path: "contracts/:id", lazy: ContractDetail },
           // Quotations
           { path: "quotations", lazy: QuotationsIndex },
           { path: "quotations/new", lazy: QuotationNew },

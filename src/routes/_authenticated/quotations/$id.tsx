@@ -667,10 +667,15 @@ export default function QuotationDetail() {
                               <TableHead>{rtl ? "الفندق والغرفة" : "Hotel & Room"}</TableHead>
                               <TableHead>{rtl ? "كود السعر" : "Price Code"}</TableHead>
                               <TableHead className="text-center">{rtl ? "خطة الوجبات" : "Meal Plan"}</TableHead>
-                              <TableHead className="text-center">{rtl ? "المصدر" : "Source"}</TableHead>
                               <TableHead className="text-center">{rtl ? "عدد الغرف" : "Rooms"}</TableHead>
                               <TableHead className="text-center">{rtl ? "الليالي" : "Nights"}</TableHead>
-                              <TableHead className="text-center">{rtl ? "سعر الليلة" : "Night Price"}</TableHead>
+                              {!hidePrices && (
+                                <>
+                                  <TableHead className="text-center">{rtl ? "تكلفة الفندق" : "Hotel Cost"}</TableHead>
+                                  <TableHead className="text-center">{rtl ? "هامش الربح" : "Profit Margin"}</TableHead>
+                                  <TableHead className="text-center">{rtl ? "ربح الشركة" : "Company Profit"}</TableHead>
+                                </>
+                              )}
                               <TableHead className="text-center">{rtl ? "الإجمالي" : "Subtotal"}</TableHead>
                             </TableRow>
                           </TableHeader>
@@ -681,6 +686,8 @@ export default function QuotationDetail() {
                               const itemCheckOut = item.end_date || r.check_out || r.end_date;
                               const itemNights = calcNights(itemCheckIn, itemCheckOut) || 1;
                               const roomName = localizedName(pd.room, rtl);
+                              const roomTypeName = pd.room?.room_type ? localizedName(pd.room.room_type, rtl) : "";
+                              const showRoomType = roomTypeName && roomTypeName !== roomName;
                               const mealPlan = pd.meal_plan_type || "inclusive";
                               const isExclusiveEmpty = mealPlan === "exclusive" && (!pd.meal_plan_details || pd.meal_plan_details.length === 0);
                               const taxRate = pd.tax_rate ?? 0;
@@ -704,7 +711,16 @@ export default function QuotationDetail() {
                                           return localizedName(hObj, rtl);
                                         })()}
                                       </span>
-                                      <span className="font-medium text-sm text-foreground">{roomName}</span>
+                                      <div className="flex flex-col gap-0.5">
+                                        <span className="font-medium text-sm text-foreground">
+                                          {roomName} {showRoomType && `(${roomTypeName})`}
+                                        </span>
+                                        {pd.room?.view && (
+                                          <span className="text-[11px] text-muted-foreground mt-0.5">
+                                            🌅 {rtl ? `إطلالة ${pd.room.view}` : `${pd.room.view} View`}
+                                          </span>
+                                        )}
+                                      </div>
                                       {pd.room?.code && (
                                         <span className="text-[10px] text-muted-foreground font-mono">{pd.room.code}</span>
                                       )}
@@ -760,19 +776,6 @@ export default function QuotationDetail() {
                                     </Badge>
                                   </TableCell>
 
-                                  {/* Source (Direct / Supplier) */}
-                                  <TableCell className="text-center">
-                                    {pd.is_direct ? (
-                                      <Badge variant="outline" className="text-[11px] bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-800">
-                                        {rtl ? "مباشر" : "Direct"}
-                                      </Badge>
-                                    ) : (
-                                      <Badge variant="outline" className="text-[11px] bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-950/30 dark:text-violet-400 dark:border-violet-800">
-                                        {localizedName(pd.supplier, rtl) || (pd.supplier_id ? `#${pd.supplier_id}` : "—")}
-                                      </Badge>
-                                    )}
-                                  </TableCell>
-
                                   {/* Rooms Count */}
                                   <TableCell className="text-center">
                                     <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 font-bold text-sm">
@@ -787,12 +790,31 @@ export default function QuotationDetail() {
                                     </span>
                                   </TableCell>
 
-                                  {/* Night Price */}
-                                  <TableCell className="text-center">
-                                    <span dir="ltr" className="font-semibold text-sm">
-                                      {money(item.night_price)}
-                                    </span>
-                                  </TableCell>
+                                  {/* Pricing Columns */}
+                                  {!hidePrices && (
+                                    <>
+                                      {/* Hotel Cost */}
+                                      <TableCell className="text-center">
+                                        <span dir="ltr" className="font-semibold text-sm text-muted-foreground">
+                                          {money(item.hotel_total)}
+                                        </span>
+                                      </TableCell>
+
+                                      {/* Profit Margin */}
+                                      <TableCell className="text-center">
+                                        <span className="font-medium text-sm text-muted-foreground">
+                                          {item.profit_margin}%
+                                        </span>
+                                      </TableCell>
+
+                                      {/* Company Profit */}
+                                      <TableCell className="text-center">
+                                        <span dir="ltr" className="font-semibold text-sm text-emerald-600 dark:text-emerald-400">
+                                          {money(item.company_profit)}
+                                        </span>
+                                      </TableCell>
+                                    </>
+                                  )}
 
                                   {/* Subtotal */}
                                   <TableCell className="text-center">

@@ -6,6 +6,7 @@ export type UserType =
   | "employee";
 
 export interface UserProfile {
+  image?: string;
   avatar_url: string | null;
   created_at: string;
   created_by: string | null;

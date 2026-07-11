@@ -3,7 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { useI18n } from "@/lib/i18n";
 import { selectAuth } from "@/store/features/authSlice";
-import { useLoginMutation } from "@/store/api";
+import { useLoginMutation, useGetRolesQuery } from "@/store/api";
 import { requestPermission } from "@/lib/firebaseMessaging";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,10 @@ export default function LoginPage() {
   const dispatch = useDispatch();
   const auth = useSelector(selectAuth);
   const [login, { isLoading: busy }] = useLoginMutation();
+  const { data: apiRolesResponse } = useGetRolesQuery();
+  const rolesArray = Array.isArray(apiRolesResponse)
+    ? apiRolesResponse
+    : apiRolesResponse?.data || [];
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -156,11 +160,13 @@ export default function LoginPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="super_admin">{t("usertype.super_admin")}</SelectItem>
-                    <SelectItem value="sales_manager">{t("usertype.sales_manager")}</SelectItem>
-                    <SelectItem value="financial_manager">{t("usertype.financial_manager")}</SelectItem>
-                    <SelectItem value="viewer">{t("usertype.viewer")}</SelectItem>
-                    <SelectItem value="employee">{t("usertype.employee")}</SelectItem>
+                    {rolesArray
+                      .filter((r: any) => r.status !== false)
+                      .map((r: any) => (
+                        <SelectItem key={r.id} value={r.name}>
+                          {dir === "rtl" ? r.name_ar || r.name : r.name_en || r.name}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>

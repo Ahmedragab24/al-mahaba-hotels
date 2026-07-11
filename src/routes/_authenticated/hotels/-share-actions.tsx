@@ -10,8 +10,10 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Eye, Printer, MessageCircle } from "lucide-react";
+import { Eye, Printer, MessageCircle, Share2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import html2canvas from "html2canvas";
+import { jsPDF } from "jspdf";
 import {
   DOC_LANGS, DOC_LANG_LIST, toDocLang, renderWaTemplate, waTemplateExists, HOTEL_RES, type DocLang,
 } from "@/lib/doc-lang";
@@ -127,6 +129,120 @@ export function HotelShareActions({ hotelId, contextCustomerId }: { hotelId: str
     setWaOpen(false);
   };
 
+  const [sharingPdf, setSharingPdf] = useState(false);
+
+  const doSharePdf = async () => {
+    const data = share.data;
+    if (!data?.hotel) return;
+    const cust = customers.data?.find((c: any) => c.id === waCustomerId);
+    if (!cust) {
+      toast.error(t("wa.select_customer"));
+      return;
+    }
+
+    setSharingPdf(true);
+    try {
+      const htmlStr = buildHotelInfoHtml(effWaLang, data);
+      if (!htmlStr) {
+        toast.error(t("doc.missing_translations"));
+        return;
+      }
+
+      const iframe = document.createElement("iframe");
+      iframe.style.position = "fixed";
+      iframe.style.top = "-9999px";
+      iframe.style.left = "-9999px";
+      iframe.style.width = "210mm";
+      iframe.style.height = "297mm";
+      document.body.appendChild(iframe);
+
+      const idoc = iframe.contentWindow?.document || iframe.contentDocument;
+      if (!idoc) throw new Error("Could not create iframe document");
+
+      idoc.open();
+      idoc.write(htmlStr);
+      idoc.close();
+
+      // Wait a bit for iframe contents to render (including images)
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+
+      const canvas = await html2canvas(idoc.body, {
+        scale: 2,
+        useCORS: true,
+        windowWidth: idoc.body.scrollWidth,
+        windowHeight: idoc.body.scrollHeight,
+      });
+      const imgData = canvas.toDataURL("image/jpeg", 0.95);
+
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
+      });
+
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+      pdf.addImage(imgData, "JPEG", 0, 0, pdfWidth, pdfHeight);
+
+      document.body.removeChild(iframe);
+
+      const pdfBlob = pdf.output("blob");
+
+      const rtl = DOC_LANGS[effWaLang].dir === "rtl";
+      const hotelName = (rtl ? data.hotel.name_ar || data.hotel.name_en || data.hotel.name : data.hotel.name_en || data.hotel.name_ar || data.hotel.name) ?? "hotel";
+      const filename = `${hotelName.replace(/\s+/g, "_")}.pdf`;
+      const file = new File([pdfBlob], filename, { type: "application/pdf" });
+
+      try {
+        await apiClient.customerCommunications.create({
+          customer_id: cust.id,
+          channel: "whatsapp",
+          direction: "outbound",
+          subject: `PDF Share [${effWaLang}] — ${data.hotel.code}`,
+          body: `Shared PDF document for hotel ${data.hotel.code}`,
+        });
+      } catch {
+        // ignore
+      }
+      try {
+        await db.rpc("log_audit", {
+          _action: "pdf_share",
+          _entity_type: "hotels",
+          _entity_id: data.hotel.id,
+          _metadata: {
+            lang: effWaLang,
+            doc: "hotel_information",
+            hotel_code: data.hotel.code,
+            customer_id: cust.id,
+          },
+        });
+      } catch {
+        // ignore
+      }
+
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: filename,
+          text: uiLang === "ar" ? `مرفق ملف معلومات فندق ${hotelName}` : `Attached is hotel information for ${hotelName}`,
+        });
+      } else {
+        const url = URL.createObjectURL(pdfBlob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        a.click();
+        toast.success(uiLang === "ar" ? "تم تحميل ملف PDF بنجاح" : "Downloaded PDF file successfully");
+      }
+    } catch (err: any) {
+      console.error("[Share PDF Error]", err);
+      toast.error(err.message || "Failed to share PDF");
+    } finally {
+      setSharingPdf(false);
+    }
+  };
+
   return (
     <>
       <Button variant="outline" size="sm" onClick={() => setPreviewOpen(true)}>
@@ -227,10 +343,14 @@ export function HotelShareActions({ hotelId, contextCustomerId }: { hotelId: str
               )}
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setWaOpen(false)}>{t("actions.close")}</Button>
+            <Button variant="secondary" onClick={doSharePdf} disabled={sharingPdf || !waCustomerId}>
+              {sharingPdf ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Share2 className="h-4 w-4 mr-1" />}
+              {uiLang === "ar" ? "مشاركة ملف PDF" : "Share PDF File"}
+            </Button>
             <Button onClick={doSend} disabled={sending || !editableBody.trim() || !waCustomerId}>
-              <MessageCircle className="h-4 w-4" /> {t("wa.send")}
+              <MessageCircle className="h-4 w-4 mr-1" /> {t("wa.send")}
             </Button>
           </DialogFooter>
         </DialogContent>

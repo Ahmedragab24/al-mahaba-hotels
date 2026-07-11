@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, db, apiClient, dbErrorMessage } from "@/store/queryBridge";
-import { useGetQuotationsQuery } from "@/store/services/quotations/quotationsService";
+import { useGetQuotationsQuery, useGetQuotationByIdQuery } from "@/store/services/quotations/quotationsService";
 import { useI18n } from "@/lib/i18n";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent } from "@/components/ui/card";
@@ -27,16 +27,10 @@ export default function NewBooking() {
   const [quoteId, setQuoteId] = useState("");
   const [open, setOpen] = useState(false);
 
-  const selectedQuoteQuery = useQuery({
-    queryKey: ["quotation-detail", quoteId],
-    queryFn: async () => {
-      if (!quoteId) return null;
-      const res = await apiClient.quotations.getById(quoteId);
-      return res?.data || res;
-    },
-    enabled: !!quoteId,
-    refetchInterval: 2000, // Auto-refresh every 2 seconds
-  });
+  const selectedQuoteQuery = useGetQuotationByIdQuery(
+    { id: quoteId, lang },
+    { skip: !quoteId, pollingInterval: 2000 }
+  );
   
   // Auto-refresh quotations list every 2 seconds to ensure latest data
   const { data: rawQuotes, isLoading: isLoadingQuotes } = useGetQuotationsQuery({ all: true, lang }, { pollingInterval: 2000 });
@@ -72,7 +66,9 @@ export default function NewBooking() {
   }, [rawQuotes, convertedQuery.data]);
 
   const selectedQuote = useMemo(() => {
-    return selectedQuoteQuery.data || quotesList.find((q: any) => String(q.id) === String(quoteId));
+    const rawData = selectedQuoteQuery.data as any;
+    const qDetails = rawData?.data || rawData;
+    return qDetails || quotesList.find((q: any) => String(q.id) === String(quoteId));
   }, [selectedQuoteQuery.data, quotesList, quoteId]);
 
   const initialData = useMemo(() => {
@@ -122,7 +118,7 @@ export default function NewBooking() {
     },
     onSuccess: (id) => {
       toast.success(t("toast.saved"));
-      navigate(`/bookings/${id}`);
+      navigate(`/bookings`);
     },
     onError: (e: any) => toast.error(dbErrorMessage(e, t)),
   });
@@ -145,7 +141,7 @@ export default function NewBooking() {
             <TabsTrigger value="quotation">{t("bk.source_quotation")}</TabsTrigger>
           </TabsList>
           <TabsContent value="direct">
-            <BookingForm onSaved={(id) => navigate(`/bookings/${id}`)} />
+            <BookingForm onSaved={(id) => navigate(`/bookings`)} />
           </TabsContent>
           <TabsContent value="quotation">
             <div className="space-y-4">
@@ -245,7 +241,7 @@ export default function NewBooking() {
                   key={quoteId || "quotation-booking"}
                   isQuotationConfirm={true}
                   initial={initialData}
-                  onSaved={(id) => navigate(`/bookings/${id}`)}
+                  onSaved={(id) => navigate(`/bookings`)}
                 />
               )}
             </div>

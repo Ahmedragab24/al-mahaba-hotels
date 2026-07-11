@@ -250,7 +250,10 @@ function PrintInvoice({
             {booking.check_in && <div><strong>{ar("الوصول:", "Check-in:")}</strong> {formatDate(booking.check_in)}</div>}
             {booking.check_out && <div><strong>{ar("المغادرة:", "Check-out:")}</strong> {formatDate(booking.check_out)}</div>}
             {nights != null && nights > 0 && <div><strong>{ar("عدد الليالي:", "Nights:")}</strong> {nights}</div>}
-            {booking.rooms && <div><strong>{ar("عدد الغرف:", "Rooms:")}</strong> {booking.rooms}</div>}
+            {(() => {
+              const rCount = booking.rooms ?? booking.items?.reduce((sum: number, item: any) => sum + (item.room_count || item.rooms || 0), 0) ?? 0;
+              return rCount > 0 && <div><strong>{ar("عدد الغرف:", "Rooms:")}</strong> {rCount}</div>;
+            })()}
           </div>
         </div>
       </div>
@@ -465,6 +468,7 @@ export default function BookingDetail() {
   const nights = r.nights || (r.check_in && r.check_out
     ? Math.max((new Date(r.check_out).getTime() - new Date(r.check_in).getTime()) / 86400000, 0)
     : null);
+  const roomsCount = r.rooms ?? r.items?.reduce((sum: number, item: any) => sum + (item.room_count || item.rooms || 0), 0) ?? 0;
 
   const actions: {
     key: string;
@@ -474,7 +478,24 @@ export default function BookingDetail() {
     variant?: "destructive" | "outline";
     show: boolean;
     needsReason?: boolean;
-  }[] = [];
+  }[] = [
+    {
+      key: "confirm",
+      label: ar("تأكيد الحجز", "Confirm Booking"),
+      status: "confirmed",
+      icon: Check,
+      show: canWrite && ["pending", "pending_supplier_confirmation", "draft"].includes(r.status) && !r.deleted_at,
+    },
+    {
+      key: "cancel",
+      label: ar("إلغاء الحجز", "Cancel Booking"),
+      status: "cancelled",
+      icon: Ban,
+      variant: "destructive",
+      show: canWrite && ["pending", "pending_supplier_confirmation", "draft", "confirmed", "checked_in"].includes(r.status) && !r.deleted_at,
+      needsReason: true,
+    },
+  ];
 
   return (
     <>
@@ -604,7 +625,7 @@ export default function BookingDetail() {
                     {roomTypeName && <KV k={ar("نوع الغرفة", "Room Type")} v={roomTypeName} icon={BedDouble} />}
                     {viewName && <KV k={ar("الإطلالة", "View")} v={viewName} icon={MapPin} />}
                     {r.occupancy_type && <KV k={ar("نوع الإشغال", "Occupancy")} v={r.occupancy_type} />}
-                    {r.rooms !== undefined && r.rooms !== null && <KV k={ar("عدد الغرف", "Rooms")} v={r.rooms} />}
+                    {roomsCount > 0 && <KV k={ar("عدد الغرف", "Rooms")} v={roomsCount} />}
                   </div>
                 </DetailSection>
               )}

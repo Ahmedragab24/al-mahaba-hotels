@@ -267,7 +267,7 @@ const mapInitialItemsToSelectedRates = (items: any[], initial: any) => {
     const roomNameEn = price.room?.name_en || price.room?.name || item.room?.name_en || item.room?.name || "";
     const roomNameAr = price.room?.name_ar || price.room?.name || item.room?.name_ar || item.room?.name || "";
     // View Obj
-    const viewObj = price.hotel_view || price.hotelView || price.view || item.view || item.hotel_view;
+    const viewObj = price.hotel_view || price.hotelView || price.view || item.view || item.hotel_view || price.room?.view;
     const viewNameEn = viewObj?.name_en || (typeof viewObj === "string" ? viewObj : "") || item.view_name_en || "";
     const viewNameAr = viewObj?.name_ar || (typeof viewObj === "string" ? viewObj : "") || item.view_name_ar || "";
     // Supplier
@@ -277,6 +277,16 @@ const mapInitialItemsToSelectedRates = (items: any[], initial: any) => {
     // Use parent stay dates as a fallback for direct booking items
     const itemCheckIn = item.start_date || item.check_in || initial?.check_in || "";
     const itemCheckOut = item.end_date || item.check_out || initial?.check_out || "";
+
+    const margin = item.profit_margin !== undefined ? Number(item.profit_margin) : 5;
+    const taxRate = Number(price.tax_rate ?? item.tax_rate ?? 15);
+    const taxType = price.tax_type || item.tax_type || "inclusive_tax";
+
+    const reversedSellingPrice = item.night_price
+      ? Number(item.night_price) / (1 + margin / 100)
+      : (item.hotel_total && initial?.nights
+        ? Number(item.hotel_total) / (Number(item.room_count || item.rooms || 1) * initial.nights)
+        : 0);
 
     return {
       rate_id: String(price.id || item.price_id || ""),
@@ -290,9 +300,10 @@ const mapInitialItemsToSelectedRates = (items: any[], initial: any) => {
       weekend_selling_price: price.weekend_selling_price,
       weekend_days: price.weekend_days,
       days: price.days,
-      // Set base supplier price (e.g. 200). Fallback to hotel_total or night_price (reversing margin & tax) if empty
-      selling_price: Number(price.selling_price) || Number(item.hotel_total) ||
-        (item.night_price ? Number(item.night_price) / (1 + (item.profit_margin || 5) / 100 * 1.15) : 0),
+      tax_type: taxType,
+      tax_rate: taxRate,
+      // Set base supplier price (e.g. 200). Fallback to night_price (reversing margin & tax) or hotel_total if empty
+      selling_price: reversedSellingPrice || Number(price.selling_price) || Number(item.hotel_total) || 0,
       rooms: Number(item.room_count) || Number(item.rooms) || 1,
       supplier_id: price.supplier_id ? String(price.supplier_id) : null,
       is_direct: !!price.is_direct,
@@ -324,11 +335,13 @@ const mapInitialItemsToSelectedRates = (items: any[], initial: any) => {
       end_date: itemCheckOut,
       check_in: itemCheckIn,
       check_out: itemCheckOut,
-      hotel_id: String(item.hotel_id || price.hotel_id || ""),
+      hotel_id: String(item.hotel_id || price.hotel_id || initial?.hotel_id || ""),
       quotation_item_id: item.id,
-      profit_margin: item.profit_margin !== undefined ? item.profit_margin : 5,
-      night_price: item.night_price || null,
-      subtotal: item.subtotal || null,
+      profit_margin: margin,
+      night_price: item.night_price ? Number(item.night_price) : null,
+      subtotal: item.subtotal ? Number(item.subtotal) : null,
+      hotel_total: item.hotel_total ? Number(item.hotel_total) : null,
+      company_profit: item.company_profit ? Number(item.company_profit) : null,
     };
   });
 };
@@ -348,13 +361,34 @@ export function BookingForm({
 }) {
   const { t, lang } = useI18n();
   // Auto-refresh all lists every 2 seconds for real-time data
-  const currencies = useGetCurrenciesQuery({ lang, all: 1 }, { pollingInterval: 2000 });
-  const countries = useGetCountriesQuery({ lang, all: 1 }, { pollingInterval: 2000 });
+  const currencies = useGetCurrenciesQuery({ lang, all: 1 }, { pollingInterval: 4000 });
+  const countries = useGetCountriesQuery({ lang, all: 1 }, { pollingInterval: 4000 });
 
   const ar = (a: string, e: string) => (lang === "ar" ? a : e);
 
   const [selectedItems, setSelectedItems] = useState<SelectedRate[]>(() => {
-    return mapInitialItemsToSelectedRates(initial?.items, initial);
+    let initialItems = initial?.items;
+    if (!initialItems && initial?.bookings && Array.isArray(initial.bookings)) {
+      initialItems = [];
+      initial.bookings.forEach((b: any) => {
+        if (b.items && Array.isArray(b.items)) {
+          b.items.forEach((item: any) => {
+            initialItems.push({
+              ...item,
+              hotel_id: b.hotel_id,
+              check_in: b.check_in,
+              check_out: b.check_out,
+              status: b.status,
+              special_requests: b.special_requests,
+              notes: b.notes,
+              booking_type: b.booking_type,
+              booking_source: b.booking_source,
+            });
+          });
+        }
+      });
+    }
+    return mapInitialItemsToSelectedRates(initialItems, initial);
   });
   const [invoiceImage, setInvoiceImage] = useState<File | null>(null);
 
@@ -537,8 +571,29 @@ export function BookingForm({
         status: initial.status ?? f.status,
       }));
 
-      if (initial.items && Array.isArray(initial.items)) {
-        setSelectedItems(mapInitialItemsToSelectedRates(initial.items, initial));
+      let initialItems = initial.items;
+      if (!initialItems && initial.bookings && Array.isArray(initial.bookings)) {
+        initialItems = [];
+        initial.bookings.forEach((b: any) => {
+          if (b.items && Array.isArray(b.items)) {
+            b.items.forEach((item: any) => {
+              initialItems.push({
+                ...item,
+                hotel_id: b.hotel_id,
+                check_in: b.check_in,
+                check_out: b.check_out,
+                status: b.status,
+                special_requests: b.special_requests,
+                notes: b.notes,
+                booking_type: b.booking_type,
+                booking_source: b.booking_source,
+              });
+            });
+          }
+        });
+      }
+      if (initialItems && Array.isArray(initialItems)) {
+        setSelectedItems(mapInitialItemsToSelectedRates(initialItems, initial));
       }
     }
   }, [initialId]);
@@ -695,6 +750,11 @@ export function BookingForm({
   };
 
   const getItemTotal = (item: any) => {
+    if (item.is_saved) {
+      if (item.subtotal !== undefined && item.subtotal !== null) {
+        return Number(item.subtotal);
+      }
+    }
     const rCount = item.rooms || 1;
     const sDate = item.check_in || item.start_date || form.check_in;
     const eDate = item.check_out || item.end_date || form.check_out;
@@ -708,8 +768,7 @@ export function BookingForm({
 
     const getClientNightPrice = (base: number) => {
       const marginAmt = base * (margin / 100);
-      const taxAmt = marginAmt * 0.15;
-      return base + marginAmt + taxAmt;
+      return base + marginAmt;
     };
 
     // If it has weekend/weekday rates
@@ -861,46 +920,61 @@ export function BookingForm({
         );
       }
 
-      let checkInDate = form.check_in;
-      let checkOutDate = form.check_out;
+      // Group selectedItems by hotel_id and check_in/check_out dates
+      const bookingGroups: { [key: string]: any } = {};
 
-      if (!isQuotationMode && selectedItems.length > 0) {
-        const startDates = selectedItems.map(item => item.start_date || item.check_in).filter(Boolean);
-        const endDates = selectedItems.map(item => item.end_date || item.check_out).filter(Boolean);
-        if (startDates.length > 0) {
-          checkInDate = startDates.sort()[0];
+      selectedItems.forEach((item) => {
+        const hotelId = Number(item.hotel_id || form.hotel_id);
+        const checkIn = item.check_in || item.start_date || form.check_in;
+        const checkOut = item.check_out || item.end_date || form.check_out;
+
+        // Group key can be combination of hotel_id, check_in and check_out
+        const key = `${hotelId}_${checkIn}_${checkOut}`;
+
+        if (!bookingGroups[key]) {
+          bookingGroups[key] = {
+            hotel_id: hotelId,
+            check_in: checkIn,
+            check_out: checkOut,
+            booking_type: isQuotationMode ? "quotation" : "direct",
+            status: form.status || "confirmed",
+            special_requests: form.special_requests || "",
+            notes: form.notes || "",
+            items: []
+          };
+          if (!isQuotationMode) {
+            bookingGroups[key].booking_source = item.is_direct ? "hotel" : "supplier";
+          }
         }
-        if (endDates.length > 0) {
-          checkOutDate = endDates.sort().reverse()[0];
+
+        const itemObj: any = {
+          price_id: Number(item.rate_id),
+          room_count: Number(item.rooms) || 1,
+        };
+
+        if (isQuotationMode) {
+          if (item.quotation_item_id) {
+            itemObj.quotation_item_id = Number(item.quotation_item_id);
+          }
+        } else {
+          itemObj.profit_margin = Number(item.profit_margin !== undefined ? item.profit_margin : 5);
         }
-      }
+
+        bookingGroups[key].items.push(itemObj);
+      });
+
+      const bookingsArray = Object.values(bookingGroups);
 
       let payload: any = {
-        booking_type: isQuotationMode ? "quotation" : "direct",
+        customer_id: Number(form.customer_id),
+        currency_id: Number(form.currency_id),
         booking_date: form.booking_date,
         payment_method: form.payment_mode,
-        status: form.status,
+        bookings: bookingsArray,
       };
 
       if (isQuotationMode) {
         payload.quotation_id = Number(initial.quotation_id || initial.id);
-        payload.quotation_items = selectedItems.map((item) => Number(item.quotation_item_id)).filter(Boolean);
-      } else {
-        payload.booking_source = form.is_direct ? "hotel" : "supplier";
-        payload.customer_id = Number(form.customer_id);
-        payload.currency_id = Number(form.currency_id);
-        payload.country_id = Number(form.country_id);
-        payload.city_id = Number(form.city_id);
-        payload.hotel_id = Number(form.hotel_id);
-        payload.check_in = checkInDate;
-        payload.check_out = checkOutDate;
-        payload.special_requests = form.special_requests || "";
-        payload.notes = form.notes || "";
-        payload.items = selectedItems.map((item) => ({
-          price_id: Number(item.rate_id),
-          room_count: Number(item.rooms) || 1,
-          profit_margin: Number(item.profit_margin !== undefined ? item.profit_margin : 5),
-        }));
       }
 
       if (form.payment_mode === "deferred") {
@@ -924,18 +998,31 @@ export function BookingForm({
         Object.entries(payload).forEach(([key, val]) => {
           if (val === null || val === undefined) {
             // skip
-          } else if (key === "items" && Array.isArray(val)) {
-            val.forEach((item: any, idx: number) => {
-              formData.append(`items[${idx}][hotel_id]`, String(item.hotel_id));
-              formData.append(`items[${idx}][price_id]`, String(item.price_id));
-              formData.append(`items[${idx}][room_count]`, String(item.room_count));
-              formData.append(`items[${idx}][start_date]`, String(item.start_date));
-              formData.append(`items[${idx}][end_date]`, String(item.end_date));
-              formData.append(`items[${idx}][profit_margin]`, String(item.profit_margin));
-            });
-          } else if (key === "quotation_items" && Array.isArray(val)) {
-            val.forEach((id: any, idx: number) => {
-              formData.append(`quotation_items[${idx}]`, String(id));
+          } else if (key === "bookings" && Array.isArray(val)) {
+            val.forEach((booking: any, bIdx: number) => {
+              formData.append(`bookings[${bIdx}][hotel_id]`, String(booking.hotel_id));
+              formData.append(`bookings[${bIdx}][check_in]`, String(booking.check_in));
+              formData.append(`bookings[${bIdx}][check_out]`, String(booking.check_out));
+              formData.append(`bookings[${bIdx}][booking_type]`, String(booking.booking_type));
+              if (booking.booking_source) {
+                formData.append(`bookings[${bIdx}][booking_source]`, String(booking.booking_source));
+              }
+              formData.append(`bookings[${bIdx}][status]`, String(booking.status));
+              formData.append(`bookings[${bIdx}][special_requests]`, String(booking.special_requests));
+              formData.append(`bookings[${bIdx}][notes]`, String(booking.notes));
+
+              if (Array.isArray(booking.items)) {
+                booking.items.forEach((item: any, iIdx: number) => {
+                  formData.append(`bookings[${bIdx}][items][${iIdx}][price_id]`, String(item.price_id));
+                  formData.append(`bookings[${bIdx}][items][${iIdx}][room_count]`, String(item.room_count));
+                  if (item.quotation_item_id !== undefined) {
+                    formData.append(`bookings[${bIdx}][items][${iIdx}][quotation_item_id]`, String(item.quotation_item_id));
+                  }
+                  if (item.profit_margin !== undefined) {
+                    formData.append(`bookings[${bIdx}][items][${iIdx}][profit_margin]`, String(item.profit_margin));
+                  }
+                });
+              }
             });
           } else if (key === "installments" && Array.isArray(val)) {
             val.forEach((inst: any, idx: number) => {

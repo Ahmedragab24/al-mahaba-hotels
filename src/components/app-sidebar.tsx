@@ -58,6 +58,12 @@ const operational: NavItem[] = [
     icon: FileSpreadsheet,
     permission: "quotations",
   },
+  {
+    to: "/my-tasks",
+    labelKey: "nav.my_tasks",
+    icon: ClipboardList,
+    permission: "",
+  },
 ];
 
 const master: NavItem[] = [

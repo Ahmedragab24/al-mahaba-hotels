@@ -43,6 +43,7 @@ const PATH_MAP: Record<string, string | null> = {
   "/settings": "settings",
   "/reports": "reports",
   "/tasks": "tasks",
+  "/my-tasks": null,
 };
 
 export function pathToModule(pathname: string): string | null {

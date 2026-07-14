@@ -21,8 +21,8 @@ export function NotificationsPopover() {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
 
-  const { data: notifications = [], isLoading } = useGetNotificationsQuery();
-  const { data: unreadCount = 0 } = useGetUnreadNotificationsCountQuery();
+  const { data: notifications = [], isLoading } = useGetNotificationsQuery(undefined, { pollingInterval: 8000 });
+  const { data: unreadCount = 0 } = useGetUnreadNotificationsCountQuery(undefined, { pollingInterval: 8000 });
   const [markAsRead] = useMarkNotificationAsReadMutation();
   const [markAllRead] = useMarkAllNotificationsAsReadMutation();
 

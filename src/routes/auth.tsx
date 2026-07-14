@@ -27,10 +27,19 @@ export default function LoginPage() {
     ? apiRolesResponse
     : apiRolesResponse?.data || [];
 
+  const activeRoles = rolesArray.filter((r: any) => r.status !== false);
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [type, setType] = useState<string>("super_admin");
+  const [roleId, setRoleId] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
+
+  // Set default role when roles are loaded
+  useEffect(() => {
+    if (activeRoles.length > 0 && !roleId) {
+      setRoleId(String(activeRoles[0].id));
+    }
+  }, [activeRoles, roleId]);
 
   // Redirect already-authenticated users to dashboard
   useEffect(() => {
@@ -55,13 +64,13 @@ export default function LoginPage() {
       const res = await login({
         email: emailClean,
         password: password,
-        type: type,
-        ...(fcmToken ? { fcm: fcmToken, fcm_token: fcmToken } : {}),
+        role_id: roleId,
+        ...(fcmToken ? { fcm: fcmToken } : {}),
       }).unwrap();
 
-      // Handle API response structure: { data: { user, access_token }, ... }
-      const token = res.data?.access_token || res.token;
-      const user = res.data?.user || res.user;
+      // Handle API response structure (unwrapped by baseQuery)
+      const token = res.access_token || res.token;
+      const user = res.user;
 
       if (token) {
         const userId = String(user?.id || "");
@@ -154,19 +163,17 @@ export default function LoginPage() {
               </div>
 
               <div className="flex flex-col gap-2">
-                <Label htmlFor="type">{t("label.user_type")}</Label>
-                <Select value={type} onValueChange={setType} disabled={busy}>
-                  <SelectTrigger id="type" className="rounded-xl bg-background/50 focus:bg-background h-10 text-sm">
+                <Label htmlFor="role_id">{t("label.user_type")}</Label>
+                <Select value={roleId} onValueChange={setRoleId} disabled={busy}>
+                  <SelectTrigger id="role_id" className="rounded-xl bg-background/50 focus:bg-background h-10 text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {rolesArray
-                      .filter((r: any) => r.status !== false)
-                      .map((r: any) => (
-                        <SelectItem key={r.id} value={r.name}>
-                          {dir === "rtl" ? r.name_ar || r.name : r.name_en || r.name}
-                        </SelectItem>
-                      ))}
+                    {activeRoles.map((r: any) => (
+                      <SelectItem key={r.id} value={String(r.id)}>
+                        {dir === "rtl" ? r.name_ar || r.name : r.name_en || r.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

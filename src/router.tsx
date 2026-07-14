@@ -11,6 +11,7 @@ const SettingsPage = () => import("@/routes/_authenticated/settings").then((m) =
 const CurrenciesPage = () => import("@/routes/_authenticated/currencies").then((m) => ({ Component: m.default }));
 const SupplierApplicationsPage = () => import("@/routes/_authenticated/supplier-applications").then((m) => ({ Component: m.default }));
 const TasksIndex = () => import("@/routes/_authenticated/tasks/index").then((m) => ({ Component: m.default }));
+const MyTasksIndex = () => import("@/routes/_authenticated/tasks/my").then((m) => ({ Component: m.default }));
 const NotificationsIndex = () => import("@/routes/_authenticated/notifications/index").then((m) => ({ Component: m.default }));
 const PlatformTransactionsIndex = () => import("@/routes/_authenticated/platform-transactions/index").then((m) => ({ Component: m.default }));
 
@@ -60,6 +61,7 @@ const InvoiceDetail = () => import("@/routes/_authenticated/invoices/$id").then(
 
 // Reports
 const ReportsIndex = () => import("@/routes/_authenticated/reports/index").then((m) => ({ Component: m.default }));
+const SupplierPortalPage = () => import("@/routes/_authenticated/supplier-portal").then((m) => ({ Component: m.default }));
 
 export const router = createBrowserRouter([
   {
@@ -88,6 +90,7 @@ export const router = createBrowserRouter([
           { path: "notifications", lazy: NotificationsIndex },
           { path: "supplier-applications", lazy: SupplierApplicationsPage },
           { path: "tasks", lazy: TasksIndex },
+          { path: "my-tasks", lazy: MyTasksIndex },
           // Hotels
           { path: "hotels", lazy: HotelsIndex },
           { path: "hotels/new", lazy: HotelNew },
@@ -126,6 +129,7 @@ export const router = createBrowserRouter([
           { path: "platform-transactions", lazy: PlatformTransactionsIndex },
           // Reports
           { path: "reports", lazy: ReportsIndex },
+          { path: "supplier-portal", lazy: SupplierPortalPage },
         ],
       },
       {

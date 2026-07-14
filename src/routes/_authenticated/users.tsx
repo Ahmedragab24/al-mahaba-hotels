@@ -88,17 +88,26 @@ export default function UsersPage() {
 
       const allowedRoles = [
         "super_admin",
-        "financial_manager",
+        "admin",
+        "finance_manager",
+        "finance_agent",
         "sales_manager",
+        "sales_agent",
+        "operations_manager",
+        "operations_agent",
         "employee",
         "viewer"
       ];
 
       return users
-        .map((u: any) => ({
-          ...u,
-          roles: u.type ? [u.type] : []
-        }))
+        .map((u: any) => {
+          const roleName = u.role?.name_en || u.type || u.roles?.[0] || "sales_agent";
+          return {
+            ...u,
+            type: roleName,
+            roles: [roleName]
+          };
+        })
         .filter((u: any) => u.roles.some((r: string) => allowedRoles.includes(r)));
 
     },
@@ -153,6 +162,10 @@ export default function UsersPage() {
     formData.append("password", newUser.password);
     formData.append("phone", newUser.phone);
     formData.append("type", newUser.type);
+    const selectedRole = rolesArray.find((r: any) => r.name_en === newUser.type);
+    if (selectedRole) {
+      formData.append("role_id", String(selectedRole.id));
+    }
     if (newUser.country_id) formData.append("country_id", String(newUser.country_id));
     if (newUser.city_id) formData.append("city_id", String(newUser.city_id));
     formData.append("status", String(newUser.status));
@@ -270,6 +283,10 @@ export default function UsersPage() {
     formData.append("email", editingUser.email || "");
     formData.append("phone", editingUser.phone || "");
     formData.append("type", editingUser.type);
+    const selectedRole = rolesArray.find((r: any) => r.name_en === editingUser.type);
+    if (selectedRole) {
+      formData.append("role_id", String(selectedRole.id));
+    }
     formData.append("status", String(editingUser.status || "1"));
     if (editingUser.country_id) formData.append("country_id", String(editingUser.country_id));
     if (editingUser.city_id) formData.append("city_id", String(editingUser.city_id));
@@ -671,7 +688,7 @@ export default function UsersPage() {
                               {rolesArray
                                 .filter((r: any) => r.status !== false)
                                 .map((r: any) => (
-                                  <SelectItem key={r.id} value={r.name}>
+                                  <SelectItem key={r.id} value={r.name_en}>
                                     {lang === "ar" ? r.name_ar || r.name : r.name_en || r.name}
                                   </SelectItem>
                                 ))}
@@ -913,7 +930,7 @@ export default function UsersPage() {
                             {rolesArray
                               .filter((r: any) => r.status !== false)
                               .map((r: any) => (
-                                <SelectItem key={r.id} value={r.name}>
+                                <SelectItem key={r.id} value={r.name_en}>
                                   {lang === "ar" ? r.name_ar || r.name : r.name_en || r.name}
                                 </SelectItem>
                               ))}
@@ -1093,6 +1110,7 @@ export default function UsersPage() {
 function PermissionsDialog({ user, onClose }: { user: any | null; onClose: () => void }) {
   const { t, lang } = useI18n();
   const qc = useQueryClient();
+  const { data: apiRolesResponse } = useGetRolesQuery();
 
   // Local state for permissions to allow immediate UI updates
   const [localPerms, setLocalPerms] = useState<Record<string, boolean>>({});
@@ -1121,6 +1139,13 @@ function PermissionsDialog({ user, onClose }: { user: any | null; onClose: () =>
       formData.append("status", String(user.status || "1"));
       if (user.country?.id) formData.append("country_id", String(user.country.id));
       if (user.city?.id) formData.append("city_id", String(user.city.id));
+
+      const roles = apiRolesResponse?.data || apiRolesResponse || [];
+      const rolesArray = Array.isArray(roles) ? roles : (roles.data || []);
+      const roleId = user.role?.id || user.role_id || rolesArray.find((r: any) => r.name_en === user.type)?.id;
+      if (roleId) {
+        formData.append("role_id", String(roleId));
+      }
 
       const currentPerms = (user.permissions && typeof user.permissions === "object" && !Array.isArray(user.permissions))
         ? { ...user.permissions }

@@ -2,7 +2,7 @@ import { Link, Navigate, type LinkProps } from "react-router-dom";
 import { useI18n } from "@/lib/i18n";
 import { useSelector } from "react-redux";
 import { selectAuth } from "@/store/features/authSlice";
-import { canAccessModule } from "@/lib/auth-utils";
+import { canAccessModule, getFirstAllowedRoute } from "@/lib/auth-utils";
 import type { UserProfile } from "@/types/api";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent } from "@/components/ui/card";
@@ -34,13 +34,12 @@ import {
   CartesianGrid,
 } from "recharts";
 import { useGetHomeDataQuery } from "@/store/services/home";
-import { requestPermission } from "@/lib/firebaseMessaging";
-import { useUpdateUserMutation } from "@/store/api";
 
 export default function DashboardOrRedirect() {
   const auth = useSelector(selectAuth);
   if (!canAccessModule(auth, "dashboard")) {
-    return <Navigate to="/supplier-portal" replace />;
+    const fallbackRoute = getFirstAllowedRoute(auth);
+    return <Navigate to={fallbackRoute} replace />;
   }
   return <Dashboard />;
 }
@@ -107,28 +106,6 @@ function KPIStatCard({
 function Dashboard() {
   const { t, lang } = useI18n();
   const auth = useSelector(selectAuth);
-  const [updateUser] = useUpdateUserMutation();
-
-  useEffect(() => {
-    requestPermission().then((token) => {
-      if (token) {
-        console.log("FCM Token obtained:", token);
-        const profile = auth.profile as UserProfile | null;
-        const userId = auth.user?.id;
-        const currentFcm = profile?.fcm;
-        if (userId && token !== currentFcm) {
-          updateUser({ id: userId, body: { fcm: token } })
-            .unwrap()
-            .then(() => {
-              console.log("FCM Token updated on backend successfully.");
-            })
-            .catch((err) => {
-              console.error("Failed to update FCM token on backend:", err);
-            });
-        }
-      }
-    });
-  }, [auth.profile, auth.user, updateUser]);
 
   const { data: dData, isLoading: isDashboardLoading } = useGetHomeDataQuery();
 

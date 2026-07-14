@@ -79,6 +79,7 @@ export const dict: Dict = {
   "nav.admin": { ar: "الإدارة", en: "Administration" },
   "nav.users": { ar: "المستخدمون", en: "Users" },
   "nav.tasks": { ar: "المهام", en: "Tasks" },
+  "nav.my_tasks": { ar: "مهامي", en: "My Tasks" },
   "nav.audit": { ar: "سجل التدقيق", en: "Audit Log" },
   "nav.simulation": { ar: "وضع المحاكاة", en: "Simulation Mode" },
   "nav.settings": { ar: "الإعدادات", en: "Settings" },

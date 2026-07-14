@@ -8,20 +8,20 @@ export const authApi = api.injectEndpoints({
       query: (body) => ({ url: "/login", method: "POST", body }),
       async onQueryStarted(_arg, { dispatch, queryFulfilled }) {
         const { data } = await queryFulfilled;
-        // Handle API response structure: { data: { user, access_token }, ... }
-        const user = data.data?.user || data.user;
-        const token = data.data?.access_token || (data as any).access_token || data.token;
+        // Handle API response structure (unwrapped by baseQuery)
+        const user = data.user;
+        const token = data.access_token || data.token;
         
         if (token && user) {
           dispatch(
             setCredentials({
               token,
               user: {
-                id: user.id,
+                id: String(user.id),
                 email: user.email,
               },
               profile: user,
-              roles: data.roles || (user?.type ? [user.type] : []),
+              roles: user?.role?.name_en ? [user.role.name_en] : (user?.role?.name ? [user.role.name] : []),
             }),
           );
         }
@@ -46,7 +46,7 @@ export const authApi = api.injectEndpoints({
           const { data } = await queryFulfilled;
           if (data) {
             const user = data.user || data;
-            const roles = data.roles || (user.type ? [user.type] : []);
+            const roles = user.role?.name_en ? [user.role.name_en] : (user.role?.name ? [user.role.name] : (user.type ? [user.type] : []));
             const match = document.cookie.match(new RegExp("(^| )auth_token=([^;]+)"));
             const token = match ? decodeURIComponent(match[2]) : null;
             if (token) {

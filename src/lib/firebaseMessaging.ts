@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { store } from "@/store/store";
 import { api } from "@/store/api";
 
-export async function requestPermission() {
+export async function requestPermission(onNotificationReceived?: (title: string, body: string) => void) {
     if (typeof window === "undefined" || !("Notification" in window)) {
         return null;
     }
@@ -31,9 +31,26 @@ export async function requestPermission() {
             if (payload.notification) {
                 const title = payload.notification.title || "إشعار جديد";
                 const body = payload.notification.body || "";
-                toast(title, {
-                    description: body,
-                });
+                
+                // Trigger HTML5 Native Browser Desktop Notification
+                try {
+                    if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+                        new Notification(title, {
+                            body: body,
+                            icon: "/favicon.png"
+                        });
+                    }
+                } catch (e) {
+                    console.warn("Failed to trigger native desktop notification:", e);
+                }
+
+                if (onNotificationReceived) {
+                    onNotificationReceived(title, body);
+                } else {
+                    toast(title, {
+                        description: body,
+                    });
+                }
 
                 // Invalidate notifications cache to update UI instantly
                 store.dispatch(api.util.invalidateTags(["Notifications"]));

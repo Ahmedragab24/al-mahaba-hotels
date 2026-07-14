@@ -1,11 +1,10 @@
 import { useState, useEffect, useRef, useMemo } from "react";
+import { useSelector } from "react-redux";
+import { selectAuth } from "@/store/features/authSlice";
 import { PageHeader } from "@/components/page-header";
 import { useI18n } from "@/lib/i18n";
 import {
   useGetTasksQuery,
-  useCreateTaskMutation,
-  useUpdateTaskMutation,
-  useDeleteTaskMutation,
   useGetTaskCommentsQuery,
   useAddTaskCommentMutation,
   useDeleteTaskCommentMutation
@@ -18,40 +17,31 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import {
   ClipboardList,
-  PlusCircle,
   Search,
   Loader2,
   RefreshCw,
   MessageCircle,
   CheckCircle2,
-  SlidersHorizontal,
   ChevronLeft,
   ChevronRight,
   Paperclip,
   Send,
   Clipboard,
-  X,
   FileText,
   User,
-  Users,
-  Edit,
-  Trash2,
-  Trash
+  Trash,
 } from "lucide-react";
 import { toast } from "sonner";
 
 // Translation dictionary
 const T = {
   ar: {
-    title: "التاسكات",
-    subtitle: "أرسل طلباتك، ومشاكلك التقنية، أو استفساراتك وتابع حالتها مباشرة مع الفرق المختصة.",
+    title: "مهامي",
+    subtitle: "تابع مهامك الموجهة إليك والموكلة لك مباشرة مع الإدارات المختلفة.",
     searchPlaceholder: "البحث في مهامك ومراسلاتك...",
     tabTrack: "متابعة مهامي",
     tabSend: "إرسال مهمة جديدة",
@@ -119,10 +109,10 @@ const T = {
     editSubtitle: "قم بتعديل بيانات المهمة أدناه",
   },
   en: {
-    title: "Tasks",
-    subtitle: "Submit your requests, technical issues, or inquiries and track their status directly with the support teams.",
-    searchPlaceholder: "Search in your tasks and correspondences...",
-    tabTrack: "Track My Tasks",
+    title: "My Tasks",
+    subtitle: "Track your assigned tasks and collaborate directly with different departments.",
+    searchPlaceholder: "Search in your tasks...",
+    tabTrack: "My Tasks",
     tabSend: "Send New Task",
     totalTasks: "Total Tasks",
     openTasks: "Open Tasks",
@@ -279,11 +269,13 @@ const getTodayString = () => {
   return `${year}-${month}-${day}`;
 };
 
-export default function TasksPage() {
+export default function MyTasksPage() {
   const { lang, dir } = useI18n();
   const t = lang === "ar" ? T.ar : T.en;
 
-  const [activeTab, setActiveTab] = useState<"track" | "send">("track");
+  const auth = useSelector(selectAuth);
+  const currentUserId = String(auth.user?.id || "");
+
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
@@ -301,18 +293,8 @@ export default function TasksPage() {
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-  // Form State
-  const [formTitle, setFormTitle] = useState("");
-  const [formAssignedTo, setFormAssignedTo] = useState("");
-  const [formDept, setFormDept] = useState("فريق تقنية المعلومات");
-  const [formPriority, setFormPriority] = useState("high");
-  const [formDeadline, setFormDeadline] = useState(getTodayString());
-  const [formStatus, setFormStatus] = useState("open");
-  const [formDetails, setFormDetails] = useState("");
-  const [formAttachments, setFormAttachments] = useState<File[]>([]);
-
   // RTK Query Hooks
-  const { data: apiTasks = [], isLoading: isLoadingTasks } = useGetTasksQuery();
+  const { data: apiTasks = [], isLoading: isLoadingTasks } = useGetTasksQuery({ assigned_to: currentUserId });
   const { data: apiUsersResponse, isLoading: isLoadingUsers } = useGetUsersQuery();
 
   const usersArray = useMemo(() => {
@@ -323,9 +305,6 @@ export default function TasksPage() {
     return Array.isArray(rawData) ? rawData : [];
   }, [apiUsersResponse]);
 
-  const [createTask, { isLoading: isCreating }] = useCreateTaskMutation();
-  const [updateTask, { isLoading: isUpdating }] = useUpdateTaskMutation();
-  const [deleteTask, { isLoading: isDeleting }] = useDeleteTaskMutation();
 
   const { data: rawApiComments, isLoading: isLoadingComments } = useGetTaskCommentsQuery(selectedTask?.id || "", {
     skip: !selectedTask?.id
@@ -347,8 +326,10 @@ export default function TasksPage() {
     if (!Array.isArray(tasksArray)) {
       tasksArray = (tasksArray as any)?.data?.data || (tasksArray as any)?.data || [];
     }
-    return Array.isArray(tasksArray) ? tasksArray.map(mapApiTaskToUi) : [];
-  }, [apiTasks]);
+    const mapped = Array.isArray(tasksArray) ? tasksArray.map(mapApiTaskToUi) : [];
+    // Strict client-side filter to only show tasks assigned to me
+    return mapped.filter(t => String(t.assignedTo) === currentUserId);
+  }, [apiTasks, currentUserId]);
 
   // Sync comments for opened task
   useEffect(() => {
@@ -403,49 +384,7 @@ export default function TasksPage() {
     completed: tasks.filter((t) => t.status === "completed").length,
   };
 
-  // Form submission
-  const handleCreateTask = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formTitle.trim() || !formDetails.trim()) {
-      toast.error(lang === "ar" ? "يرجى تعبئة جميع الحقول المطلوبة" : "Please fill in all required fields");
-      return;
-    }
 
-    if (formDeadline && formDeadline < getTodayString()) {
-      toast.error(lang === "ar" ? "يجب أن يكون الموعد النهائي اليوم أو تاريخاً مستقبلياً" : "Deadline must be today or a future date");
-      return;
-    }
-
-    try {
-      const formData = new FormData();
-      formData.append("title", formTitle);
-      formData.append("description", formDetails);
-      formData.append("assigned_to", formAssignedTo);
-      formData.append("department", formDept);
-      formData.append("priority", formPriority);
-      if (formDeadline) formData.append("deadline", formDeadline);
-      formData.append("status", formStatus);
-
-      formAttachments.forEach((file) => {
-        formData.append("attachments[]", file);
-      });
-
-      await createTask(formData).unwrap();
-
-      toast.success(t.toastSuccess);
-      setFormTitle("");
-      setFormDetails("");
-      setFormAssignedTo("");
-      setFormDept("فريق تقنية المعلومات");
-      setFormPriority("high");
-      setFormDeadline(getTodayString());
-      setFormStatus("open");
-      setFormAttachments([]);
-      setActiveTab("track"); // Switch back to list
-    } catch (error) {
-      toast.error(lang === "ar" ? "فشل إنشاء المهمة" : "Failed to create task");
-    }
-  };
 
   // Send message in details chat
   const handleSendMessage = async () => {
@@ -483,49 +422,7 @@ export default function TasksPage() {
     }
   };
 
-  const handleEditTask = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingTask) return;
 
-    if (editingTask.deadline && editingTask.deadline < getTodayString()) {
-      toast.error(lang === "ar" ? "يجب أن يكون الموعد النهائي اليوم أو تاريخاً مستقبلياً" : "Deadline must be today or a future date");
-      return;
-    }
-
-    try {
-      await updateTask({
-        id: editingTask.id,
-        body: {
-          title: editingTask.title,
-          description: editingTask.description,
-          department: editingTask.department,
-          priority: editingTask.priority,
-          status: editingTask.status,
-          assigned_to: editingTask.assignedTo,
-          deadline: editingTask.deadline,
-        }
-      }).unwrap();
-
-      toast.success(lang === "ar" ? "تم تعديل المهمة بنجاح" : "Task updated successfully");
-      setIsEditDialogOpen(false);
-      setEditingTask(null);
-    } catch (error) {
-      toast.error(lang === "ar" ? "فشل تعديل المهمة" : "Failed to update task");
-    }
-  };
-
-  const handleDeleteTask = async () => {
-    if (!taskToDelete) return;
-
-    try {
-      await deleteTask(taskToDelete.id).unwrap();
-      toast.success(lang === "ar" ? "تم حذف المهمة بنجاح" : "Task deleted successfully");
-      setIsDeleteDialogOpen(false);
-      setTaskToDelete(null);
-    } catch (error) {
-      toast.error(lang === "ar" ? "فشل حذف المهمة" : "Failed to delete task");
-    }
-  };
 
   const handleDeleteComment = async (commentId: string) => {
     if (!selectedTask) return;
@@ -571,399 +468,207 @@ export default function TasksPage() {
       <PageHeader
         title={t.title}
         subtitle={t.subtitle}
-        children={
-          <div className="bg-secondary p-1 rounded-xl flex items-center gap-1 border">
-            <button
-              onClick={() => setActiveTab("track")}
-              className={cn(
-                "px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2",
-                activeTab === "track"
-                  ? "bg-primary shadow-sm text-white font-semibold"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <ClipboardList className="h-4 w-4" />
-              {t.tabTrack}
-            </button>
-            <button
-              onClick={() => setActiveTab("send")}
-              className={cn(
-                "px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2",
-                activeTab === "send"
-                  ? "bg-primary shadow-sm text-white font-semibold"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <PlusCircle className="h-4 w-4" />
-              {t.tabSend}
-            </button>
-
-          </div>
-        }
       />
 
       <div className="space-y-6 p-4 sm:p-6">
-        {activeTab === "track" ? (
-          <>
-            {/* Search Bar */}
-            <div className="relative w-full">
-              <Search className={cn("absolute top-3 h-4 w-4 text-muted-foreground", dir === "rtl" ? "right-3" : "left-3")} />
-              <Input
-                type="text"
-                placeholder={t.searchPlaceholder}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className={cn("w-full py-5 text-base border shadow-sm", dir === "rtl" ? "pr-10" : "pl-10")}
-              />
-            </div>
+        {/* Search Bar */}
+        <div className="relative w-full">
+          <Search className={cn("absolute top-3 h-4 w-4 text-muted-foreground", dir === "rtl" ? "right-3" : "left-3")} />
+          <Input
+            type="text"
+            placeholder={t.searchPlaceholder}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className={cn("w-full py-5 text-base border shadow-sm", dir === "rtl" ? "pr-10" : "pl-10")}
+          />
+        </div>
 
-            {/* KPI Stat Cards */}
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-              <Card
-                onClick={() => setStatusFilter("all")}
-                className={cn(
-                  "hover:shadow-md transition-all duration-200 cursor-pointer border-2",
-                  statusFilter === "all" ? "border-slate-400 dark:border-slate-500 ring-2 ring-slate-400/10" : "border-border"
-                )}
-              >
-                <CardContent className="p-4 flex flex-col justify-between h-28">
-                  <div className="flex items-center justify-between w-full">
-                    <span className="text-sm font-medium text-muted-foreground">{t.totalTasks}</span>
-                    <div className="p-2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                      <ClipboardList className="h-4 w-4" />
-                    </div>
-                  </div>
-                  <span className="text-3xl font-extrabold text-foreground">{counts.total}</span>
-                </CardContent>
-              </Card>
-
-              <Card
-                onClick={() => setStatusFilter("open")}
-                className={cn(
-                  "hover:shadow-md transition-all duration-200 cursor-pointer border-2",
-                  statusFilter === "open" ? "border-blue-500 ring-2 ring-blue-500/10" : "border-border"
-                )}
-              >
-                <CardContent className="p-4 flex flex-col justify-between h-28">
-                  <div className="flex items-center justify-between w-full">
-                    <span className="text-sm font-medium text-muted-foreground">{t.openTasks}</span>
-                    <div className="p-2 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-500">
-                      <Loader2 className="h-4 w-4 animate-spin-slow" />
-                    </div>
-                  </div>
-                  <span className="text-3xl font-extrabold text-foreground">{counts.open}</span>
-                </CardContent>
-              </Card>
-
-              <Card
-                onClick={() => setStatusFilter("in_progress")}
-                className={cn(
-                  "hover:shadow-md transition-all duration-200 cursor-pointer border-2",
-                  statusFilter === "in_progress" ? "border-amber-500 ring-2 ring-amber-500/10" : "border-border"
-                )}
-              >
-                <CardContent className="p-4 flex flex-col justify-between h-28">
-                  <div className="flex items-center justify-between w-full">
-                    <span className="text-sm font-medium text-muted-foreground">{t.inProgress}</span>
-                    <div className="p-2 rounded-full bg-amber-50 dark:bg-amber-900/30 text-amber-500">
-                      <RefreshCw className="h-4 w-4" />
-                    </div>
-                  </div>
-                  <span className="text-3xl font-extrabold text-foreground">{counts.in_progress}</span>
-                </CardContent>
-              </Card>
-
-              <Card
-                onClick={() => setStatusFilter("awaiting_reply")}
-                className={cn(
-                  "hover:shadow-md transition-all duration-200 cursor-pointer border-2",
-                  statusFilter === "awaiting_reply" ? "border-purple-500 ring-2 ring-purple-500/10" : "border-border"
-                )}
-              >
-                <CardContent className="p-4 flex flex-col justify-between h-28">
-                  <div className="flex items-center justify-between w-full">
-                    <span className="text-sm font-medium text-muted-foreground">{t.awaitingReply}</span>
-                    <div className="p-2 rounded-full bg-purple-50 dark:bg-purple-900/30 text-purple-500">
-                      <MessageCircle className="h-4 w-4" />
-                    </div>
-                  </div>
-                  <span className="text-3xl font-extrabold text-foreground">{counts.awaiting_reply}</span>
-                </CardContent>
-              </Card>
-
-              <Card
-                onClick={() => setStatusFilter("completed")}
-                className={cn(
-                  "hover:shadow-md transition-all duration-200 cursor-pointer border-2",
-                  statusFilter === "completed" ? "border-emerald-500 ring-2 ring-emerald-500/10" : "border-border"
-                )}
-              >
-                <CardContent className="p-4 flex flex-col justify-between h-28">
-                  <div className="flex items-center justify-between w-full">
-                    <span className="text-sm font-medium text-muted-foreground">{t.completedTasks}</span>
-                    <div className="p-2 rounded-full bg-emerald-50 dark:bg-emerald-900/30 text-emerald-500">
-                      <CheckCircle2 className="h-4 w-4" />
-                    </div>
-                  </div>
-                  <span className="text-3xl font-extrabold text-foreground">{counts.completed}</span>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Filter controls */}
-            {/* <div className="flex items-center justify-between pt-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => { setStatusFilter("all"); setSearch(""); }}
-                className="gap-2 text-sm"
-              >
-                <SlidersHorizontal className="h-4 w-4" />
-                {t.allTasks}
-              </Button>
-            </div> */}
-
-            {/* Tasks Table */}
-            <Card className="border overflow-hidden">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader className="bg-slate-50 dark:bg-slate-900/50">
-                    <TableRow>
-                      <TableHead className="text-center font-bold">{t.taskId}</TableHead>
-                      <TableHead className={dir === "rtl" ? "text-right font-bold" : "text-left font-bold"}>{t.taskTitle}</TableHead>
-                      <TableHead className="text-center font-bold">{t.department}</TableHead>
-                      <TableHead className="text-center font-bold">{t.lastUpdate}</TableHead>
-                      <TableHead className={dir === "rtl" ? "text-right font-bold" : "text-left font-bold"}>{t.assignedTeam}</TableHead>
-                      <TableHead className="text-center font-bold">{t.priority}</TableHead>
-                      <TableHead className="text-center font-bold">{t.status}</TableHead>
-                      <TableHead className="text-center font-bold">{t.action}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredTasks.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">
-                          {lang === "ar" ? "لا توجد نتائج بحث مطابقة" : "No matching tasks found"}
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      filteredTasks.map((task) => (
-                        <TableRow
-                          key={task.id}
-                          className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors duration-150 cursor-pointer"
-                          onClick={() => { setSelectedTask(task); setDialogTab("replies"); }}
-                        >
-                          <TableCell className="text-center font-mono font-semibold text-sm text-muted-foreground">
-                            {task.id}
-                          </TableCell>
-                          <TableCell className={cn("max-w-xs truncate font-semibold text-foreground")}>
-                            {task.title}
-                          </TableCell>
-                          <TableCell className="text-center text-sm font-medium text-slate-500 dark:text-slate-400">
-                            {task.department}
-                          </TableCell>
-                          <TableCell className="text-center text-xs font-medium text-muted-foreground">
-                            <span dir="ltr">{task.lastUpdate}</span>
-                          </TableCell>
-                          <TableCell className="py-3">
-                            <div className="flex items-center gap-2">
-                              {task.assignedAvatar ? (
-                                <Avatar className="h-6 w-6">
-                                  <AvatarImage src={task.assignedAvatar} />
-                                  <AvatarFallback>{task.assignedTeam[0]}</AvatarFallback>
-                                </Avatar>
-                              ) : (
-                                <div className="h-6 w-6 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 border text-[10px]">
-                                  <User className="h-3.5 w-3.5" />
-                                </div>
-                              )}
-                              <span className="text-sm font-medium">
-                                {task.assignedTeam === "بانتظار التعيين" ? t.awaitingAssignment : task.assignedTeam}
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <Badge className={cn("px-2 py-0.5 text-xs font-semibold border shadow-none", getPriorityColor(task.priority))}>
-                              {t[task.priority]}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <Badge className={cn("px-2.5 py-1 text-xs font-semibold rounded-full border shadow-none", getStatusColor(task.status))}>
-                              {t[`status${task.status.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join('')}` as keyof typeof t]}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
-                            <div className="flex items-center justify-center gap-1">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-blue-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                                onClick={() => { setEditingTask(task); setIsEditDialogOpen(true); }}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
-                                onClick={() => { setTaskToDelete(task); setIsDeleteDialogOpen(true); }}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                                onClick={() => { setSelectedTask(task); setDialogTab("replies"); }}
-                              >
-                                {dir === "rtl" ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </Card>
-          </>
-        ) : (
-          /* Send New Task Form (Image 2) */
-          <div className="mx-auto">
-            <Card className="border shadow-md">
-              <CardContent className="p-6 sm:p-8">
-                {/* Form Header */}
-                <div className="flex items-center gap-4 border-b pb-6 mb-6">
-                  <div className="p-3 bg-amber-50 dark:bg-amber-900/20 text-[#a87f32] rounded-xl border border-amber-200/50">
-                    <Clipboard className="h-6 w-6" />
-                  </div>
-                  <div className={dir === "rtl" ? "text-right" : "text-left"}>
-                    <h2 className="text-xl font-bold text-foreground">{t.createTitle}</h2>
-                    <p className="text-sm text-muted-foreground mt-1">{t.createSubtitle}</p>
-                  </div>
+        {/* KPI Stat Cards */}
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+          <Card
+            onClick={() => setStatusFilter("all")}
+            className={cn(
+              "hover:shadow-md transition-all duration-200 cursor-pointer border-2",
+              statusFilter === "all" ? "border-slate-400 dark:border-slate-500 ring-2 ring-slate-400/10" : "border-border"
+            )}
+          >
+            <CardContent className="p-4 flex flex-col justify-between h-28">
+              <div className="flex items-center justify-between w-full">
+                <span className="text-sm font-medium text-muted-foreground">{t.totalTasks}</span>
+                <div className="p-2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                  <ClipboardList className="h-4 w-4" />
                 </div>
+              </div>
+              <span className="text-3xl font-extrabold text-foreground">{counts.total}</span>
+            </CardContent>
+          </Card>
 
-                <form onSubmit={handleCreateTask} className="space-y-6">
-                  {/* Task Title */}
-                  <div className="flex flex-col gap-2">
-                    <Label className="text-muted-foreground font-semibold">{t.labelTitle}</Label>
-                    <Input
-                      type="text"
-                      placeholder={t.placeholderTitle}
-                      value={formTitle}
-                      onChange={(e) => setFormTitle(e.target.value)}
-                      className="py-5 text-base border"
-                      required
-                    />
-                  </div>
+          <Card
+            onClick={() => setStatusFilter("open")}
+            className={cn(
+              "hover:shadow-md transition-all duration-200 cursor-pointer border-2",
+              statusFilter === "open" ? "border-blue-500 ring-2 ring-blue-500/10" : "border-border"
+            )}
+          >
+            <CardContent className="p-4 flex flex-col justify-between h-28">
+              <div className="flex items-center justify-between w-full">
+                <span className="text-sm font-medium text-muted-foreground">{t.openTasks}</span>
+                <div className="p-2 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-500">
+                  <Loader2 className="h-4 w-4 animate-spin-slow" />
+                </div>
+              </div>
+              <span className="text-3xl font-extrabold text-foreground">{counts.open}</span>
+            </CardContent>
+          </Card>
 
-                  {/* Assigned To & Dept Fields */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Assigned To Select */}
-                    <div className="flex flex-col gap-2">
-                      <Label className="text-muted-foreground font-semibold">{t.labelAssignedTo}</Label>
-                      <Select value={formAssignedTo} onValueChange={setFormAssignedTo}>
-                        <SelectTrigger className="w-full py-5 border">
-                          <SelectValue placeholder={t.labelAssignedTo} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {usersArray.map((user: any) => (
-                            <SelectItem key={user.id} value={String(user.id)}>
-                              {user.name || user.username || `User ${user.id}`}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+          <Card
+            onClick={() => setStatusFilter("in_progress")}
+            className={cn(
+              "hover:shadow-md transition-all duration-200 cursor-pointer border-2",
+              statusFilter === "in_progress" ? "border-amber-500 ring-2 ring-amber-500/10" : "border-border"
+            )}
+          >
+            <CardContent className="p-4 flex flex-col justify-between h-28">
+              <div className="flex items-center justify-between w-full">
+                <span className="text-sm font-medium text-muted-foreground">{t.inProgress}</span>
+                <div className="p-2 rounded-full bg-amber-50 dark:bg-amber-900/30 text-amber-500">
+                  <RefreshCw className="h-4 w-4" />
+                </div>
+              </div>
+              <span className="text-3xl font-extrabold text-foreground">{counts.in_progress}</span>
+            </CardContent>
+          </Card>
 
-                    {/* Department Input */}
-                    <div className="flex flex-col gap-2">
-                      <Label className="text-muted-foreground font-semibold">{t.labelDept}</Label>
-                      <Input
-                        type="text"
-                        value={formDept}
-                        onChange={(e) => setFormDept(e.target.value)}
-                        className="py-5 text-base border"
-                        required
-                      />
-                    </div>
-                  </div>
+          <Card
+            onClick={() => setStatusFilter("awaiting_reply")}
+            className={cn(
+              "hover:shadow-md transition-all duration-200 cursor-pointer border-2",
+              statusFilter === "awaiting_reply" ? "border-purple-500 ring-2 ring-purple-500/10" : "border-border"
+            )}
+          >
+            <CardContent className="p-4 flex flex-col justify-between h-28">
+              <div className="flex items-center justify-between w-full">
+                <span className="text-sm font-medium text-muted-foreground">{t.awaitingReply}</span>
+                <div className="p-2 rounded-full bg-purple-50 dark:bg-purple-900/30 text-purple-500">
+                  <MessageCircle className="h-4 w-4" />
+                </div>
+              </div>
+              <span className="text-3xl font-extrabold text-foreground">{counts.awaiting_reply}</span>
+            </CardContent>
+          </Card>
 
-                  {/* Priority, Deadline & Status Fields */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="flex flex-col gap-2">
-                      <Label className="text-muted-foreground font-semibold">{lang === "ar" ? "الأولوية" : "Priority"}</Label>
-                      <Select value={formPriority} onValueChange={setFormPriority}>
-                        <SelectTrigger className="w-full py-5 border">
-                          <SelectValue placeholder="Priority" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="urgent">{lang === "ar" ? "طارئ" : "Urgent"}</SelectItem>
-                          <SelectItem value="high">{lang === "ar" ? "عالي" : "High"}</SelectItem>
-                          <SelectItem value="medium">{lang === "ar" ? "متوسط" : "Medium"}</SelectItem>
-                          <SelectItem value="low">{lang === "ar" ? "منخفض" : "Low"}</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+          <Card
+            onClick={() => setStatusFilter("completed")}
+            className={cn(
+              "hover:shadow-md transition-all duration-200 cursor-pointer border-2",
+              statusFilter === "completed" ? "border-emerald-500 ring-2 ring-emerald-500/10" : "border-border"
+            )}
+          >
+            <CardContent className="p-4 flex flex-col justify-between h-28">
+              <div className="flex items-center justify-between w-full">
+                <span className="text-sm font-medium text-muted-foreground">{t.completedTasks}</span>
+                <div className="p-2 rounded-full bg-emerald-50 dark:bg-emerald-900/30 text-emerald-500">
+                  <CheckCircle2 className="h-4 w-4" />
+                </div>
+              </div>
+              <span className="text-3xl font-extrabold text-foreground">{counts.completed}</span>
+            </CardContent>
+          </Card>
+        </div>
 
-                    <div className="flex flex-col gap-2">
-                      <Label className="text-muted-foreground font-semibold">{t.labelDeadline}</Label>
-                      <Input
-                        type="date"
-                        value={formDeadline}
-                        onChange={(e) => setFormDeadline(e.target.value)}
-                        min={getTodayString()}
-                        className="py-5 text-base border"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Details TextArea */}
-                  <div className="flex flex-col gap-2">
-                    <Label className="text-muted-foreground font-semibold">{t.labelDetails}</Label>
-                    <Textarea
-                      placeholder={t.placeholderDetails}
-                      value={formDetails}
-                      onChange={(e) => setFormDetails(e.target.value)}
-                      className="min-h-[150px] text-base border p-4"
-                      required
-                    />
-                  </div>
-
-                  {/* Attachments */}
-                  <div className="flex flex-col gap-2">
-                    <Label className="text-muted-foreground font-semibold">{t.labelAttachments}</Label>
-                    <Input
-                      type="file"
-                      multiple
-                      onChange={(e) => {
-                        if (e.target.files) {
-                          setFormAttachments(Array.from(e.target.files));
-                        }
-                      }}
-                      className="py-3 text-base border"
-                    />
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="flex justify-end">
-                    <Button
-                      type="submit"
-                      className="bg-[#a87f32] hover:bg-[#966f2a] dark:bg-[#a87f32] dark:hover:bg-[#be9343] text-white py-5 px-8 text-base font-semibold gap-2 transition-colors duration-200"
+        {/* Tasks Table */}
+        <Card className="border overflow-hidden">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader className="bg-slate-50 dark:bg-slate-900/50">
+                <TableRow>
+                  <TableHead className="text-center font-bold">{t.taskId}</TableHead>
+                  <TableHead className={dir === "rtl" ? "text-right font-bold" : "text-left font-bold"}>{t.taskTitle}</TableHead>
+                  <TableHead className="text-center font-bold">{t.department}</TableHead>
+                  <TableHead className="text-center font-bold">{t.lastUpdate}</TableHead>
+                  <TableHead className={dir === "rtl" ? "text-right font-bold" : "text-left font-bold"}>{t.assignedTeam}</TableHead>
+                  <TableHead className="text-center font-bold">{t.priority}</TableHead>
+                  <TableHead className="text-center font-bold">{t.status}</TableHead>
+                  <TableHead className="text-center font-bold">{t.action}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredTasks.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">
+                      {lang === "ar" ? "لا توجد نتائج بحث مطابقة" : "No matching tasks found"}
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredTasks.map((task) => (
+                    <TableRow
+                      key={task.id}
+                      className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors duration-150 cursor-pointer"
+                      onClick={() => { setSelectedTask(task); setDialogTab("replies"); }}
                     >
-                      <Send className="h-4 w-4" />
-                      {t.btnSendTask}
-                    </Button>
-                  </div>
-                </form>
-              </CardContent>
-            </Card>
+                      <TableCell className="text-center font-mono font-semibold text-sm text-muted-foreground">
+                        {task.id}
+                      </TableCell>
+                      <TableCell className={cn("max-w-xs truncate font-semibold text-foreground")}>
+                        {task.title}
+                      </TableCell>
+                      <TableCell className="text-center text-sm font-medium text-slate-500 dark:text-slate-400">
+                        {task.department}
+                      </TableCell>
+                      <TableCell className="text-center text-xs font-medium text-muted-foreground">
+                        <span dir="ltr">{task.lastUpdate}</span>
+                      </TableCell>
+                      <TableCell className="py-3">
+                        <div className="flex items-center gap-2">
+                          {task.assignedAvatar ? (
+                            <Avatar className="h-6 w-6">
+                              <AvatarImage src={task.assignedAvatar} />
+                              <AvatarFallback>{task.assignedTeam[0]}</AvatarFallback>
+                            </Avatar>
+                          ) : (
+                            <div className="h-6 w-6 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 border text-[10px]">
+                              <User className="h-3.5 w-3.5" />
+                            </div>
+                          )}
+                          <span className="text-sm font-medium">
+                            {task.assignedTeam === "بانتظار التعيين" ? t.awaitingAssignment : task.assignedTeam}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge className={cn("px-2 py-0.5 text-xs font-semibold border shadow-none", getPriorityColor(task.priority))}>
+                          {t[task.priority]}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge className={cn("px-2.5 py-1 text-xs font-semibold rounded-full border shadow-none", getStatusColor(task.status))}>
+                          {t[`status${task.status.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join('')}` as keyof typeof t]}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-center gap-1">
+
+
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                            onClick={() => { setSelectedTask(task); setDialogTab("replies"); }}
+                          >
+                            {dir === "rtl" ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
           </div>
-        )}
+        </Card>
       </div>
 
-      {/* Task Details Dialog (Image 3) */}
+      {/* Task Details Dialog */}
       <Dialog open={!!selectedTask} onOpenChange={(v) => !v && setSelectedTask(null)}>
         <DialogContent className="max-w-3xl h-[95vh] max-h-[95vh] flex flex-col p-0 overflow-hidden border bg-background [&>button]:hidden">
           {selectedTask && (
@@ -981,10 +686,8 @@ export default function TasksPage() {
                     <Badge className={cn("text-xs font-semibold border py-0.5", getPriorityColor(selectedTask.priority))}>
                       {t.priorityLabel}: {t[selectedTask.priority]}
                     </Badge>
-
                   </div>
                 </div>
-
 
                 <div className={cn("flex flex-col gap-1.5", dir === "rtl" ? "text-right" : "text-left")}>
                   <DialogTitle className="text-lg font-bold text-foreground line-clamp-2">
@@ -996,8 +699,6 @@ export default function TasksPage() {
                     <span>{t.requestDate}: <span dir="ltr">{selectedTask.requestDate}</span></span>
                   </div>
                 </div>
-
-
               </div>
 
               {/* Task Initial Description Box */}
@@ -1076,7 +777,6 @@ export default function TasksPage() {
                             isCurrentUser ? "justify-end" : "justify-start"
                           )}
                         >
-                          {/* Support Avatar (placed left for support messages) */}
                           {!isCurrentUser && (
                             <Avatar className="h-8 w-8 shrink-0">
                               <AvatarImage src={msg.avatar} />
@@ -1167,7 +867,6 @@ export default function TasksPage() {
                             )}
                           </div>
 
-                          {/* User Avatar (placed right for user messages) */}
                           {isCurrentUser && (
                             <Avatar className="h-8 w-8 shrink-0">
                               <AvatarFallback className="bg-amber-100 text-[#a87f32] font-semibold text-xs">م</AvatarFallback>
@@ -1177,7 +876,6 @@ export default function TasksPage() {
                       );
                     })}
 
-                    {/* typing indicator */}
                     {isTyping && (
                       <div className="flex items-start gap-2.5 justify-start">
                         <Avatar className="h-8 w-8 shrink-0">
@@ -1222,7 +920,7 @@ export default function TasksPage() {
                 )}
               </div>
 
-              {/* Dialog Input (Only for Replies Tab and Uncompleted tasks) */}
+              {/* Dialog Input (Only for Replies Tab) */}
               {dialogTab === "replies" && (
                 <div className="p-4 border-t bg-slate-50/50 dark:bg-slate-900/20 flex items-center gap-3">
                   <div className="relative flex-1">
@@ -1263,148 +961,8 @@ export default function TasksPage() {
           )}
         </DialogContent>
       </Dialog>
-
-      {/* Edit Task Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[600px] p-6 max-h-[90vh] overflow-y-auto" dir={dir}>
-          <DialogHeader className={dir === "rtl" ? "text-right" : "text-left"}>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 rounded-lg">
-                <Edit className="h-5 w-5" />
-              </div>
-              <div>
-                <DialogTitle className="text-xl">{t.editTask}</DialogTitle>
-                <DialogDescription>{t.editSubtitle}</DialogDescription>
-              </div>
-            </div>
-          </DialogHeader>
-
-          {editingTask && (
-            <form onSubmit={handleEditTask} className="space-y-4 mt-4">
-              <div className="space-y-2">
-                <Label>{t.labelTitle}</Label>
-                <Input
-                  value={editingTask.title}
-                  onChange={(e) => setEditingTask({ ...editingTask, title: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>{t.department}</Label>
-                  <Input
-                    type="text"
-                    value={editingTask.department}
-                    onChange={(e) => setEditingTask({ ...editingTask, department: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>{t.priority}</Label>
-                  <Select
-                    value={editingTask.priority}
-                    onValueChange={(val: any) => setEditingTask({ ...editingTask, priority: val })}
-                  >
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="urgent">{t.urgent || "طارئ"}</SelectItem>
-                      <SelectItem value="high">{t.high || "عالي"}</SelectItem>
-                      <SelectItem value="medium">{t.medium || "متوسط"}</SelectItem>
-                      <SelectItem value="low">{t.low || "منخفض"}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>{t.labelAssignedTo}</Label>
-                  <Select
-                    value={editingTask.assignedTo}
-                    onValueChange={(val) => setEditingTask({ ...editingTask, assignedTo: val })}
-                  >
-                    <SelectTrigger><SelectValue placeholder={t.labelAssignedTo} /></SelectTrigger>
-                    <SelectContent>
-                      {usersArray.map((user: any) => (
-                        <SelectItem key={user.id} value={String(user.id)}>
-                          {user.name || user.username || `User ${user.id}`}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>{t.labelDeadline || "Deadline"}</Label>
-                  <Input
-                    type="date"
-                    value={editingTask.deadline || ""}
-                    onChange={(e) => setEditingTask({ ...editingTask, deadline: e.target.value })}
-                    min={getTodayString()}
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>{t.status}</Label>
-                <Select
-                  value={editingTask.status}
-                  onValueChange={(val: any) => setEditingTask({ ...editingTask, status: val })}
-                >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="open">{t.statusOpen}</SelectItem>
-                    <SelectItem value="in_progress">{t.statusInProgress}</SelectItem>
-                    <SelectItem value="awaiting_reply">{t.statusAwaitingReply}</SelectItem>
-                    <SelectItem value="completed">{t.statusCompleted}</SelectItem>
-                    <SelectItem value="closed">{t.statusClosed}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>{t.labelDetails}</Label>
-                <Textarea
-                  value={editingTask.description}
-                  onChange={(e) => setEditingTask({ ...editingTask, description: e.target.value })}
-                  required
-                  rows={4}
-                />
-              </div>
-              <div className="flex items-center justify-end gap-3 pt-4 border-t">
-                <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-                  {t.cancel}
-                </Button>
-                <Button type="submit" disabled={isUpdating} className="bg-primary hover:bg-primary/90 text-white">
-                  {isUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : t.saveChanges}
-                </Button>
-              </div>
-            </form>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Task Dialog */}
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="sm:max-w-[400px] p-6 text-center" dir={dir}>
-          <div className="mx-auto w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center mb-4 text-red-600">
-            <Trash2 className="h-6 w-6" />
-          </div>
-          <DialogTitle className="text-xl mb-2">{t.deleteTask}</DialogTitle>
-          <DialogDescription className="mb-6">{t.confirmDelete}</DialogDescription>
-
-          <div className="flex items-center justify-center gap-3">
-            <Button variant="outline" className="w-full" onClick={() => setIsDeleteDialogOpen(false)}>
-              {t.cancel}
-            </Button>
-            <Button
-              variant="destructive"
-              className="w-full"
-              onClick={handleDeleteTask}
-              disabled={isDeleting}
-            >
-              {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : t.deleteTask}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }
 
-export { TasksPage as Component };
+export { MyTasksPage as Component };

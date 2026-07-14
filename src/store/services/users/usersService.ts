@@ -1,9 +1,9 @@
 import { api } from "../../baseApi";
-import type { UserProfile } from "@/types/api";
+import type { UserProfile, UsersResponse } from "@/types/api";
 
 export const usersApi = api.injectEndpoints({
   endpoints: (build) => ({
-    getUsers: build.query<UserProfile[], { lang?: string; search?: string; type?: string } | void>({
+    getUsers: build.query<UsersResponse, { lang?: string } | void>({
       query: (params) => ({ url: "/users", params: params || undefined }),
       providesTags: ["Users"],
     }),

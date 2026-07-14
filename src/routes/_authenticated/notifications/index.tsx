@@ -25,8 +25,8 @@ export default function NotificationsPage() {
   const [activeTab, setActiveTab] = useState<"all" | "unread">("all");
   const [showConfirmDeleteAll, setShowConfirmDeleteAll] = useState(false);
 
-  const { data: notifications = [], isLoading } = useGetNotificationsQuery();
-  const { data: unreadCount = 0 } = useGetUnreadNotificationsCountQuery();
+  const { data: notifications = [], isLoading } = useGetNotificationsQuery(undefined, { pollingInterval: 8000 });
+  const { data: unreadCount = 0 } = useGetUnreadNotificationsCountQuery(undefined, { pollingInterval: 8000 });
   const [markAsRead, { isLoading: isMarking }] = useMarkNotificationAsReadMutation();
   const [markAllRead, { isLoading: isMarkingAll }] = useMarkAllNotificationsAsReadMutation();
   const [deleteNotification, { isLoading: isDeleting }] = useDeleteNotificationMutation();

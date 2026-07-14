@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Outlet, useNavigate, useLocation, Navigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { AppSidebar } from "@/components/app-sidebar";
@@ -7,10 +7,11 @@ import { LangSwitcher } from "@/components/lang-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { selectAuth, clearAuth } from "@/store/features/authSlice";
-import { useGetProfileQuery, useLogoutMutation } from "@/store/api";
+import { useGetProfileQuery, useLogoutMutation, useUpdateUserMutation } from "@/store/api";
 import { canAccessModule } from "@/lib/auth-utils";
 import { useI18n } from "@/lib/i18n";
-import { LogOut, ShieldOff, Loader2 } from "lucide-react";
+import { LogOut, ShieldOff, Loader2, TriangleAlertIcon, X } from "lucide-react";
+import { requestPermission } from "@/lib/firebaseMessaging";
 import { pathToModule } from "@/lib/modules";
 import {
   DropdownMenu,
@@ -22,6 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { NotificationsPopover } from "@/components/notifications-popover";
+import { cn } from "@/lib/utils";
 
 export default function AuthenticatedLayout() {
   const { lang, t, dir } = useI18n();
@@ -51,6 +53,70 @@ export default function AuthenticatedLayout() {
     }
   }, [cookieToken, isProfileLoading, auth.isAuthenticated, dispatch, navigate]);
 
+  const [activeAlert, setActiveAlert] = useState<{ title: string; body: string } | null>(null);
+  const [updateUser] = useUpdateUserMutation();
+
+  // Setup real-time notifications and register FCM token globally for all authenticated users
+  useEffect(() => {
+    if (auth.isAuthenticated) {
+      requestPermission((title, body) => {
+        setActiveAlert({ title, body });
+      }).then((token) => {
+        if (token) {
+          console.log("FCM Token obtained globally:", token);
+          const profile = auth.profile as any;
+          const user = auth.user as any;
+          const userId = user?.id || profile?.id;
+          const currentFcm = profile?.fcm || user?.fcm;
+          
+          if (userId && token !== currentFcm) {
+            const name = user?.name || profile?.name || "";
+            const email = user?.email || profile?.email || "";
+            const phone = user?.phone || profile?.phone || "";
+            const status = String(user?.status ?? profile?.status ?? "1");
+            const type = user?.role?.name_en || profile?.role?.name_en || user?.type || profile?.type || "";
+            const roleId = user?.role?.id || profile?.role?.id || user?.role_id || profile?.role_id;
+
+            const body: any = {
+              _method: "PUT",
+              name,
+              email,
+              phone,
+              status,
+              type,
+              fcm: token
+            };
+
+            if (roleId) {
+              body.role_id = String(roleId);
+            }
+
+            updateUser({ id: userId, body })
+              .unwrap()
+              .then(() => {
+                console.log("FCM Token updated globally on backend.");
+              })
+              .catch((err) => {
+                console.error("Failed to update FCM token globally:", err);
+              });
+          }
+        }
+      }).catch((err) => {
+        console.warn("Global FCM requestPermission failed:", err);
+      });
+    }
+  }, [auth.isAuthenticated, auth.profile, auth.user, updateUser]);
+
+  // Auto-dismiss custom alert after 6 seconds
+  useEffect(() => {
+    if (activeAlert) {
+      const timer = setTimeout(() => {
+        setActiveAlert(null);
+      }, 6000);
+      return () => clearTimeout(timer);
+    }
+  }, [activeAlert]);
+
   if (!cookieToken || isProfileLoading || !auth.isAuthenticated) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
@@ -61,7 +127,7 @@ export default function AuthenticatedLayout() {
 
   const currentModule = pathToModule(pathname);
   const blocked =
-    auth.roles.length > 0 &&
+    pathname !== "/" &&
     !canAccessModule(auth, currentModule);
 
   async function handleSignOut() {
@@ -84,15 +150,9 @@ export default function AuthenticatedLayout() {
   const primaryRole = auth.roles[0];
   const displayName = String(
     customDisplayEmail ||
-    (lang === "ar"
-      ? auth.profile?.full_name_ar ||
-      auth.profile?.full_name_en ||
-      auth.user?.email ||
-      (primaryRole ? (t(`role.${primaryRole}`) as string) : "—")
-      : auth.profile?.full_name_en ||
-      auth.profile?.full_name_ar ||
-      auth.user?.email ||
-      (primaryRole ? (t(`role.${primaryRole}`) as string) : "—"))
+    auth.profile?.name ||
+    auth.user?.email ||
+    (primaryRole ? (t(`role.${primaryRole}`) as string) : "—")
   );
   const initials = (displayName || "?")
     .toString()
@@ -164,6 +224,30 @@ export default function AuthenticatedLayout() {
           </main>
         </SidebarInset>
       </div>
+
+      {activeAlert && (
+        <div
+          className={cn(
+            "fixed z-[9999] bottom-4 max-w-sm animate-in fade-in slide-in-from-bottom-5 duration-300",
+            lang === "ar" ? "right-4" : "left-4"
+          )}
+          dir={dir}
+        >
+          <div className="relative w-full rounded-xl border bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-900/40 text-amber-900 dark:text-amber-200 shadow-lg p-4 flex gap-3 items-start">
+            <TriangleAlertIcon className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+            <div className="flex-1 space-y-1">
+              <h5 className="font-bold text-sm leading-none">{activeAlert.title}</h5>
+              <div className="text-xs opacity-90 leading-normal">{activeAlert.body}</div>
+            </div>
+            <button
+              onClick={() => setActiveAlert(null)}
+              className="text-amber-600/60 hover:text-amber-600 dark:text-amber-400/60 dark:hover:text-amber-400 shrink-0 -mt-1"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
     </SidebarProvider>
   );
 }
